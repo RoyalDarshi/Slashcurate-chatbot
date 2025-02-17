@@ -78,7 +78,7 @@ const ChatInterface: React.FC = () => {
       forceUpdate();
 
       try {
-        const response = await axios.post("http://localhost:50000/ask", {
+        const response = await axios.post("http://localhost:5000/ask", {
           question: state.input,
         });
 

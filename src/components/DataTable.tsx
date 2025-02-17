@@ -111,11 +111,11 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50">
+              <tr key={row.id} className="hover:bg-gray-500 ">
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                    className="px-6 py-4 whitespace-nowrap text-sm text-white"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
