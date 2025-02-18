@@ -97,7 +97,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 hover:text-gray-600"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     {flexRender(
@@ -115,7 +115,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-white"
+                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-50"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>

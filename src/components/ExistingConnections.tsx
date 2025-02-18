@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { FaStar, FaRegStar } from "react-icons/fa"; // Import icons
 
 const ExistingConnections: React.FC = () => {
   interface Connection {
+    id: number;
     applicationName: string;
     clientAccountingInformation: string;
     clientHostname: string;
@@ -19,6 +21,8 @@ const ExistingConnections: React.FC = () => {
     port: string;
     selectedDB: string;
     username: string;
+    created_at: string;
+    isPrimary: boolean; // Add a field to track primary status
   }
 
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -56,6 +60,61 @@ const ExistingConnections: React.FC = () => {
 
     fetchConnections();
   }, []); // Runs only once due to useRef
+
+  // Function to toggle the primary connection
+  const togglePrimary = async (connectionId: number, isPrimary: boolean) => {
+    const userId = sessionStorage.getItem("userId");
+    if (!userId) {
+      toast.error("User ID not found. Please log in again.");
+      return;
+    }
+
+    // Only send request to set primary if it's not already primary
+    if (!isPrimary) {
+      try {
+        const response = await axios.post("http://localhost:5000/setprimary", {
+          userId,
+          connectionId,
+        });
+
+        toast.success(response.data.message);
+
+        // Update the connections state to reflect the new primary connection
+        setConnections((prevConnections) =>
+          prevConnections.map((connection) => ({
+            ...connection,
+            isPrimary: connection.id === connectionId, // Set the clicked one as primary, unset others
+          }))
+        );
+      } catch (error) {
+        toast.error(`Error: ${(error as Error).message}`);
+      }
+    } else {
+      // Unset primary status
+      try {
+        const response = await axios.post(
+          "http://localhost:5000/unsetprimary",
+          {
+            userId,
+            connectionId,
+          }
+        );
+
+        toast.success(response.data.message);
+
+        // Update the connections state to remove primary status from the current connection
+        setConnections((prevConnections) =>
+          prevConnections.map((connection) =>
+            connection.id === connectionId
+              ? { ...connection, isPrimary: false }
+              : connection
+          )
+        );
+      } catch (error) {
+        toast.error(`Error: ${(error as Error).message}`);
+      }
+    }
+  };
 
   return (
     <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
@@ -106,6 +165,12 @@ const ExistingConnections: React.FC = () => {
               <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
                 Selected DB
               </th>
+              <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
+                Created At
+              </th>
+              <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
+                Action
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -152,6 +217,23 @@ const ExistingConnections: React.FC = () => {
                 </td>
                 <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
                   {connection.selectedDB}
+                </td>
+                <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
+                  {connection.created_at}
+                </td>
+                <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
+                  <button
+                    onClick={() =>
+                      togglePrimary(connection.id, connection.isPrimary)
+                    }
+                    className="text-xl"
+                  >
+                    {connection.isPrimary ? (
+                      <FaStar color="gold" />
+                    ) : (
+                      <FaRegStar color="gray" />
+                    )}
+                  </button>
                 </td>
               </tr>
             ))}
