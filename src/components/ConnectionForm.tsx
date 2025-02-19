@@ -354,7 +354,7 @@ const ConnectionForm: React.FC = () => {
           name="selectedDB"
           value={formData.selectedDB}
           onChange={handleChange}
-          className="mt-2 block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          className="mt-2 block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         >
           <option value="" disabled>
             Select a Database
@@ -422,12 +422,12 @@ const ConnectionForm: React.FC = () => {
           ].map(({ label, name, type, required }) =>
             renderInputField(label, name, type, required ?? false)
           )}
-          <div className="md:col-span-2 flex justify-end space-x-4 mb-12">
+          <div className="md:col-span-2 flex flex-wrap justify-center md:justify-end gap-4 mt-6">
             <button
               type="button"
               onClick={handleClearForm}
               disabled={!isFormModified}
-              className={`px-4 py-2 ${
+              className={`px-4 py-2 w-full md:w-auto ${
                 isFormModified
                   ? "bg-red-500 hover:bg-red-600"
                   : "bg-gray-300 cursor-not-allowed"
@@ -439,36 +439,36 @@ const ConnectionForm: React.FC = () => {
               type="button"
               onClick={handleTestConnection}
               disabled={!isTestButtonEnabled}
-              className={`px-4 py-2 ${
+              className={`px-4 py-2 w-full md:w-auto ${
                 isTestButtonEnabled
-                  ? "bg-green-500 hover:bg-green-600"
+                  ? "bg-blue-500 hover:bg-blue-600"
                   : "bg-gray-300 cursor-not-allowed"
-              } text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
+              } text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
             >
-              Test
+              Test Connection
             </button>
             <button
               type="submit"
               disabled={!isSubmitButtonEnabled}
-              className={`px-4 py-2 ${
+              className={`px-4 py-2 w-full md:w-auto ${
                 isSubmitButtonEnabled
-                  ? "bg-blue-500 hover:bg-blue-600"
+                  ? "bg-green-500 hover:bg-green-600"
                   : "bg-gray-300 cursor-not-allowed"
-              } text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+              } text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
             >
               Submit
             </button>
             <button
               type="button"
-              disabled={!isPdfButtonEnabled}
-              className={`px-4 py-2 ${
-                isPdfButtonEnabled
-                  ? "bg-blue-500 hover:bg-blue-600"
-                  : "bg-gray-300 cursor-not-allowed"
-              } text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
               onClick={openPdf}
+              disabled={!isPdfButtonEnabled}
+              className={`px-4 py-2 w-full md:w-auto ${
+                isPdfButtonEnabled
+                  ? "bg-purple-500 hover:bg-purple-600"
+                  : "bg-gray-300 cursor-not-allowed"
+              } text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
             >
-              View Pdf
+              Download PDF
             </button>
           </div>
           <div className="mb-12"></div> {/* Added space below the buttons */}

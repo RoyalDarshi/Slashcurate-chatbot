@@ -19,7 +19,7 @@ const ConnectionManager: React.FC = () => {
           ></div>
           <button
             onClick={() => setView("new")}
-            className={`relative z-10 px-4 py-2 w-32 rounded-full focus:outline-none transition-all duration-300 ease-in-out ${
+            className={`relative px-4 py-2 w-32 rounded-full focus:outline-none transition-all duration-300 ease-in-out ${
               view === "new" ? "text-white" : "text-blue-600"
             }`}
           >
