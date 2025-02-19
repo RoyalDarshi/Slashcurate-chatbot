@@ -31,10 +31,13 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
           headers: { "Content-Type": "application/json" },
         }
       );
+      console.log(response);
 
       if (response.status === 200) {
         toast.success("Password reset email sent.");
-        onBackToLogin();
+        setTimeout(() => {
+          onBackToLogin();
+        }, 3000);
       } else {
         toast.error(`Error: ${response.data.message}`);
       }
