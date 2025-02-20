@@ -4,7 +4,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
-import Loader from "./loader";
+import Loader from "./Loader";
+import { API_URL } from "../config";
 
 interface LoginProps {
   onLoginSuccess: (token: string) => void;
@@ -33,13 +34,9 @@ const Login: React.FC<LoginProps> = ({
     try {
       setLoading(true);
       setLoadingText("Logging in, please wait...");
-      const response = await axios.post(
-        "http://localhost:5000/login",
-        formData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const response = await axios.post(`${API_URL}/login`, formData, {
+        headers: { "Content-Type": "application/json" },
+      });
       setLoading(false);
 
       if (response.status === 200) {
@@ -50,6 +47,7 @@ const Login: React.FC<LoginProps> = ({
         toast.error(`Error: ${response.data.message}`);
       }
     } catch (error) {
+      setLoading(false);
       if (axios.isAxiosError(error)) {
         toast.error(`Error: ${error.response?.data?.message || error.message}`);
       } else {

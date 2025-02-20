@@ -4,7 +4,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
-import Loader from "./loader";
+import Loader from "./Loader";
+import { API_URL } from "../config";
 
 interface SignupProps {
   onSignupSuccess: (token: string) => void;
@@ -51,13 +52,10 @@ const Signup: React.FC<SignupProps> = ({
     try {
       setLoading(true);
       setLoadingText("Signing up, please wait...");
-      const response = await axios.post(
-        "http://localhost:5000/signup",
-        formData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+
+      const response = await axios.post(`${API_URL}/signup`, formData, {
+        headers: { "Content-Type": "application/json" },
+      });
       setLoading(false);
       if (response.status === 200) {
         const token = response.data.token;
@@ -67,6 +65,7 @@ const Signup: React.FC<SignupProps> = ({
         toast.error(`Error: ${response.data.message}`);
       }
     } catch (error) {
+      setLoading(false);
       if (axios.isAxiosError(error)) {
         toast.error(`Error: ${error.response?.data?.message || error.message}`);
       } else {

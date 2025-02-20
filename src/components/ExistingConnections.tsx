@@ -3,7 +3,8 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaStar, FaRegStar } from "react-icons/fa"; // Import icons
-import Loader from "./loader";
+import Loader from "./Loader";
+import { API_URL } from "../config";
 
 const ExistingConnections: React.FC = () => {
   interface Connection {
@@ -45,15 +46,13 @@ const ExistingConnections: React.FC = () => {
       try {
         setLoading(true);
         setLoadingText("Fetching connections, please wait...");
-        const response = await axios.post(
-          "http://localhost:5000/getuserconnections",
-          {
-            userId,
-          }
-        );
+        const response = await axios.post(`${API_URL}/getuserconnections`, {
+          userId,
+        });
         setConnections(response.data.connections);
         setLoading(false);
       } catch (error) {
+        setLoading(false);
         if (axios.isAxiosError(error)) {
           toast.error(
             `Error: ${error.response?.data?.message || error.message}`
@@ -78,7 +77,7 @@ const ExistingConnections: React.FC = () => {
     // Only send request to set primary if it's not already primary
     if (!isPrimary) {
       try {
-        const response = await axios.post("http://localhost:5000/setprimary", {
+        const response = await axios.post(`${API_URL}/setprimary`, {
           userId,
           connectionId,
         });
@@ -98,13 +97,10 @@ const ExistingConnections: React.FC = () => {
     } else {
       // Unset primary status
       try {
-        const response = await axios.post(
-          "http://localhost:5000/unsetprimary",
-          {
-            userId,
-            connectionId,
-          }
-        );
+        const response = await axios.post(`${API_URL}/unsetprimary`, {
+          userId,
+          connectionId,
+        });
 
         toast.success(response.data.message);
 

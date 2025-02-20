@@ -3,7 +3,8 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
-import Loader from "./loader";
+import Loader from "./Loader";
+import { API_URL } from "../config";
 
 interface ForgotPasswordProps {
   onBackToLogin: () => void;
@@ -30,7 +31,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
       setLoading(true);
       setLoadingText("Sending reset link, please wait...");
       const response = await axios.post(
-        "http://localhost:5000/forgot-password",
+        `${API_URL}/forgot-password`,
         { email },
         {
           headers: { "Content-Type": "application/json" },
@@ -47,6 +48,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
         toast.error(`Error: ${response.data.message}`);
       }
     } catch (error) {
+      setLoading(false);
       if (axios.isAxiosError(error)) {
         toast.error(`Error: ${error.response?.data?.message || error.message}`);
       } else {

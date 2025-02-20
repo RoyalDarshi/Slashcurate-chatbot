@@ -3,6 +3,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { API_URL } from "../config";
 
 const GoogleLoginButton: React.FC = () => {
   const handleGoogleSuccess = (response: { credential?: string }) => {
@@ -20,7 +21,7 @@ const GoogleLoginButton: React.FC = () => {
 
     // If using a backend to verify the token
     axios
-      .post("http://localhost:5000/google-login", {
+      .post(`${API_URL}/google-login`, {
         token: response.credential,
       })
       .then((res) => {

@@ -3,7 +3,8 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import debounce from "lodash.debounce";
-import Loader from "./loader";
+import Loader from "./Loader";
+import { API_URL } from "../config";
 
 const ConnectionForm: React.FC = () => {
   // State to manage form data
@@ -29,7 +30,6 @@ const ConnectionForm: React.FC = () => {
   // State to manage button enable/disable status
   const [isTestButtonEnabled, setIsTestButtonEnabled] = useState(false);
   const [isSubmitButtonEnabled, setIsSubmitButtonEnabled] = useState(false);
-  const [isPdfButtonEnabled, setIsPdfButtonEnabled] = useState(false);
   const [isFormModified, setIsFormModified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Loading, please wait...");
@@ -210,24 +210,20 @@ const ConnectionForm: React.FC = () => {
     try {
       setLoading(true);
       setLoadingText("Submitting form, please wait...");
-      const response = await axios.post(
-        "http://localhost:5000/createdbcon",
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await axios.post(`${API_URL}/createdbcon`, payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       setLoading(false);
       if (response.status === 200) {
         toast.success("Form submitted successfully.");
         handleClearForm();
-        setIsPdfButtonEnabled(true);
       } else {
         toast.error(`Error: ${response.data.message}`);
       }
     } catch (error) {
+      setLoading(false);
       const errorMessage =
         axios.isAxiosError(error) && error.response?.data?.message
           ? error.response.data.message
@@ -241,18 +237,13 @@ const ConnectionForm: React.FC = () => {
     if (!validateForm()) return;
     setLoading(true);
     setLoadingText("Testing connection, please wait...");
-    setLoading(false);
     try {
-      const response = await axios.post(
-        "http://localhost:5000/testdbcon",
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
+      const response = await axios.post(`${API_URL}/testdbcon`, formData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      setLoading(false);
       if (response.status === 200) {
         toast.success("Connection established successfully.");
         setIsSubmitButtonEnabled(true);
@@ -261,6 +252,7 @@ const ConnectionForm: React.FC = () => {
         setIsSubmitButtonEnabled(false);
       }
     } catch {
+      setLoading(false);
       toast.error(`Error: Please check the connection details.`);
       setIsSubmitButtonEnabled(false);
     }

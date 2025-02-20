@@ -3,13 +3,14 @@ import { FaLinkedin } from "react-icons/fa";
 import { LinkedIn } from "react-linkedin-login-oauth2";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { API_URL } from "../config";
 
 const LinkedInLoginButton: React.FC = () => {
   const handleSuccess = async (code: string) => {
     console.log("LinkedIn Authorization Code:", code);
 
     try {
-      const res = await axios.post("http://localhost:5000/linkedin-login", {
+      const res = await axios.post(`${API_URL}/linkedin-login`, {
         code,
       });
 
@@ -20,7 +21,13 @@ const LinkedInLoginButton: React.FC = () => {
     }
   };
 
-  const handleFailure = ({ error, errorMessage }: { error: string; errorMessage: string }) => {
+  const handleFailure = ({
+    error,
+    errorMessage,
+  }: {
+    error: string;
+    errorMessage: string;
+  }) => {
     console.error("LinkedIn Login Error:", error, errorMessage);
     toast.error("LinkedIn login failed!");
   };

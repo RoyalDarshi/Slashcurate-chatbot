@@ -37,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick }) => {
 
       {/* Mobile Toggle Button */}
       <button
+        title="Toggle Sidebar"
         className="md:hidden p-3 text-white bg-gray-900 fixed top-4 left-4 rounded-full"
         onClick={() => setIsOpen(!isOpen)}
       >

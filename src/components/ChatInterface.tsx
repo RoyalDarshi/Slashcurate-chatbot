@@ -3,6 +3,7 @@ import axios from "axios";
 import ChatMessage from "./ChatMessage";
 import { Message } from "../types";
 import ChatInput from "./ChatInput";
+import { API_URL } from "../config";
 
 interface State {
   isLoading: boolean;
@@ -78,7 +79,7 @@ const ChatInterface: React.FC = () => {
       forceUpdate();
 
       try {
-        const response = await axios.post("http://localhost:5000/ask", {
+        const response = await axios.post(`${API_URL}/ask`, {
           question: state.input,
         });
 

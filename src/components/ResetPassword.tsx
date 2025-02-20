@@ -4,7 +4,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useParams, useNavigate } from "react-router-dom";
 import PasswordField from "./PasswordField";
-import Loader from "./loader";
+import Loader from "./Loader";
+import { API_URL } from "../config";
 
 const ResetPassword: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -51,7 +52,7 @@ const ResetPassword: React.FC = () => {
       setLoading(true);
       setLoadingText("Resetting password, please wait...");
       const response = await axios.post(
-        `http://localhost:5000/reset-password`,
+        `${API_URL}/reset-password`,
         { password: formData.password, token: token },
         {
           headers: { "Content-Type": "application/json" },
@@ -65,6 +66,7 @@ const ResetPassword: React.FC = () => {
         toast.error(`Error: ${response.data.message}`);
       }
     } catch (error) {
+      setLoading(false);
       if (axios.isAxiosError(error)) {
         toast.error(`Error: ${error.response?.data?.message || error.message}`);
       } else {
