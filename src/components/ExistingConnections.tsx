@@ -124,7 +124,7 @@ const ExistingConnections: React.FC = () => {
       <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-200">
         Existing Connections
       </h2>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto mb-40">
         <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg">
           <thead className="bg-gray-200 dark:bg-gray-700">
             <tr>

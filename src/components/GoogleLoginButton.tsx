@@ -5,29 +5,35 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { API_URL } from "../config";
 
+interface DecodedToken {
+  name: string;
+  email?: string;
+  picture?: string;
+}
+
 const GoogleLoginButton: React.FC = () => {
-  const handleGoogleSuccess = (response: { credential?: string }) => {
-    interface DecodedToken {
-      name: string;
-      // add other properties if needed
+  const handleGoogleSuccess = async (response: { credential?: string }) => {
+    if (!response.credential) {
+      toast.error("Google login failed: No credential received.");
+      return;
     }
-    if (response.credential) {
+
+    try {
       const decoded = jwtDecode<DecodedToken>(response.credential);
       console.log("Google User Info:", decoded);
       toast.success(`Welcome, ${decoded.name}!`);
-    } else {
-      toast.error("Google login failed: No credential received.");
-    }
 
-    // If using a backend to verify the token
-    axios
-      .post(`${API_URL}/google-login`, {
+      // Sending token to the backend for verification & authentication
+      const res = await axios.post(`${API_URL}/google-login`, {
         token: response.credential,
-      })
-      .then((res) => {
-        sessionStorage.setItem("token", res.data.token);
-      })
-      .catch(() => toast.error("Google Login Failed!"));
+      });
+
+      sessionStorage.setItem("token", res.data.token);
+      console.log("Backend response:", res.data);
+    } catch (error) {
+      console.error("Error handling Google login:", error);
+      toast.error("Google Login Failed!");
+    }
   };
 
   const handleGoogleFailure = () => {
