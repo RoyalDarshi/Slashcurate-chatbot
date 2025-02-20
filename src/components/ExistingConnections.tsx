@@ -3,6 +3,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaStar, FaRegStar } from "react-icons/fa"; // Import icons
+import Loader from "./loader";
 
 const ExistingConnections: React.FC = () => {
   interface Connection {
@@ -27,6 +28,8 @@ const ExistingConnections: React.FC = () => {
 
   const [connections, setConnections] = useState<Connection[]>([]);
   const fetched = useRef(false); // Prevents duplicate API calls
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Loading, please wait...");
 
   useEffect(() => {
     if (fetched.current) return; // If already fetched, do nothing
@@ -40,6 +43,8 @@ const ExistingConnections: React.FC = () => {
       }
 
       try {
+        setLoading(true);
+        setLoadingText("Fetching connections, please wait...");
         const response = await axios.post(
           "http://localhost:5000/getuserconnections",
           {
@@ -47,6 +52,7 @@ const ExistingConnections: React.FC = () => {
           }
         );
         setConnections(response.data.connections);
+        setLoading(false);
       } catch (error) {
         if (axios.isAxiosError(error)) {
           toast.error(
@@ -169,7 +175,7 @@ const ExistingConnections: React.FC = () => {
                 Created At
               </th>
               <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
-                Action
+                Make Primary
               </th>
             </tr>
           </thead>
@@ -239,6 +245,7 @@ const ExistingConnections: React.FC = () => {
             ))}
           </tbody>
         </table>
+        {loading && <Loader text={loadingText} />}
       </div>
     </div>
   );

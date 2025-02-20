@@ -3,6 +3,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import debounce from "lodash.debounce";
+import Loader from "./loader";
 
 const ConnectionForm: React.FC = () => {
   // State to manage form data
@@ -30,6 +31,8 @@ const ConnectionForm: React.FC = () => {
   const [isSubmitButtonEnabled, setIsSubmitButtonEnabled] = useState(false);
   const [isPdfButtonEnabled, setIsPdfButtonEnabled] = useState(false);
   const [isFormModified, setIsFormModified] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Loading, please wait...");
 
   // Memoize form validity check
   const isFormValid = useMemo(() => {
@@ -205,6 +208,8 @@ const ConnectionForm: React.FC = () => {
     };
 
     try {
+      setLoading(true);
+      setLoadingText("Submitting form, please wait...");
       const response = await axios.post(
         "http://localhost:5000/createdbcon",
         payload,
@@ -214,7 +219,7 @@ const ConnectionForm: React.FC = () => {
           },
         }
       );
-
+      setLoading(false);
       if (response.status === 200) {
         toast.success("Form submitted successfully.");
         handleClearForm();
@@ -234,7 +239,9 @@ const ConnectionForm: React.FC = () => {
   // Handle test connection
   const handleTestConnection = async () => {
     if (!validateForm()) return;
-
+    setLoading(true);
+    setLoadingText("Testing connection, please wait...");
+    setLoading(false);
     try {
       const response = await axios.post(
         "http://localhost:5000/testdbcon",
@@ -257,12 +264,6 @@ const ConnectionForm: React.FC = () => {
       toast.error(`Error: Please check the connection details.`);
       setIsSubmitButtonEnabled(false);
     }
-  };
-
-  // Open PDF in a new tab
-  const openPdf = async () => {
-    
-    window.open("http://localhost:5000/getfile", "_blank");
   };
 
   // Handle form reset
@@ -458,18 +459,7 @@ const ConnectionForm: React.FC = () => {
             >
               Submit
             </button>
-            <button
-              type="button"
-              onClick={openPdf}
-              disabled={!isPdfButtonEnabled}
-              className={`px-4 py-2 w-full md:w-auto ${
-                isPdfButtonEnabled
-                  ? "bg-purple-500 hover:bg-purple-600"
-                  : "bg-gray-300 cursor-not-allowed"
-              } text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
-            >
-              Download PDF
-            </button>
+            {loading && <Loader text={loadingText} />}
           </div>
           <div className="mb-12"></div> {/* Added space below the buttons */}
         </form>

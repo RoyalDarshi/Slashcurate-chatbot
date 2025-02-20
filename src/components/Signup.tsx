@@ -4,6 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
+import Loader from "./loader";
 
 interface SignupProps {
   onSignupSuccess: (token: string) => void;
@@ -22,6 +23,8 @@ const Signup: React.FC<SignupProps> = ({
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Loading, please wait...");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -46,6 +49,8 @@ const Signup: React.FC<SignupProps> = ({
     }
 
     try {
+      setLoading(true);
+      setLoadingText("Signing up, please wait...");
       const response = await axios.post(
         "http://localhost:5000/signup",
         formData,
@@ -53,7 +58,7 @@ const Signup: React.FC<SignupProps> = ({
           headers: { "Content-Type": "application/json" },
         }
       );
-
+      setLoading(false);
       if (response.status === 200) {
         const token = response.data.token;
         toast.success("Signup successful.");
@@ -133,6 +138,7 @@ const Signup: React.FC<SignupProps> = ({
       >
         Already have an account? Log in
       </button>
+      {loading && <Loader text={loadingText} />}
     </form>
   );
 };

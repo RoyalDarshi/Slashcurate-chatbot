@@ -4,6 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useParams, useNavigate } from "react-router-dom";
 import PasswordField from "./PasswordField";
+import Loader from "./loader";
 
 const ResetPassword: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -14,6 +15,8 @@ const ResetPassword: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Loading, please wait...");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -45,7 +48,8 @@ const ResetPassword: React.FC = () => {
     }
 
     try {
-    
+      setLoading(true);
+      setLoadingText("Resetting password, please wait...");
       const response = await axios.post(
         `http://localhost:5000/reset-password`,
         { password: formData.password, token: token },
@@ -53,7 +57,7 @@ const ResetPassword: React.FC = () => {
           headers: { "Content-Type": "application/json" },
         }
       );
-
+      setLoading(false);
       if (response.status === 200) {
         toast.success("Password reset successful.");
         setTimeout(() => navigate("/"), 3000);
@@ -106,6 +110,7 @@ const ResetPassword: React.FC = () => {
           >
             Back to Login
           </button>
+          {loading && <Loader text={loadingText} />}
         </form>
       </div>
     </div>

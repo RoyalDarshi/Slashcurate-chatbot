@@ -3,6 +3,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
+import Loader from "./loader";
 
 interface ForgotPasswordProps {
   onBackToLogin: () => void;
@@ -10,6 +11,8 @@ interface ForgotPasswordProps {
 
 const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Loading, please wait...");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
@@ -24,6 +27,8 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
     }
 
     try {
+      setLoading(true);
+      setLoadingText("Sending reset link, please wait...");
       const response = await axios.post(
         "http://localhost:5000/forgot-password",
         { email },
@@ -31,7 +36,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
           headers: { "Content-Type": "application/json" },
         }
       );
-      console.log(response);
+      setLoading(false);
 
       if (response.status === 200) {
         toast.success("Password reset email sent.");
@@ -75,6 +80,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
       >
         Back to Login
       </button>
+      {loading && <Loader text={loadingText} />}
     </form>
   );
 };
