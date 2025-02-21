@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,6 +13,8 @@ import Loader from "./Loader";
 import { API_URL } from "../config";
 
 const ConnectionForm: React.FC = () => {
+  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+
   // State to manage form data
   const [formData, setFormData] = useState({
     connectionName: "",
@@ -56,10 +64,23 @@ const ConnectionForm: React.FC = () => {
 
   // Effect to enable/disable the clear form button based on form modification
   useEffect(() => {
-    const isModified = Object.keys(formData).some(
-      (key) => key !== "selectedDB" && formData[key as keyof typeof formData]
-    );
-    setIsFormModified(isModified);
+    if (timeoutIdRef.current) {
+      clearTimeout(timeoutIdRef.current);
+    }
+
+    timeoutIdRef.current = setTimeout(() => {
+      const isModified = Object.entries(formData).some(
+        ([key, value]) => key !== "selectedDB" && !!value
+      );
+      setIsSubmitButtonEnabled(false);
+      setIsFormModified(isModified);
+    }, 500);
+
+    return () => {
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+      }
+    };
   }, [formData]);
 
   // Debounced validation function
