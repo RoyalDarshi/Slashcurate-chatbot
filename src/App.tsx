@@ -5,6 +5,7 @@ import ConnectionManager from "./components/ConnectionManager";
 import ChatInterface from "./components/ChatInterface";
 import LoginSignup from "./components/LoginSignup";
 import ResetPassword from "./components/ResetPassword";
+import Home from "./components/Home";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -33,11 +34,9 @@ function App() {
                 <div className="min-h-screen flex h-screen bg-gray-100 dark:bg-gray-900">
                   <Sidebar onMenuClick={setActiveMenu} />
                   <div className="flex-1 flex flex-col overflow-hidden">
-                    {activeMenu === "connections" ? (
-                      <ConnectionManager />
-                    ) : (
-                      <ChatInterface />
-                    )}
+                    {activeMenu === "home" && <Home />}
+                    {activeMenu === "new-chat" && <ChatInterface />}
+                    {activeMenu === "connections" && <ConnectionManager />}
                   </div>
                 </div>
               ) : (
