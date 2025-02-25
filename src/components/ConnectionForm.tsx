@@ -368,7 +368,7 @@ const ConnectionForm: React.FC = () => {
           name="selectedDB"
           value={formData.selectedDB}
           onChange={handleChange}
-          className="mt-2 block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white text-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          className="mt-2 block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white  dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         >
           <option value="" disabled>
             Select a Database
