@@ -1,3 +1,4 @@
+// menuItems.ts
 import {
   MessageCircle,
   Home,
@@ -6,10 +7,9 @@ import {
   HelpCircle,
   Link,
   Heart,
-  PlusCircle, // Import PlusCircle for "New Connection" icon
+  PlusCircle,
 } from "lucide-react";
 
-// ✅ Define menu items separately
 export const menuItems = [
   { id: "home", icon: Home, label: "Home" },
   {

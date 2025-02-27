@@ -1,9 +1,17 @@
-import React, { useReducer, useRef, useEffect, useCallback, useState } from "react";
+import React, {
+  useReducer,
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+} from "react";
 import axios from "axios";
 import ChatMessage from "./ChatMessage";
 import { Message } from "../types";
 import ChatInput from "./ChatInput";
-import { CHATBOT_API_URL } from "../config";
+import { CHATBOT_API_URL, API_URL } from "../config";
+import { ToastContainer, toast } from "react-toastify";
+import Select from "react-select";
 
 interface State {
   isLoading: boolean;
@@ -37,14 +45,21 @@ interface ChatInterfaceProps {
   onCreateConSelected: () => void;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) => {
+interface Connection {
+  connectionName: string;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  onCreateConSelected,
+}) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const messagesRef = useRef<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const forceUpdate = useReducer(() => ({}), {})[1];
-  const [connections, setConnections] = useState<string[]>([]);
-  const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
-  const [loadingConnections, setLoadingConnections] = useState(true);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [selectedConnection, setSelectedConnection] = useState<string | null>(
+    null
+  );
   const [connectionSelected, setConnectionSelected] = useState(false);
 
   const scrollToBottom = useCallback(() => {
@@ -57,28 +72,40 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
 
   useEffect(() => {
     const fetchConnections = async () => {
+      const userId = sessionStorage.getItem("userId");
+      if (!userId) {
+        toast.error("User ID not found. Please log in again.");
+        return;
+      }
       try {
-        setConnections(["db2", "mysql"]);
+        const response = await axios.post(`${API_URL}/getuserconnections`, {
+          userId,
+        });
+        setConnections(response.data.connections);
       } catch (error) {
         console.error("Error fetching connections:", error);
-      } finally {
-        setLoadingConnections(false);
       }
     };
 
     fetchConnections();
   }, []);
 
-  const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    if (value === "create-con") {
+  const handleSelect = (option: { value: string; label: string } | null) => {
+    if (option && option.value === "create-con") {
       onCreateConSelected();
       setSelectedConnection(null);
       setConnectionSelected(false);
-    } else {
-      setSelectedConnection(value);
+    } else if (option) {
+      setSelectedConnection(option.value);
       setConnectionSelected(true);
+    } else {
+      setSelectedConnection(null);
+      setConnectionSelected(false);
     }
+  };
+
+  const handleChangeConnection = () => {
+    setConnectionSelected(false);
   };
 
   const handleSubmit = useCallback(
@@ -145,43 +172,59 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
     },
     [state.input, state.isLoading, forceUpdate, selectedConnection]
   );
-
-  if (loadingConnections) {
-    return <div>Loading connections...</div>;
-  }
+  const options = [
+    { value: "create-con", label: "Create Connection" },
+    ...connections.map((connection) => ({
+      value: connection.connectionName,
+      label: connection.connectionName,
+    })),
+  ];
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-800">
+      <ToastContainer />
       <div className="p-4 flex items-center justify-between">
         {connectionSelected ? (
           <div className="flex items-center">
-            <span className="font-semibold text-lg mr-2">Current Connection:</span>
+            <span className="font-semibold text-lg mr-2">
+              Current Connection:
+            </span>
             <span className="text-lg">{selectedConnection}</span>
+            <button
+              className="ml-2 px-3 py-1 text-xs text-red-600 border border-red-600 rounded-full hover:bg-red-100"
+              onClick={handleChangeConnection}
+            >
+              Edit
+            </button>
           </div>
         ) : (
           <div className="flex items-center">
-            <label htmlFor="connectionSelect" className="mr-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              htmlFor="connectionSelect"
+              className="mr-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               Select Connection:
             </label>
-            <select
-              id="connectionSelect"
-              className="mt-1 block py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              value={selectedConnection || ""}
-              onChange={handleSelect}
-            >
-              <option disabled value="">
-                Select a Connection
-              </option>
-              <option value="create-con">Create Connection</option>
-              {connections.map((connection) => (
-                <option key={connection} value={connection}>
-                  {connection}
-                </option>
-              ))}
-            </select>
+            <div className="w-64">
+              <Select
+                options={options}
+                onChange={handleSelect}
+                isClearable
+                placeholder="Select a connection"
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    border: "1px solid #d1d5db",
+                    boxShadow: "none",
+                    "&:hover": {
+                      borderColor: "#9ca3af",
+                    },
+                  }),
+                }}
+              />
+            </div>
           </div>
         )}
-        <div></div>
       </div>
       {connectionSelected && (
         <>
@@ -198,7 +241,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
           <ChatInput
             input={state.input}
             isLoading={state.isLoading}
-            onInputChange={(value) => dispatch({ type: "SET_INPUT", payload: value })}
+            onInputChange={(value) =>
+              dispatch({ type: "SET_INPUT", payload: value })
+            }
             onSubmit={handleSubmit}
           />
         </>

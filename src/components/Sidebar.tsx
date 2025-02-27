@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { MessageCircle, LogOut, Menu } from "lucide-react";
+// Sidebar.tsx
+import React, { useState, useEffect, useRef } from "react";
+import { MessageCircle, LogOut, Menu, User } from "lucide-react";
 import { menuItems } from "../menuItems";
 
 interface SidebarProps {
@@ -11,6 +12,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState<string>("home");
   const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     onMenuClick("home");
@@ -25,12 +28,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
   const handleMenuClick = (id: string) => {
     if (id === "connections") {
       setIsConnectionsOpen(!isConnectionsOpen);
-      setActiveMenuItem(id); // Set "connections" as active
+      setActiveMenuItem(id);
     } else {
       setActiveMenuItem(id);
       onMenuClick(id);
       setIsOpen(false);
       setIsConnectionsOpen(false);
+      setIsProfileOpen(false);
     }
   };
 
@@ -39,12 +43,33 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
     onMenuClick(id);
     setIsOpen(false);
     setIsConnectionsOpen(false);
+    setIsProfileOpen(false);
   };
 
   const handleLogout = () => {
     sessionStorage.removeItem("userId");
     window.location.reload();
   };
+
+  const handleProfileClick = () => {
+    setIsProfileOpen(!isProfileOpen);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileDropdownRef]);
 
   return (
     <div className="flex">
@@ -88,18 +113,22 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
                 </button>
                 {isConnectionsOpen && id === "connections" && subMenu && (
                   <div className="ml-6 space-y-2">
-                    {subMenu.map(({ id: subId, label: subLabel, icon: SubIcon }) => (
-                      <button
-                        key={subId}
-                        className={`flex items-center p-3 rounded-lg w-full transition-colors duration-200 ${
-                          activeMenuItem === subId ? "bg-gray-800" : "hover:bg-gray-800"
-                        }`}
-                        onClick={() => handleSubMenuClick(subId)}
-                      >
-                        <SubIcon size={20} />
-                        <span className="ml-3">{subLabel}</span>
-                      </button>
-                    ))}
+                    {subMenu.map(
+                      ({ id: subId, label: subLabel, icon: SubIcon }) => (
+                        <button
+                          key={subId}
+                          className={`flex items-center p-3 rounded-lg w-full transition-colors duration-200 ${
+                            activeMenuItem === subId
+                              ? "bg-gray-800"
+                              : "hover:bg-gray-800"
+                          }`}
+                          onClick={() => handleSubMenuClick(subId)}
+                        >
+                          <SubIcon size={20} />
+                          <span className="ml-3">{subLabel}</span>
+                        </button>
+                      )
+                    )}
                   </div>
                 )}
               </React.Fragment>
@@ -112,13 +141,42 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
             © /curate. All rights reserved.
           </div>
           <button
-            className="flex items-center p-3 hover:bg-gray-800 rounded-lg w-full mt-4"
+            className="flex items-center p-3 hover:bg-gray-800 rounded-lg w-full mt-2"
             onClick={handleLogout}
           >
             <LogOut size={20} />
             <span className="ml-3">Logout</span>
           </button>
         </div>
+      </div>
+      {/* User icon at the top right (outside sidebar) */}
+      <div className="absolute top-4 right-4 z-30" ref={profileDropdownRef}>
+        <button
+          className="p-2 rounded-full hover:bg-gray-800 bg-gray-900"
+          onClick={handleProfileClick}
+        >
+          <User size={24} className="text-white" />
+        </button>
+        {isProfileOpen && (
+          <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg">
+            <button
+              className="block w-full text-left p-2 hover:bg-gray-700 text-white"
+              onClick={() => {
+                setIsProfileOpen(false);
+              }}
+            >
+              Settings
+            </button>
+            <button
+              className="block w-full text-left p-2 hover:bg-gray-700 text-white"
+              onClick={() => {
+                setIsProfileOpen(false);
+              }}
+            >
+              Details
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

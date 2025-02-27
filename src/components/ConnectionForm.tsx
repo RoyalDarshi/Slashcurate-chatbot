@@ -10,7 +10,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import debounce from "lodash.debounce";
 import Loader from "./Loader";
-import { API_URL } from "../config";
+import { DBCON_API_URL, API_URL } from "../config";
 
 const ConnectionForm: React.FC = () => {
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
@@ -259,11 +259,15 @@ const ConnectionForm: React.FC = () => {
     setLoading(true);
     setLoadingText("Testing connection, please wait...");
     try {
-      const response = await axios.post(`${API_URL}/testdbcon`, formData, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await axios.post(
+        `${DBCON_API_URL}/testdbcon`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       setLoading(false);
       if (response.status === 200) {
         toast.success("Connection established successfully.");
