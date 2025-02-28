@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -9,14 +9,15 @@ import {
 } from "@tanstack/react-table";
 
 interface DataTableProps {
-  data: any; // Supports both arrays and single objects
-  darkMode?: boolean; // Add a prop for dark mode
+  data: any;
+  darkMode?: boolean;
 }
 
 const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [processedData, setProcessedData] = useState<any[]>([]);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!data) {
@@ -25,26 +26,14 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
       return;
     }
 
-    let normalizedData = data;
-
-    if (!Array.isArray(normalizedData)) {
-      normalizedData = [normalizedData];
-    }
+    let normalizedData = Array.isArray(data) ? data : [data];
 
     if (typeof normalizedData[0] === "object") {
-      const keys = Object.keys(normalizedData[0]);
-      setHeaders(keys);
+      setHeaders(Object.keys(normalizedData[0]));
       setProcessedData(normalizedData);
-    } else if (
-      Array.isArray(normalizedData) &&
-      typeof normalizedData[0] !== "object"
-    ) {
+    } else {
       setHeaders(["Value"]);
       setProcessedData(normalizedData.map((item) => ({ Value: item })));
-    } else {
-      console.warn("Data format not recognized:", normalizedData);
-      setHeaders([]);
-      setProcessedData([]);
     }
   }, [data]);
 
@@ -58,17 +47,21 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
           sortingFn: "alphanumeric",
           header: ({ column }) => (
             <div
-              className="flex items-center space-x-2 cursor-pointer"
+              className="flex items-center space-x-1 cursor-pointer select-none"
               onClick={() =>
                 column.toggleSorting(column.getIsSorted() !== "asc")
               }
             >
-              <span>{header}</span>
-              {column.getIsSorted() === "asc"
-                ? " 🔼"
-                : column.getIsSorted() === "desc"
-                ? " 🔽"
-                : " ⬍"}
+              <span className="font-medium">{header}</span>
+              {column.getIsSorted() ? (
+                column.getIsSorted() === "asc" ? (
+                  <span className="text-blue-500"> ▲</span>
+                ) : (
+                  <span className="text-blue-500"> ▼</span>
+                )
+              ) : (
+                <span className="text-blue-500"> ⬍</span>
+              )}
             </div>
           ),
           cell: (info) => info.getValue() ?? "N/A",
@@ -86,57 +79,72 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const tableClasses = darkMode
-    ? "bg-gray-800 text-white"
-    : "bg-white text-gray-800";
-  const headerClasses = darkMode
-    ? "bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white sticky top-0"
-    : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700 sticky top-0";
-  const rowClasses = darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100";
-  const cellClasses = darkMode ? "text-gray-400" : "text-gray-500";
-  const outerDivClasses = darkMode
-    ? "rounded-md border p-1 bg-gray-900 border-gray-700"
-    : "rounded-md border p-1";
-
   return (
-    <div className={outerDivClasses}>
-      <div className="overflow-x-auto max-h-80 overflow-y-auto">
-        {" "}
-        {/* Combined scrollable container */}
-        <table className={`w-full text-sm border-collapse ${tableClasses}`}>
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer ${headerClasses}`}
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </th>
+    <div
+      className={`rounded-md border p-4 shadow-md ${
+        darkMode
+          ? "bg-gray-800 border-gray-700 text-gray-200"
+          : "bg-white border-gray-200 text-gray-700"
+      }`}
+    >
+      <div
+        ref={tableContainerRef}
+        className="overflow-x-auto overflow-y-auto max-h-96"
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: darkMode
+            ? "gray-600 transparent"
+            : "gray-300 transparent",
+        }}
+      >
+        <div className="min-w-full align-middle">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead
+              className={`sticky top-0 ${
+                darkMode
+                  ? "bg-gray-700 text-gray-300"
+                  : "bg-gray-50 text-gray-600"
+              }`}
+            >
+              <tr>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <React.Fragment key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        scope="col"
+                        className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                      </th>
+                    ))}
+                  </React.Fragment>
                 ))}
               </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className={rowClasses}>
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className={`px-6 py-4 whitespace-nowrap text-sm ${cellClasses}`}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className="px-5 py-4 whitespace-nowrap text-sm text-gray-500"
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
