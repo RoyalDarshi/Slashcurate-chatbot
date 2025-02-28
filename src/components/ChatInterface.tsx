@@ -9,7 +9,11 @@ import axios from "axios";
 import ChatMessage from "./ChatMessage";
 import { Message } from "../types";
 import ChatInput from "./ChatInput";
-import { CHATBOT_API_URL, API_URL } from "../config";
+import {
+  CHATBOT_API_URL,
+  API_URL,
+  CHATBOT_CON_DETAILS_API_URL,
+} from "../config";
 import { ToastContainer, toast } from "react-toastify";
 import Select from "react-select";
 
@@ -47,6 +51,7 @@ interface ChatInterfaceProps {
 
 interface Connection {
   connectionName: string;
+  value: string;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -90,13 +95,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     fetchConnections();
   }, []);
 
-  const handleSelect = (option: { value: string; label: string } | null) => {
+  const handleSelect = async (
+    option:
+      | { value: Connection; label: string }
+      | { value: { connectionName: string }; label: string }
+      | { value: string; label: string }
+      | null
+  ) => {
     if (option && option.value === "create-con") {
       onCreateConSelected();
       setSelectedConnection(null);
       setConnectionSelected(false);
     } else if (option) {
-      setSelectedConnection(option.value);
+      console.log(option.value);
+
+      const response = await axios.post(
+        `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
+        {
+          connection: option.value,
+        }
+      );
+      console.log(response.data);
+      setSelectedConnection(option.value.connectionName);
       setConnectionSelected(true);
     } else {
       setSelectedConnection(null);
@@ -175,7 +195,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const options = [
     { value: "create-con", label: "Create Connection" },
     ...connections.map((connection) => ({
-      value: connection.connectionName,
+      value: connection,
       label: connection.connectionName,
     })),
   ];

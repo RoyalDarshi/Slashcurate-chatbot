@@ -2,16 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { FaStar, FaRegStar } from "react-icons/fa";
 import Loader from "./Loader";
 import { API_URL } from "../config";
 
 interface Connection {
   id: number;
-  applicationName: string;
-  clientAccountingInformation: string;
-  clientHostname: string;
-  clientUser: string;
   commandTimeout: string;
   connectionName: string;
   database: string;
@@ -23,7 +18,6 @@ interface Connection {
   selectedDB: string;
   username: string;
   created_at: string;
-  isPrimary: boolean;
 }
 
 const ExistingConnections: React.FC = () => {
@@ -83,37 +77,6 @@ const ExistingConnections: React.FC = () => {
     fetchConnections();
   }, [fetchConnections]);
 
-  const togglePrimary = useCallback(
-    async (connectionId: number, isPrimary: boolean) => {
-      const userId = sessionStorage.getItem("userId");
-      if (!userId) {
-        toast.error("User ID not found. Please log in again.");
-        return;
-      }
-
-      try {
-        const response = await axios.post<{ message: string }>(
-          API_URL + `${isPrimary ? "/unsetprimary" : "/setprimary"}`,
-          {
-            userId,
-            connectionId,
-          }
-        );
-        toast.success(response.data.message);
-
-        setConnections((prevConnections) =>
-          prevConnections.map((connection) => ({
-            ...connection,
-            isPrimary: !isPrimary && connection.id === connectionId,
-          }))
-        );
-      } catch (error) {
-        toast.error(`Error: ${(error as Error).message}`);
-      }
-    },
-    []
-  );
-
   return (
     <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
       <ToastContainer />
@@ -146,18 +109,6 @@ const ExistingConnections: React.FC = () => {
                     Username
                   </th>
                   <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
-                    Application Name
-                  </th>
-                  <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
-                    Client Accounting Information
-                  </th>
-                  <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
-                    Client Hostname
-                  </th>
-                  <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
-                    Client User
-                  </th>
-                  <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
                     Command Timeout
                   </th>
                   <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
@@ -168,9 +119,6 @@ const ExistingConnections: React.FC = () => {
                   </th>
                   <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
                     Created At
-                  </th>
-                  <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-gray-600 dark:text-gray-300">
-                    Make Primary
                   </th>
                 </tr>
               </thead>
@@ -199,18 +147,6 @@ const ExistingConnections: React.FC = () => {
                       {connection.username}
                     </td>
                     <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
-                      {connection.applicationName}
-                    </td>
-                    <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
-                      {connection.clientAccountingInformation}
-                    </td>
-                    <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
-                      {connection.clientHostname}
-                    </td>
-                    <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
-                      {connection.clientUser}
-                    </td>
-                    <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
                       {connection.commandTimeout}
                     </td>
                     <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
@@ -221,20 +157,6 @@ const ExistingConnections: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
                       {connection.created_at}
-                    </td>
-                    <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
-                      <button
-                        onClick={() =>
-                          togglePrimary(connection.id, connection.isPrimary)
-                        }
-                        className="text-xl"
-                      >
-                        {connection.isPrimary ? (
-                          <FaStar color="gold" />
-                        ) : (
-                          <FaRegStar color="gray" />
-                        )}
-                      </button>
                     </td>
                   </tr>
                 ))}

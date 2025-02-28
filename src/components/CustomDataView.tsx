@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { BarChart, Table } from "lucide-react";
 import DataTable from "./DataTable";
-import BankBarChart from "./Graphs/BankBarChart";
+import BankBarChart from "./Graphs/DynamicGraph";
 import BankLineChart from "./Graphs/BankLineChart";
 import BankAreaChart from "./Graphs/BankAreaChart";
 import BankPieChart from "./Graphs/BankPieChart";

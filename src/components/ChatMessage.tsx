@@ -3,10 +3,11 @@ import { Bot, User, Table, ChartSpline } from "lucide-react";
 import { Message } from "../types";
 import "./ChatMessage.css";
 import DataTable from "./DataTable";
-import BankBarChart from "./Graphs/BankBarChart";
 import { Tooltip } from "react-tooltip";
 import BankLineChart from "./Graphs/BankLineChart";
 import { GoGraph } from "react-icons/go";
+import DynamicBarGraph from "./Graphs/DynamicBarGraph";
+import DynamicGraph from "./Graphs/DynamicGraph";
 
 interface ChatMessageProps {
   message: Message;
@@ -14,7 +15,7 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message }) => {
-  const [showTable, setShowTable] = useState(true); // Track the current view
+  const [showTable, setShowTable] = useState(false); // Track the current view
 
   const handleSwap = () => {
     setShowTable((prev) => !prev); // Toggle between table and graph
@@ -78,8 +79,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message }) => {
                 data={Array.isArray(data.answer) ? data.answer : [data.answer]}
               />
             ) : (
-              <div className="w-60 md:w-80">
-                <BankBarChart data={data.answer} />
+              <div>
+                <DynamicBarGraph data={data.answer} />
               </div>
             )}
           </div>

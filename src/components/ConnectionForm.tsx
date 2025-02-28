@@ -26,10 +26,6 @@ const ConnectionForm: React.FC = () => {
     maxTransportObjects: "",
     username: "",
     password: "",
-    applicationName: "",
-    clientAccountingInformation: "",
-    clientHostname: "",
-    clientUser: "",
     selectedDB: "",
   });
 
@@ -295,10 +291,6 @@ const ConnectionForm: React.FC = () => {
       maxTransportObjects: "",
       username: "",
       password: "",
-      applicationName: "",
-      clientAccountingInformation: "",
-      clientHostname: "",
-      clientUser: "",
       selectedDB: formData.selectedDB,
     });
     setErrors({});
@@ -425,18 +417,6 @@ const ConnectionForm: React.FC = () => {
               type: "password",
               required: true,
             },
-            {
-              label: "Application Name",
-              name: "applicationName",
-              type: "text",
-            },
-            {
-              label: "Client Accounting Information",
-              name: "clientAccountingInformation",
-              type: "text",
-            },
-            { label: "Client Hostname", name: "clientHostname", type: "text" },
-            { label: "Client User", name: "clientUser", type: "text" },
           ].map(({ label, name, type, required }) =>
             renderInputField(label, name, type, required ?? false)
           )}
