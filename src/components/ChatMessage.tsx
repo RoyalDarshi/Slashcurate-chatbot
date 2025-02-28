@@ -1,10 +1,12 @@
+// ChatMessage.tsx
 import React, { useState } from "react";
 import { Bot, User, Table, ChartSpline } from "lucide-react";
 import { Message } from "../types";
-import "./ChatMessage.css";
 import DataTable from "./DataTable";
-import { Tooltip } from "react-tooltip";
+import { Tooltip } from "react-tippy";
+import "react-tippy/dist/tippy.css";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
+import "./ChatMessage.css";
 
 interface ChatMessageProps {
   message: Message;
@@ -41,34 +43,23 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message }) => {
         return (
           <div className="relative">
             <button
-              data-tooltip-content={
-                showTable ? "Switch to Graph View" : "Switch to Table View"
-              }
-              data-tooltip-id="my-tooltip"
               onClick={handleSwap}
               aria-label="Swap Data"
-              className="absolute top-0 -right-12 -m-1 p-2 rounded-full transition hover:bg-gray-300 dark:hover:bg-gray-600 z-10"
+              className="absolute top-0 -right-12 -m-1 p-2 rounded-full  hover:bg-gray-300 dark:hover:bg-gray-600 z-10"
             >
-              {showTable ? (
-                <ChartSpline className="text-blue-600" strokeWidth={2} />
-              ) : (
-                <Table size={22} className="text-blue-600" />
-              )}
+              <Tooltip
+                title={
+                  showTable ? "Switch to Graph View" : "Switch to Table View"
+                }
+              >
+                {showTable ? (
+                  <ChartSpline className="text-blue-600" strokeWidth={2} />
+                ) : (
+                  <Table size={22} className="text-blue-600" />
+                )}
+              </Tooltip>
             </button>
-            <Tooltip
-              id="my-tooltip"
-              place="top"
-              delayShow={200}
-              delayHide={200}
-              style={{
-                background: "#374151", // Dark background
-                color: "#e5e7eb", // Light text
-                padding: "8px 12px",
-                borderRadius: "8px",
-                fontSize: "14px",
-                boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
-              }}
-            />
+
             {showTable ? (
               <DataTable
                 data={Array.isArray(data.answer) ? data.answer : [data.answer]}

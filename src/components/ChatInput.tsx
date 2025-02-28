@@ -1,3 +1,4 @@
+// ChatInput.tsx
 import React from "react";
 import { Send } from "lucide-react";
 

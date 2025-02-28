@@ -64,7 +64,17 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
       if (!foundBranchId) {
         setXKey(numericKeys[0]);
       }
-      setYKeys(foundBranchId ? numericKeys : numericKeys.slice(1));
+
+      // Filter out keys ending with "id" or "code" for Y-axis
+      const filteredNumericKeys = numericKeys.filter(
+        (key) =>
+          !key.toLowerCase().endsWith("id") &&
+          !key.toLowerCase().endsWith("code")
+      );
+
+      setYKeys(
+        foundBranchId ? filteredNumericKeys : filteredNumericKeys.slice(1)
+      );
 
       const normalizedData = data.map((item) => {
         const newItem: { [key: string]: string | number } = {};

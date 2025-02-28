@@ -1,3 +1,4 @@
+// ChatInterface.tsx
 import React, {
   useReducer,
   useRef,
@@ -24,8 +25,7 @@ interface State {
 
 type Action =
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_INPUT"; payload: string }
-  | { type: "ADD_BOT_MESSAGE"; payload: Message };
+  | { type: "SET_INPUT"; payload: string };
 
 const initialState: State = {
   isLoading: false,
@@ -38,8 +38,6 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, isLoading: action.payload };
     case "SET_INPUT":
       return { ...state, input: action.payload };
-    case "ADD_BOT_MESSAGE":
-      return { ...state, isLoading: false };
     default:
       return state;
   }
@@ -60,7 +58,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [state, dispatch] = useReducer(reducer, initialState);
   const messagesRef = useRef<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const forceUpdate = useReducer(() => ({}), {})[1];
+  const [messages, setMessages] = useState<Message[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [selectedConnection, setSelectedConnection] = useState<string | null>(
     null
@@ -72,8 +70,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, []);
 
   useEffect(() => {
+    setMessages([...messagesRef.current]);
     scrollToBottom();
-  }, [messagesRef.current.length, scrollToBottom]);
+  }, [messagesRef.current, scrollToBottom]);
 
   useEffect(() => {
     const fetchConnections = async () => {
@@ -91,33 +90,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         console.error("Error fetching connections:", error);
       }
     };
-
     fetchConnections();
   }, []);
 
-  const handleSelect = async (
-    option:
-      | { value: Connection; label: string }
-      | { value: { connectionName: string }; label: string }
-      | { value: string; label: string }
-      | null
-  ) => {
+  const handleSelect = async (option: any) => {
     if (option && option.value === "create-con") {
       onCreateConSelected();
       setSelectedConnection(null);
       setConnectionSelected(false);
     } else if (option) {
-      console.log(option.value);
-
-      const response = await axios.post(
-        `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
-        {
-          connection: option.value,
-        }
-      );
-      console.log(response.data);
-      setSelectedConnection(option.value.connectionName);
-      setConnectionSelected(true);
+      try {
+        const response = await axios.post(
+          `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
+          {
+            connection: option.value,
+          }
+        );
+        setSelectedConnection(option.value.connectionName);
+        setConnectionSelected(true);
+      } catch (error) {
+        console.error("Error fetching connection details:", error);
+      }
     } else {
       setSelectedConnection(null);
       setConnectionSelected(false);
@@ -141,9 +134,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       };
 
       messagesRef.current = [...messagesRef.current, userMessage];
+      setMessages([...messagesRef.current]);
       dispatch({ type: "SET_INPUT", payload: "" });
-      forceUpdate();
-
       dispatch({ type: "SET_LOADING", payload: true });
 
       const botMessage: Message = {
@@ -154,7 +146,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       };
 
       messagesRef.current = [...messagesRef.current, botMessage];
-      forceUpdate();
+      setMessages([...messagesRef.current]);
 
       try {
         const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
@@ -173,7 +165,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           ...messagesRef.current.filter((msg) => msg.id !== botMessage.id),
           botResponseMessage,
         ];
-        forceUpdate();
+        setMessages([...messagesRef.current]);
       } catch {
         const errorMessage: Message = {
           id: Date.now() + 3 + "",
@@ -185,13 +177,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           ...messagesRef.current.filter((msg) => msg.id !== botMessage.id),
           errorMessage,
         ];
-        forceUpdate();
+        setMessages([...messagesRef.current]);
       } finally {
         dispatch({ type: "SET_LOADING", payload: false });
       }
     },
-    [state.input, state.isLoading, forceUpdate, selectedConnection]
+    [state.input, state.isLoading, selectedConnection]
   );
+
   const options = [
     { value: "create-con", label: "Create Connection" },
     ...connections.map((connection) => ({
@@ -201,15 +194,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   ];
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-800">
+    <div className="flex-1 flex flex-col overflow-hidden bg-gray-200 dark:bg-gray-900">
+      {" "}
+      {/* Changed background color here */}
       <ToastContainer />
       <div className="p-4 flex items-center justify-between">
         {connectionSelected ? (
           <div className="flex items-center">
-            <span className="font-semibold text-lg mr-2">
+            <span className="font-semibold text-lg mr-2 dark:text-gray-200">
               Current Connection:
             </span>
-            <span className="text-lg">{selectedConnection}</span>
+            <span className="text-lg dark:text-gray-200">
+              {selectedConnection}
+            </span>
             <button
               className="ml-2 px-3 py-1 text-xs text-red-600 border border-red-600 rounded-full hover:bg-red-100"
               onClick={handleChangeConnection}
@@ -236,9 +233,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     ...provided,
                     border: "1px solid #d1d5db",
                     boxShadow: "none",
-                    "&:hover": {
-                      borderColor: "#9ca3af",
-                    },
+                    "&:hover": { borderColor: "#9ca3af" },
                   }),
                 }}
               />
@@ -249,7 +244,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {connectionSelected && (
         <>
           <div className="overflow-y-auto flex-1 p-4 space-y-4">
-            {messagesRef.current.map((message) => (
+            {messages.map((message) => (
               <ChatMessage
                 key={message.id}
                 message={message}
