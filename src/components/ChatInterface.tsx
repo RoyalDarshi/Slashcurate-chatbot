@@ -100,12 +100,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setConnectionSelected(false);
     } else if (option) {
       try {
-        const response = await axios.post(
-          `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
-          {
-            connection: option.value,
-          }
-        );
+        await axios.post(`${CHATBOT_CON_DETAILS_API_URL}/connection_details`, {
+          connection: option.value,
+        });
         setSelectedConnection(option.value.connectionName);
         setConnectionSelected(true);
       } catch (error) {
@@ -195,8 +192,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-gray-200 dark:bg-gray-900">
-      {" "}
-      {/* Changed background color here */}
       <ToastContainer />
       <div className="p-4 flex items-center justify-between">
         {connectionSelected ? (

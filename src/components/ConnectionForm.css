@@ -1,0 +1,44 @@
+/* Dark Theme Styles */
+@media (prefers-color-scheme: dark) {
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: #e2e8f0 !important; /* Dark text color */
+  }
+
+  input:-moz-autofill,
+  input:-moz-autofill:hover,
+  input:-moz-autofill:active {
+    background-color: #2d3748 !important; /* Dark background color */
+    color: #e2e8f0 !important; /* Dark text color */
+  }
+}
+
+/* Light Theme Styles */
+@media (prefers-color-scheme: light) {
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: #374151 !important; /* Light text color (gray-800) */
+  }
+
+  input:-moz-autofill,
+  input:-moz-autofill:hover,
+  input:-moz-autofill:active {
+    background-color: #ffffff !important; /* Light background color (white) */
+    color: #374151 !important; /* Light text color (gray-800) */
+  }
+}
+
+/* Default Styles (Optional) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:active {
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+input:-moz-autofill,
+input:-moz-autofill:hover,
+input:-moz-autofill:active {
+    transition: background-color 5000s ease-in-out 0s;
+}

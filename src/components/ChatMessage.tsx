@@ -39,7 +39,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message }) => {
     try {
       const data = JSON.parse(message.content);
 
-      if (data) {
+      if (data && data.answer) {
         return (
           <div className="relative">
             <button
@@ -66,7 +66,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ message }) => {
               />
             ) : (
               <div>
-                <DynamicBarGraph data={data.answer} />
+                <div style={{ flex: 1 }}>
+                  <DynamicBarGraph data={data.answer} />
+                </div>
               </div>
             )}
           </div>
