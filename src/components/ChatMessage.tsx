@@ -30,6 +30,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [hasChanges, setHasChanges] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -46,21 +47,25 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       setIsEditing(true);
     };
 
+    const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newContent = e.target.value;
+      setEditedContent(newContent);
+      setHasChanges(newContent !== message.content);
+    };
+
     const handleSave = async () => {
-      if (!selectedConnection || !editedContent.trim()) return;
+      if (!selectedConnection || !editedContent.trim() || !hasChanges) return;
 
       setIsUpdating(true);
       try {
-        // First update the user message
         onEditMessage(message.id, editedContent);
+        setHasChanges(false);
 
-        // Then get new bot response
         const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
           question: editedContent,
           connection: selectedConnection,
         });
 
-        // Update the bot response that follows this message
         const botResponse = JSON.stringify(response.data, null, 2);
         const messageIndex = messagesRef.current.findIndex(
           (msg) => msg.id === message.id
@@ -79,6 +84,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
     const handleCancel = () => {
       setEditedContent(message.content);
+      setHasChanges(false);
       setIsEditing(false);
     };
 
@@ -104,19 +110,25 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             <textarea
               ref={inputRef}
               value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
+              onChange={handleContentChange}
               className="w-full p-2 border rounded-md"
             />
             <div className="flex space-x-2 mt-2">
               <button
                 onClick={handleSave}
-                className="p-2 bg-green-500 text-white rounded-md"
+                className={`p-2 text-white rounded-md transition-colors duration-200 ${
+                  hasChanges && !isUpdating
+                    ? "bg-green-500 hover:bg-green-600"
+                    : "bg-green-500/50 cursor-not-allowed"
+                }`}
+                disabled={!hasChanges || isUpdating}
               >
                 <Check size={16} />
               </button>
               <button
                 onClick={handleCancel}
-                className="p-2 bg-red-500 text-white rounded-md"
+                className="p-2 bg-red-500 text-white rounded-md disabled:opacity-50 hover:bg-red-600"
+                disabled={isUpdating}
               >
                 <X size={16} />
               </button>
@@ -225,7 +237,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       <textarea
                         ref={inputRef}
                         value={editedContent}
-                        onChange={(e) => setEditedContent(e.target.value)}
+                        onChange={handleContentChange}
                         className="w-full bg-blue-500 text-white focus:outline-none resize-none"
                         disabled={isUpdating}
                         rows={3}
@@ -234,8 +246,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                         <div className="flex space-x-2">
                           <button
                             onClick={handleSave}
-                            className="p-2 bg-green-500 text-white rounded-md disabled:opacity-50 hover:bg-green-600"
-                            disabled={isUpdating}
+                            className={`p-2 text-white rounded-md transition-colors duration-200 ${
+                              hasChanges && !isUpdating
+                                ? "bg-green-500 hover:bg-green-600"
+                                : "bg-green-500/50 cursor-not-allowed"
+                            }`}
+                            disabled={!hasChanges || isUpdating}
                           >
                             <Check size={16} />
                           </button>
