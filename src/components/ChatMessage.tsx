@@ -228,57 +228,76 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           ) : (
             <div className="w-full flex flex-col items-end space-y-2">
               <div className="flex items-start gap-4 max-w-[80%] flex-row-reverse relative">
-                <div className="p-2 rounded-full bg-blue-400">
+                <div className="p-2 rounded-full bg-blue-400 shadow-md">
                   <User size={20} className="text-white" />
                 </div>
-                <div className="bg-blue-500 text-white rounded-2xl px-4 py-3 w-auto max-w-full shadow-md">
+                <div className="bg-blue-500 text-white rounded-2xl px-4 py-3 w-auto max-w-full shadow-md hover:shadow-lg transition-shadow">
                   {isEditing ? (
-                    <div>
+                    <div className="space-y-3">
                       <textarea
                         ref={inputRef}
                         value={editedContent}
                         onChange={handleContentChange}
-                        className="w-full bg-blue-500 text-white focus:outline-none resize-none"
+                        className="w-full bg-blue-600/50 text-white focus:outline-none resize-none rounded-lg p-2 border border-blue-400/30"
                         disabled={isUpdating}
                         rows={3}
+                        placeholder="Edit your message..."
                       />
-                      <div className="flex justify-between mt-2">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={handleSave}
-                            className={`p-2 text-white rounded-md transition-colors duration-200 ${
-                              hasChanges && !isUpdating
-                                ? "bg-green-500 hover:bg-green-600"
-                                : "bg-green-500/50 cursor-not-allowed"
-                            }`}
-                            disabled={!hasChanges || isUpdating}
+                      <div className="flex items-center justify-between pt-2 border-t border-blue-400/30">
+                        <div className="flex items-center gap-2">
+                          <Tooltip
+                            title="Update message"
+                            position="bottom"
+                            arrow={true}
                           >
-                            <Check size={16} />
-                          </button>
-                          <button
-                            onClick={handleCancel}
-                            className="p-2 bg-red-500 text-white rounded-md disabled:opacity-50 hover:bg-red-600"
-                            disabled={isUpdating}
+                            <button
+                              onClick={handleSave}
+                              className={`p-2 rounded-md transition-all duration-200 ${
+                                hasChanges && !isUpdating
+                                  ? "bg-green-500 hover:bg-green-600 text-white"
+                                  : "bg-green-500/30 text-white/50 cursor-not-allowed"
+                              }`}
+                              disabled={!hasChanges || isUpdating}
+                            >
+                              <Check size={16} />
+                            </button>
+                          </Tooltip>
+                          <Tooltip
+                            title="Cancel editing"
+                            position="bottom"
+                            arrow={true}
                           >
-                            <X size={16} />
-                          </button>
+                            <button
+                              onClick={handleCancel}
+                              className="p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-md transition-all duration-200 disabled:opacity-50"
+                              disabled={isUpdating}
+                            >
+                              <X size={16} />
+                            </button>
+                          </Tooltip>
                         </div>
-                        <span className="text-xs text-gray-300 self-end">
+                        <span className="text-xs text-blue-100">
                           {formattedTime}
                         </span>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                      <div className="flex justify-between mt-2">
-                        <button
-                          onClick={handleEdit}
-                          className="text-gray-300 hover:text-gray-100"
+                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-400/30">
+                        <Tooltip
+                          title="Edit message"
+                          position="bottom"
+                          arrow={true}
                         >
-                          <Edit3 size={16} />
-                        </button>
-                        <span className="text-xs text-gray-300">
+                          <button
+                            onClick={handleEdit}
+                            className="p-2 text-blue-100 hover:text-white transition-colors duration-200"
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                        </Tooltip>
+                        <span className="text-xs text-blue-100">
                           {formattedTime}
                         </span>
                       </div>

@@ -104,7 +104,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
   };
 
   if (graphData.length === 0 || !xKey || yKeys.length === 0) {
-    return <div>Loading... or No valid data for graph.</div>;
+    return <div>No valid data for graph.</div>;
   }
 
   console.log("Graph Data:", graphData, xKey, yKeys);
