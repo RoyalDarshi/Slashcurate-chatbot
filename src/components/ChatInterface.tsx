@@ -268,7 +268,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-gray-200 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-200 dark:bg-gray-900">
       <ToastContainer />
       <div className="p-4 flex items-center justify-between">
         {connectionSelected ? (
@@ -315,7 +315,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
       {connectionSelected && (
         <>
-          <div className="overflow-y-auto flex-1 p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto">
             {messages.map((message) => (
               <ChatMessage
                 key={message.id}
@@ -331,7 +331,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 selectedConnection={selectedConnection}
               />
             ))}
-            <div ref={messagesEndRef} />
           </div>
           <ChatInput
             input={state.input}

@@ -81,22 +81,13 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
 
   return (
     <div
-      className={`rounded-lg border p-5 shadow-lg transition-all duration-300 ${
+      className={`rounded-lg border shadow-lg transition-all duration-300 h-[400px] overflow-hidden ${
         darkMode
           ? "bg-gray-900 border-gray-700 text-gray-200"
           : "bg-white border-gray-200 text-gray-700"
       }`}
     >
-      <div
-        ref={tableContainerRef}
-        className="overflow-x-auto overflow-y-auto max-h-96"
-        style={{
-          scrollbarWidth: "thin",
-          scrollbarColor: darkMode
-            ? "gray-600 transparent"
-            : "gray-300 transparent",
-        }}
-      >
+      <div className="w-full h-full overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead
             className={`sticky top-0 z-10 border-b ${

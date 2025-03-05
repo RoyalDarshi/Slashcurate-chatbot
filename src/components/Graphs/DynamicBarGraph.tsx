@@ -97,7 +97,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
         });
         setGraphData(normalizedData);
       }
-      console.log("Process Data:", data, normalizedData, xKey, yKeys);
     } catch (error) {
       console.error("Error processing data:", error);
     }
@@ -107,7 +106,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
     return <div>No valid data for graph.</div>;
   }
 
-  console.log("Graph Data:", graphData, xKey, yKeys);
 
   return (
     <div style={{ width: "50vw", height: "400px" }}>
