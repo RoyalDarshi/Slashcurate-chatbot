@@ -35,7 +35,7 @@ const LinkedInLoginButton: React.FC = () => {
   return (
     <div>
       <LinkedIn
-        clientId="YOUR_LINKEDIN_CLIENT_ID"
+        clientId={import.meta.env.VITE_LINKEDIN_CLIENT_ID ?? ""}
         redirectUri={`${window.location.origin}/linkedin`}
         onSuccess={(code) => handleSuccess(code)}
         onError={handleFailure}

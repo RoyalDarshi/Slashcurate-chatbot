@@ -1,6 +1,13 @@
 // Sidebar.tsx
 import React, { useState, useEffect, useRef } from "react";
-import { MessageCircle, LogOut, Menu, User } from "lucide-react";
+import {
+  MessageCircle,
+  LogOut,
+  Menu,
+  User,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { menuItems } from "../menuItems";
 
 interface SidebarProps {
@@ -82,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
 
       <button
         title="Toggle Sidebar"
-        className="md:hidden p-3 text-white bg-gray-900 fixed top-4 left-4 rounded-full"
+        className="md:hidden p-3 text-white bg-gray-900 fixed top-4 left-4 rounded-full shadow-lg"
         onClick={() => setIsOpen(!isOpen)}
       >
         <Menu size={24} />
@@ -91,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
       <div
         className={`h-screen bg-gray-900 text-white p-4 flex flex-col justify-between w-64 md:static fixed top-0 left-0 transform ${
           isOpen ? "translate-x-0" : "-translate-x-64"
-        } md:translate-x-0 transition-transform duration-300 ease-in-out z-20`}
+        } md:translate-x-0 transition-transform duration-300 ease-in-out z-20 shadow-lg`}
       >
         <div>
           <div className="flex items-center space-x-2 mb-6">
@@ -99,25 +106,35 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
             <h1 className="text-xl font-bold">Ask Your Data</h1>
           </div>
 
-          <nav className="flex flex-col space-y-2">
+          <nav className="flex flex-col space-y-1">
             {menuItems.map(({ id, icon: Icon, label, subMenu }) => (
               <React.Fragment key={id}>
                 <button
-                  className={`flex items-center p-3 rounded-lg w-full transition-colors duration-200 ${
+                  className={`flex items-center justify-between p-3 rounded-md w-full transition-colors duration-200 ${
                     activeMenuItem === id ? "bg-gray-800" : "hover:bg-gray-800"
                   }`}
                   onClick={() => handleMenuClick(id)}
+                  aria-expanded={isConnectionsOpen && id === "connections"}
+                  aria-controls={id === "connections" ? "sub-menu" : undefined}
                 >
-                  <Icon size={20} />
-                  <span className="ml-3">{label}</span>
+                  <div className="flex items-center">
+                    <Icon size={20} />
+                    <span className="ml-3">{label}</span>
+                  </div>
+                  {id === "connections" &&
+                    (isConnectionsOpen ? (
+                      <ChevronUp size={16} />
+                    ) : (
+                      <ChevronDown size={16} />
+                    ))}
                 </button>
                 {isConnectionsOpen && id === "connections" && subMenu && (
-                  <div className="ml-6 space-y-2">
+                  <div id="sub-menu" className="ml-4 space-y-1">
                     {subMenu.map(
                       ({ id: subId, label: subLabel, icon: SubIcon }) => (
                         <button
                           key={subId}
-                          className={`flex items-center p-3 rounded-lg w-full transition-colors duration-200 ${
+                          className={`flex items-center p-3 rounded-md w-full transition-colors duration-200 ${
                             activeMenuItem === subId
                               ? "bg-gray-800"
                               : "hover:bg-gray-800"
@@ -141,7 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
             © /curate. All rights reserved.
           </div>
           <button
-            className="flex items-center p-3 hover:bg-gray-800 rounded-lg w-full mt-2"
+            className="flex items-center p-3 hover:bg-gray-800 rounded-md w-full mt-2 transition-colors duration-200"
             onClick={handleLogout}
           >
             <LogOut size={20} />
@@ -152,15 +169,17 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
       {/* User icon at the top right (outside sidebar) */}
       <div className="absolute top-4 right-4 z-30" ref={profileDropdownRef}>
         <button
-          className="p-2 rounded-full hover:bg-gray-800 bg-gray-900"
+          className="p-2 rounded-full hover:bg-gray-800 bg-gray-900 transition-colors duration-200"
           onClick={handleProfileClick}
+          aria-haspopup="true"
+          aria-expanded={isProfileOpen}
         >
           <User size={24} className="text-white" />
         </button>
         {isProfileOpen && (
           <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg">
             <button
-              className="block w-full text-left p-2 hover:bg-gray-700 text-white"
+              className="block w-full text-left p-2 hover:bg-gray-700 text-white transition-colors duration-200"
               onClick={() => {
                 setIsProfileOpen(false);
               }}
@@ -168,7 +187,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
               Settings
             </button>
             <button
-              className="block w-full text-left p-2 hover:bg-gray-700 text-white"
+              className="block w-full text-left p-2 hover:bg-gray-700 text-white transition-colors duration-200"
               onClick={() => {
                 setIsProfileOpen(false);
               }}

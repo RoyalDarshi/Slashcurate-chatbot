@@ -1,4 +1,3 @@
-// DataTable.tsx
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   createColumnHelper,
@@ -48,12 +47,12 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
           sortingFn: "alphanumeric",
           header: ({ column }) => (
             <div
-              className="flex items-center space-x-1 cursor-pointer select-none"
+              className="flex items-center space-x-1 cursor-pointer select-none hover:text-blue-500"
               onClick={() =>
                 column.toggleSorting(column.getIsSorted() !== "asc")
               }
             >
-              <span className="font-medium">{header}</span>
+              <span className="font-semibold text-blue-500">{header}</span>
               {column.getIsSorted() ? (
                 column.getIsSorted() === "asc" ? (
                   <span className="text-blue-500"> ▲</span>
@@ -61,7 +60,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
                   <span className="text-blue-500"> ▼</span>
                 )
               ) : (
-                <span className="text-blue-500"> ⬍</span>
+                <span className="text-gray-400"> ⬍</span>
               )}
             </div>
           ),
@@ -82,9 +81,9 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
 
   return (
     <div
-      className={`rounded-md border p-4 shadow-md ${
+      className={`rounded-lg border p-5 shadow-lg transition-all duration-300 ${
         darkMode
-          ? "bg-gray-800 border-gray-700 text-gray-200"
+          ? "bg-gray-900 border-gray-700 text-gray-200"
           : "bg-white border-gray-200 text-gray-700"
       }`}
     >
@@ -98,54 +97,69 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
             : "gray-300 transparent",
         }}
       >
-        <div className="min-w-full align-middle">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead
-              className={`sticky top-0 ${
-                darkMode
-                  ? "bg-gray-700 text-gray-300"
-                  : "bg-gray-50 text-gray-600"
-              }`}
-            >
-              <tr>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <React.Fragment key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        scope="col"
-                        className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider"
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                      </th>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className="px-5 py-4 whitespace-nowrap text-sm text-gray-500"
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead
+            className={`sticky top-0 z-10 border-b ${
+              darkMode
+                ? "bg-gray-800 text-gray-300"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            <tr>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <React.Fragment key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      className={`px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider cursor-pointer transition-colors duration-200 ${
+                        darkMode
+                          ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
+                          : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+                      }`}
+                      onClick={header.column.getToggleSortingHandler()}
                     >
                       {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
+                        header.column.columnDef.header,
+                        header.getContext()
                       )}
-                    </td>
+                    </th>
                   ))}
-                </tr>
+                </React.Fragment>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody
+            className={`divide-y ${
+              darkMode
+                ? "bg-gray-900 divide-gray-700"
+                : "bg-white divide-gray-200"
+            }`}
+          >
+            {table.getRowModel().rows.map((row, i) => (
+              <tr
+                key={row.id}
+                className={`transition duration-200 hover:bg-gray-200 dark:hover:bg-gray-700 ${
+                  i % 2 === 0
+                    ? darkMode
+                      ? "bg-gray-900"
+                      : "bg-white"
+                    : darkMode
+                    ? "bg-gray-800"
+                    : "bg-gray-50"
+                }`}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <td
+                    key={cell.id}
+                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300"
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

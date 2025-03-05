@@ -11,8 +11,12 @@ interface DecodedToken {
   picture?: string;
 }
 
+interface GoogleLoginResponse {
+  credential?: string;
+}
+
 const GoogleLoginButton: React.FC = () => {
-  const handleGoogleSuccess = async (response: { credential?: string }) => {
+  const handleGoogleSuccess = async (response: GoogleLoginResponse) => {
     if (!response.credential) {
       toast.error("Google login failed: No credential received.");
       return;
@@ -29,21 +33,27 @@ const GoogleLoginButton: React.FC = () => {
       });
 
       sessionStorage.setItem("token", res.data.token);
+      sessionStorage.setItem("userId", res.data.userId); // Store userId
       console.log("Backend response:", res.data);
-    } catch (error) {
+      window.location.reload(); // Refresh the page
+    } catch (error: any) {
       console.error("Error handling Google login:", error);
-      toast.error("Google Login Failed!");
+      toast.error(error.response?.data?.message || "Google Login Failed!"); // Improved error message
     }
   };
 
-  const handleGoogleFailure = () => {
+  const handleGoogleFailure = (error: any) => {
+    console.error("Google login failed:", error);
     toast.error("Google login failed!");
   };
 
   return (
     <GoogleLogin
+      clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ""}
       onSuccess={handleGoogleSuccess}
       onError={handleGoogleFailure}
+      // Add prompt="select_account" to force account selection every time
+      // prompt="select_account"
     />
   );
 };

@@ -55,6 +55,9 @@ interface Connection {
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onCreateConSelected,
 }) => {
+  // Add new state to track loading message ID
+  const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
+
   const [state, dispatch] = useReducer(reducer, initialState);
   const messagesRef = useRef<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -130,20 +133,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         timestamp: new Date().toISOString(),
       };
 
-      messagesRef.current = [...messagesRef.current, userMessage];
-      setMessages([...messagesRef.current]);
-      dispatch({ type: "SET_INPUT", payload: "" });
-      dispatch({ type: "SET_LOADING", payload: true });
-
-      const botMessage: Message = {
-        id: Date.now() + 1 + "",
+      const botLoadingMessage: Message = {
+        id: `loading-${Date.now()}`,
         content: "loading...",
         isBot: true,
         timestamp: new Date().toISOString(),
       };
 
-      messagesRef.current = [...messagesRef.current, botMessage];
+      // Set the current loading message ID
+      setLoadingMessageId(botLoadingMessage.id);
+
+      messagesRef.current = [
+        ...messagesRef.current,
+        userMessage,
+        botLoadingMessage,
+      ];
       setMessages([...messagesRef.current]);
+      dispatch({ type: "SET_INPUT", payload: "" });
 
       try {
         const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
@@ -152,31 +158,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         });
 
         const botResponseMessage: Message = {
-          id: Date.now() + 2 + "",
+          id: Date.now().toString(),
           content: JSON.stringify(response.data, null, 2),
           isBot: true,
           timestamp: new Date().toISOString(),
         };
 
-        messagesRef.current = [
-          ...messagesRef.current.filter((msg) => msg.id !== botMessage.id),
-          botResponseMessage,
-        ];
-        setMessages([...messagesRef.current]);
-      } catch {
+        messagesRef.current = messagesRef.current.map((msg) =>
+          msg.id === botLoadingMessage.id ? botResponseMessage : msg
+        );
+      } catch (error) {
+        console.error("Error getting bot response:", error);
+
         const errorMessage: Message = {
-          id: Date.now() + 3 + "",
+          id: Date.now().toString(),
           content: "Sorry, an error occurred. Please try again.",
           isBot: true,
           timestamp: new Date().toISOString(),
         };
-        messagesRef.current = [
-          ...messagesRef.current.filter((msg) => msg.id !== botMessage.id),
-          errorMessage,
-        ];
-        setMessages([...messagesRef.current]);
+
+        messagesRef.current = messagesRef.current.map((msg) =>
+          msg.id === botLoadingMessage.id ? errorMessage : msg
+        );
       } finally {
-        dispatch({ type: "SET_LOADING", payload: false });
+        setLoadingMessageId(null);
+        setMessages([...messagesRef.current]);
       }
     },
     [state.input, state.isLoading, selectedConnection]
@@ -189,6 +195,77 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       label: connection.connectionName,
     })),
   ];
+
+  const handleEditMessage = async (
+    id: string,
+    newContent: string,
+    botResponse?: string
+  ) => {
+    const messageIndex = messagesRef.current.findIndex((msg) => msg.id === id);
+    if (messageIndex === -1) return;
+
+    messagesRef.current = messagesRef.current.map((msg) =>
+      msg.id === id ? { ...msg, content: newContent } : msg
+    );
+    setMessages([...messagesRef.current]);
+
+    const editedMessage = messagesRef.current[messageIndex];
+    if (!editedMessage.isBot && selectedConnection) {
+      const botLoadingMessage: Message = {
+        id: `loading-${Date.now()}`,
+        content: "loading...",
+        isBot: true,
+        timestamp: new Date().toISOString(),
+      };
+
+      setLoadingMessageId(botLoadingMessage.id);
+
+      if (
+        messageIndex + 1 < messagesRef.current.length &&
+        messagesRef.current[messageIndex + 1].isBot
+      ) {
+        messagesRef.current[messageIndex + 1] = botLoadingMessage;
+      } else {
+        messagesRef.current.splice(messageIndex + 1, 0, botLoadingMessage);
+      }
+      setMessages([...messagesRef.current]);
+
+      try {
+        const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
+          question: newContent,
+          connection: selectedConnection,
+        });
+
+        const botResponseMessage: Message = {
+          id: Date.now().toString(),
+          content: JSON.stringify(response.data, null, 2),
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        messagesRef.current = messagesRef.current.map((msg) =>
+          msg.id === botLoadingMessage.id ? botResponseMessage : msg
+        );
+      } catch (error) {
+        console.error("Error getting bot response:", error);
+
+        // Replace loading message with error message, just like in handleSubmit
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          content: "Sorry, an error occurred. Please try again.",
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        messagesRef.current = messagesRef.current.map((msg) =>
+          msg.id === botLoadingMessage.id ? errorMessage : msg
+        );
+      } finally {
+        setLoadingMessageId(null);
+        setMessages([...messagesRef.current]);
+      }
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-gray-200 dark:bg-gray-900">
@@ -243,7 +320,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <ChatMessage
                 key={message.id}
                 message={message}
-                loading={state.isLoading && message.isBot}
+                loading={message.id === loadingMessageId}
+                onEditMessage={handleEditMessage}
+                onDeleteMessage={(id) => {
+                  messagesRef.current = messagesRef.current.filter(
+                    (msg) => msg.id !== id
+                  );
+                  setMessages([...messagesRef.current]);
+                }}
+                selectedConnection={selectedConnection}
               />
             ))}
             <div ref={messagesEndRef} />
