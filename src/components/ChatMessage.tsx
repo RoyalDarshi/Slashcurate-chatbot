@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Bot,
   User,
@@ -19,6 +19,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./ChatMessage.css";
 import html2canvas from "html2canvas";
+import { CSVLink } from "react-csv";
+import EditableMessage from "./EditableMessage";
 
 interface ChatMessageProps {
   message: Message;
@@ -44,14 +46,22 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [editedContent, setEditedContent] = useState(message.content);
     const [isUpdating, setIsUpdating] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
     const graphRef = useRef<HTMLDivElement>(null); // Ref for the graph container
+    const [csvData, setCsvData] = useState<any[]>([]);
 
     useEffect(() => {
-      if (isEditing) {
-        inputRef.current?.focus();
+      try {
+        const data = JSON.parse(message.content);
+        if (data && data.answer) {
+          const tableData = Array.isArray(data.answer)
+            ? data.answer
+            : [data.answer];
+          setCsvData(tableData);
+        }
+      } catch (error) {
+        setCsvData([]);
       }
-    }, [isEditing]);
+    }, [message.content]);
 
     const handleSwap = () => {
       setShowTable((prev) => !prev);
@@ -133,43 +143,14 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         );
       }
 
-      if (isEditing) {
-        return (
-          <div>
-            <textarea
-              ref={inputRef}
-              value={editedContent}
-              onChange={handleContentChange}
-              className="w-full p-2 border rounded-md"
-            />
-            <div className="flex space-x-2 mt-2">
-              <button
-                onClick={handleSave}
-                className={`p-2 text-white rounded-md transition-colors duration-200 ${
-                  hasChanges && !isUpdating
-                    ? "bg-green-500 hover:bg-green-600"
-                    : "bg-green-500/50 cursor-not-allowed"
-                }`}
-                disabled={!hasChanges || isUpdating}
-              >
-                <Check size={16} />
-              </button>
-              <button
-                onClick={handleCancel}
-                className="p-2 bg-red-500 text-white rounded-md disabled:opacity-50 hover:bg-red-600"
-                disabled={isUpdating}
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-        );
-      }
-
       try {
         const data = JSON.parse(message.content);
 
         if (data && data.answer) {
+          const tableData = Array.isArray(data.answer)
+            ? data.answer
+            : [data.answer];
+
           return (
             <div className="relative">
               <div className="absolute top-0 -right-14 flex flex-col items-center">
@@ -202,14 +183,21 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     </Tooltip>
                   </button>
                 )}
+                {showTable && (
+                  <CSVLink
+                    data={csvData}
+                    filename={"table_data.csv"}
+                    className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 mt-2 z-10"
+                  >
+                    <Tooltip title="Download CSV">
+                      <Download size={22} className="text-blue-600" />
+                    </Tooltip>
+                  </CSVLink>
+                )}
               </div>
 
               {showTable ? (
-                <DataTable
-                  data={
-                    Array.isArray(data.answer) ? data.answer : [data.answer]
-                  }
-                />
+                <DataTable data={tableData} />
               ) : (
                 <div>
                   <div ref={graphRef} style={{ flex: 1 }}>
@@ -274,57 +262,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 <div className="p-2 rounded-full bg-blue-400 shadow-md">
                   <User size={20} className="text-white" />
                 </div>
-                <div className="bg-blue-500 text-white rounded-2xl px-4 py-3 w-auto max-w-full shadow-md hover:shadow-lg transition-shadow">
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <textarea
-                        ref={inputRef}
-                        value={editedContent}
-                        onChange={handleContentChange}
-                        className="w-full bg-blue-600/50 text-white focus:outline-none resize-none rounded-lg p-2 border border-blue-400/30"
-                        disabled={isUpdating}
-                        rows={3}
-                        placeholder="Edit your message..."
-                      />
-                      <div className="flex items-center justify-between pt-2 border-t border-blue-400/30">
-                        <div className="flex items-center gap-2">
-                          <Tooltip
-                            title="Update message"
-                            position="bottom"
-                            arrow={true}
-                          >
-                            <button
-                              onClick={handleSave}
-                              className={`p-2 rounded-md transition-all duration-200 ${
-                                hasChanges && !isUpdating
-                                  ? "bg-green-500 hover:bg-green-600 text-white"
-                                  : "bg-green-500/30 text-white/50 cursor-not-allowed"
-                              }`}
-                              disabled={!hasChanges || isUpdating}
-                            >
-                              <Check size={16} />
-                            </button>
-                          </Tooltip>
-                          <Tooltip
-                            title="Cancel editing"
-                            position="bottom"
-                            arrow={true}
-                          >
-                            <button
-                              onClick={handleCancel}
-                              className="p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-md transition-all duration-200 disabled:opacity-50"
-                              disabled={isUpdating}
-                            >
-                              <X size={16} />
-                            </button>
-                          </Tooltip>
-                        </div>
-                        <span className="text-xs text-blue-100">
-                          {formattedTime}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
+                {!isEditing ? (
+                  <div className="bg-blue-500 text-white rounded-2xl px-4 py-3 w-auto max-w-full shadow-md hover:shadow-lg transition-shadow">
                     <>
                       <p className="whitespace-pre-wrap break-words">
                         {message.content}
@@ -347,8 +286,19 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                         </span>
                       </div>
                     </>
-                  )}
-                </div>
+                  </div>
+                ) : null}
+                {isEditing ? (
+                  <EditableMessage
+                    messageContent={editedContent}
+                    isUpdating={isUpdating}
+                    hasChanges={hasChanges}
+                    formattedTime={formattedTime}
+                    onSave={handleSave}
+                    onCancel={handleCancel}
+                    onContentChange={handleContentChange}
+                  />
+                ) : null}
               </div>
             </div>
           )}

@@ -64,7 +64,12 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
               )}
             </div>
           ),
-          cell: (info) => info.getValue() ?? "N/A",
+          cell: (info) => {
+            const cellValue = info.getValue();
+            return cellValue !== undefined && cellValue !== null
+              ? cellValue
+              : "N/A";
+          },
         })
       ),
     [headers]
