@@ -1,5 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, User, Table, ChartSpline, Edit3, Check, X } from "lucide-react";
+import {
+  Bot,
+  User,
+  Table,
+  ChartSpline,
+  Edit3,
+  Check,
+  X,
+  Download,
+} from "lucide-react";
 import axios from "axios";
 import { Message } from "../types";
 import DataTable from "./DataTable";
@@ -9,6 +18,7 @@ import DynamicBarGraph from "./Graphs/DynamicBarGraph";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./ChatMessage.css";
+import html2canvas from "html2canvas";
 
 interface ChatMessageProps {
   message: Message;
@@ -17,6 +27,9 @@ interface ChatMessageProps {
   onDeleteMessage: (id: string) => void;
   selectedConnection: string | null;
 }
+
+const CHATBOT_API_URL = process.env.REACT_APP_CHATBOT_API_URL || ""; // Ensure you have this defined
+const messagesRef = { current: [] as Message[] }; // Ensure you have this defined
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({
@@ -32,6 +45,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [isUpdating, setIsUpdating] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const graphRef = useRef<HTMLDivElement>(null); // Ref for the graph container
 
     useEffect(() => {
       if (isEditing) {
@@ -93,6 +107,21 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       minute: "2-digit",
     });
 
+    const handleDownloadGraph = async () => {
+      if (graphRef.current) {
+        try {
+          const canvas = await html2canvas(graphRef.current);
+          const image = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = image;
+          link.download = "graph.png";
+          link.click();
+        } catch (error) {
+          console.error("Error downloading graph:", error);
+        }
+      }
+    };
+
     const renderContent = () => {
       if (loading) {
         return (
@@ -143,23 +172,37 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         if (data && data.answer) {
           return (
             <div className="relative">
-              <button
-                onClick={handleSwap}
-                aria-label="Swap Data"
-                className="absolute top-0 -right-12 -m-1 p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 z-10"
-              >
-                <Tooltip
-                  title={
-                    showTable ? "Switch to Graph View" : "Switch to Table View"
-                  }
+              <div className="absolute top-0 -right-14 flex flex-col items-center">
+                <button
+                  onClick={handleSwap}
+                  aria-label="Swap Data"
+                  className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 z-10"
                 >
-                  {showTable ? (
-                    <ChartSpline className="text-blue-600" strokeWidth={2} />
-                  ) : (
-                    <Table size={22} className="text-blue-600" />
-                  )}
-                </Tooltip>
-              </button>
+                  <Tooltip
+                    title={
+                      showTable
+                        ? "Switch to Graph View"
+                        : "Switch to Table View"
+                    }
+                  >
+                    {showTable ? (
+                      <ChartSpline className="text-blue-600" strokeWidth={2} />
+                    ) : (
+                      <Table size={22} className="text-blue-600" />
+                    )}
+                  </Tooltip>
+                </button>
+                {!showTable && (
+                  <button
+                    onClick={handleDownloadGraph}
+                    className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 mt-2 z-10"
+                  >
+                    <Tooltip title="Download Graph">
+                      <Download size={22} className="text-blue-600" />
+                    </Tooltip>
+                  </button>
+                )}
+              </div>
 
               {showTable ? (
                 <DataTable
@@ -169,7 +212,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 />
               ) : (
                 <div>
-                  <div style={{ flex: 1 }}>
+                  <div ref={graphRef} style={{ flex: 1 }}>
                     <DynamicBarGraph data={data.answer} />
                   </div>
                 </div>
@@ -215,7 +258,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 <div className="p-2 rounded-full bg-gray-400 dark:bg-gray-600">
                   <Bot size={20} className="text-white" />
                 </div>
-                <div className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl px-4 py-3 w-auto max-w-full shadow-md animate-fade">
+                <div className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl px-4 py-3 my-4 w-auto max-w-full shadow-md animate-fade">
                   {renderContent()}
                   <div className="flex justify-end mt-2">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -283,7 +326,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     </div>
                   ) : (
                     <>
-                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                      <p className="whitespace-pre-wrap break-words">
+                        {message.content}
+                      </p>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-400/30">
                         <Tooltip
                           title="Edit message"
