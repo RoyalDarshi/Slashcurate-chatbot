@@ -259,11 +259,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           ) : (
             <div className="w-full flex flex-col items-end space-y-2">
               <div className="flex items-start gap-4 max-w-[80%] flex-row-reverse relative">
-                <div className="p-2 rounded-full bg-blue-400 shadow-md">
+                <div className="p-2 rounded-full bg-blue-500 shadow-md">
                   <User size={20} className="text-white" />
                 </div>
                 {!isEditing ? (
-                  <div className="bg-blue-500 text-white rounded-2xl px-4 py-3 w-auto max-w-full shadow-md hover:shadow-lg transition-shadow">
+                  <div className="bg-blue-600 text-white rounded-2xl px-4 py-3 w-auto max-w-full shadow-md hover:shadow-lg transition-shadow">
                     <>
                       <p className="whitespace-pre-wrap break-words">
                         {message.content}

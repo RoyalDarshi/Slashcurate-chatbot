@@ -7,7 +7,7 @@ import ResetPassword from "./components/ResetPassword";
 import Home from "./components/Home";
 import ConnectionForm from "./components/ConnectionForm"; // Import ConnectionForm
 import ExistingConnections from "./components/ExistingConnections";
-// // Import ExistingConnection
+import History from "./components/History";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -42,16 +42,24 @@ function App() {
             <>
               {isAuthenticated ? (
                 <div className="min-h-screen flex h-screen bg-gray-100 dark:bg-gray-900">
-                  <Sidebar onMenuClick={setActiveMenu} activeMenu={activeMenu} />
+                  <Sidebar
+                    onMenuClick={setActiveMenu}
+                    activeMenu={activeMenu}
+                  />
                   <div className="flex-1 flex flex-col overflow-hidden">
                     {activeMenu === "home" && (
                       <Home onBtnClick={handleHomeButtonClick} />
                     )}
-                    {activeMenu === "new-chat" && <ChatInterface onCreateConSelected={handleCreateConSelected} />}
+                    {activeMenu === "new-chat" && (
+                      <ChatInterface
+                        onCreateConSelected={handleCreateConSelected}
+                      />
+                    )}
                     {activeMenu === "new-connection" && <ConnectionForm />}
                     {activeMenu === "existing-connection" && (
                       <ExistingConnections />
                     )}
+                    {activeMenu === "history" && <History />}
                   </div>
                 </div>
               ) : (

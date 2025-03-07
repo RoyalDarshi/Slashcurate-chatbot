@@ -15,7 +15,7 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
   onContentChange,
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [editedContent, setEditedContent] = useState(messageContent);
+  const [editedContent, setEditedContent] = useState();
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
@@ -33,28 +33,29 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
   };
 
   return (
-    <div className="w-screen max-w-2xl mx-auto bg-gradient-to-br from-blue-100 to-purple-100 p-5 rounded-3xl shadow-xl">
+    <div className="w-screen max-w-2xl mx-auto  bg-blue-600 p-5 rounded-3xl shadow-xl">
       <Textarea
         variant="static"
         placeholder="Edit your message..."
         value={editedContent}
         onChange={handleTextareaChange}
         rows={4}
-        style={{ fontSize: "17px" }}
-        className="focus:outline-none border-none text-gray-900 text-lg placeholder-gray-500 bg-white"
+        style={{ fontSize: "17px", resize: "none" }}
+        className="outline-none border-none text-white text-lg placeholder-gray-100 bg-blue-600"
+        autoFocus={true}
         ref={inputRef}
       />
       <div className="flex justify-end mt-4 space-x-3">
         <Button
           size="sm"
-          className="rounded-2xl bg-red-400 text-white hover:bg-red-500 px-5 py-2 transition-all duration-200"
+          className="rounded-2xl bg-red-400 text-white hover:bg-red-500 px-5 py-2 transition-all duration-200 shadow-md"
           onClick={onCancel}
         >
           Cancel
         </Button>
         <Button
           size="sm"
-          className="rounded-2xl bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 transition-all duration-200 hover:shadow-md disabled:opacity-50"
+          className="rounded-2xl bg-white hover:bg-slate-200  text-blue-600 px-6 py-2 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onSave}
           disabled={!hasChanges}
         >

@@ -1,4 +1,3 @@
-// ChatInterface.tsx
 import React, {
   useReducer,
   useRef,
@@ -72,10 +71,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  // Function to save messages to local storage
+  const saveMessages = useCallback(() => {
+    try {
+      // Combine existing messages with new messages
+      const existingMessages = JSON.parse(
+        localStorage.getItem("chatMessages") ?? '[]'
+      );
+      console.log("existingMessages", existingMessages);
+      const allMessages = [...existingMessages, ...messagesRef.current];
+
+      // Limit to the last 10 messages
+      const limitedMessages = allMessages.slice(-10);
+      localStorage.setItem("chatMessages", JSON.stringify(limitedMessages));
+    } catch (error) {
+      console.error("Failed to save messages to local storage", error);
+    }
+  }, []);
+
   useEffect(() => {
     setMessages([...messagesRef.current]);
     scrollToBottom();
-  }, [messagesRef.current, scrollToBottom]);
+  }, [scrollToBottom]);
 
   useEffect(() => {
     const fetchConnections = async () => {
@@ -183,9 +200,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       } finally {
         setLoadingMessageId(null);
         setMessages([...messagesRef.current]);
+        saveMessages(); // Save messages after each submit
       }
     },
-    [state.input, state.isLoading, selectedConnection]
+    [state.input, state.isLoading, selectedConnection, saveMessages]
   );
 
   const options = [
@@ -236,18 +254,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           connection: selectedConnection,
         });
 
-        const botResponseMessage: Message = {
-          id: Date.now().toString(),
-          content: JSON.stringify(response.data, null, 2),
-          isBot: true,
-          timestamp: new Date().toISOString(),
-        };
-
-        messagesRef.current = messagesRef.current.map((msg) =>
-          msg.id === botLoadingMessage.id ? botResponseMessage : msg
+        const botResponse = JSON.stringify(response.data, null, 2);
+        const messageIndex = messagesRef.current.findIndex(
+          (msg) => msg.id === message.id
         );
+
+        if (messageIndex + 1 < messagesRef.current.length) {
+          onEditMessage(messagesRef.current[messageIndex + 1].id, botResponse);
+        }
       } catch (error) {
-        console.error("Error getting bot response:", error);
+        console.error("Error updating message:", error);
 
         // Replace loading message with error message, just like in handleSubmit
         const errorMessage: Message = {
@@ -263,6 +279,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       } finally {
         setLoadingMessageId(null);
         setMessages([...messagesRef.current]);
+        saveMessages(); // Save messages after each edit
       }
     }
   };
@@ -327,10 +344,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     (msg) => msg.id !== id
                   );
                   setMessages([...messagesRef.current]);
+                  saveMessages(); // Save messages after deletion
                 }}
                 selectedConnection={selectedConnection}
               />
             ))}
+            <div ref={messagesEndRef} />
           </div>
           <ChatInput
             input={state.input}
