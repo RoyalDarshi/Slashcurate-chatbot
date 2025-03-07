@@ -3,7 +3,7 @@ import {
   Bot,
   User,
   Table,
-  ChartSpline,
+  LineChart as ChartSpline,
   Edit3,
   Check,
   X,
@@ -21,6 +21,7 @@ import "./ChatMessage.css";
 import html2canvas from "html2canvas";
 import { CSVLink } from "react-csv";
 import EditableMessage from "./EditableMessage";
+import { motion } from "framer-motion";
 
 interface ChatMessageProps {
   message: Message;
@@ -153,11 +154,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
           return (
             <div className="relative">
-              <div className="absolute top-0 -right-14 flex flex-col items-center">
-                <button
+              <div className="absolute -right-12 top-0 flex flex-col items-center gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={handleSwap}
-                  aria-label="Swap Data"
-                  className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 z-10"
+                  className="rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                 >
                   <Tooltip
                     title={
@@ -167,67 +169,116 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     }
                   >
                     {showTable ? (
-                      <ChartSpline className="text-blue-600" strokeWidth={2} />
+                      <ChartSpline
+                        className="text-blue-500 dark:text-blue-400"
+                        size={20}
+                      />
                     ) : (
-                      <Table size={22} className="text-blue-600" />
+                      <Table
+                        className="text-blue-500 dark:text-blue-400"
+                        size={20}
+                      />
                     )}
                   </Tooltip>
-                </button>
+                </motion.button>
+
                 {!showTable && (
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={handleDownloadGraph}
-                    className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 mt-2 z-10"
+                    className="rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                   >
                     <Tooltip title="Download Graph">
-                      <Download size={22} className="text-blue-600" />
+                      <Download
+                        className="text-blue-500 dark:text-blue-400"
+                        size={20}
+                      />
                     </Tooltip>
-                  </button>
+                  </motion.button>
                 )}
+
                 {showTable && (
-                  <CSVLink
-                    data={csvData}
-                    filename={"table_data.csv"}
-                    className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 mt-2 z-10"
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <Tooltip title="Download CSV">
-                      <Download size={22} className="text-blue-600" />
-                    </Tooltip>
-                  </CSVLink>
+                    <CSVLink
+                      data={tableData}
+                      filename="table_data.csv"
+                      className="flex rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    >
+                      <Tooltip title="Download CSV">
+                        <Download
+                          className="text-blue-500 dark:text-blue-400"
+                          size={20}
+                        />
+                      </Tooltip>
+                    </CSVLink>
+                  </motion.div>
                 )}
               </div>
 
-              {showTable ? (
-                <DataTable data={tableData} />
-              ) : (
-                <div>
-                  <div ref={graphRef} style={{ flex: 1 }}>
+              <div className="rounded-xl bg-white p-4 shadow-md dark:bg-gray-800">
+                {showTable ? (
+                  <>
+                    <DataTable data={tableData} />
+                    <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(message.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div ref={graphRef} className="w-full">
                     <DynamicBarGraph data={data.answer} />
+                    <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(message.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
-        } else {
-          return (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ node, ...props }) => (
-                  <p className="whitespace-pre-wrap break-words" {...props} />
-                ),
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
-          );
         }
+
+        return (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              p: ({ node, ...props }) => (
+                <p
+                  className="whitespace-pre-wrap break-words leading-relaxed text-gray-700 dark:text-gray-300"
+                  {...props}
+                />
+              ),
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        );
       } catch {
         return (
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               p: ({ node, ...props }) => (
-                <p className="whitespace-pre-wrap break-words" {...props} />
+                <div className="rounded-2xl rounded-tl-none bg-white p-4 shadow-md dark:bg-gray-800">
+                  <p
+                    className="whitespace-pre-wrap break-words leading-relaxed text-gray-700 dark:text-gray-300"
+                    {...props}
+                  />
+                  <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
               ),
             }}
           >
@@ -238,71 +289,54 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     };
 
     return (
-      <div className="w-full flex flex-col px-4 space-y-4">
-        <div className="w-full flex">
-          {message.isBot ? (
-            <div className="w-full flex flex-col items-start space-y-2">
-              <div className="flex items-start space-x-4 max-w-[80%]">
-                <div className="p-2 rounded-full bg-gray-400 dark:bg-gray-600">
-                  <Bot size={20} className="text-white" />
-                </div>
-                <div className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl px-4 py-3 my-4 w-auto max-w-full shadow-md animate-fade">
-                  {renderContent()}
-                  <div className="flex justify-end mt-2">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {formattedTime}
-                    </span>
-                  </div>
+      <div className="mb-6 flex w-full">
+        {message.isBot ? (
+          <div className="flex w-full items-start space-x-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg dark:from-blue-600 dark:to-purple-600">
+              <Bot size={20} className="text-white" />
+            </div>
+            <div className="max-w-[80%]">{renderContent()}</div>
+          </div>
+        ) : (
+          <div className="ml-auto flex w-full items-start justify-end space-x-4">
+            {!isEditing ? (
+              <div className="max-w-[80%] rounded-2xl rounded-tr-none bg-gradient-to-r from-blue-500 to-blue-600 p-4 shadow-lg dark:from-blue-600 dark:to-blue-700">
+                <p className="whitespace-pre-wrap break-words text-white">
+                  {message.content}
+                </p>
+                <div className="mt-2 border-t border-blue-400/30 pt-2 flex items-center justify-between">
+                  <span className="text-xs text-blue-50">
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <Tooltip title="Edit message" position="bottom" arrow={true}>
+                    <button
+                      onClick={handleEdit}
+                      className="p-2 text-blue-100 hover:text-white transition-colors duration-200"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
+            ) : (
+              <EditableMessage
+                messageContent={editedContent}
+                isUpdating={isUpdating}
+                hasChanges={hasChanges}
+                formattedTime={formattedTime}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                onContentChange={handleContentChange}
+              />
+            )}
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg dark:from-blue-600 dark:to-blue-700">
+              <User size={20} className="text-white" />
             </div>
-          ) : (
-            <div className="w-full flex flex-col items-end space-y-2">
-              <div className="flex items-start gap-4 max-w-[80%] flex-row-reverse relative">
-                <div className="p-2 rounded-full bg-blue-500 shadow-md">
-                  <User size={20} className="text-white" />
-                </div>
-                {!isEditing ? (
-                  <div className="bg-blue-600 text-white rounded-2xl px-4 py-3 w-auto max-w-full shadow-md hover:shadow-lg transition-shadow">
-                    <>
-                      <p className="whitespace-pre-wrap break-words">
-                        {message.content}
-                      </p>
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-400/30">
-                        <Tooltip
-                          title="Edit message"
-                          position="bottom"
-                          arrow={true}
-                        >
-                          <button
-                            onClick={handleEdit}
-                            className="p-2 text-blue-100 hover:text-white transition-colors duration-200"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                        </Tooltip>
-                        <span className="text-xs text-blue-100">
-                          {formattedTime}
-                        </span>
-                      </div>
-                    </>
-                  </div>
-                ) : null}
-                {isEditing ? (
-                  <EditableMessage
-                    messageContent={editedContent}
-                    isUpdating={isUpdating}
-                    hasChanges={hasChanges}
-                    formattedTime={formattedTime}
-                    onSave={handleSave}
-                    onCancel={handleCancel}
-                    onContentChange={handleContentChange}
-                  />
-                ) : null}
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }

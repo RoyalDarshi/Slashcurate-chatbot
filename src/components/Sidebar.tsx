@@ -4,7 +4,6 @@ import {
   MessageCircle,
   LogOut,
   Menu,
-  User,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -19,7 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState<string>("home");
   const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  // const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
       onMenuClick(id);
       setIsOpen(false);
       setIsConnectionsOpen(false);
-      setIsProfileOpen(false);
+      // setIsProfileOpen(false);
     }
   };
 
@@ -50,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
     onMenuClick(id);
     setIsOpen(false);
     setIsConnectionsOpen(false);
-    setIsProfileOpen(false);
+    // setIsProfileOpen(false);
   };
 
   const handleLogout = () => {
@@ -58,9 +57,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
     window.location.reload();
   };
 
-  const handleProfileClick = () => {
-    setIsProfileOpen(!isProfileOpen);
-  };
+  // const handleProfileClick = () => {
+  //   setIsProfileOpen(!isProfileOpen);
+  // };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -68,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
         profileDropdownRef.current &&
         !profileDropdownRef.current.contains(event.target as Node)
       ) {
-        setIsProfileOpen(false);
+        // setIsProfileOpen(false);
       }
     };
 
@@ -166,7 +165,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
           </button>
         </div>
       </div>
-      {/* User icon at the top right (outside sidebar) */}
+      {/* User icon at the top right (outside sidebar)
       <div className="absolute top-4 right-4 z-30" ref={profileDropdownRef}>
         <button
           className="p-2 rounded-full hover:bg-gray-800 bg-gray-900 transition-colors duration-200"
@@ -196,7 +195,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
             </button>
           </div>
         )}
-      </div>
+      </div> */}
     </div>
   );
 };

@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Message } from "../types";
-import { Bot, User, Table, ChartSpline, Download } from "lucide-react";
+import {
+  Bot,
+  User,
+  Table,
+  LineChart as ChartSpline,
+  Download,
+  Search,
+} from "lucide-react";
 import DataTable from "./DataTable";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +15,7 @@ import remarkGfm from "remark-gfm";
 import html2canvas from "html2canvas";
 import { CSVLink } from "react-csv";
 import { Tooltip } from "react-tippy";
+import { motion, AnimatePresence } from "framer-motion";
 import "react-tippy/dist/tippy.css";
 
 const History: React.FC = () => {
@@ -38,15 +46,21 @@ const History: React.FC = () => {
 
     if (term) {
       const filtered: Message[] = [];
-      for (let i = 0; i < messages.length - 1; i++) {
+      for (let i = 0; i < messages.length; i++) {
         if (
           !messages[i].isBot &&
-          messages[i].content.toLowerCase().includes(term.toLowerCase()) &&
-          messages[i + 1].isBot
+          messages[i].content.toLowerCase().includes(term.toLowerCase())
         ) {
-          filtered.push(messages[i]); // push user message
-          filtered.push(messages[i + 1]); // Push the bot's response
-          i++; // Skip the bot's response in the next iteration
+          // Found a user message with the search term
+          filtered.push(messages[i]); // Add the user message
+
+          // Search for the next bot message
+          for (let j = i + 1; j < messages.length; j++) {
+            if (messages[j].isBot) {
+              filtered.push(messages[j]); // Add the bot message
+              break; // Stop searching for bot messages after the first one
+            }
+          }
         }
       }
       setFilteredMessages(filtered);
@@ -87,11 +101,12 @@ const History: React.FC = () => {
 
         return (
           <div className="relative">
-            <div className="absolute top-0 -right-14 flex flex-col items-center">
-              <button
+            <div className="absolute -right-12 top-0 flex flex-col items-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleSwap}
-                aria-label="Swap Data"
-                className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 z-10"
+                className="rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
               >
                 <Tooltip
                   title={
@@ -99,67 +114,116 @@ const History: React.FC = () => {
                   }
                 >
                   {showTable ? (
-                    <ChartSpline className="text-blue-600" strokeWidth={2} />
+                    <ChartSpline
+                      className="text-blue-500 dark:text-blue-400"
+                      size={20}
+                    />
                   ) : (
-                    <Table size={22} className="text-blue-600" />
+                    <Table
+                      className="text-blue-500 dark:text-blue-400"
+                      size={20}
+                    />
                   )}
                 </Tooltip>
-              </button>
+              </motion.button>
+
               {!showTable && (
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={handleDownloadGraph}
-                  className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 mt-2 z-10"
+                  className="rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                 >
                   <Tooltip title="Download Graph">
-                    <Download size={22} className="text-blue-600" />
+                    <Download
+                      className="text-blue-500 dark:text-blue-400"
+                      size={20}
+                    />
                   </Tooltip>
-                </button>
+                </motion.button>
               )}
+
               {showTable && (
-                <CSVLink
-                  data={tableData}
-                  filename={"table_data.csv"}
-                  className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 mt-2 z-10"
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Tooltip title="Download CSV">
-                    <Download size={22} className="text-blue-600" />
-                  </Tooltip>
-                </CSVLink>
+                  <CSVLink
+                    data={tableData}
+                    filename="table_data.csv"
+                    className="flex rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  >
+                    <Tooltip title="Download CSV">
+                      <Download
+                        className="text-blue-500 dark:text-blue-400"
+                        size={20}
+                      />
+                    </Tooltip>
+                  </CSVLink>
+                </motion.div>
               )}
             </div>
 
-            {showTable ? (
-              <DataTable data={tableData} />
-            ) : (
-              <div>
-                <div ref={graphRef} style={{ flex: 1 }}>
+            <div className="rounded-xl bg-white p-4 shadow-md dark:bg-gray-800">
+              {showTable ? (
+                <>
+                  <DataTable data={tableData} />
+                  <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div ref={graphRef} className="w-full">
                   <DynamicBarGraph data={data.answer} />
+                  <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         );
-      } else {
-        return (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ node, ...props }) => (
-                <p className="whitespace-pre-wrap break-words" {...props} />
-              ),
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
-        );
       }
+
+      return (
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            p: ({ node, ...props }) => (
+              <p
+                className="whitespace-pre-wrap break-words leading-relaxed text-gray-700 dark:text-gray-300"
+                {...props}
+              />
+            ),
+          }}
+        >
+          {message.content}
+        </ReactMarkdown>
+      );
     } catch {
       return (
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
             p: ({ node, ...props }) => (
-              <p className="whitespace-pre-wrap break-words" {...props} />
+              <div className="rounded-2xl rounded-tl-none bg-white p-4 shadow-md dark:bg-gray-800">
+                <p
+                  className="whitespace-pre-wrap break-words leading-relaxed text-gray-700 dark:text-gray-300"
+                  {...props}
+                />
+                <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
+                  {new Date(message.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
             ),
           }}
         >
@@ -170,52 +234,50 @@ const History: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-200 dark:bg-gray-900 p-4">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
-        Chat History
-      </h2>
-      <input
-        type="text"
-        placeholder="Search chat history..."
-        value={searchTerm}
-        onChange={handleSearchChange}
-        className="w-full px-4 py-2 border rounded-md text-gray-700 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-      />
-      <div className="overflow-y-auto flex-1">
-        {messagesToDisplay.length > 0 ? (
-          messagesToDisplay.map((message) => (
-            <div key={message.id} className="w-full flex">
-              {message.isBot ? (
-                <div className="w-full flex flex-col items-start space-y-2">
-                  <div className="flex items-start space-x-4 max-w-[80%]">
-                    <div className="p-2 rounded-full bg-gray-400 dark:bg-gray-600">
+    <div className="flex h-full flex-col bg-gradient-to-br from-gray-300 to-gray-300 p-6 dark:from-gray-900 dark:to-gray-800">
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-3xl font-bold text-transparent dark:from-blue-400 dark:to-purple-400">
+          Chat History
+        </h2>
+        <div className="relative w-1/3">
+          <input
+            type="text"
+            placeholder="Search conversations..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-full rounded-full bg-white px-5 py-2.5 pl-12 text-gray-700 shadow-sm ring-1 ring-gray-200 transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700 dark:placeholder:text-gray-500"
+          />
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+        </div>
+      </div>
+
+      <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-700 dark:hover:scrollbar-thumb-gray-600 flex-1 overflow-y-auto">
+        <AnimatePresence>
+          {messagesToDisplay.length > 0 ? (
+            messagesToDisplay.map((message, index) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="mb-6 flex w-full last:mb-0"
+              >
+                {message.isBot ? (
+                  <div className="flex w-full items-start space-x-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg dark:from-blue-600 dark:to-purple-600">
                       <Bot size={20} className="text-white" />
                     </div>
-                    <div className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl px-4 py-3 my-4 w-auto max-w-full shadow-md animate-fade">
-                      {renderContent(message)}
-                      <div className="flex justify-end mt-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(message.timestamp).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </div>
+                    <div className="max-w-[80%]">{renderContent(message)}</div>
                   </div>
-                </div>
-              ) : (
-                <div className="w-full flex flex-col items-end space-y-2">
-                  <div className="flex items-start gap-4 max-w-[80%] flex-row-reverse">
-                    <div className="p-2 rounded-full bg-blue-500 shadow-md">
-                      <User size={20} className="text-white" />
-                    </div>
-                    <div className="bg-blue-600 text-white rounded-2xl px-4 py-3 w-auto max-w-full shadow-md hover:shadow-lg transition-shadow">
-                      <p className="whitespace-pre-wrap break-words">
+                ) : (
+                  <div className="ml-auto flex w-full items-start justify-end space-x-4">
+                    <div className="max-w-[80%] rounded-2xl rounded-tr-none bg-gradient-to-r from-blue-500 to-blue-600 p-4 shadow-lg dark:from-blue-600 dark:to-blue-700">
+                      <p className="whitespace-pre-wrap break-words text-white">
                         {message.content}
                       </p>
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-400/30">
-                        <span className="text-xs text-blue-100">
+                      <div className="mt-2 border-t border-blue-400/30 pt-2">
+                        <span className="text-xs text-blue-50">
                           {new Date(message.timestamp).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -223,14 +285,23 @@ const History: React.FC = () => {
                         </span>
                       </div>
                     </div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg dark:from-blue-600 dark:to-blue-700">
+                      <User size={20} className="text-white" />
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-500 dark:text-gray-400">No messages found.</p>
-        )}
+                )}
+              </motion.div>
+            ))
+          ) : (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center text-gray-500 dark:text-gray-400"
+            >
+              No messages found.
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

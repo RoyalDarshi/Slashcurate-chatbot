@@ -33,7 +33,7 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
   };
 
   return (
-    <div className="w-screen max-w-2xl mx-auto  bg-blue-600 p-5 rounded-3xl shadow-xl">
+    <div className="w-screen max-w-2xl rounded-2xl rounded-tr-none bg-gradient-to-r from-blue-500 to-blue-600 p-4 shadow-lg dark:from-blue-600 dark:to-blue-700">
       <Textarea
         variant="static"
         placeholder="Edit your message..."
@@ -41,7 +41,7 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
         onChange={handleTextareaChange}
         rows={4}
         style={{ fontSize: "17px", resize: "none" }}
-        className="outline-none border-none text-white text-lg placeholder-gray-100 bg-blue-600"
+        className="outline-none border-none text-white text-lg placeholder-gray-100 bg-transparent w-full"
         autoFocus={true}
         ref={inputRef}
       />
