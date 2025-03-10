@@ -48,14 +48,14 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
       <div className="flex justify-end mt-4 space-x-3">
         <Button
           size="sm"
-          className="rounded-2xl bg-red-400 text-white hover:bg-red-500 px-5 py-2 transition-all duration-200 shadow-md"
+          className="rounded-2xl bg-slate-600 text-white hover:bg-slate-700 px-4 py-2 transition-all duration-200 shadow-md normal-case" // Added normal-case
           onClick={onCancel}
         >
           Cancel
         </Button>
         <Button
           size="sm"
-          className="rounded-2xl bg-white hover:bg-slate-200  text-blue-600 px-6 py-2 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-2xl bg-green-500 text-white hover:bg-green-600 px-5 py-2 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed normal-case" // Added normal-case
           onClick={onSave}
           disabled={!hasChanges}
         >

@@ -20,15 +20,18 @@ import Select from "react-select";
 interface State {
   isLoading: boolean;
   input: string;
+  isSubmitting: boolean; // Add this line
 }
 
 type Action =
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_INPUT"; payload: string };
+  | { type: "SET_INPUT"; payload: string }
+  | { type: "SET_SUBMITTING"; payload: boolean }; // Add this line
 
 const initialState: State = {
   isLoading: false,
   input: "",
+  isSubmitting: false, // Add this line
 };
 
 const reducer = (state: State, action: Action): State => {
@@ -37,6 +40,8 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, isLoading: action.payload };
     case "SET_INPUT":
       return { ...state, input: action.payload };
+    case "SET_SUBMITTING": // Add this case
+      return { ...state, isSubmitting: action.payload };
     default:
       return state;
   }
@@ -68,15 +73,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [connectionSelected, setConnectionSelected] = useState(false);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+    console.log(messagesEndRef.current);
   }, []);
-
   // Function to save messages to local storage
   const saveMessages = useCallback(() => {
     try {
       // Combine existing messages with new messages
       const existingMessages = JSON.parse(
-        localStorage.getItem("chatMessages") ?? '[]'
+        localStorage.getItem("chatMessages") ?? "[]"
       );
       console.log("existingMessages", existingMessages);
       const allMessages = [...existingMessages, ...messagesRef.current];
@@ -91,8 +98,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     setMessages([...messagesRef.current]);
+  }, []);
+
+  useEffect(() => {
     scrollToBottom();
-  }, [scrollToBottom]);
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     const fetchConnections = async () => {
@@ -141,7 +151,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+      scrollToBottom();
       if (!state.input.trim() || state.isLoading || !selectedConnection) return;
+      dispatch({ type: "SET_SUBMITTING", payload: true }); // Disable input and button
 
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -152,7 +164,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       const botLoadingMessage: Message = {
         id: `loading-${Date.now()}`,
-        content: "loading...",
         isBot: true,
         timestamp: new Date().toISOString(),
       };
@@ -200,6 +211,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       } finally {
         setLoadingMessageId(null);
         setMessages([...messagesRef.current]);
+        dispatch({ type: "SET_SUBMITTING", payload: false }); // Re-enable input and button
         saveMessages(); // Save messages after each submit
       }
     },
@@ -332,7 +344,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
       {connectionSelected && (
         <>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto px-4">
             {messages.map((message) => (
               <ChatMessage
                 key={message.id}
@@ -357,6 +369,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onInputChange={(value) =>
               dispatch({ type: "SET_INPUT", payload: value })
             }
+            isSubmitting={state.isSubmitting} // Pass isSubmitting
             onSubmit={handleSubmit}
           />
         </>

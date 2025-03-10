@@ -115,50 +115,49 @@ const ExistingConnections: React.FC = () => {
   }, [fetchConnections]);
 
   return (
-    <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+    <div className="p-6 bg-white dark:bg-gray-800">
       <ToastContainer />
       <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-200">
         Existing Connections
       </h2>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="overflow-x-auto mb-40 relative">
         <div ref={tableContainerRef}>
-          <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+          <table className="min-w-full mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm">
             {connections.length > 0 && (
               <>
-                <thead className="bg-blue-600 dark:bg-blue-900">
+                <thead className="bg-blue-600 dark:bg-blue-700">
                   <tr>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-32">
+                    <th className="py-3 px-4 text-left text-white w-32">
                       Connection Name
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-48">
+                    <th className="py-3 px-4 text-left text-white w-48">
                       Description
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-32">
+                    <th className="py-3 px-4 text-left text-white w-32">
                       Hostname
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-20">
+                    <th className="py-3 px-4 text-left text-white w-20">
                       Port
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-32">
+                    <th className="py-3 px-4 text-left text-white w-32">
                       Database
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-32">
+                    <th className="py-3 px-4 text-left text-white w-32">
                       Username
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-32">
+                    <th className="py-3 px-4 text-left text-white w-32">
                       Command Timeout
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-32">
+                    <th className="py-3 px-4 text-left text-white w-32">
                       Max Transport Objects
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-32">
+                    <th className="py-3 px-4 text-left text-white w-32">
                       Selected DB
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-40">
+                    <th className="py-3 px-4 text-left text-white w-40">
                       Created At
                     </th>
-                    <th className="py-3 px-4 border-b dark:border-gray-700 text-left text-white w-20">
+                    <th className="py-3 px-4 text-left text-white w-20">
                       Actions
                     </th>
                   </tr>
@@ -169,37 +168,37 @@ const ExistingConnections: React.FC = () => {
                       key={connection.connectionName}
                       className="hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                     >
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-32">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
                         {connection.connectionName}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-48">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-48">
                         {connection.description}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-32">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
                         {connection.hostname}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-20">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-20">
                         {connection.port}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-32">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
                         {connection.database}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-32">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
                         {connection.username}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-32">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
                         {connection.commandTimeout}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-32">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
                         {connection.maxTransportObjects}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-32">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
                         {connection.selectedDB}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-40">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-40">
                         {connection.created_at}
                       </td>
-                      <td className="py-3 px-4 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200 w-20">
+                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-20">
                         <button
                           onClick={() => handleDeleteConnection(connection.id)}
                           className="text-red-500 hover:text-red-700 focus:outline-none"

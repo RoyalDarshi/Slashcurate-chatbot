@@ -271,7 +271,7 @@ const History: React.FC = () => {
                     <div className="max-w-[80%]">{renderContent(message)}</div>
                   </div>
                 ) : (
-                  <div className="ml-auto flex w-full items-start justify-end space-x-4">
+                  <div className="ml-auto flex w-full items-start justify-end space-x-4 pr-4">
                     <div className="max-w-[80%] rounded-2xl rounded-tr-none bg-gradient-to-r from-blue-500 to-blue-600 p-4 shadow-lg dark:from-blue-600 dark:to-blue-700">
                       <p className="whitespace-pre-wrap break-words text-white">
                         {message.content}

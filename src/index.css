@@ -16,23 +16,25 @@
 
 /* width */
 ::-webkit-scrollbar {
-    width: 6px;
+    width: 10px;
+    height: 10px;
 }
 
 /* Track */
 ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    @apply bg-gray-200;
+    border-radius: 8px;
 }
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-    @apply bg-gray-400 rounded-full transition-all duration-300;
-    border-radius: 5px;
+    @apply bg-gray-500 rounded-full transition-all duration-300;
+    border-radius: 8px;
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500;
+    @apply bg-gray-400;
     cursor: default;
 }
 
@@ -57,26 +59,5 @@
   
   .scrollbar-custom::-webkit-scrollbar-thumb {
     @apply bg-gray-400/50 rounded-full hover:bg-gray-500/50 transition-colors;
-  }
-}
-
-.animate-bounce {
-  animation: bounce 1s infinite;
-}
-
-.delay-100 {
-  animation-delay: 0.1s;
-}
-
-.delay-200 {
-  animation-delay: 0.2s;
-}
-
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
   }
 }

@@ -136,10 +136,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const renderContent = () => {
       if (loading) {
         return (
-          <div className="flex justify-center items-center space-x-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-typing delay-100"></div>
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-typing delay-200"></div>
-            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-typing delay-300"></div>
+          <div className="rounded-2xl rounded-tl-none bg-white p-4 shadow-md pb-6 flex items-center justify-center dark:bg-gray-800">
+            <div className="loader"></div>
           </div>
         );
       }
