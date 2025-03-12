@@ -84,7 +84,7 @@ const ExistingConnections: React.FC = () => {
       setLoading(true);
       setLoadingText("Deleting connection, please wait...");
       setError(null);
-      await axios.post(`${API_URL}/deleteconnection`, {
+      await axios.post(`${API_URL}/deleteuserconnection`, {
         userId,
         connectionId,
       });

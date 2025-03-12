@@ -335,44 +335,9 @@ const ConnectionForm: React.FC = () => {
     return "";
   };
 
-  const validateForm = () => {
-    const newErrors: Errors = {};
-    Object.keys(formData).forEach((key) => {
-      const value = formData[key as keyof FormData];
-      let error = "";
-      switch (key) {
-        case "connectionName":
-          error = validateConnectionName(value);
-          break;
-        case "hostname":
-          error = validateHostname(value);
-          break;
-        case "port":
-          error = validatePort(value);
-          break;
-        case "database":
-          error = validateDatabase(value);
-          break;
-        case "username":
-          error = validateUsername(value);
-          break;
-        case "password":
-          error = validatePassword(value);
-          break;
-        default:
-          break;
-      }
-      if (error) {
-        newErrors[key] = error;
-      }
-    });
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!isFormValid) return;
 
     const userId = sessionStorage.getItem("userId");
     if (!userId) {
@@ -411,7 +376,7 @@ const ConnectionForm: React.FC = () => {
   };
 
   const handleTestConnection = async () => {
-    if (!validateForm()) return;
+    if (!isFormValid) return;
     setLoading(true);
     setLoadingText("Testing connection, please wait...");
     try {

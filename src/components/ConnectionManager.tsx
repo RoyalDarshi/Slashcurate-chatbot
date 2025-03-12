@@ -1,12 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import ConnectionForm from "./ConnectionForm";
 import ExistingConnections from "./ExistingConnections";
 
 const ConnectionManager: React.FC = () => {
   const [view, setView] = useState<"new" | "existing">("new");
-
-  const MemoizedConnectionForm = useMemo(() => <ConnectionForm />, []);
-  const MemoizedExistingConnections = useMemo(() => <ExistingConnections />, []);
 
   return (
     <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-full h-full overflow-hidden">
@@ -36,8 +33,8 @@ const ConnectionManager: React.FC = () => {
         </fieldset>
       </div>
       <div className="w-full h-full overflow-y-auto">
-        {view === "new" && MemoizedConnectionForm}
-        {view === "existing" && MemoizedExistingConnections}
+        {view === "new" && <ConnectionForm />}
+        {view === "existing" && <ExistingConnections />}
       </div>
     </div>
   );

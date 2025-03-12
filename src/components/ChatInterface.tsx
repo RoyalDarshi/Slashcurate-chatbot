@@ -234,6 +234,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const messageIndex = messagesRef.current.findIndex((msg) => msg.id === id);
     if (messageIndex === -1) return;
 
+    // Update the edited message
     messagesRef.current = messagesRef.current.map((msg) =>
       msg.id === id ? { ...msg, content: newContent } : msg
     );
@@ -250,6 +251,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       setLoadingMessageId(botLoadingMessage.id);
 
+      // Insert or update bot message
       if (
         messageIndex + 1 < messagesRef.current.length &&
         messagesRef.current[messageIndex + 1].isBot
@@ -267,17 +269,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         });
 
         const botResponse = JSON.stringify(response.data, null, 2);
-        const messageIndex = messagesRef.current.findIndex(
-          (msg) => msg.id === message.id
-        );
 
+        // Update the bot message (using the correct reference)
         if (messageIndex + 1 < messagesRef.current.length) {
-          onEditMessage(messagesRef.current[messageIndex + 1].id, botResponse);
+          const botMessageId = messagesRef.current[messageIndex + 1].id;
+          messagesRef.current = messagesRef.current.map((msg) =>
+            msg.id === botMessageId ? { ...msg, content: botResponse } : msg
+          );
         }
       } catch (error) {
         console.error("Error updating message:", error);
 
-        // Replace loading message with error message, just like in handleSubmit
+        // Replace loading message with error message
         const errorMessage: Message = {
           id: Date.now().toString(),
           content: "Sorry, an error occurred. Please try again.",
@@ -291,7 +294,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       } finally {
         setLoadingMessageId(null);
         setMessages([...messagesRef.current]);
-        saveMessages(); // Save messages after each edit
+        saveMessages();
       }
     }
   };
@@ -302,14 +305,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="p-4 flex items-center justify-between">
         {connectionSelected ? (
           <div className="flex items-center">
-            <span className="font-semibold text-lg mr-2 dark:text-gray-200">
+            <span className="font-semibold text-lg mr-2 text-gray-800 dark:text-gray-200 transition-colors duration-200">
               Current Connection:
             </span>
-            <span className="text-lg dark:text-gray-200">
+            <span className="text-lg text-gray-700 dark:text-gray-300 transition-colors duration-200">
               {selectedConnection}
             </span>
             <button
-              className="ml-2 px-3 py-1 text-xs text-red-600 border border-red-600 rounded-full hover:bg-red-100"
+              className="ml-2 px-3 py-1 text-xs border rounded-full transition-all duration-200
+              text-red-600 dark:text-red-400
+              border-red-600 dark:border-red-400
+              hover:bg-red-100 dark:hover:bg-red-900/20
+              hover:text-red-700 dark:hover:text-red-300"
               onClick={handleChangeConnection}
             >
               Edit

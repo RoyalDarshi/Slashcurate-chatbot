@@ -25,18 +25,33 @@ const Login: React.FC<LoginProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value.trimStart(), // Prevent leading spaces
+    }));
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const email = formData.email.trim();
+    const password = formData.password.trim();
+
+    if (!email || !password) {
+      toast.error("Email and password cannot be empty or spaces.");
+      return;
+    }
+
     try {
       setLoading(true);
       setLoadingText("Logging in, please wait...");
-      const response = await axios.post(`${API_URL}/login`, formData, {
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await axios.post(
+        `${API_URL}/login`,
+        { email, password }, // Sending trimmed values
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
       setLoading(false);
 
       if (response.status === 200) {

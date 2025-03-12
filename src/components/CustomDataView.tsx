@@ -12,8 +12,18 @@ interface CustomDataViewProps {
   graphType: "pie" | "bar" | "line" | "area"; // Graph selection
 }
 
+const graphComponents = {
+  pie: BankPieChart,
+  bar: BankBarChart,
+  line: BankLineChart,
+  area: BankAreaChart,
+};
+
 const CustomDataView: React.FC<CustomDataViewProps> = ({ data, graphType }) => {
   const [showGraph, setShowGraph] = useState(false);
+
+  const GraphComponent =
+    graphComponents[graphType as keyof typeof graphComponents] || null;
 
   return (
     <div className="rounded-lg">
@@ -27,14 +37,8 @@ const CustomDataView: React.FC<CustomDataViewProps> = ({ data, graphType }) => {
         <div className="flex-1 p-4 rounded-lg shadow-md over">
           {!showGraph ? (
             <DataTable data={data} />
-          ) : graphType === "pie" ? (
-            <BankPieChart data={data} />
-          ) : graphType === "bar" ? (
-            <BankBarChart data={data} />
-          ) : graphType === "line" ? (
-            <BankLineChart data={data} />
-          ) : graphType === "area" ? (
-            <BankAreaChart data={data} />
+          ) : GraphComponent ? (
+            <GraphComponent data={data} />
           ) : null}
         </div>
 

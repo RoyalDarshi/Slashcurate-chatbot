@@ -8,6 +8,7 @@ import {
   Link,
   Heart,
   PlusCircle,
+  LogOut,
 } from "lucide-react";
 
 export const menuItems = [
@@ -34,4 +35,9 @@ export const menuItems = [
   { id: "saved", icon: Heart, label: "Favourite" },
   { id: "settings", icon: Settings, label: "Settings" },
   { id: "help", icon: HelpCircle, label: "Help" },
+  {
+    id: "logout",
+    icon: LogOut,
+    label: "Logout",
+  },
 ];

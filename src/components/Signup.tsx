@@ -29,23 +29,34 @@ const Signup: React.FC<SignupProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value.trimStart(), // Prevent leading spaces while typing
+    }));
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !formData.name ||
-      !formData.email ||
-      !formData.password ||
-      !formData.confirmPassword
-    ) {
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    const password = formData.password.trim();
+    const confirmPassword = formData.confirmPassword.trim();
+
+    if (!name || !email || !password || !confirmPassword) {
       toast.error("All fields are required.");
       return;
     }
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       toast.error("Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long.");
+      return;
+    }
+    if (!/\S/.test(password)) {
+      toast.error("Password cannot be only spaces.");
       return;
     }
 
@@ -53,9 +64,13 @@ const Signup: React.FC<SignupProps> = ({
       setLoading(true);
       setLoadingText("Signing up, please wait...");
 
-      const response = await axios.post(`${API_URL}/signup`, formData, {
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await axios.post(
+        `${API_URL}/signup`,
+        { name, email, password }, // Send trimmed values
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
       setLoading(false);
       if (response.status === 200) {
         const token = response.data.token;

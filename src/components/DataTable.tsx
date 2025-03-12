@@ -85,32 +85,14 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
   });
 
   return (
-    <div
-      className={`rounded-lg border p-4 shadow-realistic ${
-        darkMode
-          ? "bg-gray-800 border-gray-700 text-gray-200"
-          : "bg-white border-gray-200 text-gray-700"
-      }`}
-    >
+    <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition-colors duration-200 shadow-sm dark:shadow-lg">
       <div
         ref={tableContainerRef}
-        className="overflow-x-auto overflow-y-auto max-h-96"
-        style={{
-          scrollbarWidth: "thin",
-          scrollbarColor: darkMode
-            ? "gray-600 transparent"
-            : "gray-300 transparent",
-        }}
+        className="overflow-auto max-h-96 scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent"
       >
-        <div className="min-w-full align-middle">
+        <div className="align-middle mr-2">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead
-              className={`sticky top-0 ${
-                darkMode
-                  ? "bg-gray-700 text-gray-300"
-                  : "bg-gray-50 text-gray-600"
-              }`}
-            >
+            <thead className="sticky top-0 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-200">
               <tr>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <React.Fragment key={headerGroup.id}>
@@ -118,7 +100,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
                       <th
                         key={header.id}
                         scope="col"
-                        className="px-5 py-3 text-left text-sm font-semibold uppercase tracking-wider"
+                        className="px-5 py-3 text-left text-sm font-semibold uppercase tracking-wider hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 cursor-pointer"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(
@@ -131,30 +113,16 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
                 ))}
               </tr>
             </thead>
-            <tbody
-              className={`divide-y ${
-                darkMode
-                  ? "bg-gray-800 divide-gray-700"
-                  : "bg-white divide-gray-200"
-              }`}
-            >
-              {table.getRowModel().rows.map((row, i) => (
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800 transition-colors duration-200">
+              {table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className={`${
-                    i % 2 === 0
-                      ? darkMode
-                        ? "bg-gray-800"
-                        : "bg-white"
-                      : darkMode
-                      ? "bg-gray-750"
-                      : "bg-gray-50"
-                  }`}
+                  className="transition-all duration-200 bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 group"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-5 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+                      className="px-5 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-200"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

@@ -124,7 +124,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center gap-2">
               <div
-                className="w-3 h-3 rounded-full"
+                className="w-3 h-3 rounded-full transition-colors"
                 style={{ backgroundColor: entry.color }}
               />
               <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -179,7 +179,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
   return (
     <div
       style={{ width: "55vw" }}
-      className="w-full max-w-full overflow-hidden card"
+      className="w-full max-w-full overflow-hidden card bg-white dark:bg-gray-800 rounded-l"
     >
       <div className="relative w-full" style={{ minHeight: "400px" }}>
         <div className="absolute inset-0 flex flex-col">
@@ -188,10 +188,12 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
               <BarChart
                 data={graphData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                className="text-gray-800 dark:text-gray-200"
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
                   className="stroke-gray-200 dark:stroke-gray-700"
+                  opacity={0.5}
                 />
                 <XAxis
                   dataKey={xKey}
@@ -203,6 +205,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
                   axisLine={{ stroke: "currentColor" }}
                   interval={0}
                   angle={-45}
+                  className="dark:text-gray-400"
                   textAnchor="end"
                   height={60}
                 />
@@ -214,15 +217,11 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
                   }}
                   tickLine={{ stroke: "currentColor" }}
                   axisLine={{ stroke: "currentColor" }}
+                  className="dark:text-gray-400"
                   width={60}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  content={<CustomLegend />}
-                  wrapperStyle={{
-                    paddingTop: "20px",
-                  }}
-                />
+                <Legend content={<CustomLegend />} />
                 {yKeys.map((yKey, index) => (
                   <Bar
                     key={yKey}
@@ -234,12 +233,13 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
                     opacity={
                       selectedMetric ? (selectedMetric === yKey ? 1 : 0.3) : 1
                     }
+                    className="transition-opacity duration-300"
                   >
                     {graphData.map((entry, entryIndex) => (
                       <Cell
                         key={`cell-${entryIndex}`}
                         fill={colors[index % colors.length]}
-                        className="transition-opacity duration-200"
+                        className="transition-all duration-300 hover:brightness-110"
                         opacity={
                           activeIndex === index || activeIndex === null
                             ? 1

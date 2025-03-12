@@ -8,7 +8,7 @@
     aspect-ratio: 1.5;
    --_g: no-repeat radial-gradient(circle closest-side, #3b82f6 90%, #0000); /* Tailwind blue-500 equivalent */
     background: var(--_g) 0% 50%, var(--_g) 50% 50%, var(--_g) 100% 50%;
-    background-size: calc(100% / 4) 50%; /* Adjusted background-size */
+    background-size: calc(100% / 4.5) 50%; /* Adjusted background-size */
     animation: l3 1s infinite linear;
   }
 

@@ -22,6 +22,7 @@ import html2canvas from "html2canvas";
 import { CSVLink } from "react-csv";
 import EditableMessage from "./EditableMessage";
 import { motion } from "framer-motion";
+import { CHATBOT_API_URL } from "../config";
 
 interface ChatMessageProps {
   message: Message;
@@ -31,7 +32,6 @@ interface ChatMessageProps {
   selectedConnection: string | null;
 }
 
-const CHATBOT_API_URL = process.env.REACT_APP_CHATBOT_API_URL || ""; // Ensure you have this defined
 const messagesRef = { current: [] as Message[] }; // Ensure you have this defined
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
@@ -79,19 +79,20 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     };
 
     const handleSave = async () => {
+      setIsEditing(false);
       if (!selectedConnection || !editedContent.trim() || !hasChanges) return;
 
       setIsUpdating(true);
       try {
         onEditMessage(message.id, editedContent);
         setHasChanges(false);
-
+        console.log(CHATBOT_API_URL);
         const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
           question: editedContent,
           connection: selectedConnection,
         });
-
         const botResponse = JSON.stringify(response.data, null, 2);
+
         const messageIndex = messagesRef.current.findIndex(
           (msg) => msg.id === message.id
         );
@@ -103,7 +104,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         console.error("Error updating message:", error);
       } finally {
         setIsUpdating(false);
-        setIsEditing(false);
       }
     };
 
