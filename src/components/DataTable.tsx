@@ -7,13 +7,9 @@ import {
   useReactTable,
   SortingState,
 } from "@tanstack/react-table";
+import { DataTableProps } from "../types";
 
-interface DataTableProps {
-  data: any;
-  darkMode?: boolean;
-}
-
-const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
+const DataTable: React.FC<DataTableProps> = ({ data }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [processedData, setProcessedData] = useState<any[]>([]);
@@ -26,7 +22,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, darkMode = false }) => {
       return;
     }
 
-    let normalizedData = Array.isArray(data) ? data : [data];
+    const normalizedData = Array.isArray(data) ? data : [data];
 
     if (typeof normalizedData[0] === "object") {
       setHeaders(Object.keys(normalizedData[0]));

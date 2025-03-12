@@ -44,15 +44,18 @@ function App() {
   }, []);
 
   const handleLoginSuccess = (userId: string) => {
+    console.log("handleLoginSuccess called, userId:", userId);
     sessionStorage.setItem("userId", userId);
     setIsAuthenticated(true);
   };
 
   const handleHomeButtonClick = () => {
+    console.log("handleHomeButtonClick called");
     setActiveMenu("new-chat");
   };
 
   const handleCreateConSelected = () => {
+    console.log("handleCreateConSelected called");
     setActiveMenu("new-connection");
   };
 

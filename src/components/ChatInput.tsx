@@ -1,20 +1,13 @@
 import React from "react";
 import { Send } from "lucide-react";
-
-interface ChatInputProps {
-  input: string;
-  isLoading: boolean;
-  onInputChange: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isSubmitting: boolean;
-}
+import { ChatInputProps } from "../types";
 
 const ChatInput: React.FC<ChatInputProps> = ({
   input,
   isLoading,
+  isSubmitting,
   onInputChange,
   onSubmit,
-  isSubmitting,
 }) => {
   const isDisabled = isLoading || isSubmitting;
 

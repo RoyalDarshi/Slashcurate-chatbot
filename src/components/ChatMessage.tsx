@@ -10,7 +10,7 @@ import {
   Download,
 } from "lucide-react";
 import axios from "axios";
-import { Message } from "../types";
+import { Message, ChatMessageProps, MarkdownComponentProps } from "../types";
 import DataTable from "./DataTable";
 import { Tooltip } from "react-tippy";
 import "react-tippy/dist/tippy.css";
@@ -24,15 +24,7 @@ import EditableMessage from "./EditableMessage";
 import { motion } from "framer-motion";
 import { CHATBOT_API_URL } from "../config";
 
-interface ChatMessageProps {
-  message: Message;
-  loading: boolean;
-  onEditMessage: (id: string, newContent: string, botResponse?: string) => void;
-  onDeleteMessage: (id: string) => void;
-  selectedConnection: string | null;
-}
-
-const messagesRef = { current: [] as Message[] }; // Ensure you have this defined
+const messagesRef = { current: [] as Message[] };
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({
