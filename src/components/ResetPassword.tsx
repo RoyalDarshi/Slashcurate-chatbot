@@ -6,6 +6,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import PasswordField from "./PasswordField";
 import Loader from "./Loader";
 import { API_URL } from "../config";
+import { useTheme } from "../ThemeContext";
 
 const ResetPassword: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -18,13 +19,13 @@ const ResetPassword: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Loading, please wait...");
+  const { theme } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setFormData((prevData) => ({ ...prevData, [name]: value.trimStart() }));
   };
 
-  // Show password for a limited time (0.75 seconds)
   const handleShowPassword = () => {
     setShowPassword(true);
     setTimeout(() => setShowPassword(false), 750);
@@ -38,12 +39,16 @@ const ResetPassword: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.password || !formData.confirmPassword) {
+    const { password, confirmPassword } = formData;
+    const trimmedPassword = password.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
+
+    if (!trimmedPassword || !trimmedConfirmPassword) {
       toast.error("Both fields are required.");
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (trimmedPassword !== trimmedConfirmPassword) {
       toast.error("Passwords do not match.");
       return;
     }
@@ -53,7 +58,7 @@ const ResetPassword: React.FC = () => {
       setLoadingText("Resetting password, please wait...");
       const response = await axios.post(
         `${API_URL}/reset-password`,
-        { password: formData.password, token: token },
+        { password: trimmedPassword, token },
         {
           headers: { "Content-Type": "application/json" },
         }
@@ -76,43 +81,95 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <div className="w-full max-w-md p-6 bg-gray-800 shadow-lg rounded-lg">
-        <h2 className="text-2xl font-bold text-center text-white mb-4">
+    <div
+      className="flex items-center justify-center min-h-screen p-6"
+      style={{ background: theme.colors.background }}
+    >
+      <div
+        className="w-full max-w-md p-8 rounded-lg shadow-md"
+        style={{
+          background:
+            theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+          borderRadius: theme.borderRadius.default,
+          border: `1px solid ${theme.colors.text}20`,
+        }}
+      >
+        <h2
+          className="text-2xl font-semibold text-center mb-6"
+          style={{ color: theme.colors.text }}
+        >
           Reset Password
         </h2>
-        <ToastContainer />
-        <form onSubmit={handleResetPassword} className="space-y-4">
-          <PasswordField
-            name="password"
-            placeholder="New Password"
-            value={formData.password}
-            onChange={handleChange}
-            showPassword={showPassword}
-            toggleShowPassword={handleShowPassword} // Auto-hides after 1.5s
-          />
-          <PasswordField
-            name="confirmPassword"
-            placeholder="Confirm Password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            showPassword={showConfirmPassword}
-            toggleShowPassword={handleShowConfirmPassword} // Auto-hides after 1.5s
-          />
+        <ToastContainer
+          toastStyle={{
+            background:
+              theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+            color: theme.colors.text,
+            border: `1px solid ${theme.colors.text}20`,
+            borderRadius: theme.borderRadius.default,
+          }}
+        />
+        <form onSubmit={handleResetPassword} className="space-y-5">
+          <div className="space-y-1">
+            <label
+              htmlFor="password"
+              className="text-sm font-medium"
+              style={{ color: theme.colors.text }}
+            >
+              New Password
+            </label>
+            <PasswordField
+              name="password"
+              placeholder="Enter new password"
+              value={formData.password}
+              onChange={handleChange}
+              showPassword={showPassword}
+              toggleShowPassword={handleShowPassword}
+            />
+          </div>
+          <div className="space-y-1">
+            <label
+              htmlFor="confirmPassword"
+              className="text-sm font-medium"
+              style={{ color: theme.colors.text }}
+            >
+              Confirm Password
+            </label>
+            <PasswordField
+              name="confirmPassword"
+              placeholder="Confirm new password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              showPassword={showConfirmPassword}
+              toggleShowPassword={handleShowConfirmPassword}
+            />
+          </div>
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition duration-300"
+            className="w-full p-3 rounded-md hover:opacity-90 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: theme.colors.accent,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              boxShadow: `0 4px 6px ${theme.colors.text}20`,
+            }}
+            disabled={loading}
           >
-            Reset Password
+            {loading ? "Resetting..." : "Reset Password"}
           </button>
           <button
             type="button"
-            className="w-full text-sm text-gray-400 hover:text-gray-300 hover:underline mt-4"
+            className="w-full text-sm hover:underline transition-colors text-center"
             onClick={() => navigate("/")}
+            style={{ color: `${theme.colors.text}80` }}
           >
             Back to Login
           </button>
-          {loading && <Loader text={loadingText} />}
+          {loading && (
+            <div className="flex justify-center">
+              <Loader text={loadingText} />
+            </div>
+          )}
         </form>
       </div>
     </div>

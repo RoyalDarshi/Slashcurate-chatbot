@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
 import Loader from "./Loader";
 import { API_URL } from "../config";
+import { useTheme } from "../ThemeContext";
 
 interface SignupProps {
   onSignupSuccess: (token: string) => void;
@@ -25,25 +26,26 @@ const Signup: React.FC<SignupProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("Loading, please wait...");
+  const [loadingText, setLoadingText] = useState("Signing up...");
+  const { theme } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
-      [name]: value.trimStart(), // Prevent leading spaces while typing
+      [name]: value.trimStart(),
     }));
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const name = formData.name.trim();
-    const email = formData.email.trim();
-    const password = formData.password.trim();
-    const confirmPassword = formData.confirmPassword.trim();
-
-    if (!name || !email || !password || !confirmPassword) {
+    const { name, email, password, confirmPassword } = formData;
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
       toast.error("All fields are required.");
       return;
     }
@@ -59,100 +61,143 @@ const Signup: React.FC<SignupProps> = ({
       toast.error("Password cannot be only spaces.");
       return;
     }
-
     try {
       setLoading(true);
-      setLoadingText("Signing up, please wait...");
-
-      const response = await axios.post(
-        `${API_URL}/signup`,
-        { name, email, password }, // Send trimmed values
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+      const res = await axios.post(`${API_URL}/signup`, {
+        name: name.trim(),
+        email: email.trim(),
+        password: password.trim(),
+      });
+      setLoading(false);
+      if (res.status === 200) {
+        onSignupSuccess(res.data.token);
+        toast.success("Signup successful!");
+      } else {
+        toast.error(res.data.message || "Signup failed.");
+      }
+    } catch (err) {
+      setLoading(false);
+      toast.error(
+        isAxiosError(err)
+          ? err.response?.data?.message || err.message
+          : (err as Error).message
       );
-      setLoading(false);
-      if (response.status === 200) {
-        const token = response.data.token;
-        toast.success("Signup successful.");
-        onSignupSuccess(token);
-      } else {
-        toast.error(`Error: ${response.data.message}`);
-      }
-    } catch (error) {
-      setLoading(false);
-      if (axios.isAxiosError(error)) {
-        toast.error(`Error: ${error.response?.data?.message || error.message}`);
-      } else {
-        const errorMessage = (error as Error).message;
-        toast.error(`Error: ${errorMessage}`);
-      }
     }
   };
 
   const handleShowPassword = () => {
-    setShowPassword(true);
-    setTimeout(() => {
-      setShowPassword(false);
-    }, 750); // Hide password after 0.75 seconds
+    setShowPassword((prev) => !prev);
   };
 
   const handleShowConfirmPassword = () => {
-    setShowConfirmPassword(true);
-    setTimeout(() => {
-      setShowConfirmPassword(false);
-    }, 750); // Hide confirm password after 0.75 seconds
+    setShowConfirmPassword((prev) => !prev);
   };
 
   return (
     <form onSubmit={handleSignup} className="space-y-4">
-      <ToastContainer />
-      <InputField
-        type="text"
-        name="name"
-        placeholder="Full Name"
-        value={formData.name}
-        onChange={handleChange}
-        required
+      <ToastContainer
+        toastStyle={{
+          background:
+            theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+          color: theme.colors.text,
+          border: `1px solid ${theme.colors.text}20`,
+          borderRadius: theme.borderRadius.default,
+        }}
       />
-      <InputField
-        type="email"
-        name="email"
-        placeholder="Email Address"
-        value={formData.email}
-        onChange={handleChange}
-        required
-      />
-      <PasswordField
-        name="password"
-        placeholder="Password"
-        value={formData.password}
-        onChange={handleChange}
-        showPassword={showPassword}
-        toggleShowPassword={handleShowPassword}
-      />
-      <PasswordField
-        name="confirmPassword"
-        placeholder="Confirm Password"
-        value={formData.confirmPassword}
-        onChange={handleChange}
-        showPassword={showConfirmPassword}
-        toggleShowPassword={handleShowConfirmPassword}
-      />
+      <div className="space-y-1">
+        <label
+          htmlFor="name"
+          className="text-sm font-medium"
+          style={{ color: theme.colors.text }}
+        >
+          Full Name
+        </label>
+        <InputField
+          type="text"
+          name="name"
+          placeholder="Enter your full name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="space-y-1">
+        <label
+          htmlFor="email"
+          className="text-sm font-medium"
+          style={{ color: theme.colors.text }}
+        >
+          Email Address
+        </label>
+        <InputField
+          type="email"
+          name="email"
+          placeholder="Enter your email"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="space-y-1">
+        <label
+          htmlFor="password"
+          className="text-sm font-medium"
+          style={{ color: theme.colors.text }}
+        >
+          Password
+        </label>
+        <PasswordField
+          name="password"
+          placeholder="Enter your password"
+          value={formData.password}
+          onChange={handleChange}
+          showPassword={showPassword}
+          toggleShowPassword={handleShowPassword}
+        />
+      </div>
+      <div className="space-y-1">
+        <label
+          htmlFor="confirmPassword"
+          className="text-sm font-medium"
+          style={{ color: theme.colors.text }}
+        >
+          Confirm Password
+        </label>
+        <PasswordField
+          name="confirmPassword"
+          placeholder="Confirm your password"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          showPassword={showConfirmPassword}
+          toggleShowPassword={handleShowConfirmPassword}
+        />
+      </div>
       <button
         type="submit"
-        className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition"
+        className="w-full p-2 rounded-md hover:opacity-90 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          background: theme.colors.accent,
+          color: theme.colors.text,
+          borderRadius: theme.borderRadius.default,
+          boxShadow: `0 4px 6px ${theme.colors.text}20`,
+        }}
+        disabled={loading}
       >
-        Sign Up
+        {loading ? "Signing Up..." : "Sign Up"}
       </button>
       <button
         type="button"
-        className="w-full text-sm text-gray-300 hover:underline mt-4"
+        className="w-full text-sm hover:underline transition-colors text-center"
         onClick={onSwitchToLogin}
+        style={{ color: `${theme.colors.text}80` }}
       >
         Already have an account? Log in
       </button>
-      {loading && <Loader text={loadingText} />}
+      {loading && (
+        <div className="flex justify-center pt-2">
+          <Loader text={loadingText} />
+        </div>
+      )}
     </form>
   );
 };

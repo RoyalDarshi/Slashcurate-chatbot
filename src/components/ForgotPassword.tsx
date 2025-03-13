@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import Loader from "./Loader";
 import { API_URL } from "../config";
+import { useTheme } from "../ThemeContext";
 
 interface ForgotPasswordProps {
   onBackToLogin: () => void;
@@ -14,15 +15,17 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Loading, please wait...");
+  const { theme } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
+    setEmail(e.target.value.trimStart());
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
       toast.error("Email is required.");
       return;
     }
@@ -32,7 +35,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
       setLoadingText("Sending reset link, please wait...");
       const response = await axios.post(
         `${API_URL}/forgot-password`,
-        { email },
+        { email: trimmedEmail },
         {
           headers: { "Content-Type": "application/json" },
         }
@@ -59,30 +62,59 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
   };
 
   return (
-    <form onSubmit={handleForgotPassword} className="space-y-4">
-      <ToastContainer />
-      <InputField
-        type="email"
-        name="email"
-        placeholder="Email Address"
-        value={email}
-        onChange={handleChange}
-        required
+    <form onSubmit={handleForgotPassword} className="space-y-5">
+      <ToastContainer
+        toastStyle={{
+          background:
+            theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+          color: theme.colors.text,
+          border: `1px solid ${theme.colors.text}20`,
+          borderRadius: theme.borderRadius.default,
+        }}
       />
+      <div className="space-y-1">
+        <label
+          htmlFor="email"
+          className="text-sm font-medium"
+          style={{ color: theme.colors.text }}
+        >
+          Email Address
+        </label>
+        <InputField
+          type="email"
+          name="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={handleChange}
+          required
+        />
+      </div>
       <button
         type="submit"
-        className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition"
+        className="w-full p-3 rounded-md hover:opacity-90 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          background: theme.colors.accent,
+          color: theme.colors.text,
+          borderRadius: theme.borderRadius.default,
+          boxShadow: `0 4px 6px ${theme.colors.text}20`,
+        }}
+        disabled={loading}
       >
-        Send Reset Link
+        {loading ? "Sending..." : "Send Reset Link"}
       </button>
       <button
         type="button"
-        className="w-full text-sm text-gray-300 hover:underline mt-4"
+        className="w-full text-sm hover:underline transition-colors text-center"
         onClick={onBackToLogin}
+        style={{ color: `${theme.colors.text}80` }}
       >
         Back to Login
       </button>
-      {loading && <Loader text={loadingText} />}
+      {loading && (
+        <div className="flex justify-center">
+          <Loader text={loadingText} />
+        </div>
+      )}
     </form>
   );
 };

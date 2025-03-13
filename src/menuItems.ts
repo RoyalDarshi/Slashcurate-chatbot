@@ -18,16 +18,8 @@ export const menuItems = [
     icon: Link,
     label: "Connections",
     subMenu: [
-      {
-        id: "new-connection",
-        label: "New Connection",
-        icon: PlusCircle,
-      },
-      {
-        id: "existing-connection",
-        label: "Existing Connection",
-        icon: Link,
-      },
+      { id: "new-connection", label: "New Connection", icon: PlusCircle },
+      { id: "existing-connection", label: "Existing Connection", icon: Link },
     ],
   },
   { id: "new-chat", icon: MessageCircle, label: "New Chat" },
@@ -35,9 +27,5 @@ export const menuItems = [
   { id: "saved", icon: Heart, label: "Favourite" },
   { id: "settings", icon: Settings, label: "Settings" },
   { id: "help", icon: HelpCircle, label: "Help" },
-  {
-    id: "logout",
-    icon: LogOut,
-    label: "Logout",
-  },
+  { id: "logout", icon: LogOut, label: "Logout" },
 ];

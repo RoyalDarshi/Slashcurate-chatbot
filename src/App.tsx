@@ -9,32 +9,12 @@ import ConnectionForm from "./components/ConnectionForm";
 import ExistingConnections from "./components/ExistingConnections";
 import History from "./components/History";
 import Settings from "./components/Settings";
+import { ThemeProvider, useTheme } from "./ThemeContext";
 import "./index.css";
 
 function App() {
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>("home"); // Default to "home"
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [theme, setTheme] = useState<string>(
-    localStorage.getItem("theme") || "light"
-  );
-
-  useEffect(() => {
-    console.log("Theme useEffect triggered:", theme);
-    // Update both HTML element class and data-theme attribute
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    console.log("toggleTheme called, newTheme:", newTheme);
-    setTheme(newTheme);
-  };
 
   useEffect(() => {
     const userId = sessionStorage.getItem("userId");
@@ -49,6 +29,12 @@ function App() {
     setIsAuthenticated(true);
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("userId");
+    setIsAuthenticated(false);
+    setActiveMenu("home");
+  };
+
   const handleHomeButtonClick = () => {
     console.log("handleHomeButtonClick called");
     setActiveMenu("new-chat");
@@ -60,49 +46,77 @@ function App() {
   };
 
   return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <>
-              {isAuthenticated ? (
-                <div
-                  className={`min-h-screen flex h-screen bg-gray-100 dark:bg-gray-900`}
-                >
-                  <Sidebar
-                    onMenuClick={setActiveMenu}
-                    activeMenu={activeMenu}
-                  />
-                  <div className="flex-1 flex flex-col overflow-hidden">
-                    {activeMenu === "home" && (
-                      <Home onBtnClick={handleHomeButtonClick} />
-                    )}
-                    {activeMenu === "new-chat" && (
-                      <ChatInterface
-                        onCreateConSelected={handleCreateConSelected}
-                      />
-                    )}
-                    {activeMenu === "new-connection" && <ConnectionForm />}
-                    {activeMenu === "existing-connection" && (
-                      <ExistingConnections />
-                    )}
-                    {activeMenu === "history" && <History />}
-                    {activeMenu === "settings" && (
-                      <Settings toggleTheme={toggleTheme} theme={theme} />
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <LoginSignup onLoginSuccess={handleLoginSuccess} />
-              )}
-            </>
-          }
-        />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-      </Routes>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <AppContent
+                isAuthenticated={isAuthenticated}
+                activeMenu={activeMenu}
+                setActiveMenu={setActiveMenu}
+                onLoginSuccess={handleLoginSuccess} // Pass the function as a prop
+                onLogout={handleLogout}
+                onHomeButtonClick={handleHomeButtonClick}
+                onCreateConSelected={handleCreateConSelected}
+              />
+            }
+          />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
+
+const AppContent: React.FC<{
+  isAuthenticated: boolean;
+  activeMenu: string | null;
+  setActiveMenu: (menu: string | null) => void;
+  onLoginSuccess: (userId: string) => void; // Define prop type
+  onLogout: () => void;
+  onHomeButtonClick: () => void;
+  onCreateConSelected: () => void;
+}> = ({
+  isAuthenticated,
+  activeMenu,
+  setActiveMenu,
+  onLoginSuccess, // Use the prop here
+  onLogout,
+  onHomeButtonClick,
+  onCreateConSelected,
+}) => {
+  const { theme } = useTheme();
+
+  return (
+    <>
+      {isAuthenticated ? (
+        <div
+          className="min-h-screen flex h-screen"
+          style={{ background: theme.colors.background }}
+        >
+          <Sidebar
+            onMenuClick={setActiveMenu}
+            activeMenu={activeMenu}
+            onLogout={onLogout}
+          />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {activeMenu === "home" && <Home onBtnClick={onHomeButtonClick} />}
+            {activeMenu === "new-chat" && (
+              <ChatInterface onCreateConSelected={onCreateConSelected} />
+            )}
+            {activeMenu === "new-connection" && <ConnectionForm />}
+            {activeMenu === "existing-connection" && <ExistingConnections />}
+            {activeMenu === "history" && <History />}
+            {activeMenu === "settings" && <Settings />}
+          </div>
+        </div>
+      ) : (
+        <LoginSignup onLoginSuccess={onLoginSuccess} /> // Use the prop, not handleLoginSuccess
+      )}
+    </>
+  );
+};
 
 export default App;

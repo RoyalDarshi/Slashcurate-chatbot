@@ -7,18 +7,24 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { menuItems } from "../menuItems";
+import { useTheme } from "../ThemeContext";
 
 interface SidebarProps {
   onMenuClick: (id: string) => void;
   activeMenu: string | null;
+  onLogout?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  onMenuClick,
+  activeMenu,
+  onLogout,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState<string>("home");
   const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
-  // const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     onMenuClick("home");
@@ -36,15 +42,20 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
     } else if (id === "logout") {
       handleLogout();
       return;
+    } else {
+      onMenuClick(id);
+      setActiveMenuItem(id);
+      setIsOpen(false);
     }
-    onMenuClick(id);
-    setActiveMenuItem(id);
-    setIsOpen(false);
   };
 
   const handleLogout = () => {
     sessionStorage.removeItem("userId");
-    window.location.reload();
+    if (onLogout) {
+      onLogout();
+    } else {
+      window.location.reload();
+    }
   };
 
   useEffect(() => {
@@ -53,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
         profileDropdownRef.current &&
         !profileDropdownRef.current.contains(event.target as Node)
       ) {
-        // setIsProfileOpen(false);
+        // setIsProfileOpen(false); // Placeholder for future profile dropdown
       }
     };
 
@@ -74,57 +85,96 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
 
       <button
         title="Toggle Sidebar"
-        className="md:hidden p-3 text-white bg-gray-900 fixed top-4 left-4 rounded-full shadow-lg"
+        className="md:hidden p-3 fixed top-4 left-4 rounded-full shadow-lg hover:opacity-90 transition-opacity"
+        style={{
+          background: theme.colors.accent,
+          color: theme.colors.text,
+        }}
         onClick={() => setIsOpen(!isOpen)}
       >
         <Menu size={24} />
       </button>
 
       <div
-        className={`h-screen bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 p-4 flex flex-col w-64 md:static fixed top-0 left-0 transform ${
+        className={`h-screen p-4 flex flex-col w-64 md:static fixed top-0 left-0 transform ${
           isOpen ? "translate-x-0" : "-translate-x-64"
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-20 shadow-lg`}
+        style={{
+          background:
+            theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+          borderRight: `1px solid ${theme.colors.text}20`,
+        }}
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center space-x-2 mb-6">
-            <MessageCircle size={28} className="text-blue-400" />
-            <h1 className="text-xl font-bold">Ask Your Data</h1>
+            <MessageCircle size={28} style={{ color: theme.colors.accent }} />
+            <h1
+              className="text-xl font-bold"
+              style={{ color: theme.colors.text }}
+            >
+              Ask Your Data
+            </h1>
           </div>
 
           <nav className="flex flex-col space-y-1 flex-grow">
-            {menuItems.map(({ id, icon: Icon, label, subMenu, className }) => (
+            {menuItems.map(({ id, icon: Icon, label, subMenu }) => (
               <React.Fragment key={id}>
                 <button
                   className={`flex items-center justify-between p-3 rounded-md w-full transition-colors duration-200 ${
                     activeMenuItem === id
-                      ? "bg-gray-600 dark:bg-gray-600"
-                      : "hover:bg-gray-700 dark:hover:bg-gray-700"
-                  } ${className || ""}`}
+                      ? "bg-opacity-20"
+                      : "hover:bg-opacity-10"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      activeMenuItem === id
+                        ? `${theme.colors.accent}33` // 20% opacity for active
+                        : undefined,
+                    color: theme.colors.text,
+                  }}
                   onClick={() => handleMenuClick(id)}
                   aria-expanded={isConnectionsOpen && id === "connections"}
-                  aria-controls={id === "connections" ? "sub-menu" : undefined}
+                  aria-controls={
+                    id === "connections" ? "connections-sub-menu" : undefined
+                  }
                 >
                   <div className="flex items-center">
-                    <Icon size={20} />
+                    <Icon size={20} style={{ color: theme.colors.text }} />
                     <span className="ml-3">{label}</span>
                   </div>
                   {id === "connections" &&
                     (isConnectionsOpen ? (
-                      <ChevronUp size={16} />
+                      <ChevronUp
+                        size={16}
+                        style={{ color: theme.colors.text }}
+                      />
                     ) : (
-                      <ChevronDown size={16} />
+                      <ChevronDown
+                        size={16}
+                        style={{ color: theme.colors.text }}
+                      />
                     ))}
                 </button>
                 {subMenu && isConnectionsOpen && id === "connections" && (
-                  <div className="pl-4 space-y-1">
+                  <div className="pl-6 space-y-1" id="connections-sub-menu">
                     {subMenu.map((subItem) => (
                       <button
                         key={subItem.id}
-                        className="flex items-center p-3 rounded-md w-full hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors duration-200"
+                        className="flex items-center p-2 rounded-md w-full hover:bg-opacity-10 transition-colors duration-200"
+                        style={{
+                          backgroundColor:
+                            activeMenuItem === subItem.id
+                              ? `${theme.colors.accent}33`
+                              : undefined,
+                          color: theme.colors.text,
+                        }}
                         onClick={() => handleMenuClick(subItem.id)}
                       >
-                        <subItem.icon size={20} />
-                        <span className="ml-3">{subItem.label}</span>
+                        <subItem.icon
+                          size={18}
+                          style={{ color: theme.colors.text }}
+                        />
+                        <span className="ml-3 text-sm">{subItem.label}</span>
                       </button>
                     ))}
                   </div>
@@ -133,11 +183,31 @@ const Sidebar: React.FC<SidebarProps> = ({ onMenuClick, activeMenu }) => {
             ))}
           </nav>
 
-          {/* Add company logo at bottom */}
-          <div className="mt-auto border-t border-gray-700">
-            <div className="flex my-2 items-center justify-start ml-2 text-white">
-              <span className="text-sm">Slash Curate Technologies PVT LTD</span>
-            </div>
+          {/* Company Logo at Bottom */}
+          <div
+            className="mt-auto pt-4 flex items-center space-x-2"
+            style={{ borderTop: `1px solid ${theme.colors.text}20` }}
+          >
+            {/* Replace with your actual logo image */}
+            {/* <img src="/assets/logo.png" alt="Slash Curate Logo" className="h-8 w-auto" /> */}
+            <svg
+              className="h-8 w-8"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={theme.colors.accent}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <span
+              className="text-sm font-semibold"
+              style={{ color: theme.colors.text }}
+            >
+              Slash Curate
+            </span>
           </div>
         </div>
       </div>

@@ -17,3 +17,24 @@ module.exports = {
   },
   plugins: [],
 };
+
+module.exports = {
+  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        accent: {
+          light: "#8B5CF6",
+          dark: "#A78BFA",
+        },
+      },
+      ringColor: {
+        accent: {
+          light: "#8B5CF6",
+          dark: "#A78BFA",
+        },
+      },
+    },
+  },
+  plugins: [],
+};

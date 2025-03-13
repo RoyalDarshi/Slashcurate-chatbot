@@ -1,16 +1,14 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Bot,
   User,
   Table,
   LineChart as ChartSpline,
   Edit3,
-  Check,
-  X,
   Download,
 } from "lucide-react";
 import axios from "axios";
-import { Message, ChatMessageProps, MarkdownComponentProps } from "../types";
+import { Message, ChatMessageProps } from "../types";
 import DataTable from "./DataTable";
 import { Tooltip } from "react-tippy";
 import "react-tippy/dist/tippy.css";
@@ -27,17 +25,10 @@ import { CHATBOT_API_URL } from "../config";
 const messagesRef = { current: [] as Message[] };
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
-  ({
-    message,
-    loading,
-    onEditMessage,
-    onDeleteMessage,
-    selectedConnection,
-  }) => {
+  ({ message, loading, onEditMessage, selectedConnection }) => {
     const [showTable, setShowTable] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
-    const [isUpdating, setIsUpdating] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const graphRef = useRef<HTMLDivElement>(null); // Ref for the graph container
     const [csvData, setCsvData] = useState<any[]>([]);
@@ -74,7 +65,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       setIsEditing(false);
       if (!selectedConnection || !editedContent.trim() || !hasChanges) return;
 
-      setIsUpdating(true);
       try {
         onEditMessage(message.id, editedContent);
         setHasChanges(false);
@@ -94,8 +84,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         }
       } catch (error) {
         console.error("Error updating message:", error);
-      } finally {
-        setIsUpdating(false);
       }
     };
 
@@ -105,10 +93,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       setIsEditing(false);
     };
 
-    const formattedTime = new Date(message.timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
 
     const handleDownloadGraph = async () => {
       if (graphRef.current) {
@@ -137,7 +121,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       try {
         const data = JSON.parse(message.content);
 
-        if (data && data.answer) {
+        if (data?.answer) {
           const tableData = Array.isArray(data.answer)
             ? data.answer
             : [data.answer];
@@ -314,9 +298,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             ) : (
               <EditableMessage
                 messageContent={editedContent}
-                isUpdating={isUpdating}
-                hasChanges={hasChanges}
-                formattedTime={formattedTime}
                 onSave={handleSave}
                 onCancel={handleCancel}
                 onContentChange={handleContentChange}

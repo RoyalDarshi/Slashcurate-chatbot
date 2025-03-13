@@ -5,7 +5,6 @@ import { ConnectionSelectorProps } from '../types';
 export const ConnectionSelector: React.FC<ConnectionSelectorProps> = ({
   connections,
   onSelect,
-  onCreateConSelected,
 }) => {
   const options = [
     { value: "create-con", label: "Create Connection" },
@@ -34,22 +33,22 @@ export const ConnectionSelector: React.FC<ConnectionSelectorProps> = ({
             ...theme,
             colors: {
               ...theme.colors,
-              primary: '#3b82f6',
-              neutral0: '#ffffff',
-              neutral20: '#d1d5db',
-              neutral30: '#9ca3af',
+              primary: "#3b82f6",
+              neutral0: "#ffffff",
+              neutral20: "#d1d5db",
+              neutral30: "#9ca3af",
             },
           })}
           styles={{
             control: (baseStyles, state) => ({
               ...baseStyles,
-              backgroundColor: 'var(--tw-bg-opacity, 1) rgb(255 255 255 / var(--tw-bg-opacity))',
-              borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
-              boxShadow: 'none',
-              '&:hover': { borderColor: '#9ca3af' },
-              '@media (prefers-color-scheme: dark)': {
-                backgroundColor: '#1f2937',
-                borderColor: state.isFocused ? '#3b82f6' : '#4b5563',
+              backgroundColor: " rgb(255 255 255 / var(--tw-bg-opacity))",
+              borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+              boxShadow: "none",
+              "&:hover": { borderColor: "#9ca3af" },
+              "@media (prefers-color-scheme: dark)": {
+                backgroundColor: "#1f2937",
+                borderColor: state.isFocused ? "#3b82f6" : "#4b5563",
               },
             }),
             // ... other style overrides
