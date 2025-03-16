@@ -6,6 +6,8 @@ import {
   LineChart as ChartSpline,
   Edit3,
   Download,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import axios from "axios";
 import { Message, ChatMessageProps } from "../types";
@@ -15,23 +17,32 @@ import "react-tippy/dist/tippy.css";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import "./ChatMessage.css";
 import html2canvas from "html2canvas";
-import { CSVLink } from "react-csv";
+import * as XLSX from "xlsx";
 import EditableMessage from "./EditableMessage";
 import { motion } from "framer-motion";
 import { CHATBOT_API_URL } from "../config";
+import { useTheme } from "../ThemeContext";
+import MiniLoader from "./MiniLoader";
 
 const messagesRef = { current: [] as Message[] };
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({ message, loading, onEditMessage, selectedConnection }) => {
-    const [showTable, setShowTable] = useState(false);
+    const { theme } = useTheme();
+    const [csvData, setCsvData] = useState<any[]>([]);
+    const [hasNumericData, setHasNumericData] = useState<boolean>(true);
+    const [showTable, setShowTable] = useState<boolean>(false); // Will be set based on numeric data
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [hasChanges, setHasChanges] = useState(false);
-    const graphRef = useRef<HTMLDivElement>(null); // Ref for the graph container
-    const [csvData, setCsvData] = useState<any[]>([]);
+    const [showResolutionOptions, setShowResolutionOptions] = useState(false);
+    const [isLiked, setIsLiked] = useState(false);
+    const [isDisliked, setIsDisliked] = useState(false);
+    const [showDislikeOptions, setShowDislikeOptions] = useState(false);
+    const [dislikeReason, setDislikeReason] = useState<string | null>(null);
+    const graphRef = useRef<HTMLDivElement>(null);
+    const dislikeRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
       try {
@@ -42,17 +53,62 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             : [data.answer];
           setCsvData(tableData);
         }
-      } catch (error) {
+      } catch {
         setCsvData([]);
+        setShowTable(true); // Default to table on error
       }
     }, [message.content]);
 
+    // Handle click outside to hide dislike options
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          dislikeRef.current &&
+          !dislikeRef.current.contains(event.target as Node)
+        ) {
+          setShowDislikeOptions(false);
+        }
+      };
+
+      if (showDislikeOptions) {
+        document.addEventListener("mousedown", handleClickOutside);
+      }
+
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [showDislikeOptions]);
+
     const handleSwap = () => {
-      setShowTable((prev) => !prev);
+      if (hasNumericData) {
+        setShowTable((prev) => !prev);
+      }
     };
 
-    const handleEdit = () => {
-      setIsEditing(true);
+    const handleEdit = () => setIsEditing(true);
+
+    const handleLike = () => {
+      setIsLiked(!isLiked);
+      setIsDisliked(false);
+      setShowDislikeOptions(false);
+      setDislikeReason(null);
+    };
+
+    const handleDislike = () => {
+      if (isDisliked) {
+        setIsDisliked(false);
+        setDislikeReason(null);
+        setShowDislikeOptions(false);
+      } else {
+        setShowDislikeOptions(true);
+        setIsLiked(false);
+      }
+    };
+
+    const handleDislikeOption = (reason: string) => {
+      setDislikeReason(reason);
+      setIsDisliked(true);
+      setShowDislikeOptions(false);
     };
 
     const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -68,7 +124,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       try {
         onEditMessage(message.id, editedContent);
         setHasChanges(false);
-        console.log(CHATBOT_API_URL);
         const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
           question: editedContent,
           connection: selectedConnection,
@@ -78,7 +133,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         const messageIndex = messagesRef.current.findIndex(
           (msg) => msg.id === message.id
         );
-
         if (messageIndex + 1 < messagesRef.current.length) {
           onEditMessage(messagesRef.current[messageIndex + 1].id, botResponse);
         }
@@ -93,27 +147,63 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       setIsEditing(false);
     };
 
+    const handleDownloadTableXLSX = () => {
+      try {
+        const data = JSON.parse(message.content);
+        const tableData = Array.isArray(data.answer)
+          ? data.answer
+          : [data.answer];
 
-    const handleDownloadGraph = async () => {
+        const worksheet = XLSX.utils.json_to_sheet(tableData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+
+        XLSX.writeFile(workbook, "table_data.xlsx");
+      } catch (error) {
+        console.error("Error downloading XLSX:", error);
+      }
+    };
+
+    const handleDownloadGraph = async (resolution: "low" | "high") => {
       if (graphRef.current) {
         try {
-          const canvas = await html2canvas(graphRef.current);
+          const scale = resolution === "high" ? 2 : 1;
+          const canvas = await html2canvas(graphRef.current, {
+            scale: scale,
+            useCORS: true,
+            logging: false,
+          });
           const image = canvas.toDataURL("image/png");
           const link = document.createElement("a");
           link.href = image;
-          link.download = "graph.png";
+          link.download = `graph_${resolution}.png`;
           link.click();
         } catch (error) {
           console.error("Error downloading graph:", error);
         }
       }
+      setShowResolutionOptions(false);
     };
 
     const renderContent = () => {
       if (loading) {
         return (
-          <div className="rounded-2xl rounded-tl-none bg-white p-4 shadow-md pb-6 flex items-center justify-center dark:bg-gray-800">
-            <div className="loader"></div>
+          <div
+            className="p-4 shadow-md flex items-center justify-center"
+            style={{
+              background: theme.colors.surface,
+              borderRadius: theme.borderRadius.large,
+              borderTopLeftRadius: "0",
+              boxShadow: `0 2px 6px ${theme.colors.text}20`,
+            }}
+          >
+            <MiniLoader />
+            <span
+              className="ml-2 text-sm"
+              style={{ color: theme.colors.textSecondary }}
+            >
+              Thinking...
+            </span>
           </div>
         );
       }
@@ -128,76 +218,120 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
           return (
             <div className="relative">
-              <div className="absolute -right-12 top-0 flex flex-col items-center gap-2">
+              <div
+                className="absolute -right-12 top-0 flex flex-col items-center"
+                style={{ gap: theme.spacing.sm }}
+              >
                 <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
+                  whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
                   onClick={handleSwap}
-                  className="rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  className={`rounded-full p-2 shadow-sm transition-colors duration-200 ${
+                    !hasNumericData
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:opacity-85"
+                  }`}
+                  style={{ background: theme.colors.surface }}
+                  disabled={!hasNumericData}
                 >
                   <Tooltip
                     title={
-                      showTable
+                      !hasNumericData
+                        ? "Graph unavailable: No numeric data to visualize"
+                        : showTable
                         ? "Switch to Graph View"
                         : "Switch to Table View"
                     }
                   >
                     {showTable ? (
                       <ChartSpline
-                        className="text-blue-500 dark:text-blue-400"
                         size={20}
+                        style={{ color: theme.colors.accent }}
                       />
                     ) : (
-                      <Table
-                        className="text-blue-500 dark:text-blue-400"
-                        size={20}
-                      />
+                      <Table size={20} style={{ color: theme.colors.accent }} />
                     )}
                   </Tooltip>
                 </motion.button>
 
-                {!showTable && (
+                {!showTable && hasNumericData && (
+                  <div className="relative">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() =>
+                        setShowResolutionOptions(!showResolutionOptions)
+                      }
+                      className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                      style={{ background: theme.colors.surface }}
+                    >
+                      <Tooltip title="Download Graph">
+                        <Download
+                          size={20}
+                          style={{ color: theme.colors.accent }}
+                        />
+                      </Tooltip>
+                    </motion.button>
+                    {showResolutionOptions && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute top-full mt-2 right-0 shadow-lg rounded-md p-2 z-10"
+                        style={{ background: theme.colors.surface }}
+                      >
+                        <button
+                          onClick={() => handleDownloadGraph("low")}
+                          className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          style={{ color: theme.colors.text }}
+                        >
+                          Low Resolution
+                        </button>
+                        <button
+                          onClick={() => handleDownloadGraph("high")}
+                          className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          style={{ color: theme.colors.text }}
+                        >
+                          High Resolution
+                        </button>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+
+                {showTable && (
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={handleDownloadGraph}
-                    className="rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    onClick={handleDownloadTableXLSX}
+                    className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                    style={{ background: theme.colors.surface }}
                   >
-                    <Tooltip title="Download Graph">
+                    <Tooltip title="Download XLSX">
                       <Download
-                        className="text-blue-500 dark:text-blue-400"
                         size={20}
+                        style={{ color: theme.colors.accent }}
                       />
                     </Tooltip>
                   </motion.button>
                 )}
-
-                {showTable && (
-                  <motion.div
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <CSVLink
-                      data={tableData}
-                      filename="table_data.csv"
-                      className="flex rounded-full bg-gray-100 p-2.5 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-                    >
-                      <Tooltip title="Download CSV">
-                        <Download
-                          className="text-blue-500 dark:text-blue-400"
-                          size={20}
-                        />
-                      </Tooltip>
-                    </CSVLink>
-                  </motion.div>
-                )}
               </div>
 
-              <div className="rounded-xl bg-white p-4 shadow-md dark:bg-gray-800">
+              <div
+                className="p-4 shadow-md"
+                style={{
+                  background: theme.colors.surface,
+                  borderRadius: theme.borderRadius.large,
+                  boxShadow: `0 2px 6px ${theme.colors.text}20`,
+                  width: "100%",
+                }}
+              >
                 {showTable ? (
                   <>
                     <DataTable data={tableData} />
-                    <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
+                    <div
+                      className="mt-2 text-right text-xs"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
                       {new Date(message.timestamp).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -205,9 +339,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     </div>
                   </>
                 ) : (
-                  <div ref={graphRef} className="w-full">
-                    <DynamicBarGraph data={data.answer} />
-                    <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
+                  <div ref={graphRef} style={{ width: "100%" }}>
+                    <DynamicBarGraph showTable={setShowTable} isValidGraph={setHasNumericData} data={data.answer} />
+                    <div
+                      className="mt-2 text-right text-xs"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
                       {new Date(message.timestamp).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -226,7 +363,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             components={{
               p: ({ node, ...props }) => (
                 <p
-                  className="whitespace-pre-wrap break-words leading-relaxed text-gray-700 dark:text-gray-300"
+                  className="whitespace-pre-wrap break-words leading-relaxed"
+                  style={{ color: theme.colors.text }}
                   {...props}
                 />
               ),
@@ -237,49 +375,157 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         );
       } catch {
         return (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ node, ...props }) => (
-                <div className="rounded-2xl rounded-tl-none bg-white p-4 shadow-md dark:bg-gray-800">
-                  <p
-                    className="whitespace-pre-wrap break-words leading-relaxed text-gray-700 dark:text-gray-300"
-                    {...props}
-                  />
-                  <div className="mt-2 text-right text-xs text-gray-400 dark:text-gray-500">
-                    {new Date(message.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                </div>
-              ),
+          <div
+            className="p-4 shadow-md"
+            style={{
+              background: theme.colors.surface,
+              borderRadius: theme.borderRadius.large,
+              borderTopLeftRadius: message.isBot ? "0" : undefined,
+              borderTopRightRadius: !message.isBot ? "0" : undefined,
+              boxShadow: `0 2px 6px ${theme.colors.text}20`,
             }}
           >
-            {message.content}
-          </ReactMarkdown>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ node, ...props }) => (
+                  <p
+                    className="whitespace-pre-wrap break-words leading-relaxed"
+                    style={{ color: theme.colors.text }}
+                    {...props}
+                  />
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+            <div
+              className="mt-2 text-right text-xs"
+              style={{ color: theme.colors.textSecondary }}
+            >
+              {new Date(message.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
         );
       }
     };
 
     return (
-      <div className="mb-6 flex w-full">
+      <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
         {message.isBot ? (
-          <div className="flex w-full items-start space-x-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg dark:from-blue-600 dark:to-purple-600">
-              <Bot size={20} className="text-white" />
+          <div
+            className="flex w-full items-start"
+            style={{ gap: theme.spacing.md }}
+          >
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+              style={{ background: theme.colors.accent }}
+            >
+              <Bot size={20} style={{ color: "white" }} />
             </div>
-            <div className="max-w-[80%]">{renderContent()}</div>
+            <div className="max-w-[80%] flex flex-col gap-2">
+              {renderContent()}
+              {!loading && (
+                <div className="flex justify-end gap-2">
+                  <Tooltip
+                    title={isLiked ? "Remove like" : "Like this response"}
+                    position="top"
+                    arrow={true}
+                  >
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleLike}
+                      className={`p-1 rounded-md border transition-colors duration-200 ${
+                        isLiked
+                          ? "bg-green-500 border-green-500 text-white dark:bg-green-500 dark:border-green-500 dark:text-gray-900"
+                          : "bg-white border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+                      }`}
+                    >
+                      <ThumbsUp size={16} />
+                    </motion.button>
+                  </Tooltip>
+                  <div className="relative" ref={dislikeRef}>
+                    <Tooltip
+                      title={
+                        isDisliked ? "Remove dislike" : "Dislike this response"
+                      }
+                      position="top"
+                      arrow={true}
+                    >
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleDislike}
+                        className={`p-1 rounded-md border transition-colors duration-200 ${
+                          isDisliked
+                            ? "bg-red-500 border-red-500 text-white dark:bg-red-500 dark:border-red-500 dark:text-gray-900"
+                            : "bg-white border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+                        }`}
+                      >
+                        <ThumbsDown size={16} />
+                      </motion.button>
+                    </Tooltip>
+                    {showDislikeOptions && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-md shadow-md p-2 z-10 min-w-[150px] dark:bg-gray-800 dark:border-gray-600"
+                      >
+                        {[
+                          "Incorrect data",
+                          "Takes too long",
+                          "Irrelevant response",
+                          "Confusing answer",
+                          "Other",
+                        ].map((reason) => (
+                          <button
+                            key={reason}
+                            onClick={() => handleDislikeOption(reason)}
+                            className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200 dark:text-gray-200 dark:hover:bg-gray-700"
+                          >
+                            {reason}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
-          <div className="ml-auto flex w-full items-start justify-end space-x-4">
+          <div
+            className="ml-auto flex w-full items-start justify-end"
+            style={{ gap: theme.spacing.md }}
+          >
             {!isEditing ? (
-              <div className="max-w-[80%] rounded-2xl rounded-tr-none bg-gradient-to-r from-blue-500 to-blue-600 p-4 shadow-lg dark:from-blue-600 dark:to-blue-700">
-                <p className="whitespace-pre-wrap break-words text-white">
+              <div
+                className="max-w-[80%] p-4 shadow-md"
+                style={{
+                  background: theme.colors.accent,
+                  borderRadius: theme.borderRadius.large,
+                  borderTopRightRadius: "0",
+                  boxShadow: `0 2px 6px ${theme.colors.text}20`,
+                }}
+              >
+                <p
+                  className="whitespace-pre-wrap break-words"
+                  style={{ color: "white" }}
+                >
                   {message.content}
                 </p>
-                <div className="mt-2 border-t border-blue-400/30 pt-2 flex items-center justify-between">
-                  <span className="text-xs text-blue-50">
+                <div
+                  className="mt-2 border-t pt-2 flex items-center justify-between"
+                  style={{ borderColor: `${theme.colors.surface}20` }}
+                >
+                  <span
+                    className="text-xs"
+                    style={{ color: `${theme.colors.background}70` }}
+                  >
                     {new Date(message.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -288,7 +534,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   <Tooltip title="Edit message" position="bottom" arrow={true}>
                     <button
                       onClick={handleEdit}
-                      className="p-2 text-blue-100 hover:text-white transition-colors duration-200"
+                      className="p-2 transition-colors duration-200 hover:opacity-80"
+                      style={{ color: "white" }}
                     >
                       <Edit3 size={16} />
                     </button>
@@ -303,8 +550,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 onContentChange={handleContentChange}
               />
             )}
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg dark:from-blue-600 dark:to-blue-700">
-              <User size={20} className="text-white" />
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+              style={{ background: theme.colors.accent }}
+            >
+              <User size={20} style={{ color: "white" }} />
             </div>
           </div>
         )}

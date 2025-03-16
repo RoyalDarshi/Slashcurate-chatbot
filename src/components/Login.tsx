@@ -22,7 +22,6 @@ const Login: React.FC<LoginProps> = ({
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("Logging in, please wait...");
   const { theme } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,7 +45,6 @@ const Login: React.FC<LoginProps> = ({
 
     try {
       setLoading(true);
-      setLoadingText("Logging in, please wait...");
       const response = await axios.post(
         `${API_URL}/login`,
         { email, password },
@@ -61,15 +59,16 @@ const Login: React.FC<LoginProps> = ({
         toast.success("Login successful!");
         onLoginSuccess(token);
       } else {
-        toast.error(`Error: ${response.data.message}`);
+        toast.error(`Error: ${response.data.message || "Login failed"}`);
       }
     } catch (error) {
       setLoading(false);
       if (axios.isAxiosError(error)) {
         toast.error(`Error: ${error.response?.data?.message || error.message}`);
       } else {
-        const errorMessage = (error as Error).message;
-        toast.error(`Error: ${errorMessage}`);
+        toast.error(
+          `Error: ${(error as Error).message || "An unexpected error occurred"}`
+        );
       }
     }
   };
@@ -80,22 +79,34 @@ const Login: React.FC<LoginProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <form onSubmit={handleLogin} className="space-y-4">
+        {/* Toast Notifications */}
         <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar
+          closeOnClick
+          pauseOnHover
           toastStyle={{
-            background:
-              theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+            backgroundColor: theme.colors.surface,
             color: theme.colors.text,
-            border: `1px solid ${theme.colors.text}20`,
+            border: `1px solid ${theme.colors.border}`,
             borderRadius: theme.borderRadius.default,
+            boxShadow: theme.shadow.sm,
           }}
         />
+
+        {/* Email Field */}
         <div className="space-y-1">
           <label
             htmlFor="email"
             className="text-sm font-medium"
-            style={{ color: theme.colors.text }}
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.medium,
+            }}
           >
             Email Address
           </label>
@@ -106,13 +117,20 @@ const Login: React.FC<LoginProps> = ({
             value={formData.email}
             onChange={handleChange}
             required
+            disabled={loading}
           />
         </div>
+
+        {/* Password Field */}
         <div className="space-y-1">
           <label
             htmlFor="password"
             className="text-sm font-medium"
-            style={{ color: theme.colors.text }}
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.medium,
+            }}
           >
             Password
           </label>
@@ -123,42 +141,64 @@ const Login: React.FC<LoginProps> = ({
             onChange={handleChange}
             showPassword={showPassword}
             toggleShowPassword={handleShowPassword}
+            disabled={loading}
           />
         </div>
+
+        {/* Submit Button */}
         <button
           type="submit"
-          className="w-full p-2 rounded-md hover:opacity-90 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full p-2 rounded-md transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            background: theme.colors.accent,
-            color: theme.colors.text,
+            backgroundColor: theme.colors.accent,
+            color: "white",
             borderRadius: theme.borderRadius.default,
-            boxShadow: `0 4px 6px ${theme.colors.text}20`,
+            boxShadow: theme.shadow.sm,
+            transition: theme.transition.default,
           }}
           disabled={loading}
+          onMouseOver={(e) =>
+            !loading &&
+            (e.currentTarget.style.backgroundColor = theme.colors.accentHover)
+          }
+          onMouseOut={(e) =>
+            !loading &&
+            (e.currentTarget.style.backgroundColor = theme.colors.accent)
+          }
         >
           {loading ? "Logging In..." : "Log In"}
         </button>
       </form>
+
+      {/* Links */}
       <div className="flex flex-col items-center space-y-2">
         <button
           type="button"
-          className="text-sm hover:underline transition-colors"
+          className="text-sm transition-colors hover:underline"
+          style={{
+            color: theme.colors.textSecondary,
+            transition: theme.transition.default,
+          }}
           onClick={onForgotPassword}
-          style={{ color: `${theme.colors.text}80` }}
+          disabled={loading}
         >
           Forgot Password?
         </button>
         <button
           type="button"
-          className="text-sm hover:underline transition-colors"
+          className="text-sm transition-colors hover:underline"
+          style={{
+            color: theme.colors.textSecondary,
+            transition: theme.transition.default,
+          }}
           onClick={onSwitchToSignup}
-          style={{ color: `${theme.colors.text}80` }}
+          disabled={loading}
         >
-          Don't have an account? Sign up
+          Don&apos;t have an account? Sign up
         </button>
         {loading && (
-          <div className="flex justify-center pt-2">
-            <Loader text={loadingText} />
+          <div className="pt-2">
+            <Loader text="" />
           </div>
         )}
       </div>

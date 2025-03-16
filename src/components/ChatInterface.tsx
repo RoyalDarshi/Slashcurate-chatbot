@@ -1,18 +1,29 @@
-import React, { useReducer, useRef, useEffect, useCallback, useState } from "react";
+import React, {
+  useReducer,
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+  useMemo,
+} from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
-import { 
-  Message, 
-  Connection, 
-  ChatState, 
-  ChatAction, 
-  ChatInterfaceProps 
+import {
+  Message,
+  Connection,
+  ChatState,
+  ChatAction,
+  ChatInterfaceProps,
 } from "../types";
-import { CHATBOT_API_URL, API_URL, CHATBOT_CON_DETAILS_API_URL } from "../config";
-import { ConnectionSelector } from "./ConnectionSelector";
-import { CurrentConnection } from "./CurrentConnection";
-import { MessageList } from "./MessageList";
+import {
+  CHATBOT_API_URL,
+  API_URL,
+  CHATBOT_CON_DETAILS_API_URL,
+} from "../config";
 import ChatInput from "./ChatInput";
+import ChatMessage from "./ChatMessage";
+import Loader from "./Loader";
+import { useTheme } from "../ThemeContext";
 
 const initialState: ChatState = {
   isLoading: false,
@@ -33,20 +44,24 @@ const reducer = (state: ChatState, action: ChatAction): ChatState => {
   }
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  onCreateConSelected,
+}) => {
+  const { theme } = useTheme();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
   const [state, dispatch] = useReducer(reducer, initialState);
   const messagesRef = useRef<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
-  const [connectionSelected, setConnectionSelected] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<string | null>(
+    localStorage.getItem("selectedConnection") || null
+  );
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionsLoading, setConnectionsLoading] = useState(true);
 
   const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => {
@@ -55,24 +70,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
 
   const saveMessages = useCallback(() => {
     try {
-      const existingMessages = JSON.parse(
-        localStorage.getItem("chatMessages") ?? "[]"
-      );
-      console.log("existingMessages", existingMessages);
-      const allMessages = [...existingMessages, ...messagesRef.current];
-
-      const limitedMessages = allMessages.slice(-10);
+      const limitedMessages = messagesRef.current.slice(-10);
       localStorage.setItem("chatMessages", JSON.stringify(limitedMessages));
     } catch (error) {
-      console.error("Failed to save messages to local storage", error);
+      console.error("Failed to save messages", error);
     }
   }, []);
 
   useEffect(() => {
     const fetchConnections = async () => {
+      setConnectionsLoading(true);
       const userId = sessionStorage.getItem("userId");
       if (!userId) {
-        toast.error("User ID not found. Please log in again.");
+        toast.error("User ID not found. Please log in again.", {
+          style: {
+            background: theme.colors.surface,
+            color: theme.colors.error,
+          },
+        });
+        setConnectionsLoading(false);
         return;
       }
       try {
@@ -80,36 +96,68 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
           userId,
         });
         setConnections(response.data.connections);
+
+        const storedConnectionName = localStorage.getItem("selectedConnection");
+        const defaultConnection =
+          response.data.connections.find(
+            (conn: Connection) => conn.connectionName === storedConnectionName
+          ) ||
+          response.data.connections[0] ||
+          null;
+
+        setSelectedConnection(defaultConnection?.connectionName || null);
+        setConnectionError(null);
+
+        if (defaultConnection) {
+          await axios.post(
+            `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
+            {
+              connection: defaultConnection,
+            }
+          );
+        }
       } catch (error) {
         console.error("Error fetching connections:", error);
+        setConnectionError("Failed to fetch connections. Please try again.");
+      } finally {
+        setConnectionsLoading(false);
       }
     };
     fetchConnections();
-  }, []);
+  }, [theme]);
 
   const handleSelect = async (option: any) => {
-    if (option && option.value === "create-con") {
+    if (option?.value === "create-con") {
       onCreateConSelected();
       setSelectedConnection(null);
-      setConnectionSelected(false);
+      localStorage.removeItem("selectedConnection");
     } else if (option) {
-      try {
-        await axios.post(`${CHATBOT_CON_DETAILS_API_URL}/connection_details`, {
-          connection: option.value,
-        });
-        setSelectedConnection(option.value.connectionName);
-        setConnectionSelected(true);
-      } catch (error) {
-        console.error("Error fetching connection details:", error);
+      const selectedConnectionObj = connections.find(
+        (conn) => conn.connectionName === option.value.connectionName
+      );
+      if (selectedConnectionObj) {
+        try {
+          await axios.post(
+            `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
+            {
+              connection: selectedConnectionObj,
+            }
+          );
+          setSelectedConnection(selectedConnectionObj.connectionName);
+          localStorage.setItem(
+            "selectedConnection",
+            selectedConnectionObj.connectionName
+          );
+          setConnectionError(null);
+        } catch (error) {
+          console.error("Error fetching connection details:", error);
+          setConnectionError("Failed to load connection details.");
+        }
       }
     } else {
       setSelectedConnection(null);
-      setConnectionSelected(false);
+      localStorage.removeItem("selectedConnection");
     }
-  };
-
-  const handleChangeConnection = () => {
-    setConnectionSelected(false);
   };
 
   const handleSubmit = useCallback(
@@ -124,15 +172,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
         isBot: false,
         timestamp: new Date().toISOString(),
       };
-
       const botLoadingMessage: Message = {
         id: `loading-${Date.now()}`,
         isBot: true,
+        content: "loading...",
         timestamp: new Date().toISOString(),
       };
 
       setLoadingMessageId(botLoadingMessage.id);
-
       messagesRef.current = [
         ...messagesRef.current,
         userMessage,
@@ -141,10 +188,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
       setMessages([...messagesRef.current]);
       dispatch({ type: "SET_INPUT", payload: "" });
       scrollToBottom();
+
       try {
+        const selectedConnectionObj = connections.find(
+          (conn) => conn.connectionName === selectedConnection
+        );
+        if (!selectedConnectionObj)
+          throw new Error("Selected connection not found");
+
         const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
           question: state.input,
-          connection: selectedConnection,
+          connection: selectedConnectionObj,
         });
 
         const botResponseMessage: Message = {
@@ -159,14 +213,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
         );
       } catch (error) {
         console.error("Error getting bot response:", error);
-
         const errorMessage: Message = {
           id: Date.now().toString(),
           content: "Sorry, an error occurred. Please try again.",
           isBot: true,
           timestamp: new Date().toISOString(),
         };
-
         messagesRef.current = messagesRef.current.map((msg) =>
           msg.id === botLoadingMessage.id ? errorMessage : msg
         );
@@ -177,13 +229,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
         saveMessages();
       }
     },
-    [state.input, state.isLoading, selectedConnection, saveMessages]
+    [
+      state.input,
+      state.isLoading,
+      selectedConnection,
+      connections,
+      saveMessages,
+    ]
   );
-  const handleEditMessage = async (
-    id: string,
-    newContent: string,
-    botResponse?: string
-  ) => {
+
+  const handleEditMessage = async (id: string, newContent: string) => {
     const messageIndex = messagesRef.current.findIndex((msg) => msg.id === id);
     if (messageIndex === -1) return;
 
@@ -200,7 +255,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
         isBot: true,
         timestamp: new Date().toISOString(),
       };
-
       setLoadingMessageId(botLoadingMessage.id);
 
       if (
@@ -218,25 +272,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
           question: newContent,
           connection: selectedConnection,
         });
-
         const botResponse = JSON.stringify(response.data, null, 2);
-
-        if (messageIndex + 1 < messagesRef.current.length) {
-          const botMessageId = messagesRef.current[messageIndex + 1].id;
-          messagesRef.current = messagesRef.current.map((msg) =>
-            msg.id === botMessageId ? { ...msg, content: botResponse } : msg
-          );
-        }
+        messagesRef.current = messagesRef.current.map((msg) =>
+          msg.id === botLoadingMessage.id
+            ? { ...msg, content: botResponse }
+            : msg
+        );
       } catch (error) {
         console.error("Error updating message:", error);
-
         const errorMessage: Message = {
           id: Date.now().toString(),
           content: "Sorry, an error occurred. Please try again.",
           isBot: true,
           timestamp: new Date().toISOString(),
         };
-
         messagesRef.current = messagesRef.current.map((msg) =>
           msg.id === botLoadingMessage.id ? errorMessage : msg
         );
@@ -249,48 +298,98 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onCreateConSelected }) =>
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-200 dark:bg-gray-900">
-      <ToastContainer />
-      <div className="p-4 flex items-center justify-between">
-        {connectionSelected ? (
-          <CurrentConnection
-            connectionName={selectedConnection!}
-            onChangeConnection={handleChangeConnection}
-          />
-        ) : (
-          <ConnectionSelector
-            connections={connections}
-            onSelect={handleSelect}
-            onCreateConSelected={onCreateConSelected}
-          />
+    <div
+      className="flex flex-col h-full"
+      style={{ background: theme.colors.background }}
+    >
+      <ToastContainer
+        toastStyle={{
+          background: theme.colors.surface,
+          color: theme.colors.text,
+          border: `1px solid ${theme.colors.text}20`,
+          borderRadius: theme.borderRadius.default,
+          padding: theme.spacing.sm,
+        }}
+      />
+
+      {/* Scrollable Messages Container */}
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{
+          padding: theme.spacing.lg,
+          maxHeight: "calc(100vh + 100px)", // Adjust height as needed
+        }}
+      >
+        {messages.length === 0 && !connectionError && (
+          <div
+            className="flex items-center justify-center h-full text-center"
+            style={{ color: theme.colors.text }}
+          >
+            <p
+              className="text-xl font-bold"
+              style={{ maxWidth: "80%", lineHeight: "1.5" }}
+            >
+              Hello! I’m your Data Assistant. How can I help you today?
+            </p>
+          </div>
         )}
+        {messages.map((message) => (
+          <div
+            className="flex flex-col w-full"
+            style={{ gap: theme.spacing.md }}
+            key={message.id}
+          >
+            <ChatMessage
+              message={message}
+              loading={message.id === loadingMessageId}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={(id) => {
+                messagesRef.current = messagesRef.current.filter(
+                  (msg) => msg.id !== id
+                );
+                setMessages([...messagesRef.current]);
+                saveMessages();
+              }}
+              selectedConnection={selectedConnection}
+            />
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
       </div>
-      {connectionSelected && (
-        <>
-          <MessageList
-            messages={messages}
-            loadingMessageId={loadingMessageId}
-            onEditMessage={handleEditMessage}
-            onDeleteMessage={(id) => {
-              messagesRef.current = messagesRef.current.filter(
-                (msg) => msg.id !== id
-              );
-              setMessages([...messagesRef.current]);
-              saveMessages();
-            }}
-            selectedConnection={selectedConnection}
-            messagesEndRef={messagesEndRef}
-          />
-          <ChatInput
-            input={state.input}
-            isLoading={state.isLoading}
-            onInputChange={(value) =>
-              dispatch({ type: "SET_INPUT", payload: value })
-            }
-            isSubmitting={state.isSubmitting}
-            onSubmit={handleSubmit}
-          />
-        </>
+
+      {/* Fixed ChatInput at the Bottom */}
+      <div
+        style={{
+          position: "sticky",
+          bottom: 0,
+          background: theme.colors.background,
+          padding: theme.spacing.lg,
+        }}
+      >
+        <ChatInput
+          input={state.input}
+          isLoading={state.isLoading}
+          onInputChange={(value) =>
+            dispatch({ type: "SET_INPUT", payload: value })
+          }
+          isSubmitting={state.isSubmitting}
+          onSubmit={handleSubmit}
+          connections={connections}
+          selectedConnection={selectedConnection}
+          onSelect={handleSelect}
+        />
+      </div>
+
+      {connectionError && (
+        <div
+          className="text-center"
+          style={{
+            padding: theme.spacing.md,
+            color: theme.colors.error,
+          }}
+        >
+          {connectionError}
+        </div>
       )}
     </div>
   );

@@ -9,6 +9,7 @@ interface InputFieldProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
   className?: string;
+  disabled?: boolean; // Added for consistency with other components
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -19,6 +20,7 @@ const InputField: React.FC<InputFieldProps> = ({
   onChange,
   required = false,
   className = "",
+  disabled = false,
 }) => {
   const { theme } = useTheme();
 
@@ -30,13 +32,18 @@ const InputField: React.FC<InputFieldProps> = ({
       value={value}
       onChange={onChange}
       required={required}
-      className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all ${className}`}
+      disabled={disabled}
+      className={`w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       style={{
-        backgroundColor: theme.colors.background,
-        color: theme.colors.text,
-        borderColor: `${theme.colors.text}50`, // 50% opacity for border
+        backgroundColor: disabled
+          ? theme.colors.disabled
+          : theme.colors.background,
+        color: disabled ? theme.colors.disabledText : theme.colors.text,
+        border: `1px solid ${theme.colors.border}`,
         borderRadius: theme.borderRadius.default,
-        focusRingColor: theme.colors.accent, // This won't work directly; handled by Tailwind class
+        fontFamily: theme.typography.fontFamily,
+        fontSize: theme.typography.size.base,
+        transition: theme.transition.default,
       }}
     />
   );

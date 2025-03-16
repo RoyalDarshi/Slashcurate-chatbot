@@ -8,8 +8,10 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import { DataTableProps } from "../types";
+import { useTheme } from "../ThemeContext";
 
 const DataTable: React.FC<DataTableProps> = ({ data }) => {
+  const { theme } = useTheme();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [processedData, setProcessedData] = useState<any[]>([]);
@@ -51,12 +53,12 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
               <span className="font-medium">{header}</span>
               {column.getIsSorted() ? (
                 column.getIsSorted() === "asc" ? (
-                  <span className="text-blue-500"> ▲</span>
+                  <span style={{ color: theme.colors.accent }}> ▲</span>
                 ) : (
-                  <span className="text-blue-500"> ▼</span>
+                  <span style={{ color: theme.colors.accent }}> ▼</span>
                 )
               ) : (
-                <span className="text-gray-400"> ⬍</span>
+                <span style={{ color: theme.colors.textSecondary }}> ⬍</span>
               )}
             </div>
           ),
@@ -68,7 +70,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
           },
         })
       ),
-    [headers]
+    [headers, theme]
   );
 
   const table = useReactTable({
@@ -81,14 +83,30 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
   });
 
   return (
-    <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition-colors duration-200 shadow-sm dark:shadow-lg">
+    <div
+      className="rounded-lg border shadow-sm transition-colors duration-200"
+      style={{
+        background: theme.colors.surface,
+        borderColor: `${theme.colors.text}20`,
+        borderRadius: theme.borderRadius.default,
+      }}
+    >
       <div
         ref={tableContainerRef}
-        className="overflow-auto max-h-96 scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent"
+        className="overflow-auto max-h-96 scrollbar-thin"
+        style={{
+          scrollbarColor: `${theme.colors.textSecondary} ${theme.colors.surface}`,
+        }}
       >
         <div className="align-middle mr-2">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="sticky top-0 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors duration-200">
+          <table className="min-w-full divide-y">
+            <thead
+              className="sticky top-0 transition-colors duration-200"
+              style={{
+                background: theme.colors.surface,
+                color: theme.colors.text,
+              }}
+            >
               <tr>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <React.Fragment key={headerGroup.id}>
@@ -96,7 +114,12 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                       <th
                         key={header.id}
                         scope="col"
-                        className="px-5 py-3 text-left text-sm font-semibold uppercase tracking-wider hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 cursor-pointer"
+                        className="px-5 py-3 text-left text-sm font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer"
+                        style={{
+                          background: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderBottom: `1px solid ${theme.colors.text}20`,
+                        }}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(
@@ -109,16 +132,30 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800 transition-colors duration-200">
+            <tbody
+              className="divide-y transition-colors duration-200"
+              style={{
+                background: theme.colors.surface,
+                borderColor: `${theme.colors.text}20`,
+              }}
+            >
               {table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="transition-all duration-200 bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 group"
+                  className="transition-all duration-200 group"
+                  style={{
+                    background: theme.colors.surface,
+                    color: theme.colors.text,
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-5 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-200"
+                      className="px-5 py-4 whitespace-nowrap text-sm transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-200"
+                      style={{
+                        color: theme.colors.textSecondary,
+                        borderBottom: `1px solid ${theme.colors.text}20`,
+                      }}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

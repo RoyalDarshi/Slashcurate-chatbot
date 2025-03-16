@@ -1,16 +1,38 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+// vite.config.ts
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
+import { visualizer } from "rollup-plugin-visualizer";
+import path from "path";
 
-export default defineConfig({
-    plugins: [react()],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+
+  return {
+    server: {
+      host: "0.0.0.0",
+      port: 5173, // Or your desired port
+    },
+    plugins: [react(), visualizer()],
     optimizeDeps: {
-        exclude: ["lucide-react"],
+      exclude: ["lucide-react"],
     },
     define: {
-        "process.env": process.env,
+      "import.meta.env.VITE_API_URL": JSON.stringify(env.VITE_API_URL),
     },
-    server: {
-        host: '0.0.0.0',
-        port: 5173, // Or your desired port
+    build: {
+      rollupOptions: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
+        },
+      },
+      sourcemap: env.VITE_ENABLE_SOURCEMAP === "true",
     },
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+  };
 });

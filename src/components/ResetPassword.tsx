@@ -19,7 +19,7 @@ const ResetPassword: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Loading, please wait...");
-  const { theme } = useTheme();
+  const { theme } = useTheme(); // Access the theme
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -88,10 +88,9 @@ const ResetPassword: React.FC = () => {
       <div
         className="w-full max-w-md p-8 rounded-lg shadow-md"
         style={{
-          background:
-            theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+          background: theme.colors.surface, // Use surface color for the card
           borderRadius: theme.borderRadius.default,
-          border: `1px solid ${theme.colors.text}20`,
+          border: `1px solid ${theme.colors.border}`,
         }}
       >
         <h2
@@ -102,10 +101,9 @@ const ResetPassword: React.FC = () => {
         </h2>
         <ToastContainer
           toastStyle={{
-            background:
-              theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+            background: theme.colors.surface,
             color: theme.colors.text,
-            border: `1px solid ${theme.colors.text}20`,
+            border: `1px solid ${theme.colors.border}`,
             borderRadius: theme.borderRadius.default,
           }}
         />
@@ -125,6 +123,7 @@ const ResetPassword: React.FC = () => {
               onChange={handleChange}
               showPassword={showPassword}
               toggleShowPassword={handleShowPassword}
+              theme={theme} // Pass the theme to PasswordField
             />
           </div>
           <div className="space-y-1">
@@ -142,6 +141,7 @@ const ResetPassword: React.FC = () => {
               onChange={handleChange}
               showPassword={showConfirmPassword}
               toggleShowPassword={handleShowConfirmPassword}
+              theme={theme} // Pass the theme to PasswordField
             />
           </div>
           <button
@@ -149,9 +149,9 @@ const ResetPassword: React.FC = () => {
             className="w-full p-3 rounded-md hover:opacity-90 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background: theme.colors.accent,
-              color: theme.colors.text,
+              color: "white",
               borderRadius: theme.borderRadius.default,
-              boxShadow: `0 4px 6px ${theme.colors.text}20`,
+              boxShadow: theme.shadow.md,
             }}
             disabled={loading}
           >
@@ -161,13 +161,14 @@ const ResetPassword: React.FC = () => {
             type="button"
             className="w-full text-sm hover:underline transition-colors text-center"
             onClick={() => navigate("/")}
-            style={{ color: `${theme.colors.text}80` }}
+            style={{ color: theme.colors.textSecondary }}
           >
             Back to Login
           </button>
           {loading && (
             <div className="flex justify-center">
-              <Loader text={loadingText} />
+              <Loader text={loadingText} theme={theme} />{" "}
+              {/* Pass the theme to Loader */}
             </div>
           )}
         </form>

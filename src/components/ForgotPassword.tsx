@@ -94,7 +94,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
         className="w-full p-3 rounded-md hover:opacity-90 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
           background: theme.colors.accent,
-          color: theme.colors.text,
+          color: "white",
           borderRadius: theme.borderRadius.default,
           boxShadow: `0 4px 6px ${theme.colors.text}20`,
         }}

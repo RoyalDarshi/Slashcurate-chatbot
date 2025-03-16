@@ -1,64 +1,57 @@
-// ThemeContext.tsx
 import React, {
   createContext,
-  useState,
   useContext,
-  ReactNode,
+  useState,
   useEffect,
+  ReactNode,
 } from "react";
-import { Theme, themes } from "./theme"; // Adjust the path to your theme.ts
+import { themes } from "./theme"; // Import from your themes file
+import { Theme } from "./types"; // Import the Theme type
 
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
-  themeKey: "dark" | "light"; // Expose themeKey for UI feedback
+  setTheme: (themeName: "light" | "dark") => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType>({
+  theme: themes.light, // Default to light theme
+  toggleTheme: () => {}, // No-op function as default
+  setTheme: () => {}, // No-op function as default
+});
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [themeKey, setThemeKey] = useState<"dark" | "light">(() => {
-    // Check localStorage first, then system preference
-    const savedTheme = localStorage.getItem("theme") as "dark" | "light" | null;
-    if (savedTheme && (savedTheme === "dark" || savedTheme === "light")) {
-      return savedTheme;
-    }
-    const prefersDark =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return prefersDark ? "dark" : "light";
-  });
+  const [currentTheme, setCurrentTheme] = useState<"light" | "dark">(
+    localStorage.getItem("theme") === "dark" ? "dark" : "light"
+  );
 
   useEffect(() => {
-    // Persist theme choice to localStorage
-    localStorage.setItem("theme", themeKey);
-    // Update document class for Tailwind dark mode (optional)
-    if (themeKey === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [themeKey]);
+    // Apply theme class to the body element
+    document.body.className = currentTheme;
+  }, [currentTheme]);
 
   const toggleTheme = () => {
-    setThemeKey((prev) => (prev === "dark" ? "light" : "dark"));
+    const newTheme = currentTheme === "light" ? "dark" : "light";
+    setCurrentTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
   };
 
+  const setTheme = (themeName: "light" | "dark") => {
+    setCurrentTheme(themeName);
+    localStorage.setItem("theme", themeName);
+  };
+
+  const theme = themes[currentTheme];
+
   return (
-    <ThemeContext.Provider
-      value={{ theme: themes[themeKey], toggleTheme, themeKey }}
-    >
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
 };
 
 export const useTheme = (): ThemeContextType => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
+  return useContext(ThemeContext);
 };

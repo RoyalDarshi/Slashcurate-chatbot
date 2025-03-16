@@ -26,7 +26,6 @@ const Signup: React.FC<SignupProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("Signing up...");
   const { theme } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,6 +39,7 @@ const Signup: React.FC<SignupProps> = ({
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     const { name, email, password, confirmPassword } = formData;
+
     if (
       !name.trim() ||
       !email.trim() ||
@@ -61,17 +61,23 @@ const Signup: React.FC<SignupProps> = ({
       toast.error("Password cannot be only spaces.");
       return;
     }
+
     try {
       setLoading(true);
-      const res = await axios.post(`${API_URL}/signup`, {
-        name: name.trim(),
-        email: email.trim(),
-        password: password.trim(),
-      });
+      const res = await axios.post(
+        `${API_URL}/signup`,
+        {
+          name: name.trim(),
+          email: email.trim(),
+          password: password.trim(),
+        },
+        { headers: { "Content-Type": "application/json" } }
+      );
       setLoading(false);
+
       if (res.status === 200) {
-        onSignupSuccess(res.data.token);
         toast.success("Signup successful!");
+        onSignupSuccess(res.data.token);
       } else {
         toast.error(res.data.message || "Signup failed.");
       }
@@ -80,125 +86,182 @@ const Signup: React.FC<SignupProps> = ({
       toast.error(
         isAxiosError(err)
           ? err.response?.data?.message || err.message
-          : (err as Error).message
+          : (err as Error).message || "An unexpected error occurred"
       );
     }
   };
 
   const handleShowPassword = () => {
-    setShowPassword((prev) => !prev);
+    setShowPassword(true);
+    setTimeout(() => setShowPassword(false), 500); // Hide after 500ms
   };
 
   const handleShowConfirmPassword = () => {
-    setShowConfirmPassword((prev) => !prev);
+    setShowConfirmPassword(true);
+    setTimeout(() => setShowConfirmPassword(false), 500); // Hide after 500ms
   };
 
   return (
-    <form onSubmit={handleSignup} className="space-y-4">
-      <ToastContainer
-        toastStyle={{
-          background:
-            theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
-          color: theme.colors.text,
-          border: `1px solid ${theme.colors.text}20`,
-          borderRadius: theme.borderRadius.default,
-        }}
-      />
-      <div className="space-y-1">
-        <label
-          htmlFor="name"
-          className="text-sm font-medium"
-          style={{ color: theme.colors.text }}
-        >
-          Full Name
-        </label>
-        <InputField
-          type="text"
-          name="name"
-          placeholder="Enter your full name"
-          value={formData.name}
-          onChange={handleChange}
-          required
+    <div className="space-y-6">
+      <form onSubmit={handleSignup} className="space-y-4">
+        {/* Toast Notifications */}
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar
+          closeOnClick
+          pauseOnHover
+          toastStyle={{
+            backgroundColor: theme.colors.surface,
+            color: theme.colors.text,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.borderRadius.default,
+            boxShadow: theme.shadow.sm,
+          }}
         />
-      </div>
-      <div className="space-y-1">
-        <label
-          htmlFor="email"
-          className="text-sm font-medium"
-          style={{ color: theme.colors.text }}
-        >
-          Email Address
-        </label>
-        <InputField
-          type="email"
-          name="email"
-          placeholder="Enter your email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="space-y-1">
-        <label
-          htmlFor="password"
-          className="text-sm font-medium"
-          style={{ color: theme.colors.text }}
-        >
-          Password
-        </label>
-        <PasswordField
-          name="password"
-          placeholder="Enter your password"
-          value={formData.password}
-          onChange={handleChange}
-          showPassword={showPassword}
-          toggleShowPassword={handleShowPassword}
-        />
-      </div>
-      <div className="space-y-1">
-        <label
-          htmlFor="confirmPassword"
-          className="text-sm font-medium"
-          style={{ color: theme.colors.text }}
-        >
-          Confirm Password
-        </label>
-        <PasswordField
-          name="confirmPassword"
-          placeholder="Confirm your password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          showPassword={showConfirmPassword}
-          toggleShowPassword={handleShowConfirmPassword}
-        />
-      </div>
-      <button
-        type="submit"
-        className="w-full p-2 rounded-md hover:opacity-90 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{
-          background: theme.colors.accent,
-          color: theme.colors.text,
-          borderRadius: theme.borderRadius.default,
-          boxShadow: `0 4px 6px ${theme.colors.text}20`,
-        }}
-        disabled={loading}
-      >
-        {loading ? "Signing Up..." : "Sign Up"}
-      </button>
-      <button
-        type="button"
-        className="w-full text-sm hover:underline transition-colors text-center"
-        onClick={onSwitchToLogin}
-        style={{ color: `${theme.colors.text}80` }}
-      >
-        Already have an account? Log in
-      </button>
-      {loading && (
-        <div className="flex justify-center pt-2">
-          <Loader text={loadingText} />
+
+        {/* Name Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="name"
+            className="text-sm font-medium"
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.medium,
+            }}
+          >
+            Full Name
+          </label>
+          <InputField
+            type="text"
+            name="name"
+            placeholder="Enter your full name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
         </div>
-      )}
-    </form>
+
+        {/* Email Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="email"
+            className="text-sm font-medium"
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.medium,
+            }}
+          >
+            Email Address
+          </label>
+          <InputField
+            type="email"
+            name="email"
+            placeholder="Enter your email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
+        </div>
+
+        {/* Password Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="password"
+            className="text-sm font-medium"
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.medium,
+            }}
+          >
+            Password
+          </label>
+          <PasswordField
+            name="password"
+            placeholder="Enter your password"
+            value={formData.password}
+            onChange={handleChange}
+            showPassword={showPassword}
+            toggleShowPassword={handleShowPassword}
+            disabled={loading}
+          />
+        </div>
+
+        {/* Confirm Password Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="confirmPassword"
+            className="text-sm font-medium"
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.medium,
+            }}
+          >
+            Confirm Password
+          </label>
+          <PasswordField
+            name="confirmPassword"
+            placeholder="Confirm your password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            showPassword={showConfirmPassword}
+            toggleShowPassword={handleShowConfirmPassword}
+            disabled={loading}
+          />
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          className="w-full p-2 rounded-md transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            backgroundColor: theme.colors.accent,
+            color: "white",
+            borderRadius: theme.borderRadius.default,
+            boxShadow: theme.shadow.sm,
+            transition: theme.transition.default,
+          }}
+          disabled={loading}
+          onMouseOver={(e) =>
+            !loading &&
+            (e.currentTarget.style.backgroundColor = theme.colors.accentHover)
+          }
+          onMouseOut={(e) =>
+            !loading &&
+            (e.currentTarget.style.backgroundColor = theme.colors.accent)
+          }
+        >
+          {loading ? "Signing Up..." : "Sign Up"}
+        </button>
+      </form>
+
+      {/* Switch to Login */}
+      <div className="text-center">
+        <button
+          type="button"
+          className="text-sm transition-colors hover:underline"
+          style={{
+            color: theme.colors.textSecondary,
+            transition: theme.transition.default,
+          }}
+          onClick={onSwitchToLogin}
+          disabled={loading}
+        >
+          Already have an account? Log in
+        </button>
+        {loading && (
+          <div className="pt-2">
+            <Loader text="Signing up..." />
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

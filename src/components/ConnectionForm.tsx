@@ -399,12 +399,11 @@ const ConnectionForm: React.FC = () => {
             placeholder={placeholder}
             className="pl-10 w-full p-3 rounded-md focus:outline-none focus:ring-2 transition-all duration-200"
             style={{
-              background:
-                theme.colors.background === "#f9f9f9" ? "#f0f0f0" : "#2a2a2a",
+              background: theme.colors.background,
               color: theme.colors.text,
               border: `1px solid ${
-                errors[name] ? "#ef4444" : theme.colors.text
-              }20`,
+                errors[name] ? theme.colors.error : `${theme.colors.text}20`
+              }`,
               borderRadius: theme.borderRadius.default,
             }}
           />
@@ -418,12 +417,11 @@ const ConnectionForm: React.FC = () => {
             placeholder={placeholder}
             className="pl-10 w-full p-3 rounded-md focus:outline-none focus:ring-2 transition-all duration-200"
             style={{
-              background:
-                theme.colors.background === "#f9f9f9" ? "#f0f0f0" : "#2a2a2a",
+              background: theme.colors.background,
               color: theme.colors.text,
               border: `1px solid ${
-                errors[name] ? "#ef4444" : theme.colors.text
-              }20`,
+                errors[name] ? theme.colors.error : `${theme.colors.text}20`
+              }`,
               borderRadius: theme.borderRadius.default,
             }}
           />
@@ -443,15 +441,14 @@ const ConnectionForm: React.FC = () => {
     <div
       className="p-6 rounded-lg shadow-md h-full overflow-y-auto"
       style={{
-        background:
-          theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+        backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.text}20`,
+        borderRadius: theme.borderRadius.default,
       }}
     >
       <ToastContainer
         toastStyle={{
-          background:
-            theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+          backgroundColor: theme.colors.surface,
           color: theme.colors.text,
           border: `1px solid ${theme.colors.text}20`,
         }}
@@ -479,8 +476,7 @@ const ConnectionForm: React.FC = () => {
             onClick={() => setIsSelectOpen(!isSelectOpen)}
             className="w-full p-3 rounded-md flex items-center justify-between focus:outline-none focus:ring-2 transition-all duration-200"
             style={{
-              background:
-                theme.colors.background === "#f9f9f9" ? "#f0f0f0" : "#2a2a2a",
+              backgroundColor: theme.colors.background,
               border: `1px solid ${theme.colors.text}20`,
               borderRadius: theme.borderRadius.default,
               color: theme.colors.text,
@@ -509,8 +505,7 @@ const ConnectionForm: React.FC = () => {
             <div
               className="absolute z-10 mt-2 w-full rounded-md shadow-lg max-h-72 overflow-auto"
               style={{
-                background:
-                  theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+                backgroundColor: theme.colors.surface,
                 border: `1px solid ${theme.colors.text}20`,
                 borderRadius: theme.borderRadius.default,
               }}
@@ -523,9 +518,18 @@ const ConnectionForm: React.FC = () => {
                   style={{
                     backgroundColor:
                       formData.selectedDB === option.value
-                        ? `${theme.colors.accent}10`
+                        ? `${theme.colors.accent}30`
                         : undefined,
                   }}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor = theme.colors.hover)
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor =
+                      formData.selectedDB === option.value
+                        ? `${theme.colors.accent}30`
+                        : "transparent")
+                  }
                 >
                   <div className="flex items-center">
                     {React.cloneElement(option.icon as React.ReactElement, {
@@ -579,10 +583,10 @@ const ConnectionForm: React.FC = () => {
                 disabled={!isFormModified}
                 className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200"
                 style={{
-                  background: isFormModified
-                    ? "#ef4444"
+                  backgroundColor: isFormModified
+                    ? theme.colors.error
                     : `${theme.colors.text}20`,
-                  color: theme.colors.text,
+                  color: "white",
                   borderRadius: theme.borderRadius.default,
                   boxShadow: isFormModified
                     ? `0 4px 6px ${theme.colors.text}20`
@@ -599,10 +603,10 @@ const ConnectionForm: React.FC = () => {
                 disabled={!isTestButtonEnabled}
                 className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200"
                 style={{
-                  background: isTestButtonEnabled
-                    ? "#3b82f6"
+                  backgroundColor: isTestButtonEnabled
+                    ? theme.colors.accent
                     : `${theme.colors.text}20`,
-                  color: theme.colors.text,
+                  color: "white",
                   borderRadius: theme.borderRadius.default,
                   boxShadow: isTestButtonEnabled
                     ? `0 4px 6px ${theme.colors.text}20`
@@ -618,10 +622,10 @@ const ConnectionForm: React.FC = () => {
                 disabled={!isSubmitButtonEnabled}
                 className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200"
                 style={{
-                  background: isSubmitButtonEnabled
+                  backgroundColor: isSubmitButtonEnabled
                     ? theme.colors.accent
                     : `${theme.colors.text}20`,
-                  color: theme.colors.text,
+                  color: "white",
                   borderRadius: theme.borderRadius.default,
                   boxShadow: isSubmitButtonEnabled
                     ? `0 4px 6px ${theme.colors.text}20`

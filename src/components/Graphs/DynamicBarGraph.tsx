@@ -1,3 +1,4 @@
+// DynamicBarGraph.tsx
 import React, { useState, useEffect } from "react";
 import {
   BarChart,
@@ -10,29 +11,32 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useTheme } from "../../ThemeContext";
 
 interface DynamicBarGraphProps {
   data: any[];
+  showTable: (setTable:boolean) => void;
+  isValidGraph: (validData:boolean) => void;
 }
 
-const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
+const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data,showTable,isValidGraph }) => {
+  const { theme } = useTheme();
   const [graphData, setGraphData] = useState<any[]>([]);
   const [xKey, setXKey] = useState<string | null>(null);
   const [yKeys, setYKeys] = useState<string[]>([]);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
 
   const colors = [
-    "#6A0DAD", // Deep Purple
-    "#1E90FF", // Bright Blue
-    "#32CD32", // Lime Green
-    "#FF4500", // Orange-Red
-    "#FFA500", // Lavender
-    "#4DB6AC", // Teal
-    "#FFB74D", // Amber
-    "#81D4FA", // Light Sky Blue
-    "#CE93D8", // Light Purple
-    "#A1887F", // Brown
+    theme.colors.accent,
+    "#4CAF50",
+    "#FF9800",
+    "#03A9F4",
+    "#E91E63",
+    "#9C27B0",
+    "#FFC107",
+    "#2196F3",
+    "#673AB7",
   ];
 
   useEffect(() => {
@@ -41,7 +45,10 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
 
   const processApiData = (data: any[]) => {
     try {
-      if (!data || data.length === 0) return;
+      if (!data || data.length === 0) {
+        setIsValidGraphData(false);
+        return;
+      }
 
       const firstItem = data[0];
       const keys = Object.keys(firstItem);
@@ -77,9 +84,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
             !key.toLowerCase().endsWith("code")
         );
 
-        setYKeys(
-          foundBranchId ? filteredNumericKeys : filteredNumericKeys.slice(1)
-        );
+        setYKeys(filteredNumericKeys);
         setSelectedMetric(filteredNumericKeys[0]);
 
         const normalizedData = data.map((item) => {
@@ -100,37 +105,44 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
           return newItem;
         });
         setGraphData(normalizedData);
+        setIsValidGraphData(filteredNumericKeys.length > 0);
+      } else {
+        setIsValidGraphData(false);
       }
     } catch (error) {
       console.error("Error processing data:", error);
+      setIsValidGraphData(false);
     }
-  };
-
-  const handleMouseEnter = (index: number) => {
-    setActiveIndex(index);
-  };
-
-  const handleMouseLeave = () => {
-    setActiveIndex(null);
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-elevation-medium border border-gray-200 dark:border-gray-700">
-          <p className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
-            {label}
+        <div
+          style={{
+            backgroundColor: theme.colors.surface,
+            color: theme.colors.text,
+            padding: "8px",
+            borderRadius: "4px",
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p>
+            <strong>{label}</strong>
           </p>
           {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full transition-colors"
-                style={{ backgroundColor: entry.color }}
-              />
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {entry.name}: {entry.value.toLocaleString()}
-              </p>
-            </div>
+            <p key={index}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "10px",
+                  height: "10px",
+                  backgroundColor: entry.color,
+                  marginRight: "5px",
+                }}
+              ></span>
+              {entry.name}: {entry.value.toLocaleString()}
+            </p>
           ))}
         </div>
       );
@@ -138,122 +150,79 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data }) => {
     return null;
   };
 
-  const CustomLegend = ({ payload }: any) => {
+  if (!isValidGraphData) {
+    showTable(true)
+    isValidGraph(false)
     return (
-      <div className="flex flex-wrap gap-4 justify-center mt-4">
-        {payload.map((entry: any, index: number) => (
-          <div
-            key={index}
-            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => setSelectedMetric(entry.value)}
-          >
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span
-              className={`text-sm ${
-                selectedMetric === entry.value
-                  ? "font-semibold text-blue-600 dark:text-blue-400"
-                  : "text-gray-600 dark:text-gray-400"
-              }`}
-            >
-              {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  if (graphData.length === 0 || !xKey || yKeys.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <p className="text-gray-500 dark:text-gray-400">
-          No valid data for graph.
+      <div
+        style={{
+          backgroundColor: theme.colors.surface,
+          borderRadius: "4px",
+          border: `1px solid ${theme.colors.border}`,
+          padding: "16px",
+        }}
+      >
+        <p
+          style={{
+            color: theme.colors.textSecondary,
+            textAlign: "center",
+            marginTop: "8px",
+          }}
+        >
+          Insufficient numeric data for graph visualization
         </p>
       </div>
     );
   }
 
   return (
-    <div
-      style={{ width: "55vw" }}
-      className="w-full max-w-full overflow-hidden card bg-white dark:bg-gray-800 rounded-l"
-    >
-      <div className="relative w-full" style={{ minHeight: "400px" }}>
-        <div className="absolute inset-0 flex flex-col">
-          <div className="flex-1 min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={graphData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                className="text-gray-800 dark:text-gray-200"
+    <div style={{ width: "55vw" }}>
+      <ResponsiveContainer height={400}>
+        <BarChart
+          data={graphData}
+          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
+          <XAxis
+            dataKey={xKey}
+            tick={{ fill: theme.colors.textSecondary }}
+            axisLine={{ stroke: theme.colors.border }}
+          />
+          <YAxis
+            domain={[0, "dataMax + 10"]}
+            tick={{ fill: theme.colors.textSecondary }}
+            axisLine={{ stroke: theme.colors.border }}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend
+            onClick={({ dataKey }) => setSelectedMetric(dataKey)}
+            formatter={(value: string, entry: any) => (
+              <span
+                style={{
+                  color:
+                    selectedMetric === value
+                      ? theme.colors.accent
+                      : theme.colors.textSecondary,
+                }}
               >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  className="stroke-gray-200 dark:stroke-gray-700"
-                  opacity={0.5}
-                />
-                <XAxis
-                  dataKey={xKey}
-                  tick={{
-                    fill: "currentColor",
-                    fontSize: 12,
-                  }}
-                  tickLine={{ stroke: "currentColor" }}
-                  axisLine={{ stroke: "currentColor" }}
-                  interval={0}
-                  angle={-45}
-                  className="dark:text-gray-400"
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis
-                  domain={[0, "dataMax + 10"]}
-                  tick={{
-                    fill: "currentColor",
-                    fontSize: 12,
-                  }}
-                  tickLine={{ stroke: "currentColor" }}
-                  axisLine={{ stroke: "currentColor" }}
-                  className="dark:text-gray-400"
-                  width={60}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend content={<CustomLegend />} />
-                {yKeys.map((yKey, index) => (
-                  <Bar
-                    key={yKey}
-                    dataKey={yKey}
-                    fill={colors[index % colors.length]}
-                    barSize={20}
-                    onMouseEnter={() => handleMouseEnter(index)}
-                    onMouseLeave={handleMouseLeave}
-                    opacity={
-                      selectedMetric ? (selectedMetric === yKey ? 1 : 0.3) : 1
-                    }
-                    className="transition-opacity duration-300"
-                  >
-                    {graphData.map((entry, entryIndex) => (
-                      <Cell
-                        key={`cell-${entryIndex}`}
-                        fill={colors[index % colors.length]}
-                        className="transition-all duration-300 hover:brightness-110"
-                        opacity={
-                          activeIndex === index || activeIndex === null
-                            ? 1
-                            : 0.3
-                        }
-                      />
-                    ))}
-                  </Bar>
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+                {value}
+              </span>
+            )}
+          />
+          {yKeys.map((yKey, index) => (
+            <Bar
+              key={yKey}
+              dataKey={yKey}
+              fill={colors[index % colors.length]}
+              opacity={selectedMetric ? (selectedMetric === yKey ? 1 : 0.3) : 1}
+            >
+              {graphData.map((_, idx) => (
+                <Cell key={`cell-${idx}`} />
+              ))}
+            </Bar>
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 };

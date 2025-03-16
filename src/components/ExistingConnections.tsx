@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Loader from "./Loader";
 import { API_URL } from "../config";
 import { Trash2 } from "react-feather"; // Import the Trash2 icon
+import { useTheme } from "../ThemeContext";
 
 interface Connection {
   id: number;
@@ -22,10 +23,10 @@ interface Connection {
 }
 
 const ExistingConnections: React.FC = () => {
+  const { theme } = useTheme();
   const [connections, setConnections] = useState<Connection[]>([]);
   const fetched = useRef(false);
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("Loading, please wait...");
   const [error, setError] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -38,7 +39,6 @@ const ExistingConnections: React.FC = () => {
 
     try {
       setLoading(true);
-      setLoadingText("Fetching connections, please wait...");
       setError(null);
       const response = await axios.post<{ connections: Connection[] }>(
         `${API_URL}/getuserconnections`,
@@ -82,7 +82,6 @@ const ExistingConnections: React.FC = () => {
 
     try {
       setLoading(true);
-      setLoadingText("Deleting connection, please wait...");
       setError(null);
       await axios.post(`${API_URL}/deleteuserconnection`, {
         userId,
@@ -115,95 +114,162 @@ const ExistingConnections: React.FC = () => {
   }, [fetchConnections]);
 
   return (
-    <div className="p-6 bg-white dark:bg-gray-800">
-      <ToastContainer />
-      <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-200">
+    <div
+      className="p-6 rounded-lg shadow-md h-full overflow-y-auto"
+      style={{
+        backgroundColor: theme.colors.surface,
+        border: `1px solid ${theme.colors.text}20`,
+        borderRadius: theme.borderRadius.default,
+      }}
+    >
+      <ToastContainer
+        toastStyle={{
+          backgroundColor: theme.colors.surface,
+          color: theme.colors.text,
+          border: `1px solid ${theme.colors.text}20`,
+        }}
+      />
+      <h2
+        className="text-3xl font-bold mb-6"
+        style={{ color: theme.colors.text }}
+      >
         Existing Connections
       </h2>
       <div className="overflow-x-auto mb-40 relative">
-        <div ref={tableContainerRef}>
-          <table className="min-w-full mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm">
+        <div ref={tableContainerRef} className="relative">
+          <table
+            className="min-w-full mb-6 rounded-lg overflow-hidden shadow-sm"
+            style={{
+              backgroundColor: theme.colors.surface,
+              border: `1px solid ${theme.colors.text}20`,
+              borderRadius: theme.borderRadius.default,
+            }}
+          >
             {connections.length > 0 && (
               <>
-                <thead className="bg-blue-600 dark:bg-blue-700">
+                <thead
+                  style={{
+                    backgroundColor: theme.colors.accent,
+                  }}
+                >
                   <tr>
-                    <th className="py-3 px-4 text-left text-white w-32">
+                    <th className="py-2 px-3 text-left w-32 text-white">
                       Connection Name
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-48">
+                    <th className="py-2 px-3 text-left w-48 text-white">
                       Description
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-32">
+                    <th className="py-2 px-3 text-left w-32 text-white">
                       Hostname
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-20">
+                    <th className="py-2 px-3 text-left w-20 text-white">
                       Port
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-32">
+                    <th className="py-2 px-3 text-left w-32 text-white">
                       Database
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-32">
+                    <th className="py-2 px-3 text-left w-32 text-white">
                       Username
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-32">
+                    <th className="py-2 px-3 text-left w-32 text-white">
                       Command Timeout
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-32">
+                    <th className="py-2 px-3 text-left w-32 text-white">
                       Max Transport Objects
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-32">
+                    <th className="py-2 px-3 text-left w-32 text-white">
                       Selected DB
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-40">
+                    <th className="py-2 px-3 text-left w-40 text-white">
                       Created At
                     </th>
-                    <th className="py-3 px-4 text-left text-white w-20">
+                    <th className="py-2 px-3 text-left w-20 sticky right-0 bg-inherit text-white">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {connections.map((connection) => (
+                  {connections.map((connection, index) => (
                     <tr
                       key={connection.connectionName}
-                      className="hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      className="transition-colors duration-150"
+                      style={{
+                        backgroundColor:
+                          index % 2 === 0
+                            ? `${theme.colors.background}80`
+                            : theme.colors.surface,
+                      }}
                     >
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
+                      <td
+                        className="py-2 px-3 w-32"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.connectionName}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-48">
+                      <td
+                        className="py-2 px-3 w-48"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.description}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
+                      <td
+                        className="py-2 px-3 w-32"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.hostname}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-20">
+                      <td
+                        className="py-2 px-3 w-20"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.port}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
+                      <td
+                        className="py-2 px-3 w-32"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.database}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
+                      <td
+                        className="py-2 px-3 w-32"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.username}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
+                      <td
+                        className="py-2 px-3 w-32"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.commandTimeout}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
+                      <td
+                        className="py-2 px-3 w-32"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.maxTransportObjects}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-32">
+                      <td
+                        className="py-2 px-3 w-32"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.selectedDB}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-40">
+                      <td
+                        className="py-2 px-3 w-40"
+                        style={{ color: theme.colors.text }}
+                      >
                         {connection.created_at}
                       </td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-gray-200 w-20">
+                      <td
+                        className="py-2 px-3 w-20 sticky right-0 bg-inherit"
+                        style={{ backgroundColor: "inherit" }}
+                      >
                         <button
                           onClick={() => handleDeleteConnection(connection.id)}
                           className="text-red-500 hover:text-red-700 focus:outline-none"
+                          aria-label="Delete connection"
                         >
-                          <Trash2 size={20} />
+                          <Trash2 size={18} />
                         </button>
                       </td>
                     </tr>
@@ -212,11 +278,16 @@ const ExistingConnections: React.FC = () => {
               </>
             )}
 
-            {loading && <Loader text={loadingText} />}
+            {loading && <Loader text={""} />}
           </table>
         </div>
         {connections.length === 0 && !loading && !error && (
-          <div className="text-center mt-4">No connections available.</div>
+          <div
+            className="text-center mt-4"
+            style={{ color: theme.colors.text }}
+          >
+            No connections available.
+          </div>
         )}
       </div>
     </div>

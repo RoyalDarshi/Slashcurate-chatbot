@@ -8,6 +8,34 @@
   }
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* index.css */
+textarea::placeholder {
+  color: inherit;
+  opacity: 0.7;
+}
+
+select option {
+  color: inherit;
+  background: inherit;
+}
+
+/* index.css */
+.send-button:not(:disabled):hover {
+  opacity: 0.9;
+}
+
 /* width */
 /* ::-webkit-scrollbar {
   width: 10px;

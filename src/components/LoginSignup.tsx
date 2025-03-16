@@ -9,8 +9,7 @@ import Signup from "./Signup";
 import ForgotPassword from "./ForgotPassword";
 import { useTheme } from "../ThemeContext";
 
-const clientId =
-  process.env.REACT_APP_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
+const clientId = "YOUR_GOOGLE_CLIENT_ID"; // Replace with your actual Google Client ID
 
 interface LoginSignupProps {
   onLoginSuccess: (token: string) => void;
@@ -19,7 +18,7 @@ interface LoginSignupProps {
 const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
   const [isSignup, setIsSignup] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const { theme, toggleTheme, themeKey } = useTheme();
+  const { theme } = useTheme();
 
   const handleSwitchToSignup = () => {
     setIsSignup(true);
@@ -39,22 +38,26 @@ const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
   return (
     <div
       className="min-h-screen flex flex-col justify-center items-center p-6 relative"
-      style={{ background: theme.colors.background }}
+      style={{ backgroundColor: theme.colors.background }}
     >
-      <div className="w-full max-w-md space-y-4">
+      <div className="w-full max-w-md space-y-6">
         <div
-          className="p-6 rounded-lg shadow-md space-y-4"
+          className="p-6 rounded-lg shadow-md space-y-6"
           style={{
-            background:
-              theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+            backgroundColor: theme.colors.surface,
             borderRadius: theme.borderRadius.default,
-            border: `1px solid ${theme.colors.text}20`,
+            border: `1px solid ${theme.colors.border}`,
+            boxShadow: theme.shadow.sm,
           }}
         >
           <div className="flex justify-between items-center">
             <h2
               className="text-2xl font-semibold text-center flex-1"
-              style={{ color: theme.colors.text }}
+              style={{
+                color: theme.colors.text,
+                fontFamily: theme.typography.fontFamily,
+                fontWeight: theme.typography.weight.bold,
+              }}
             >
               {isSignup
                 ? "Sign Up"
@@ -62,25 +65,25 @@ const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
                 ? "Forgot Password"
                 : "Log In"}
             </h2>
-            <button
-              onClick={toggleTheme}
-              className="text-sm hover:underline transition-colors"
-              style={{ color: theme.colors.accent }}
-              aria-label={`Switch to ${
-                themeKey === "dark" ? "light" : "dark"
-              } mode`}
-            >
-              {themeKey === "dark" ? "Light" : "Dark"}
-            </button>
           </div>
+
+          {/* Toast Notifications */}
           <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar
+            closeOnClick
+            pauseOnHover
             toastStyle={{
-              background:
-                theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
+              backgroundColor: theme.colors.surface,
               color: theme.colors.text,
-              border: `1px solid ${theme.colors.text}20`,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.borderRadius.default,
+              boxShadow: theme.shadow.sm,
             }}
           />
+
+          {/* Conditional Rendering */}
           {isSignup && (
             <Signup
               onSignupSuccess={onLoginSuccess}
@@ -105,10 +108,12 @@ const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
           )}
         </div>
       </div>
-      {/* Logo Placeholder at Bottom-Left */}
-      <div className="absolute bottom-4 left-4 flex items-center">
-        {/* Replace with your actual logo image */}
-        {/* <img src="/assets/logo.png" alt="Company Logo" className="h-8 w-auto" /> */}
+
+      {/* Footer Logo */}
+      <footer
+        className="absolute bottom-4 left-4 flex items-center space-x-2"
+        style={{ color: theme.colors.textSecondary }}
+      >
         <svg
           className="h-8 w-8"
           viewBox="0 0 24 24"
@@ -122,12 +127,16 @@ const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
           <path d="M12 6v6l4 2" />
         </svg>
         <span
-          className="ml-2 text-lg font-semibold"
-          style={{ color: theme.colors.text }}
+          className="text-lg font-semibold"
+          style={{
+            color: theme.colors.text,
+            fontFamily: theme.typography.fontFamily,
+            fontWeight: theme.typography.weight.bold,
+          }}
         >
           YourCompany
         </span>
-      </div>
+      </footer>
     </div>
   );
 };

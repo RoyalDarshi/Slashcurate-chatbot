@@ -4,7 +4,6 @@ import Sidebar from "./components/Sidebar";
 import ChatInterface from "./components/ChatInterface";
 import LoginSignup from "./components/LoginSignup";
 import ResetPassword from "./components/ResetPassword";
-import Home from "./components/Home";
 import ConnectionForm from "./components/ConnectionForm";
 import ExistingConnections from "./components/ExistingConnections";
 import History from "./components/History";
@@ -13,7 +12,7 @@ import { ThemeProvider, useTheme } from "./ThemeContext";
 import "./index.css";
 
 function App() {
-  const [activeMenu, setActiveMenu] = useState<string | null>("home"); // Default to "home"
+  const [activeMenu, setActiveMenu] = useState<string | null>("home");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   useEffect(() => {
@@ -27,17 +26,13 @@ function App() {
     console.log("handleLoginSuccess called, userId:", userId);
     sessionStorage.setItem("userId", userId);
     setIsAuthenticated(true);
+    setActiveMenu("home"); // Redirect to home after login
   };
 
   const handleLogout = () => {
     sessionStorage.removeItem("userId");
     setIsAuthenticated(false);
     setActiveMenu("home");
-  };
-
-  const handleHomeButtonClick = () => {
-    console.log("handleHomeButtonClick called");
-    setActiveMenu("new-chat");
   };
 
   const handleCreateConSelected = () => {
@@ -56,9 +51,8 @@ function App() {
                 isAuthenticated={isAuthenticated}
                 activeMenu={activeMenu}
                 setActiveMenu={setActiveMenu}
-                onLoginSuccess={handleLoginSuccess} // Pass the function as a prop
+                onLoginSuccess={handleLoginSuccess}
                 onLogout={handleLogout}
-                onHomeButtonClick={handleHomeButtonClick}
                 onCreateConSelected={handleCreateConSelected}
               />
             }
@@ -74,48 +68,51 @@ const AppContent: React.FC<{
   isAuthenticated: boolean;
   activeMenu: string | null;
   setActiveMenu: (menu: string | null) => void;
-  onLoginSuccess: (userId: string) => void; // Define prop type
+  onLoginSuccess: (userId: string) => void;
   onLogout: () => void;
-  onHomeButtonClick: () => void;
   onCreateConSelected: () => void;
 }> = ({
   isAuthenticated,
   activeMenu,
   setActiveMenu,
-  onLoginSuccess, // Use the prop here
+  onLoginSuccess,
   onLogout,
-  onHomeButtonClick,
   onCreateConSelected,
 }) => {
   const { theme } = useTheme();
 
   return (
-    <>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        backgroundColor: theme.colors.background,
+        color: theme.colors.text,
+      }}
+    >
       {isAuthenticated ? (
-        <div
-          className="min-h-screen flex h-screen"
-          style={{ background: theme.colors.background }}
-        >
+        <div className="flex h-screen">
           <Sidebar
             onMenuClick={setActiveMenu}
             activeMenu={activeMenu}
             onLogout={onLogout}
           />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {activeMenu === "home" && <Home onBtnClick={onHomeButtonClick} />}
-            {activeMenu === "new-chat" && (
+          <main
+            className="flex-1 flex flex-col overflow-y-auto"
+            style={{ backgroundColor: theme.colors.surface }}
+          >
+            {activeMenu === "home" && (
               <ChatInterface onCreateConSelected={onCreateConSelected} />
             )}
             {activeMenu === "new-connection" && <ConnectionForm />}
             {activeMenu === "existing-connection" && <ExistingConnections />}
             {activeMenu === "history" && <History />}
             {activeMenu === "settings" && <Settings />}
-          </div>
+          </main>
         </div>
       ) : (
-        <LoginSignup onLoginSuccess={onLoginSuccess} /> // Use the prop, not handleLoginSuccess
+        <LoginSignup onLoginSuccess={onLoginSuccess} />
       )}
-    </>
+    </div>
   );
 };
 
