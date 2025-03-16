@@ -4,7 +4,6 @@ import React, {
   useEffect,
   useCallback,
   useState,
-  useMemo,
 } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -59,14 +58,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   );
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [connectionsLoading, setConnectionsLoading] = useState(true);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null); // Track editing
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({}); // Refs for individual messages
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  const scrollToMessage = useCallback((messageId: string) => {
+    const messageRef = messageRefs.current[messageId];
+    if (messageRef) {
+      messageRef.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, []);
+
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    if (!editingMessageId) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom, editingMessageId]);
 
   const saveMessages = useCallback(() => {
     try {
@@ -187,6 +197,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       ];
       setMessages([...messagesRef.current]);
       dispatch({ type: "SET_INPUT", payload: "" });
+      setEditingMessageId(null); // Reset editing state
       scrollToBottom();
 
       try {
@@ -246,6 +257,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       msg.id === id ? { ...msg, content: newContent } : msg
     );
     setMessages([...messagesRef.current]);
+    setEditingMessageId(id); // Set editing state
 
     const editedMessage = messagesRef.current[messageIndex];
     if (!editedMessage.isBot && selectedConnection) {
@@ -273,11 +285,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           connection: selectedConnection,
         });
         const botResponse = JSON.stringify(response.data, null, 2);
+        const botResponseMessage: Message = {
+          id: Date.now().toString(),
+          content: botResponse,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
         messagesRef.current = messagesRef.current.map((msg) =>
-          msg.id === botLoadingMessage.id
-            ? { ...msg, content: botResponse }
-            : msg
+          msg.id === botLoadingMessage.id ? botResponseMessage : msg
         );
+        setMessages([...messagesRef.current]);
+        // Scroll to the bot's response
+        setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
       } catch (error) {
         console.error("Error updating message:", error);
         const errorMessage: Message = {
@@ -289,10 +309,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         messagesRef.current = messagesRef.current.map((msg) =>
           msg.id === botLoadingMessage.id ? errorMessage : msg
         );
+        setMessages([...messagesRef.current]);
+        setTimeout(() => scrollToMessage(errorMessage.id), 100);
       } finally {
         setLoadingMessageId(null);
-        setMessages([...messagesRef.current]);
         saveMessages();
+        setEditingMessageId(null); // Reset editing state after completion
       }
     }
   };
@@ -312,12 +334,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }}
       />
 
-      {/* Scrollable Messages Container */}
       <div
         className="flex-1 overflow-y-auto"
         style={{
           padding: theme.spacing.lg,
-          maxHeight: "calc(100vh + 100px)", // Adjust height as needed
+          maxHeight: "calc(100vh + 100px)",
         }}
       >
         {messages.length === 0 && !connectionError && (
@@ -338,6 +359,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             className="flex flex-col w-full"
             style={{ gap: theme.spacing.md }}
             key={message.id}
+            ref={(el) => (messageRefs.current[message.id] = el)} // Assign ref to each message
           >
             <ChatMessage
               message={message}
@@ -357,7 +379,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Fixed ChatInput at the Bottom */}
       <div
         style={{
           position: "sticky",

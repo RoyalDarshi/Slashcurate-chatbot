@@ -1,43 +1,23 @@
-// DynamicBarGraph.tsx
 import React, { useState, useEffect } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { ResponsiveBar } from "@nivo/bar";
 import { useTheme } from "../../ThemeContext";
 
 interface DynamicBarGraphProps {
   data: any[];
-  showTable: (setTable:boolean) => void;
-  isValidGraph: (validData:boolean) => void;
+  showTable: (setTable: boolean) => void;
+  isValidGraph: (validData: boolean) => void;
 }
 
-const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data,showTable,isValidGraph }) => {
+const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
+  data,
+  showTable,
+  isValidGraph,
+}) => {
   const { theme } = useTheme();
   const [graphData, setGraphData] = useState<any[]>([]);
   const [xKey, setXKey] = useState<string | null>(null);
   const [yKeys, setYKeys] = useState<string[]>([]);
-  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
-
-  const colors = [
-    theme.colors.accent,
-    "#4CAF50",
-    "#FF9800",
-    "#03A9F4",
-    "#E91E63",
-    "#9C27B0",
-    "#FFC107",
-    "#2196F3",
-    "#673AB7",
-  ];
 
   useEffect(() => {
     processApiData(data);
@@ -81,11 +61,11 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data,showTable,isVali
         const filteredNumericKeys = numericKeys.filter(
           (key) =>
             !key.toLowerCase().endsWith("id") &&
-            !key.toLowerCase().endsWith("code")
+            !key.toLowerCase().endsWith("code") &&
+            key.toLowerCase() !== "phone_number"
         );
 
         setYKeys(filteredNumericKeys);
-        setSelectedMetric(filteredNumericKeys[0]);
 
         const normalizedData = data.map((item) => {
           const newItem: { [key: string]: string | number } = {};
@@ -115,44 +95,9 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data,showTable,isVali
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          style={{
-            backgroundColor: theme.colors.surface,
-            color: theme.colors.text,
-            padding: "8px",
-            borderRadius: "4px",
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <p>
-            <strong>{label}</strong>
-          </p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index}>
-              <span
-                style={{
-                  display: "inline-block",
-                  width: "10px",
-                  height: "10px",
-                  backgroundColor: entry.color,
-                  marginRight: "5px",
-                }}
-              ></span>
-              {entry.name}: {entry.value.toLocaleString()}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   if (!isValidGraphData) {
-    showTable(true)
-    isValidGraph(false)
+    showTable(true);
+    isValidGraph(false);
     return (
       <div
         style={{
@@ -175,54 +120,119 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({ data,showTable,isVali
     );
   }
 
+  showTable(false);
+  isValidGraph(true);
+
+  // Custom stunning color palette
+  const stunningColors = [
+    "#FF6B6B", // Vibrant Coral
+    "#4ECDC4", // Turquoise
+    "#45B7D1", // Sky Blue
+    "#96CEB4", // Mint Green
+    "#FFEEAD", // Soft Yellow
+    "#D4A5A5", // Dusty Pink
+    "#9B59B6", // Amethyst Purple
+    "#3498DB", // Bright Blue
+  ];
+
   return (
-    <div style={{ width: "55vw" }}>
-      <ResponsiveContainer height={400}>
-        <BarChart
+    <div
+      style={{
+        width: "55vw",
+        height: 400,
+        overflowX: "auto",
+        overflowY: "hidden",
+      }}
+    >
+      <div
+        style={{
+          width:
+            graphData.length * 100 > (55 * window.innerWidth) / 100
+              ? `${graphData.length * 100}px`
+              : "100%",
+          height: "100%",
+        }}
+      >
+        <ResponsiveBar
           data={graphData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
-          <XAxis
-            dataKey={xKey}
-            tick={{ fill: theme.colors.textSecondary }}
-            axisLine={{ stroke: theme.colors.border }}
-          />
-          <YAxis
-            domain={[0, "dataMax + 10"]}
-            tick={{ fill: theme.colors.textSecondary }}
-            axisLine={{ stroke: theme.colors.border }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend
-            onClick={({ dataKey }) => setSelectedMetric(dataKey)}
-            formatter={(value: string, entry: any) => (
-              <span
-                style={{
-                  color:
-                    selectedMetric === value
-                      ? theme.colors.accent
-                      : theme.colors.textSecondary,
-                }}
-              >
-                {value}
-              </span>
-            )}
-          />
-          {yKeys.map((yKey, index) => (
-            <Bar
-              key={yKey}
-              dataKey={yKey}
-              fill={colors[index % colors.length]}
-              opacity={selectedMetric ? (selectedMetric === yKey ? 1 : 0.3) : 1}
+          keys={yKeys}
+          indexBy={xKey!}
+          margin={{ top: 50, right: 130, bottom: 50, left: 60 }}
+          padding={0.1}
+          groupMode="grouped"
+          colors={stunningColors} // Use custom vibrant colors
+          borderRadius={4}
+          axisBottom={{
+            tickSize: 5,
+            tickPadding: 5,
+            tickRotation: 0,
+            legend: xKey || "X-Axis",
+            legendPosition: "middle",
+            legendOffset: 36,
+            tickColor: theme.colors.textSecondary,
+            legendTextColor: theme.colors.textSecondary,
+          }}
+          axisLeft={{
+            tickSize: 5,
+            tickPadding: 5,
+            tickRotation: 0,
+            tickColor: theme.colors.textSecondary,
+            legendTextColor: theme.colors.textSecondary,
+          }}
+          gridYValues={5}
+          enableLabel={false}
+          animate={true}
+          motionStiffness={90}
+          motionDamping={15}
+          theme={{
+            textColor: theme.colors.text,
+            fontSize: 12,
+            grid: { line: { stroke: theme.colors.border, strokeWidth: 1 } },
+            axis: {
+              ticks: {
+                line: { stroke: theme.colors.border },
+                text: { fill: theme.colors.textSecondary },
+              },
+              legend: { text: { fill: theme.colors.textSecondary } },
+              domain: {
+                line: {
+                  stroke: theme.colors.textSecondary,
+                  strokeWidth: 1,
+                },
+              },
+            },
+            tooltip: {
+              container: {
+                background: theme.colors.surface,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+              },
+            },
+            background: theme.colors.surface,
+          }}
+          tooltip={({ id, value, color }) => (
+            <div
+              style={{
+                padding: "8px",
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.text,
+              }}
             >
-              {graphData.map((_, idx) => (
-                <Cell key={`cell-${idx}`} />
-              ))}
-            </Bar>
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+              <strong>{id}:</strong> {value}
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  backgroundColor: color,
+                  display: "inline-block",
+                  marginLeft: "8px",
+                }}
+              />
+            </div>
+          )}
+        />
+      </div>
     </div>
   );
 };
