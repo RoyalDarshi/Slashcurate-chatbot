@@ -72,7 +72,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
           keys.forEach((key) => {
             if (
               typeof item[key] === "number" ||
-              (typeof item[key] === "string" && !isNaN(Number(item[key])))
+              (typeof item[key] === "string" && !isNaN(Number(firstItem[key])))
             ) {
               newItem[key] =
                 typeof item[key] === "string"
@@ -123,7 +123,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
   showTable(false);
   isValidGraph(true);
 
-  // Custom stunning color palette
+  // Define stunning solid colors
   const stunningColors = [
     "#FF6B6B", // Vibrant Coral
     "#4ECDC4", // Turquoise
@@ -160,7 +160,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
           margin={{ top: 50, right: 130, bottom: 50, left: 60 }}
           padding={0.1}
           groupMode="grouped"
-          colors={stunningColors} // Use custom vibrant colors
+          colors={stunningColors} // Use solid stunning colors
           borderRadius={4}
           axisBottom={{
             tickSize: 5,

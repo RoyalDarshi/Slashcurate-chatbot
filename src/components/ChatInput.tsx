@@ -25,7 +25,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        120
+      )}px`; // Cap at 120px
     }
   }, [input]);
 
@@ -92,104 +95,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
       onSubmit={onSubmit}
       style={{
         background: theme.colors.background,
+        padding: "16px",
+        width: "100%",
       }}
     >
       <div
-        className="relative flex items-center w-full max-w-3xl mx-auto transition-all duration-300"
+        className="w-full max-w-4xl mx-auto flex flex-col gap-3"
         style={{
           background: theme.colors.surface,
-          padding: theme.spacing.sm,
-          borderRadius: theme.borderRadius.pill,
-          boxShadow: `0 2px 8px ${theme.colors.text}20`,
-          border: `1px solid ${theme.colors.text}10`,
+          borderRadius: theme.borderRadius.large,
+          border: `1px solid ${theme.colors.border}`,
+          boxShadow: `0 2px 10px ${theme.colors.text}10`,
+          padding: "12px",
         }}
       >
-        {/* Custom Connection Dropdown */}
-        <div
-          className="flex items-center mr-1 relative"
-          style={{ gap: theme.spacing.sm }}
-          ref={dropdownRef}
-        >
-          <Database
-            size={18}
-            style={{ color: theme.colors.textSecondary }}
-            className="transition-colors duration-200"
-          />
-          <div className="relative">
-            {/* Dropdown Trigger */}
-            <button
-              type="button"
-              onClick={() => !isDisabled && setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center text-sm bg-transparent transition-all duration-200 hover:text-opacity-90 cursor-pointer"
-              style={{
-                color: theme.colors.text,
-                opacity: isDisabled ? 0.5 : 1,
-                padding: "8px",
-                borderRadius: theme.borderRadius.default,
-              }}
-              disabled={isDisabled}
-            >
-              <span className="mr-2">
-                {selectedConnection || "Select Connection"}
-              </span>
-              <ChevronDown
-                size={16}
-                style={{ color: theme.colors.textSecondary }}
-              />
-            </button>
-
-            {/* Dropdown Menu */}
-            {isDropdownOpen && (
-              <div
-                className="absolute left-0 bottom-full mb-2 w-48 bg-white rounded-md shadow-lg z-10"
-                style={{
-                  background: theme.colors.surface,
-                }}
-              >
-                {options.map((option) => (
-                  <div
-                    key={option.value}
-                    className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors duration-200"
-                    style={{
-                      color: theme.colors.text,
-                      background:
-                        selectedConnection === option.value
-                          ? `${theme.colors.accent}20`
-                          : "transparent",
-                    }}
-                    onClick={() => handleConnectionSelect(option.value)}
-                  >
-                    <span>{option.label}</span>
-                    {option.value !== "create-con" && (
-                      <div className="relative group">
-                        <button
-                          type="button"
-                          onClick={(e) => handlePdfClick(option.value, e)}
-                          className="p-1"
-                        >
-                          <FaFilePdf
-                            size={16}
-                            style={{ color: theme.colors.error }}
-                            className="hover:text-opacity-80 transition-colors duration-200"
-                          />
-                        </button>
-                        {/* Tooltip */}
-                        <span
-                          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap"
-                          style={{ zIndex: 10 }}
-                        >
-                          View PDF
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Textarea */}
+        {/* Textarea (No Background, No Border, No Shadow) */}
         <textarea
           ref={textareaRef}
           value={input}
@@ -198,12 +118,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
               onInputChange(e.target.value);
             }
           }}
-          placeholder="Ask me anything..."
-          className="flex-1 min-h-[44px] max-h-32 px-3 py-2 mr-2 text-base font-medium bg-transparent focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 resize-none overflow-y-auto placeholder-opacity-70"
+          placeholder="Type your message..."
+          className="w-full min-h-[40px] max-h-32 px-3 py-2 text-base bg-transparent border-none outline-none  transition-all duration-300 resize-none overflow-y-auto placeholder-opacity-50"
           style={{
             color: theme.colors.text,
             opacity: isDisabled ? 0.5 : 1,
-            "--tw-ring-color": `${theme.colors.accent}50`,
+            "--tw-ring-color": theme.colors.accent,
+            boxShadow: "none", // Remove shadow
+            background: "transparent", // Remove background color
           }}
           disabled={isDisabled}
           aria-disabled={isDisabled}
@@ -215,53 +137,135 @@ const ChatInput: React.FC<ChatInputProps> = ({
           }}
         />
 
-        {/* Character Count */}
-        {/* <p
-          className="text-xs mr-4 self-end transition-opacity duration-200"
-          style={{
-            color:
-              input.length > MAX_CHARS
-                ? theme.colors.error
-                : theme.colors.textSecondary,
-            opacity: input.length > 0 ? 1 : 0,
-          }}
-        >
-          {input.length}/{MAX_CHARS}
-        </p> */}
+        {/* Connection Dropdown and Send Button */}
+        <div className="flex items-center justify-between gap-3">
+          <div
+            className="flex items-center gap-2 max-w-[250px] relative"
+            ref={dropdownRef}
+          >
+            <Database
+              size={20}
+              style={{ color: theme.colors.accent, opacity: 0.9 }}
+              className="transition-transform duration-300 hover:scale-105 flex-shrink-0"
+            />
+            <button
+              type="button"
+              onClick={() => !isDisabled && setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center text-sm transition-all duration-300 hover:bg-opacity-10 hover:bg-accent w-full"
+              style={{
+                color: theme.colors.text,
+                background: isDisabled
+                  ? `${theme.colors.text}10`
+                  : "transparent",
+                opacity: isDisabled ? 0.5 : 1,
+                padding: "6px 10px",
+                borderRadius: "6px",
+                border: `1px solid ${theme.colors.accent}30`,
+                fontFamily: "monospace",
+              }}
+              disabled={isDisabled}
+            >
+              <span className="truncate max-w-[150px] mr-2">
+                {selectedConnection || "Select Connection"}
+              </span>
+              <ChevronDown
+                size={16}
+                style={{ color: theme.colors.accent }}
+                className={`transition-transform duration-300 ${
+                  isDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
 
-        {/* Send Button */}
-        <button
-          type="submit"
-          disabled={isDisabled}
-          className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:opacity-85 active:scale-95"
-          style={{
-            background: isDisabled
-              ? `${theme.colors.text}20`
-              : theme.colors.accent,
-            color: "white",
-            boxShadow: isDisabled
-              ? "none"
-              : `0 2px 6px ${theme.colors.accent}50`,
-          }}
-          aria-label="Send message"
-        >
-          {isSubmitting ? <MiniLoader /> : <Send size={18} />}
-        </button>
+            {/* Dropdown Menu (Positioned at the Top, Width Based on Content) */}
+            {isDropdownOpen && (
+              <div
+                className="absolute bottom-full left-0 rounded-md shadow-lg z-20 transition-all duration-300 mb-2"
+                style={{
+                  background: theme.colors.surface,
+                  border: `1px solid ${theme.colors.border}`,
+                  boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                  width: "min-content", // Set width to content size
+                  maxWidth: "min-content", // Optional: Set a max-width to prevent overflow
+                }}
+              >
+                {options.map((option) => (
+                  <div
+                    key={option.value}
+                    className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
+                    style={{
+                      color: theme.colors.text,
+                      background:
+                        selectedConnection === option.value
+                          ? `${theme.colors.accent}10`
+                          : "transparent",
+                    }}
+                    onClick={() => handleConnectionSelect(option.value)}
+                  >
+                    <span
+                      className="truncate"
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {option.label}
+                    </span>
+                    {option.value !== "create-con" && (
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          onClick={(e) => handlePdfClick(option.value, e)}
+                          className="p-1"
+                        >
+                          <FaFilePdf
+                            size={16}
+                            style={{ color: theme.colors.error }}
+                            className="hover:scale-105 transition-transform duration-300"
+                          />
+                        </button>
+                        <span
+                          className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
+                          style={{
+                            background: theme.colors.accent,
+                            color: theme.colors.surface,
+                            boxShadow: `0 0 6px ${theme.colors.accent}40`,
+                          }}
+                        >
+                          View PDF
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isDisabled}
+            className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
+            style={{
+              background: isDisabled
+                ? `${theme.colors.text}20`
+                : theme.colors.accent,
+              color: "white",
+              boxShadow: isDisabled
+                ? "none"
+                : `0 0 10px ${theme.colors.accent}40`,
+            }}
+            aria-label="Send message"
+          >
+            {isSubmitting ? (
+              <MiniLoader />
+            ) : (
+              <Send size={18} className="transition-transform duration-300" />
+            )}
+          </button>
+        </div>
       </div>
-
-      {/* Mobile-Specific Styles */}
-      <style jsx>{`
-        @media (max-width: 640px) {
-          .relative button {
-            font-size: 14px;
-            padding: 6px;
-          }
-          .relative div.absolute {
-            width: 100%;
-            left: 0;
-          }
-        }
-      `}</style>
     </form>
   );
 };
