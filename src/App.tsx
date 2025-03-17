@@ -9,30 +9,42 @@ import ExistingConnections from "./components/ExistingConnections";
 import History from "./components/History";
 import Settings from "./components/Settings";
 import { ThemeProvider, useTheme } from "./ThemeContext";
+import { handleLogout } from "./utils";
 import "./index.css";
+import { API_URL } from "./config";
+import axios from "axios";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   useEffect(() => {
+    validateUser();
+  }, []);
+
+  const validateUser = async () => {
     const userId = sessionStorage.getItem("userId");
     if (userId) {
-      setIsAuthenticated(true);
+      try {
+        const response = await axios.post(`${API_URL}/validate-token`, {
+          token: userId,
+        });
+        if (response.status === 200) {
+          setIsAuthenticated(true);
+        } else {
+          sessionStorage.removeItem("userId");
+        }
+      } catch {
+        sessionStorage.removeItem("userId");
+      }
     }
-  }, []);
+  };
 
   const handleLoginSuccess = (userId: string) => {
     console.log("handleLoginSuccess called, userId:", userId);
     sessionStorage.setItem("userId", userId);
     setIsAuthenticated(true);
     setActiveMenu("home"); // Redirect to home after login
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("userId");
-    setIsAuthenticated(false);
-    setActiveMenu("home");
   };
 
   const handleCreateConSelected = () => {

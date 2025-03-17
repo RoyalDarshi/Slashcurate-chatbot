@@ -118,7 +118,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
               onInputChange(e.target.value);
             }
           }}
-          placeholder="Type your message..."
+          placeholder="Ask your questions..."
           className="w-full min-h-[40px] max-h-32 px-3 py-2 text-base bg-transparent border-none outline-none  transition-all duration-300 resize-none overflow-y-auto placeholder-opacity-50"
           style={{
             color: theme.colors.text,

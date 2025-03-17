@@ -23,6 +23,7 @@ import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
+import { handleLogout } from "../utils";
 
 const initialState: ChatState = {
   isLoading: false,
@@ -98,6 +99,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             color: theme.colors.error,
           },
         });
+        handleLogout();
         setConnectionsLoading(false);
         return;
       }

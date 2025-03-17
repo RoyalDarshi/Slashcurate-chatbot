@@ -18,7 +18,8 @@ const Signup: React.FC<SignupProps> = ({
   onSwitchToLogin,
 }) => {
   const [formData, setFormData] = useState({
-    name: "",
+    first_name: "", // Changed from 'name' to 'first_name'
+    last_name: "", // Added 'last_name'
     email: "",
     password: "",
     confirmPassword: "",
@@ -38,10 +39,13 @@ const Signup: React.FC<SignupProps> = ({
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { name, email, password, confirmPassword } = formData;
+    const { first_name, last_name, email, password, confirmPassword } =
+      formData;
 
+    // Updated validation for first_name and last_name
     if (
-      !name.trim() ||
+      !first_name.trim() ||
+      !last_name.trim() ||
       !email.trim() ||
       !password.trim() ||
       !confirmPassword.trim()
@@ -67,7 +71,8 @@ const Signup: React.FC<SignupProps> = ({
       const res = await axios.post(
         `${API_URL}/signup`,
         {
-          name: name.trim(),
+          first_name: first_name.trim(), // Changed from 'name'
+          last_name: last_name.trim(), // Added
           email: email.trim(),
           password: password.trim(),
         },
@@ -93,18 +98,17 @@ const Signup: React.FC<SignupProps> = ({
 
   const handleShowPassword = () => {
     setShowPassword(true);
-    setTimeout(() => setShowPassword(false), 500); // Hide after 500ms
+    setTimeout(() => setShowPassword(false), 500);
   };
 
   const handleShowConfirmPassword = () => {
     setShowConfirmPassword(true);
-    setTimeout(() => setShowConfirmPassword(false), 500); // Hide after 500ms
+    setTimeout(() => setShowConfirmPassword(false), 500);
   };
 
   return (
     <div className="space-y-6">
       <form onSubmit={handleSignup} className="space-y-4">
-        {/* Toast Notifications */}
         <ToastContainer
           position="top-right"
           autoClose={3000}
@@ -120,10 +124,10 @@ const Signup: React.FC<SignupProps> = ({
           }}
         />
 
-        {/* Name Field */}
+        {/* First Name Field */}
         <div className="space-y-1">
           <label
-            htmlFor="name"
+            htmlFor="first_name"
             className="text-sm font-medium"
             style={{
               color: theme.colors.text,
@@ -131,13 +135,37 @@ const Signup: React.FC<SignupProps> = ({
               fontWeight: theme.typography.weight.medium,
             }}
           >
-            Full Name
+            First Name
           </label>
           <InputField
             type="text"
-            name="name"
-            placeholder="Enter your full name"
-            value={formData.name}
+            name="first_name" // Changed from 'name'
+            placeholder="Enter your first name"
+            value={formData.first_name}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
+        </div>
+
+        {/* Last Name Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="last_name"
+            className="text-sm font-medium"
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.medium,
+            }}
+          >
+            Last Name
+          </label>
+          <InputField
+            type="text"
+            name="last_name" // New field
+            placeholder="Enter your last name"
+            value={formData.last_name}
             onChange={handleChange}
             required
             disabled={loading}
