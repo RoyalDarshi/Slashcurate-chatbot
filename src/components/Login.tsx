@@ -34,7 +34,6 @@ const Login: React.FC<LoginProps> = ({
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const email = formData.email.trim();
     const password = formData.password.trim();
 
@@ -48,9 +47,7 @@ const Login: React.FC<LoginProps> = ({
       const response = await axios.post(
         `${API_URL}/login`,
         { email, password },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        { headers: { "Content-Type": "application/json" } }
       );
       setLoading(false);
 
@@ -79,9 +76,11 @@ const Login: React.FC<LoginProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div
+      className="relative"
+      style={{ fontFamily: theme.typography.fontFamily }}
+    >
       <form onSubmit={handleLogin} className="space-y-4">
-        {/* Toast Notifications */}
         <ToastContainer
           position="top-right"
           autoClose={3000}
@@ -91,7 +90,6 @@ const Login: React.FC<LoginProps> = ({
           toastStyle={{
             backgroundColor: theme.colors.surface,
             color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
             borderRadius: theme.borderRadius.default,
             boxShadow: theme.shadow.sm,
           }}
@@ -101,23 +99,26 @@ const Login: React.FC<LoginProps> = ({
         <div className="space-y-1">
           <label
             htmlFor="email"
-            className="text-sm font-medium"
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamily,
-              fontWeight: theme.typography.weight.medium,
-            }}
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: theme.colors.text }}
           >
             Email Address
           </label>
           <InputField
-            type="email"
+            type="text"
             name="email"
             placeholder="Enter your email"
             value={formData.email}
             onChange={handleChange}
             required
             disabled={loading}
+            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            style={{
+              backgroundColor: theme.colors.bubbleBot,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              focusRingColor: theme.colors.accent,
+            }}
           />
         </div>
 
@@ -125,12 +126,8 @@ const Login: React.FC<LoginProps> = ({
         <div className="space-y-1">
           <label
             htmlFor="password"
-            className="text-sm font-medium"
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamily,
-              fontWeight: theme.typography.weight.medium,
-            }}
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: theme.colors.text }}
           >
             Password
           </label>
@@ -142,65 +139,64 @@ const Login: React.FC<LoginProps> = ({
             showPassword={showPassword}
             toggleShowPassword={handleShowPassword}
             disabled={loading}
+            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            style={{
+              backgroundColor: theme.colors.bubbleBot,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              focusRingColor: theme.colors.accent,
+            }}
           />
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full p-2 rounded-md transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            backgroundColor: theme.colors.accent,
-            color: "white",
-            borderRadius: theme.borderRadius.default,
-            boxShadow: theme.shadow.sm,
-            transition: theme.transition.default,
+            color: theme.colors.text,
+            backgroundColor: "transparent",
+            border: `1px solid ${theme.colors.accent}`,
+            borderRadius: theme.borderRadius.pill,
           }}
-          disabled={loading}
           onMouseOver={(e) =>
             !loading &&
-            (e.currentTarget.style.backgroundColor = theme.colors.accentHover)
+            (e.currentTarget.style.backgroundColor =
+              theme.colors.accentHover + "20")
           }
           onMouseOut={(e) =>
-            !loading &&
-            (e.currentTarget.style.backgroundColor = theme.colors.accent)
+            !loading && (e.currentTarget.style.backgroundColor = "transparent")
           }
+          disabled={loading}
+          title="Access your cosmic account" // Tooltip added
         >
-          {loading ? "Logging In..." : "Log In"}
+          {loading ? "Processing..." : "Enter Cosmos"}
         </button>
       </form>
 
       {/* Links */}
-      <div className="flex flex-col items-center space-y-2">
+      <div className="flex flex-col items-center space-y-2 text-sm mt-4">
         <button
           type="button"
-          className="text-sm transition-colors hover:underline"
-          style={{
-            color: theme.colors.textSecondary,
-            transition: theme.transition.default,
-          }}
+          className="transition-all duration-200 hover:underline"
+          style={{ color: theme.colors.textSecondary }}
           onClick={onForgotPassword}
           disabled={loading}
+          title="Recover your account" // Tooltip added
         >
-          Forgot Password?
+          Lost your key?
         </button>
         <button
           type="button"
-          className="text-sm transition-colors hover:underline"
-          style={{
-            color: theme.colors.textSecondary,
-            transition: theme.transition.default,
-          }}
+          className="transition-all duration-200 hover:underline"
+          style={{ color: theme.colors.textSecondary }}
           onClick={onSwitchToSignup}
           disabled={loading}
+          title="Create a new account" // Tooltip added
         >
-          Don&apos;t have an account? Sign up
+          New to the galaxy? Join now
         </button>
-        {loading && (
-          <div className="pt-2">
-            <Loader text="" />
-          </div>
-        )}
+        {loading && <Loader text="" />}
       </div>
     </div>
   );

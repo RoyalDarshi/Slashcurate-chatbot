@@ -3,38 +3,38 @@ import { Theme } from "./types";
 export const themes: Record<"light" | "dark", Theme> = {
   light: {
     colors: {
-      background: "#F9FAFB", // Light gray background
-      surface: "#FFFFFF", // White chat surface
-      text: "#1F2937", // Dark gray text
-      textSecondary: "#6B7280", // Medium gray text
-      accent: "#8B5CF6", // Purple accent
-      accentHover: "#7C3AED", // Darker purple for hover
-      success: "#10B981", // Green success
-      error: "#EF4444", // Red error
-      warning: "#F59E0B", // Amber warning
-      border: "#E5E7EB", // Light gray border
-      bubbleUser: "#EDE9FE", // Soft purple user bubble
-      bubbleBot: "#F3F4F6", // Light gray bot bubble
-      bubbleUserText: "#1F2937", // Same as primary text
-      bubbleBotText: "#1F2937", // Same as primary text
-      hover: "#E5E7EB", // Light gray hover
-      disabled: "#D1D5DB", // Gray disabled background
-      disabledText: "#9CA3AF", // Lighter gray disabled text
+      background: "#F9F9FB", // Soft, light off-white with a hint of blue
+      surface: "#FFFFFF",
+      text: "#2D3748",
+      textSecondary: "#4B5563",
+      accent: "#6B46C1",
+      accentHover: "#5B3A9E",
+      success: "#059669",
+      error: "#C53030",
+      warning: "#D97706",
+      border: "#D1D5DB",
+      bubbleUser: "#E9D8FD",
+      bubbleBot: "#E2E8F0",
+      bubbleUserText: "#2D3748",
+      bubbleBotText: "#2D3748",
+      hover: "#E2E8F0",
+      disabled: "#E2E8F0",
+      disabledText: "#A0AEC0",
     },
     spacing: {
-      xs: "0.25rem", // 4px
-      sm: "0.5rem", // 8px
-      md: "1rem", // 16px
-      lg: "1.5rem", // 24px
-      xl: "2rem", // 32px
+      xs: "0.25rem",
+      sm: "0.5rem",
+      md: "1rem",
+      lg: "1.5rem",
+      xl: "2rem",
     },
     typography: {
       fontFamily:
         "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       size: {
-        sm: "0.875rem", // 14px
-        base: "1rem", // 16px
-        lg: "1.25rem", // 20px
+        sm: "0.875rem",
+        base: "1rem",
+        lg: "1.25rem",
       },
       weight: {
         normal: "400",
@@ -44,9 +44,9 @@ export const themes: Record<"light" | "dark", Theme> = {
     },
     borderRadius: {
       none: "0",
-      default: "0.375rem", // 6px
-      large: "1rem", // 16px
-      pill: "9999px", // Fully rounded
+      default: "0.375rem",
+      large: "1rem",
+      pill: "9999px",
     },
     shadow: {
       none: "none",
@@ -60,38 +60,38 @@ export const themes: Record<"light" | "dark", Theme> = {
   },
   dark: {
     colors: {
-      background: "#111827", // Dark gray background
-      surface: "#1E293B", // Slightly lighter gray surface
-      text: "#F9FAFB", // White text
-      textSecondary: "#9CA3AF", // Light gray secondary text
-      accent: "#8B5CF6", // Purple accent (consistent with light)
-      accentHover: "#A78BFA", // Lighter purple for hover
-      success: "#10B981", // Green success
-      error: "#EF4444", // Red error
-      warning: "#F59E0B", // Amber warning
-      border: "#374151", // Darker gray border
-      bubbleUser: "#4C1D95", // Dark purple user bubble
-      bubbleBot: "#334155", // Slate gray bot bubble
-      bubbleUserText: "#F9FAFB", // White user text
-      bubbleBotText: "#F9FAFB", // White bot text
-      hover: "#374151", // Dark gray hover
-      disabled: "#4B5563", // Darker gray disabled background
-      disabledText: "#6B7280", // Gray disabled text
+      background: "#0F172A",
+      surface: "#1E2A44",
+      text: "#F8FAFC",
+      textSecondary: "#A0B3D6",
+      accent: "#7C3AED",
+      accentHover: "#9F67FF",
+      success: "#10B981",
+      error: "#F87171",
+      warning: "#FBBF24",
+      border: "#2D3B55",
+      bubbleUser: "#5B21B6",
+      bubbleBot: "#2A3448",
+      bubbleUserText: "#F8FAFC",
+      bubbleBotText: "#F8FAFC",
+      hover: "#2D3B55",
+      disabled: "#4B5E7A",
+      disabledText: "#7A8BA8",
     },
     spacing: {
-      xs: "0.25rem", // 4px
-      sm: "0.5rem", // 8px
-      md: "1rem", // 16px
-      lg: "1.5rem", // 24px
-      xl: "2rem", // 32px
+      xs: "0.25rem",
+      sm: "0.5rem",
+      md: "1rem",
+      lg: "1.5rem",
+      xl: "2rem",
     },
     typography: {
       fontFamily:
         "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       size: {
-        sm: "0.875rem", // 14px
-        base: "1rem", // 16px
-        lg: "1.25rem", // 20px
+        sm: "0.875rem",
+        base: "1rem",
+        lg: "1.25rem",
       },
       weight: {
         normal: "400",
@@ -101,18 +101,18 @@ export const themes: Record<"light" | "dark", Theme> = {
     },
     borderRadius: {
       none: "0",
-      default: "0.375rem", // 6px
-      large: "1rem", // 16px
-      pill: "9999px", // Fully rounded
+      default: "0.375rem",
+      large: "1rem",
+      pill: "9999px",
     },
     shadow: {
       none: "none",
-      sm: "0 1px 2px 0 rgba(0, 0, 0, 0.5)",
-      md: "0 4px 6px -1px rgba(0, 0, 0, 0.6)",
-      lg: "0 10px 15px -3px rgba(0, 0, 0, 0.7)",
+      sm: "0 2px 4px 0 rgba(0, 0, 0, 0.6)",
+      md: "0 6px 10px -1px rgba(0, 0, 0, 0.7)",
+      lg: "0 12px 18px -3px rgba(0, 0, 0, 0.8)",
     },
     transition: {
-      default: "all 0.2s ease-in-out",
+      default: "all 0.3s ease-in-out",
     },
   },
 };

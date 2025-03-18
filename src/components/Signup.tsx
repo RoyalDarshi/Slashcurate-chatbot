@@ -18,8 +18,8 @@ const Signup: React.FC<SignupProps> = ({
   onSwitchToLogin,
 }) => {
   const [formData, setFormData] = useState({
-    first_name: "", // Changed from 'name' to 'first_name'
-    last_name: "", // Added 'last_name'
+    first_name: "",
+    last_name: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -42,7 +42,6 @@ const Signup: React.FC<SignupProps> = ({
     const { first_name, last_name, email, password, confirmPassword } =
       formData;
 
-    // Updated validation for first_name and last_name
     if (
       !first_name.trim() ||
       !last_name.trim() ||
@@ -61,18 +60,14 @@ const Signup: React.FC<SignupProps> = ({
       toast.error("Password must be at least 6 characters long.");
       return;
     }
-    if (!/\S/.test(password)) {
-      toast.error("Password cannot be only spaces.");
-      return;
-    }
 
     try {
       setLoading(true);
       const res = await axios.post(
         `${API_URL}/signup`,
         {
-          first_name: first_name.trim(), // Changed from 'name'
-          last_name: last_name.trim(), // Added
+          first_name: first_name.trim(),
+          last_name: last_name.trim(),
           email: email.trim(),
           password: password.trim(),
         },
@@ -107,7 +102,10 @@ const Signup: React.FC<SignupProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div
+      className="relative"
+      style={{ fontFamily: theme.typography.fontFamily }}
+    >
       <form onSubmit={handleSignup} className="space-y-4">
         <ToastContainer
           position="top-right"
@@ -118,176 +116,184 @@ const Signup: React.FC<SignupProps> = ({
           toastStyle={{
             backgroundColor: theme.colors.surface,
             color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
             borderRadius: theme.borderRadius.default,
             boxShadow: theme.shadow.sm,
           }}
         />
 
-        {/* First Name Field */}
+        {/* First Name */}
         <div className="space-y-1">
           <label
             htmlFor="first_name"
-            className="text-sm font-medium"
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamily,
-              fontWeight: theme.typography.weight.medium,
-            }}
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: theme.colors.text }}
           >
             First Name
           </label>
           <InputField
             type="text"
-            name="first_name" // Changed from 'name'
-            placeholder="Enter your first name"
+            name="first_name"
+            placeholder="Your first name"
             value={formData.first_name}
             onChange={handleChange}
             required
             disabled={loading}
+            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            style={{
+              backgroundColor: theme.colors.bubbleBot,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              focusRingColor: theme.colors.accent,
+            }}
           />
         </div>
 
-        {/* Last Name Field */}
+        {/* Last Name */}
         <div className="space-y-1">
           <label
             htmlFor="last_name"
-            className="text-sm font-medium"
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamily,
-              fontWeight: theme.typography.weight.medium,
-            }}
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: theme.colors.text }}
           >
             Last Name
           </label>
           <InputField
             type="text"
-            name="last_name" // New field
-            placeholder="Enter your last name"
+            name="last_name"
+            placeholder="Your last name"
             value={formData.last_name}
             onChange={handleChange}
             required
             disabled={loading}
+            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            style={{
+              backgroundColor: theme.colors.bubbleBot,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              focusRingColor: theme.colors.accent,
+            }}
           />
         </div>
 
-        {/* Email Field */}
+        {/* Email */}
         <div className="space-y-1">
           <label
             htmlFor="email"
-            className="text-sm font-medium"
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamily,
-              fontWeight: theme.typography.weight.medium,
-            }}
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: theme.colors.text }}
           >
             Email Address
           </label>
           <InputField
             type="email"
             name="email"
-            placeholder="Enter your email"
+            placeholder="Your email"
             value={formData.email}
             onChange={handleChange}
             required
             disabled={loading}
+            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            style={{
+              backgroundColor: theme.colors.bubbleBot,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              focusRingColor: theme.colors.accent,
+            }}
           />
         </div>
 
-        {/* Password Field */}
+        {/* Password */}
         <div className="space-y-1">
           <label
             htmlFor="password"
-            className="text-sm font-medium"
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamily,
-              fontWeight: theme.typography.weight.medium,
-            }}
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: theme.colors.text }}
           >
             Password
           </label>
           <PasswordField
             name="password"
-            placeholder="Enter your password"
+            placeholder="Create a password"
             value={formData.password}
             onChange={handleChange}
             showPassword={showPassword}
             toggleShowPassword={handleShowPassword}
             disabled={loading}
+            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            style={{
+              backgroundColor: theme.colors.bubbleBot,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              focusRingColor: theme.colors.accent,
+            }}
           />
         </div>
 
-        {/* Confirm Password Field */}
+        {/* Confirm Password */}
         <div className="space-y-1">
           <label
             htmlFor="confirmPassword"
-            className="text-sm font-medium"
-            style={{
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamily,
-              fontWeight: theme.typography.weight.medium,
-            }}
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: theme.colors.text }}
           >
             Confirm Password
           </label>
           <PasswordField
             name="confirmPassword"
-            placeholder="Confirm your password"
+            placeholder="Confirm it"
             value={formData.confirmPassword}
             onChange={handleChange}
             showPassword={showConfirmPassword}
             toggleShowPassword={handleShowConfirmPassword}
             disabled={loading}
+            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            style={{
+              backgroundColor: theme.colors.bubbleBot,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              focusRingColor: theme.colors.accent,
+            }}
           />
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full p-2 rounded-md transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            backgroundColor: theme.colors.accent,
-            color: "white",
-            borderRadius: theme.borderRadius.default,
-            boxShadow: theme.shadow.sm,
-            transition: theme.transition.default,
+            color: theme.colors.text,
+            backgroundColor: "transparent",
+            border: `1px solid ${theme.colors.accent}`,
+            borderRadius: theme.borderRadius.pill,
           }}
-          disabled={loading}
           onMouseOver={(e) =>
             !loading &&
-            (e.currentTarget.style.backgroundColor = theme.colors.accentHover)
+            (e.currentTarget.style.backgroundColor =
+              theme.colors.accentHover + "20")
           }
           onMouseOut={(e) =>
-            !loading &&
-            (e.currentTarget.style.backgroundColor = theme.colors.accent)
+            !loading && (e.currentTarget.style.backgroundColor = "transparent")
           }
+          disabled={loading}
+          title="Begin your cosmic journey" // Tooltip added
         >
-          {loading ? "Signing Up..." : "Sign Up"}
+          {loading ? "Processing..." : "Launch Journey"}
         </button>
       </form>
 
       {/* Switch to Login */}
-      <div className="text-center">
+      <div className="text-center text-sm mt-4">
         <button
           type="button"
-          className="text-sm transition-colors hover:underline"
-          style={{
-            color: theme.colors.textSecondary,
-            transition: theme.transition.default,
-          }}
+          className="transition-all duration-200 hover:underline"
+          style={{ color: theme.colors.textSecondary }}
           onClick={onSwitchToLogin}
           disabled={loading}
+          title="Sign in with existing account" // Tooltip added
         >
-          Already have an account? Log in
+          Already orbiting? Sign in
         </button>
-        {loading && (
-          <div className="pt-2">
-            <Loader text="Signing up..." />
-          </div>
-        )}
+        {loading && <Loader text="Launching..." />}
       </div>
     </div>
   );

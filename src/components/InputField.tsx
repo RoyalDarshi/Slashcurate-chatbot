@@ -9,7 +9,7 @@ interface InputFieldProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
   className?: string;
-  disabled?: boolean; // Added for consistency with other components
+  disabled?: boolean;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -33,17 +33,15 @@ const InputField: React.FC<InputFieldProps> = ({
       onChange={onChange}
       required={required}
       disabled={disabled}
-      className={`w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       style={{
-        backgroundColor: disabled
-          ? theme.colors.disabled
-          : theme.colors.background,
-        color: disabled ? theme.colors.disabledText : theme.colors.text,
-        border: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.bubbleBot,
+        color: theme.colors.text,
         borderRadius: theme.borderRadius.default,
         fontFamily: theme.typography.fontFamily,
-        fontSize: theme.typography.size.base,
+        fontSize: theme.typography.size.sm,
         transition: theme.transition.default,
+        focusRingColor: theme.colors.accent,
       }}
     />
   );

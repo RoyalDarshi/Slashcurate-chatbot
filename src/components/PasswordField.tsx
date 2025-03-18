@@ -10,7 +10,7 @@ interface PasswordFieldProps {
   showPassword: boolean;
   toggleShowPassword: () => void;
   className?: string;
-  disabled?: boolean; // Added for consistency with Signup/Login
+  disabled?: boolean;
 }
 
 const PasswordField: React.FC<PasswordFieldProps> = ({
@@ -34,18 +34,15 @@ const PasswordField: React.FC<PasswordFieldProps> = ({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`w-full p-2 pr-10 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         style={{
-          backgroundColor: disabled
-            ? theme.colors.disabled
-            : theme.colors.background,
-          color: disabled ? theme.colors.disabledText : theme.colors.text,
-          border: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.bubbleBot,
+          color: theme.colors.text,
           borderRadius: theme.borderRadius.default,
           fontFamily: theme.typography.fontFamily,
-          fontSize: theme.typography.size.base,
+          fontSize: theme.typography.size.sm,
           transition: theme.transition.default,
-          focusRingColor: theme.colors.accent, // Custom property for focus ring
+          focusRingColor: theme.colors.accent,
         }}
         required
       />
@@ -61,6 +58,7 @@ const PasswordField: React.FC<PasswordFieldProps> = ({
             : theme.colors.textSecondary,
           transition: theme.transition.default,
         }}
+        title={showPassword ? "Hide password" : "Show password"} // Tooltip added
       >
         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
       </button>

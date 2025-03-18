@@ -14,7 +14,6 @@ interface ForgotPasswordProps {
 const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("Loading, please wait...");
   const { theme } = useTheme();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,7 +22,6 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       toast.error("Email is required.");
@@ -32,21 +30,16 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
 
     try {
       setLoading(true);
-      setLoadingText("Sending reset link, please wait...");
       const response = await axios.post(
         `${API_URL}/forgot-password`,
         { email: trimmedEmail },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        { headers: { "Content-Type": "application/json" } }
       );
       setLoading(false);
 
       if (response.status === 200) {
         toast.success("Password reset email sent.");
-        setTimeout(() => {
-          onBackToLogin();
-        }, 3000);
+        setTimeout(() => onBackToLogin(), 3000);
       } else {
         toast.error(`Error: ${response.data.message}`);
       }
@@ -55,67 +48,98 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
       if (axios.isAxiosError(error)) {
         toast.error(`Error: ${error.response?.data?.message || error.message}`);
       } else {
-        const errorMessage = (error as Error).message;
-        toast.error(`Error: ${errorMessage}`);
+        toast.error(`Error: ${(error as Error).message}`);
       }
     }
   };
 
   return (
-    <form onSubmit={handleForgotPassword} className="space-y-5">
-      <ToastContainer
-        toastStyle={{
-          background:
-            theme.colors.background === "#f9f9f9" ? "#ffffff" : "#1e1e1e",
-          color: theme.colors.text,
-          border: `1px solid ${theme.colors.text}20`,
-          borderRadius: theme.borderRadius.default,
-        }}
-      />
-      <div className="space-y-1">
-        <label
-          htmlFor="email"
-          className="text-sm font-medium"
-          style={{ color: theme.colors.text }}
-        >
-          Email Address
-        </label>
-        <InputField
-          type="email"
-          name="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={handleChange}
-          required
+    <div
+      className="relative"
+      style={{ fontFamily: theme.typography.fontFamily }}
+    >
+      <form onSubmit={handleForgotPassword} className="space-y-4">
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar
+          closeOnClick
+          pauseOnHover
+          toastStyle={{
+            backgroundColor: theme.colors.surface,
+            color: theme.colors.text,
+            borderRadius: theme.borderRadius.default,
+            boxShadow: theme.shadow.sm,
+          }}
         />
-      </div>
-      <button
-        type="submit"
-        className="w-full p-3 rounded-md hover:opacity-90 transition-all font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{
-          background: theme.colors.accent,
-          color: "white",
-          borderRadius: theme.borderRadius.default,
-          boxShadow: `0 4px 6px ${theme.colors.text}20`,
-        }}
-        disabled={loading}
-      >
-        {loading ? "Sending..." : "Send Reset Link"}
-      </button>
-      <button
-        type="button"
-        className="w-full text-sm hover:underline transition-colors text-center"
-        onClick={onBackToLogin}
-        style={{ color: `${theme.colors.text}80` }}
-      >
-        Back to Login
-      </button>
-      {loading && (
-        <div className="flex justify-center">
-          <Loader text={loadingText} />
+
+        {/* Email Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="email"
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: theme.colors.text }}
+          >
+            Email Address
+          </label>
+          <InputField
+            type="email"
+            name="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={handleChange}
+            required
+            disabled={loading}
+            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            style={{
+              backgroundColor: theme.colors.bubbleBot,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              focusRingColor: theme.colors.accent,
+            }}
+          />
         </div>
-      )}
-    </form>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            color: theme.colors.text,
+            backgroundColor: "transparent",
+            border: `1px solid ${theme.colors.accent}`,
+            borderRadius: theme.borderRadius.pill,
+          }}
+          onMouseOver={(e) =>
+            !loading &&
+            (e.currentTarget.style.backgroundColor =
+              theme.colors.accentHover + "20")
+          }
+          onMouseOut={(e) =>
+            !loading && (e.currentTarget.style.backgroundColor = "transparent")
+          }
+          disabled={loading}
+          title="Send a reset link to your email" // Tooltip added
+        >
+          {loading ? "Processing..." : "Transmit Signal"}
+        </button>
+      </form>
+
+      {/* Back to Login */}
+      <div className="text-center text-sm mt-4">
+        <button
+          type="button"
+          className="transition-all duration-200 hover:underline"
+          style={{ color: theme.colors.textSecondary }}
+          onClick={onBackToLogin}
+          disabled={loading}
+          title="Return to login screen" // Tooltip added
+        >
+          Return to Galaxy
+        </button>
+        {loading && <Loader text="Sending..." />}
+      </div>
+    </div>
   );
 };
 

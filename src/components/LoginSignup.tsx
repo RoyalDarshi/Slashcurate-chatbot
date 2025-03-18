@@ -1,15 +1,11 @@
 import React, { useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { GoogleOAuthProvider } from "@react-oauth/google";
-import GoogleLoginButton from "./GoogleLoginButton";
-import LinkedInLoginButton from "./LinkedInLoginButton";
 import Login from "./Login";
 import Signup from "./Signup";
 import ForgotPassword from "./ForgotPassword";
 import { useTheme } from "../ThemeContext";
 
-const clientId = "YOUR_GOOGLE_CLIENT_ID"; // Replace with your actual Google Client ID
 
 interface LoginSignupProps {
   onLoginSuccess: (token: string) => void;
@@ -37,85 +33,27 @@ const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
 
   return (
     <div
-      className="min-h-screen flex flex-col justify-center items-center p-6 relative"
-      style={{ backgroundColor: theme.colors.background }}
+      className="min-h-screen flex flex-col justify-center items-center p-6 relative overflow-hidden"
+      style={{
+        backgroundColor: theme.colors.background,
+        fontFamily: theme.typography.fontFamily,
+      }}
     >
-      <div className="w-full max-w-md space-y-6">
-        <div
-          className="p-6 rounded-lg shadow-md space-y-6"
-          style={{
-            backgroundColor: theme.colors.surface,
-            borderRadius: theme.borderRadius.default,
-            border: `1px solid ${theme.colors.border}`,
-            boxShadow: theme.shadow.sm,
-          }}
-        >
-          <div className="flex justify-between items-center">
-            <h2
-              className="text-2xl font-semibold text-center flex-1"
-              style={{
-                color: theme.colors.text,
-                fontFamily: theme.typography.fontFamily,
-                fontWeight: theme.typography.weight.bold,
-              }}
-            >
-              {isSignup
-                ? "Sign Up"
-                : isForgotPassword
-                ? "Forgot Password"
-                : "Log In"}
-            </h2>
-          </div>
+      {/* Subtle Background Effect */}
+      <div
+        className="absolute inset-0 opacity-50 pointer-events-none"
+        style={{
+          background: `radial-gradient(circle at 50% 50%, ${theme.colors.accent}20, transparent 70%)`,
+        }}
+      ></div>
 
-          {/* Toast Notifications */}
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar
-            closeOnClick
-            pauseOnHover
-            toastStyle={{
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.borderRadius.default,
-              boxShadow: theme.shadow.sm,
-            }}
-          />
-
-          {/* Conditional Rendering */}
-          {isSignup && (
-            <Signup
-              onSignupSuccess={onLoginSuccess}
-              onSwitchToLogin={handleSwitchToLogin}
-            />
-          )}
-          {!isSignup && !isForgotPassword && (
-            <GoogleOAuthProvider clientId={clientId}>
-              <Login
-                onLoginSuccess={onLoginSuccess}
-                onForgotPassword={handleForgotPassword}
-                onSwitchToSignup={handleSwitchToSignup}
-              />
-              <div className="flex justify-center space-x-4 mt-4">
-                <GoogleLoginButton />
-                <LinkedInLoginButton />
-              </div>
-            </GoogleOAuthProvider>
-          )}
-          {isForgotPassword && (
-            <ForgotPassword onBackToLogin={handleSwitchToLogin} />
-          )}
-        </div>
-      </div>
-
-      {/* Footer Logo */}
-      <footer
-        className="absolute bottom-4 left-4 flex items-center space-x-2"
+      {/* Company Logo - Top Left */}
+      <div
+        className="absolute top-4 left-4 flex items-center space-x-2"
         style={{ color: theme.colors.textSecondary }}
       >
         <svg
-          className="h-8 w-8"
+          className="h-6 w-6"
           viewBox="0 0 24 24"
           fill="none"
           stroke={theme.colors.accent}
@@ -127,16 +65,58 @@ const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
           <path d="M12 6v6l4 2" />
         </svg>
         <span
-          className="text-lg font-semibold"
-          style={{
-            color: theme.colors.text,
-            fontFamily: theme.typography.fontFamily,
-            fontWeight: theme.typography.weight.bold,
-          }}
+          className="text-base font-medium"
+          style={{ fontFamily: theme.typography.fontFamily }}
         >
-          YourCompany
+          SlashCurate
         </span>
-      </footer>
+      </div>
+
+      <div className="w-full max-w-md relative z-10 space-y-6">
+        <h2
+          className="text-2xl font-bold text-center tracking-tight"
+          style={{ color: theme.colors.text }}
+        >
+          {isSignup
+            ? "Join the Cosmos"
+            : isForgotPassword
+            ? "Reclaim Access"
+            : "Enter the Galaxy"}
+        </h2>
+
+        <div className="space-y-4">
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar
+            closeOnClick
+            pauseOnHover
+            toastStyle={{
+              backgroundColor: theme.colors.surface,
+              color: theme.colors.text,
+              borderRadius: theme.borderRadius.default,
+              boxShadow: theme.shadow.sm,
+            }}
+          />
+
+          {isSignup && (
+            <Signup
+              onSignupSuccess={onLoginSuccess}
+              onSwitchToLogin={handleSwitchToLogin}
+            />
+          )}
+          {!isSignup && !isForgotPassword && (
+            <Login
+              onLoginSuccess={onLoginSuccess}
+              onForgotPassword={handleForgotPassword}
+              onSwitchToSignup={handleSwitchToSignup}
+            />
+          )}
+          {isForgotPassword && (
+            <ForgotPassword onBackToLogin={handleSwitchToLogin} />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
