@@ -15,6 +15,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
+  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value.trimStart());
@@ -24,7 +25,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
     e.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      toast.error("Email is required.");
+      toast.error("Email is required.", { theme: mode });
       return;
     }
 
@@ -38,17 +39,20 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
       setLoading(false);
 
       if (response.status === 200) {
-        toast.success("Password reset email sent.");
+        toast.success("Password reset email sent.", { theme: mode });
         setTimeout(() => onBackToLogin(), 3000);
       } else {
-        toast.error(`Error: ${response.data.message}`);
+        toast.error(`Error: ${response.data.message}`, { theme: mode });
       }
     } catch (error) {
       setLoading(false);
       if (axios.isAxiosError(error)) {
-        toast.error(`Error: ${error.response?.data?.message || error.message}`);
+        toast.error(
+          `Error: ${error.response?.data?.message || error.message}`,
+          { theme: mode }
+        );
       } else {
-        toast.error(`Error: ${(error as Error).message}`);
+        toast.error(`Error: ${(error as Error).message}`, { theme: mode });
       }
     }
   };
@@ -103,7 +107,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-36 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             color: theme.colors.text,
             backgroundColor: "transparent",
@@ -121,7 +125,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
           disabled={loading}
           title="Send a reset link to your email" // Tooltip added
         >
-          {loading ? "Processing..." : "Transmit Signal"}
+          {loading ? "Processing..." : "Request Reset Link"}
         </button>
       </form>
 

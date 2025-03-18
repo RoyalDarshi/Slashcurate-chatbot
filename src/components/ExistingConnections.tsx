@@ -29,11 +29,12 @@ const ExistingConnections: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const fetchConnections = useCallback(async () => {
     const userId = sessionStorage.getItem("userId");
     if (!userId) {
-      toast.error("User ID not found. Please log in again.");
+      toast.error("User ID not found. Please log in again.", { theme: mode });
       return;
     }
 
@@ -63,11 +64,12 @@ const ExistingConnections: React.FC = () => {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<{ message?: string }>;
         toast.error(
-          `Error: ${axiosError.response?.data?.message ?? axiosError.message}`
+          `Error: ${axiosError.response?.data?.message ?? axiosError.message}`,
+          { theme: mode }
         );
         setError(axiosError.response?.data?.message ?? axiosError.message);
       } else {
-        toast.error(`Error: ${(error as Error).message}`);
+        toast.error(`Error: ${(error as Error).message}`, { theme: mode });
         setError((error as Error).message);
       }
     }
@@ -76,7 +78,7 @@ const ExistingConnections: React.FC = () => {
   const handleDeleteConnection = async (connectionId: number) => {
     const userId = sessionStorage.getItem("userId");
     if (!userId) {
-      toast.error("User ID not found. Please log in again.");
+      toast.error("User ID not found. Please log in again.", { theme: mode });
       return;
     }
 
@@ -87,7 +89,7 @@ const ExistingConnections: React.FC = () => {
         userId,
         connectionId,
       });
-      toast.success("Connection deleted successfully!");
+      toast.success("Connection deleted successfully!", { theme: mode });
       // Refresh connections after deletion
       fetchConnections();
     } catch (error) {
@@ -95,11 +97,12 @@ const ExistingConnections: React.FC = () => {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<{ message?: string }>;
         toast.error(
-          `Error: ${axiosError.response?.data?.message ?? axiosError.message}`
+          `Error: ${axiosError.response?.data?.message ?? axiosError.message}`,
+          { theme: mode }
         );
         setError(axiosError.response?.data?.message ?? axiosError.message);
       } else {
-        toast.error(`Error: ${(error as Error).message}`);
+        toast.error(`Error: ${(error as Error).message}`, { theme: mode });
         setError((error as Error).message);
       }
     } finally {
@@ -115,7 +118,7 @@ const ExistingConnections: React.FC = () => {
 
   return (
     <div
-      className="p-6 rounded-lg shadow-md h-full overflow-y-auto"
+      className="p-6 shadow-md h-full overflow-y-auto"
       style={{
         backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.text}20`,

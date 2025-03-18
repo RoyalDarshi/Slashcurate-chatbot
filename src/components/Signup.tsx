@@ -28,6 +28,7 @@ const Signup: React.FC<SignupProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
+  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -49,15 +50,17 @@ const Signup: React.FC<SignupProps> = ({
       !password.trim() ||
       !confirmPassword.trim()
     ) {
-      toast.error("All fields are required.");
+      toast.error("All fields are required.", { theme: mode });
       return;
     }
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match.");
+      toast.error("Passwords do not match.", { theme: mode });
       return;
     }
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters long.");
+      toast.error("Password must be at least 6 characters long.", {
+        theme: mode,
+      });
       return;
     }
 
@@ -76,17 +79,18 @@ const Signup: React.FC<SignupProps> = ({
       setLoading(false);
 
       if (res.status === 200) {
-        toast.success("Signup successful!");
+        toast.success("Signup successful!", { theme: mode });
         onSignupSuccess(res.data.token);
       } else {
-        toast.error(res.data.message || "Signup failed.");
+        toast.error(res.data.message || "Signup failed.", { theme: mode });
       }
     } catch (err) {
       setLoading(false);
       toast.error(
         isAxiosError(err)
           ? err.response?.data?.message || err.message
-          : (err as Error).message || "An unexpected error occurred"
+          : (err as Error).message || "An unexpected error occurred",
+        { theme: mode }
       );
     }
   };
@@ -209,7 +213,7 @@ const Signup: React.FC<SignupProps> = ({
             className="text-sm font-semibold tracking-wide"
             style={{ color: theme.colors.text }}
           >
-            Password
+            Passcode
           </label>
           <PasswordField
             name="password"
@@ -236,7 +240,7 @@ const Signup: React.FC<SignupProps> = ({
             className="text-sm font-semibold tracking-wide"
             style={{ color: theme.colors.text }}
           >
-            Confirm Password
+            Confirm Passcode
           </label>
           <PasswordField
             name="confirmPassword"
@@ -259,7 +263,7 @@ const Signup: React.FC<SignupProps> = ({
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-28 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             color: theme.colors.text,
             backgroundColor: "transparent",
@@ -275,9 +279,9 @@ const Signup: React.FC<SignupProps> = ({
             !loading && (e.currentTarget.style.backgroundColor = "transparent")
           }
           disabled={loading}
-          title="Begin your cosmic journey" // Tooltip added
+          title="Set up your data access" // Tooltip added
         >
-          {loading ? "Processing..." : "Launch Journey"}
+          {loading ? "Processing..." : "Register"}
         </button>
       </form>
 
@@ -291,7 +295,7 @@ const Signup: React.FC<SignupProps> = ({
           disabled={loading}
           title="Sign in with existing account" // Tooltip added
         >
-          Already orbiting? Sign in
+          Existing User? Sign In
         </button>
         {loading && <Loader text="Launching..." />}
       </div>

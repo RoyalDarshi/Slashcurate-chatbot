@@ -71,6 +71,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [connectionsLoading, setConnectionsLoading] = useState(true);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -91,71 +92,88 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const saveMessages = useCallback(() => {
     try {
-      const limitedMessages = messagesRef.current.slice(-10);
-      localStorage.setItem("chatMessages", JSON.stringify(limitedMessages));
+      localStorage.setItem("chatMessages", JSON.stringify(messagesRef.current));
     } catch (error) {
       console.error("Failed to save messages", error);
     }
   }, []);
 
   useEffect(() => {
-    const fetchConnections = async () => {
-      setConnectionsLoading(true);
-      const userId = sessionStorage.getItem("userId");
-      if (!userId) {
-        toast.error("User ID not found. Please log in again.", {
-          style: {
-            background: theme.colors.surface,
-            color: theme.colors.error,
-          },
-        });
-        setConnectionsLoading(false);
-        return;
-      }
-      try {
-        const response = await axios.post(`${API_URL}/getuserconnections`, {
-          userId,
-        });
-        setConnections(response.data.connections);
-
-        if (response.data.connections.length === 0) {
-          setSelectedConnection(null);
-          localStorage.removeItem("selectedConnection");
-        } else {
-          const storedConnectionName =
-            localStorage.getItem("selectedConnection");
-          const defaultConnection =
-            response.data.connections.find(
-              (conn: Connection) => conn.connectionName === storedConnectionName
-            ) ||
-            response.data.connections[0] ||
-            null;
-
-          setSelectedConnection(defaultConnection?.connectionName || null);
-          localStorage.setItem(
-            "selectedConnection",
-            defaultConnection?.connectionName || ""
-          );
-
-          if (defaultConnection) {
-            await axios.post(
-              `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
-              {
-                connection: defaultConnection,
-              }
-            );
-          }
+    const loadInitialMessages = () => {
+      const selectedSession = localStorage.getItem("selectedSession");
+      if (selectedSession) {
+        const session = JSON.parse(selectedSession);
+        messagesRef.current = session.messages;
+        setMessages(session.messages);
+        localStorage.removeItem("selectedSession"); // Clear after loading
+      } else {
+        const storedMessages = localStorage.getItem("chatMessages");
+        if (storedMessages) {
+          messagesRef.current = JSON.parse(storedMessages);
+          setMessages(messagesRef.current);
         }
-        setConnectionError(null);
-      } catch (error) {
-        console.error("Error fetching connections:", error);
-        setConnectionError("Failed to fetch connections. Please try again.");
-      } finally {
-        setConnectionsLoading(false);
       }
     };
+
+    loadInitialMessages();
     fetchConnections();
   }, [theme]);
+
+  const fetchConnections = async () => {
+    setConnectionsLoading(true);
+    const userId = sessionStorage.getItem("userId");
+    if (!userId) {
+      toast.error("User ID not found. Please log in again.", {
+        style: {
+          background: theme.colors.surface,
+          color: theme.colors.error,
+        },
+        theme:mode,
+      });
+      setConnectionsLoading(false);
+      return;
+    }
+    try {
+      const response = await axios.post(`${API_URL}/getuserconnections`, {
+        userId,
+      });
+      setConnections(response.data.connections);
+
+      if (response.data.connections.length === 0) {
+        setSelectedConnection(null);
+        localStorage.removeItem("selectedConnection");
+      } else {
+        const storedConnectionName = localStorage.getItem("selectedConnection");
+        const defaultConnection =
+          response.data.connections.find(
+            (conn: Connection) => conn.connectionName === storedConnectionName
+          ) ||
+          response.data.connections[0] ||
+          null;
+
+        setSelectedConnection(defaultConnection?.connectionName || null);
+        localStorage.setItem(
+          "selectedConnection",
+          defaultConnection?.connectionName || ""
+        );
+
+        if (defaultConnection) {
+          await axios.post(
+            `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
+            {
+              connection: defaultConnection,
+            }
+          );
+        }
+      }
+      setConnectionError(null);
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+      setConnectionError("Failed to fetch connections. Please try again.");
+    } finally {
+      setConnectionsLoading(false);
+    }
+  };
 
   const handleSelect = async (option: any) => {
     if (option?.value === "create-con") {
@@ -195,18 +213,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!state.input.trim() || state.isLoading) return;
-
       if (!selectedConnection) {
         toast.error(
-          "No connection selected. Please create or select a connection first.",
-          {
-            style: {
-              background: theme.colors.surface,
-              color: theme.colors.error,
-              border: `1px solid ${theme.colors.error}20`,
-            },
-          }
-        );
+    "No connection selected. Please create or select a connection first.",
+    {
+        style: {
+            background: theme.colors.surface,
+            color: theme.colors.error,
+            border: `1px solid ${theme.colors.error}20`,
+        },
+         theme: mode,
+    }
+);
         return;
       }
 
@@ -401,24 +419,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             style={{ color: theme.colors.text }}
           >
             <p className="text-2xl font-semibold mb-4">No Connections Found</p>
-            <p className="text-lg max-w-md">
-              No connections found. Please create one to start chatting with
-              your data assistant.
+            <p className="text-lg">
+              Please create one to start chatting with your data assistant.
             </p>
             <button
               onClick={onCreateConSelected}
               className="mt-6 flex items-center justify-center w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200"
               style={{
-                color: theme.colors.text, // #2D3748 (light) or #F8FAFC (dark)
+                color: theme.colors.text,
                 backgroundColor: "transparent",
-                border: `1px solid ${theme.colors.accent}`, // #6B46C1 (light) or #7C3AED (dark)
-                borderRadius: theme.borderRadius.pill, // 9999px
+                border: `1px solid ${theme.colors.accent}`,
+                borderRadius: theme.borderRadius.pill,
                 padding: "6px 10px",
               }}
-              onMouseOver={
-                (e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    theme.colors.accentHover + "20") // #5B3A9E20 (light) or #9F67FF20 (dark)
+              onMouseOver={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  theme.colors.accentHover + "20")
               }
               onMouseOut={(e) =>
                 (e.currentTarget.style.backgroundColor = "transparent")

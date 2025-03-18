@@ -187,6 +187,8 @@ const ConnectionForm: React.FC = () => {
   const [loadingText, setLoadingText] = useState("Loading, please wait...");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
 
+  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
+  
   const isFormValid = useMemo(() => {
     const { connectionName, hostname, port, database, username, password } =
       formData;
@@ -294,7 +296,7 @@ const ConnectionForm: React.FC = () => {
     if (!isFormValid) return;
     const userId = sessionStorage.getItem("userId");
     if (!userId) {
-      toast.error("User ID not found. Please log in again.");
+      toast.error("User ID not found. Please log in again.",{theme:mode});
       return;
     }
     const payload = { userId, connectionDetails: formData };
@@ -306,10 +308,10 @@ const ConnectionForm: React.FC = () => {
       });
       setLoading(false);
       if (response.status === 200) {
-        toast.success("Connection created successfully.");
+        toast.success("Connection created successfully.", { theme: mode });
         handleClearForm();
       } else {
-        toast.error(`Error: ${response.data.message}`);
+        toast.error(`Error: ${response.data.message}`,{theme:mode});
       }
     } catch (error) {
       setLoading(false);
@@ -318,7 +320,7 @@ const ConnectionForm: React.FC = () => {
           axios.isAxiosError(error)
             ? error.response?.data?.message
             : (error as Error).message
-        }`
+        }`,{theme:mode}
       );
     }
   };
@@ -337,15 +339,15 @@ const ConnectionForm: React.FC = () => {
       );
       setLoading(false);
       if (response.status === 200) {
-        toast.success("Connection established successfully.");
+        toast.success("Connection established successfully.",{theme:mode});
         setIsSubmitButtonEnabled(true);
       } else {
-        toast.error(`Error: ${response.data.message}`);
+        toast.error(`Error: ${response.data.message}`,{theme:mode});
         setIsSubmitButtonEnabled(false);
       }
     } catch {
       setLoading(false);
-      toast.error("Connection failed. Check details.");
+      toast.error("Connection failed. Check details.",{theme:mode});
       setIsSubmitButtonEnabled(false);
     }
   };

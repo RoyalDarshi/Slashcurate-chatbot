@@ -78,10 +78,10 @@ const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
           style={{ color: theme.colors.text }}
         >
           {isSignup
-            ? "Join the Cosmos"
+            ? "Access Data Insights Through Text"
             : isForgotPassword
             ? "Reclaim Access"
-            : "Enter the Galaxy"}
+            : "Access Your Data"}
         </h2>
 
         <div className="space-y-4">

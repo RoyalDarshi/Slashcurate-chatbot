@@ -23,6 +23,7 @@ const Login: React.FC<LoginProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
+  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -38,7 +39,7 @@ const Login: React.FC<LoginProps> = ({
     const password = formData.password.trim();
 
     if (!email || !password) {
-      toast.error("Email and password cannot be empty.");
+      toast.error("Email and password cannot be empty.", { theme: mode });
       return;
     }
 
@@ -53,18 +54,26 @@ const Login: React.FC<LoginProps> = ({
 
       if (response.status === 200) {
         const token = response.data.token;
-        toast.success("Login successful!");
+        toast.success("Login successful!", { theme: mode });
         onLoginSuccess(token);
       } else {
-        toast.error(`Error: ${response.data.message || "Login failed"}`);
+        toast.error(`Error: ${response.data.message || "Login failed"}`, {
+          theme: mode,
+        });
       }
     } catch (error) {
       setLoading(false);
       if (axios.isAxiosError(error)) {
-        toast.error(`Error: ${error.response?.data?.message || error.message}`);
+        toast.error(
+          `Error: ${error.response?.data?.message || error.message}`,
+          { theme: mode }
+        );
       } else {
         toast.error(
-          `Error: ${(error as Error).message || "An unexpected error occurred"}`
+          `Error: ${
+            (error as Error).message || "An unexpected error occurred"
+          }`,
+          { theme: mode }
         );
       }
     }
@@ -102,12 +111,12 @@ const Login: React.FC<LoginProps> = ({
             className="text-sm font-semibold tracking-wide"
             style={{ color: theme.colors.text }}
           >
-            Email Address
+            Username
           </label>
           <InputField
             type="text"
             name="email"
-            placeholder="Enter your email"
+            placeholder="Enter your username"
             value={formData.email}
             onChange={handleChange}
             required
@@ -129,11 +138,11 @@ const Login: React.FC<LoginProps> = ({
             className="text-sm font-semibold tracking-wide"
             style={{ color: theme.colors.text }}
           >
-            Password
+            Passcode
           </label>
           <PasswordField
             name="password"
-            placeholder="Enter your password"
+            placeholder="Enter your passcode"
             value={formData.password}
             onChange={handleChange}
             showPassword={showPassword}
@@ -170,7 +179,7 @@ const Login: React.FC<LoginProps> = ({
           disabled={loading}
           title="Access your cosmic account" // Tooltip added
         >
-          {loading ? "Processing..." : "Enter Cosmos"}
+          {loading ? "Processing..." : "Start Analyzing"}
         </button>
       </form>
 
@@ -184,7 +193,7 @@ const Login: React.FC<LoginProps> = ({
           disabled={loading}
           title="Recover your account" // Tooltip added
         >
-          Lost your key?
+          Forgot Your Passcode?
         </button>
         <button
           type="button"
@@ -194,7 +203,7 @@ const Login: React.FC<LoginProps> = ({
           disabled={loading}
           title="Create a new account" // Tooltip added
         >
-          New to the galaxy? Join now
+          New User? Register
         </button>
         {loading && <Loader text="" />}
       </div>

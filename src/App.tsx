@@ -52,6 +52,10 @@ function App() {
     setActiveMenu("new-connection");
   };
 
+  const handleHomePage = () => {
+    setActiveMenu("home");
+  };
+
   return (
     <ThemeProvider>
       <Router>
@@ -66,6 +70,7 @@ function App() {
                 onLoginSuccess={handleLoginSuccess}
                 onLogout={handleLogout}
                 onCreateConSelected={handleCreateConSelected}
+                onHomePage={handleHomePage}
               />
             }
           />
@@ -83,6 +88,7 @@ const AppContent: React.FC<{
   onLoginSuccess: (userId: string) => void;
   onLogout: () => void;
   onCreateConSelected: () => void;
+  onHomePage: () => void;
 }> = ({
   isAuthenticated,
   activeMenu,
@@ -90,6 +96,7 @@ const AppContent: React.FC<{
   onLoginSuccess,
   onLogout,
   onCreateConSelected,
+  onHomePage,
 }) => {
   const { theme } = useTheme();
 
@@ -117,7 +124,7 @@ const AppContent: React.FC<{
             )}
             {activeMenu === "new-connection" && <ConnectionForm />}
             {activeMenu === "existing-connection" && <ExistingConnections />}
-            {activeMenu === "history" && <History />}
+            {activeMenu === "history" && <History onSessionClicked={onHomePage} />}
             {activeMenu === "settings" && <Settings />}
           </main>
         </div>

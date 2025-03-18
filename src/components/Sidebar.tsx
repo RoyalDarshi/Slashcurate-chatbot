@@ -6,7 +6,7 @@ import {
   ChevronUp,
   PanelLeftOpen,
   PanelLeftClose,
-} from "lucide-react"; // Import PanelLeftOpen and PanelLeftClose
+} from "lucide-react";
 import { menuItems } from "../menuItems";
 import { useTheme } from "../ThemeContext";
 
@@ -22,7 +22,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  // Initialize isDesktopSidebarOpen from localStorage or default to true
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(() => {
     const savedState = localStorage.getItem("isDesktopSidebarOpen");
     return savedState !== null ? savedState === "true" : true;
@@ -32,7 +31,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
-  // Save sidebar state to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem(
       "isDesktopSidebarOpen",
@@ -40,12 +38,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
   }, [isDesktopSidebarOpen]);
 
-  // Set default menu to "home" on mount
   useEffect(() => {
     onMenuClick("home");
   }, [onMenuClick]);
 
-  // Sync activeMenuItem with parent state
   useEffect(() => {
     if (activeMenu) {
       setActiveMenuItem(activeMenu);
@@ -60,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     } else {
       onMenuClick(id);
       setActiveMenuItem(id);
-      setIsOpen(false); // Close mobile sidebar on selection
+      setIsOpen(false);
     }
   };
 
@@ -73,14 +69,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  // Handle clicks outside (for future profile dropdown)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         profileDropdownRef.current &&
         !profileDropdownRef.current.contains(event.target as Node)
       ) {
-        // setIsProfileOpen(false); // Uncomment if adding profile dropdown
+        // setIsProfileOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -89,7 +84,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className="flex">
-      {/* Overlay for mobile when sidebar is open */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
@@ -98,7 +92,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Mobile toggle button (only shown when sidebar is closed) */}
       {!isOpen && (
         <button
           title="Toggle Sidebar"
@@ -115,7 +108,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
       )}
 
-      {/* Sidebar */}
       <aside
         className={`h-screen p-4 flex flex-col ${
           isDesktopSidebarOpen ? "w-64" : "w-16"
@@ -127,7 +119,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           borderRight: `1px solid ${theme.colors.border}`,
         }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
             {isDesktopSidebarOpen && (
@@ -149,31 +140,25 @@ const Sidebar: React.FC<SidebarProps> = ({
               </>
             )}
           </div>
-          {/* Desktop toggle button with tooltip (hidden in mobile view) */}
           <div className="relative group hidden md:block">
             <button
-              title="Toggle Sidebar"
               className="p-1 rounded-md transition-all duration-200 hover:bg-opacity-10"
               style={{
                 backgroundColor: theme.colors.accent,
                 color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
               }}
               onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
               aria-label="Toggle Sidebar"
               aria-expanded={isDesktopSidebarOpen}
             >
               {isDesktopSidebarOpen ? (
-                <PanelLeftClose size={24} /> // Icon for closing sidebar
+                <PanelLeftClose size={24} />
               ) : (
-                <PanelLeftOpen size={24} /> // Icon for opening sidebar
+                <PanelLeftOpen size={24} />
               )}
             </button>
-            {/* Tooltip for toggle button */}
             <div
-              className="absolute left-12 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              className="absolute left-12 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
               style={{ zIndex: 100 }}
             >
               {isDesktopSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
@@ -181,7 +166,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex flex-col space-y-1 flex-grow">
           {menuItems.map(({ id, icon: Icon, label, subMenu }) => (
             <React.Fragment key={id}>
@@ -196,49 +180,35 @@ const Sidebar: React.FC<SidebarProps> = ({
                     activeMenuItem === id
                       ? `${theme.colors.accent}40`
                       : undefined,
-                  color: theme.colors.text, // Consistent text color for all items
+                  color: theme.colors.text,
                   borderRadius: theme.borderRadius.default,
                   transition: theme.transition.default,
                   padding: isDesktopSidebarOpen
                     ? "0.75rem"
-                    : "0.5rem 1.75rem 0.5rem 0.5rem", // Adjust padding based on sidebar state
+                    : "0.5rem 1.75rem 0.5rem 0.5rem",
                 }}
                 onClick={() => handleMenuClick(id)}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    activeMenuItem === id
-                      ? `${theme.colors.accent}40`
-                      : theme.colors.hover)
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    activeMenuItem === id
-                      ? `${theme.colors.accent}30`
-                      : "transparent")
-                }
                 aria-expanded={id === "connections" && isConnectionsOpen}
                 aria-controls={
                   id === "connections" ? "connections-sub-menu" : undefined
                 }
               >
-                <div className="flex items-center">
-                  <div className="relative group">
-                    <Icon
-                      size={20}
-                      style={{
-                        color: theme.colors.text, // Consistent icon color
-                      }}
-                    />
-                    {/* Tooltip for icons when sidebar is closed */}
-                    {!isDesktopSidebarOpen && (
-                      <div
-                        className="absolute left-10 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        style={{ zIndex: 100 }}
-                      >
-                        {label}
-                      </div>
-                    )}
-                  </div>
+                <div className="flex items-center relative group">
+                  <Icon
+                    size={20}
+                    style={{
+                      color: theme.colors.text,
+                    }}
+                  />
+                  {/* Tooltip only when sidebar is collapsed */}
+                  {!isDesktopSidebarOpen && (
+                    <div
+                      className="absolute left-10 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                      style={{ zIndex: 100 }}
+                    >
+                      {label}
+                    </div>
+                  )}
                   {isDesktopSidebarOpen && (
                     <span
                       className="ml-3"
@@ -263,7 +233,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   ))}
               </button>
 
-              {/* Sub-menu remains unchanged */}
               {subMenu &&
                 id === "connections" &&
                 isConnectionsOpen &&
@@ -308,7 +277,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </nav>
 
-        {/* Footer with Logo */}
         <div
           className="mt-auto pt-4 flex items-center space-x-2"
           style={{ borderTop: `1px solid ${theme.colors.border}` }}
@@ -334,7 +302,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 fontWeight: theme.typography.weight.bold,
               }}
             >
-              Slash Curate
+              SlashCurate
             </span>
           )}
         </div>

@@ -19,6 +19,7 @@ const ResetPassword: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
+  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -42,11 +43,11 @@ const ResetPassword: React.FC = () => {
     const trimmedConfirmPassword = confirmPassword.trim();
 
     if (!trimmedPassword || !trimmedConfirmPassword) {
-      toast.error("Both fields are required.");
+      toast.error("Both fields are required.", { theme: mode });
       return;
     }
     if (trimmedPassword !== trimmedConfirmPassword) {
-      toast.error("Passwords do not match.");
+      toast.error("Passwords do not match.", { theme: mode });
       return;
     }
 
@@ -59,17 +60,20 @@ const ResetPassword: React.FC = () => {
       );
       setLoading(false);
       if (response.status === 200) {
-        toast.success("Password reset successful.");
+        toast.success("Password reset successful.", { theme: mode });
         setTimeout(() => navigate("/"), 3000);
       } else {
-        toast.error(`Error: ${response.data.message}`);
+        toast.error(`Error: ${response.data.message}`, { theme: mode });
       }
     } catch (error) {
       setLoading(false);
       if (axios.isAxiosError(error)) {
-        toast.error(`Error: ${error.response?.data?.message || error.message}`);
+        toast.error(
+          `Error: ${error.response?.data?.message || error.message}`,
+          { theme: mode }
+        );
       } else {
-        toast.error(`Error: ${(error as Error).message}`);
+        toast.error(`Error: ${(error as Error).message}`, { theme: mode });
       }
     }
   };
@@ -111,7 +115,7 @@ const ResetPassword: React.FC = () => {
           className="text-base font-medium"
           style={{ fontFamily: theme.typography.fontFamily }}
         >
-          YourCompany
+          SlashCurate
         </span>
       </div>
 
@@ -149,7 +153,7 @@ const ResetPassword: React.FC = () => {
                 className="text-sm font-semibold tracking-wide"
                 style={{ color: theme.colors.text }}
               >
-                New Password
+                New Passcode
               </label>
               <PasswordField
                 name="password"
@@ -176,7 +180,7 @@ const ResetPassword: React.FC = () => {
                 className="text-sm font-semibold tracking-wide"
                 style={{ color: theme.colors.text }}
               >
-                Confirm Password
+                Confirm Passcode
               </label>
               <PasswordField
                 name="confirmPassword"
@@ -218,7 +222,7 @@ const ResetPassword: React.FC = () => {
               disabled={loading}
               title="Update your password" // Tooltip added
             >
-              {loading ? "Processing..." : "Reset Orbit"}
+              {loading ? "Processing..." : "Reset Passcode"}
             </button>
           </form>
 
@@ -232,7 +236,7 @@ const ResetPassword: React.FC = () => {
               disabled={loading}
               title="Go back to login" // Tooltip added
             >
-              Return to Galaxy
+              Go back to login
             </button>
             {loading && <Loader text="Resetting..." />}
           </div>
