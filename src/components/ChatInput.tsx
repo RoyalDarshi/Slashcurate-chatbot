@@ -109,7 +109,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           padding: "12px",
         }}
       >
-        {/* Textarea (No Background, No Border, No Shadow) */}
+        {/* Textarea (Inspired by Login Input Fields) */}
         <textarea
           ref={textareaRef}
           value={input}
@@ -118,14 +118,22 @@ const ChatInput: React.FC<ChatInputProps> = ({
               onInputChange(e.target.value);
             }
           }}
-          placeholder="Ask your questions..."
-          className="w-full min-h-[40px] max-h-32 px-3 py-2 text-base bg-transparent border-none outline-none  transition-all duration-300 resize-none overflow-y-auto placeholder-opacity-50"
+          placeholder="Ask about your data..."
+          className="w-full min-h-[40px] max-h-32 px-3 py-2 text-base border-none rounded-lg focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed resize-none overflow-y-auto placeholder-opacity-50"
           style={{
+            backgroundColor: "transparent",
             color: theme.colors.text,
-            opacity: isDisabled ? 0.5 : 1,
+            border:
+              theme.mode === "light"
+                ? `1px solid ${theme.colors.border}`
+                : "none",
+            boxShadow: theme.mode === "dark" ? theme.shadow.sm : "none",
+            borderRadius: theme.borderRadius.default,
+            fontFamily: theme.typography.fontFamily,
+            fontSize: theme.typography.size.lg,
+            transition: theme.transition.default,
+            outline: "none",
             "--tw-ring-color": theme.colors.accent,
-            boxShadow: "none", // Remove shadow
-            background: "transparent", // Remove background color
           }}
           disabled={isDisabled}
           aria-disabled={isDisabled}
@@ -151,33 +159,38 @@ const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => !isDisabled && setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center text-sm transition-all duration-300 hover:bg-opacity-10 hover:bg-accent w-full"
+              className="flex items-center justify-between w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
               style={{
                 color: theme.colors.text,
-                background: isDisabled
-                  ? `${theme.colors.text}10`
-                  : "transparent",
-                opacity: isDisabled ? 0.5 : 1,
+                backgroundColor: "transparent",
+                border: `1px solid ${theme.colors.accent}`,
+                borderRadius: theme.borderRadius.pill,
                 padding: "6px 10px",
-                borderRadius: "6px",
-                border: `1px solid ${theme.colors.accent}30`,
-                fontFamily: "monospace",
               }}
+              onMouseOver={(e) =>
+                !isDisabled &&
+                (e.currentTarget.style.backgroundColor =
+                  theme.colors.accentHover + "20")
+              }
+              onMouseOut={(e) =>
+                !isDisabled &&
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
               disabled={isDisabled}
             >
-              <span className="truncate max-w-[150px] mr-2">
+              <span className="truncate max-w-[130px]">
                 {selectedConnection || "Select Connection"}
               </span>
               <ChevronDown
                 size={16}
                 style={{ color: theme.colors.accent }}
-                className={`transition-transform duration-300 ${
+                className={`transition-transform duration-200 ${
                   isDropdownOpen ? "rotate-180" : ""
                 }`}
               />
             </button>
 
-            {/* Dropdown Menu (Positioned at the Top, Width Based on Content) */}
+            {/* Dropdown Menu */}
             {isDropdownOpen && (
               <div
                 className="absolute bottom-full left-0 rounded-md shadow-lg z-20 transition-all duration-300 mb-2"
@@ -185,8 +198,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   background: theme.colors.surface,
                   border: `1px solid ${theme.colors.border}`,
                   boxShadow: `0 4px 12px ${theme.colors.text}20`,
-                  width: "min-content", // Set width to content size
-                  maxWidth: "min-content", // Optional: Set a max-width to prevent overflow
+                  width: "min-content",
+                  maxWidth: "min-content",
                 }}
               >
                 {options.map((option) => (

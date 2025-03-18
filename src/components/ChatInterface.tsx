@@ -99,7 +99,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             color: theme.colors.error,
           },
         });
-        handleLogout();
+        //handleLogout();
         setConnectionsLoading(false);
         return;
       }
@@ -348,10 +348,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             className="flex items-center justify-center h-full text-center"
             style={{ color: theme.colors.text }}
           >
-            <p
-              className="text-xl font-bold"
-              style={{ maxWidth: "80%", lineHeight: "1.5" }}
-            >
+            <p className="text-3xl font-bold" style={{ maxWidth: "80%" }}>
               Hello! I’m your Data Assistant. How can I help you today?
             </p>
           </div>
