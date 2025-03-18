@@ -25,6 +25,16 @@ import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import { handleLogout } from "../utils";
 
+// Helper function to convert hex to RGB
+const hexToRgb = (hex: string) => {
+  const cleanedHex = hex.replace("#", "");
+  const bigint = parseInt(cleanedHex, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return { r, g, b };
+};
+
 const initialState: ChatState = {
   isLoading: false,
   input: "",
@@ -59,8 +69,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   );
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [connectionsLoading, setConnectionsLoading] = useState(true);
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null); // Track editing
-  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({}); // Refs for individual messages
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -99,7 +109,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             color: theme.colors.error,
           },
         });
-        //handleLogout();
         setConnectionsLoading(false);
         return;
       }
@@ -109,25 +118,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         });
         setConnections(response.data.connections);
 
-        const storedConnectionName = localStorage.getItem("selectedConnection");
-        const defaultConnection =
-          response.data.connections.find(
-            (conn: Connection) => conn.connectionName === storedConnectionName
-          ) ||
-          response.data.connections[0] ||
-          null;
+        if (response.data.connections.length === 0) {
+          setSelectedConnection(null);
+          localStorage.removeItem("selectedConnection");
+        } else {
+          const storedConnectionName =
+            localStorage.getItem("selectedConnection");
+          const defaultConnection =
+            response.data.connections.find(
+              (conn: Connection) => conn.connectionName === storedConnectionName
+            ) ||
+            response.data.connections[0] ||
+            null;
 
-        setSelectedConnection(defaultConnection?.connectionName || null);
-        setConnectionError(null);
-
-        if (defaultConnection) {
-          await axios.post(
-            `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
-            {
-              connection: defaultConnection,
-            }
+          setSelectedConnection(defaultConnection?.connectionName || null);
+          localStorage.setItem(
+            "selectedConnection",
+            defaultConnection?.connectionName || ""
           );
+
+          if (defaultConnection) {
+            await axios.post(
+              `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
+              {
+                connection: defaultConnection,
+              }
+            );
+          }
         }
+        setConnectionError(null);
       } catch (error) {
         console.error("Error fetching connections:", error);
         setConnectionError("Failed to fetch connections. Please try again.");
@@ -175,7 +194,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!state.input.trim() || state.isLoading || !selectedConnection) return;
+      if (!state.input.trim() || state.isLoading) return;
+
+      if (!selectedConnection) {
+        toast.error(
+          "No connection selected. Please create or select a connection first.",
+          {
+            style: {
+              background: theme.colors.surface,
+              color: theme.colors.error,
+              border: `1px solid ${theme.colors.error}20`,
+            },
+          }
+        );
+        return;
+      }
+
       dispatch({ type: "SET_SUBMITTING", payload: true });
 
       const userMessage: Message = {
@@ -199,7 +233,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       ];
       setMessages([...messagesRef.current]);
       dispatch({ type: "SET_INPUT", payload: "" });
-      setEditingMessageId(null); // Reset editing state
+      setEditingMessageId(null);
       scrollToBottom();
 
       try {
@@ -255,11 +289,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const messageIndex = messagesRef.current.findIndex((msg) => msg.id === id);
     if (messageIndex === -1) return;
 
+    if (!selectedConnection) {
+      toast.error(
+        "No connection selected. Please create or select a connection first.",
+        {
+          style: {
+            background: theme.colors.surface,
+            color: theme.colors.error,
+            border: `1px solid ${theme.colors.error}20`,
+          },
+        }
+      );
+      return;
+    }
+
     messagesRef.current = messagesRef.current.map((msg) =>
       msg.id === id ? { ...msg, content: newContent } : msg
     );
     setMessages([...messagesRef.current]);
-    setEditingMessageId(id); // Set editing state
+    setEditingMessageId(id);
 
     const editedMessage = messagesRef.current[messageIndex];
     if (!editedMessage.isBot && selectedConnection) {
@@ -298,7 +346,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           msg.id === botLoadingMessage.id ? botResponseMessage : msg
         );
         setMessages([...messagesRef.current]);
-        // Scroll to the bot's response
         setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
       } catch (error) {
         console.error("Error updating message:", error);
@@ -316,10 +363,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       } finally {
         setLoadingMessageId(null);
         saveMessages();
-        setEditingMessageId(null); // Reset editing state after completion
+        setEditingMessageId(null);
       }
     }
   };
+
+  // Convert hex accent color to RGB for RGBA usage
+  const { r, g, b } = hexToRgb(theme.colors.accent);
 
   return (
     <div
@@ -343,7 +393,41 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           maxHeight: "calc(100vh + 100px)",
         }}
       >
-        {messages.length === 0 && !connectionError && (
+        {connectionsLoading ? (
+          <Loader />
+        ) : connections.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center h-full text-center"
+            style={{ color: theme.colors.text }}
+          >
+            <p className="text-2xl font-semibold mb-4">No Connections Found</p>
+            <p className="text-lg max-w-md">
+              No connections found. Please create one to start chatting with
+              your data assistant.
+            </p>
+            <button
+              onClick={onCreateConSelected}
+              className="mt-6 flex items-center justify-center w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200"
+              style={{
+                color: theme.colors.text, // #2D3748 (light) or #F8FAFC (dark)
+                backgroundColor: "transparent",
+                border: `1px solid ${theme.colors.accent}`, // #6B46C1 (light) or #7C3AED (dark)
+                borderRadius: theme.borderRadius.pill, // 9999px
+                padding: "6px 10px",
+              }}
+              onMouseOver={
+                (e) =>
+                  (e.currentTarget.style.backgroundColor =
+                    theme.colors.accentHover + "20") // #5B3A9E20 (light) or #9F67FF20 (dark)
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
+            >
+              Create Connection
+            </button>
+          </div>
+        ) : messages.length === 0 && !connectionError ? (
           <div
             className="flex items-center justify-center h-full text-center"
             style={{ color: theme.colors.text }}
@@ -352,29 +436,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               Hello! I’m your Data Assistant. How can I help you today?
             </p>
           </div>
+        ) : (
+          messages.map((message) => (
+            <div
+              className="flex flex-col w-full"
+              style={{ gap: theme.spacing.md }}
+              key={message.id}
+              ref={(el) => (messageRefs.current[message.id] = el)}
+            >
+              <ChatMessage
+                message={message}
+                loading={message.id === loadingMessageId}
+                onEditMessage={handleEditMessage}
+                onDeleteMessage={(id) => {
+                  messagesRef.current = messagesRef.current.filter(
+                    (msg) => msg.id !== id
+                  );
+                  setMessages([...messagesRef.current]);
+                  saveMessages();
+                }}
+                selectedConnection={selectedConnection}
+              />
+            </div>
+          ))
         )}
-        {messages.map((message) => (
-          <div
-            className="flex flex-col w-full"
-            style={{ gap: theme.spacing.md }}
-            key={message.id}
-            ref={(el) => (messageRefs.current[message.id] = el)} // Assign ref to each message
-          >
-            <ChatMessage
-              message={message}
-              loading={message.id === loadingMessageId}
-              onEditMessage={handleEditMessage}
-              onDeleteMessage={(id) => {
-                messagesRef.current = messagesRef.current.filter(
-                  (msg) => msg.id !== id
-                );
-                setMessages([...messagesRef.current]);
-                saveMessages();
-              }}
-              selectedConnection={selectedConnection}
-            />
-          </div>
-        ))}
         <div ref={messagesEndRef} />
       </div>
 

@@ -16,11 +16,11 @@ import axios from "axios";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
 
-  useEffect(() => {
-    validateUser();
-  }, []);
+  // useEffect(() => {
+  //   validateUser();
+  // }, []);
 
   const validateUser = async () => {
     const userId = sessionStorage.getItem("userId");
