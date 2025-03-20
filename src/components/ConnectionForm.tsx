@@ -22,9 +22,9 @@ import {
   FileText,
 } from "lucide-react";
 import Loader from "./Loader";
-import { DBCON_API_URL, API_URL } from "../config";
 import { useTheme } from "../ThemeContext";
 import "./ConnectionForm.css";
+import { API_URL, DBCON_API_URL } from "../config";
 
 interface FormData {
   connectionName: string;
@@ -57,6 +57,13 @@ interface FieldConfig {
   required?: boolean;
   icon: React.ReactNode;
   placeholder?: string;
+}
+
+interface ConnectionFormProps {
+  baseUrl: string; // Base URL for API requests (e.g., "http://localhost:5000" or "http://localhost:5001")
+  isAdmin: boolean;
+  userId: string; // User ID or Admin ID from sessionStorage
+  onSuccess?: () => void; // Optional callback after successful submission
 }
 
 const databaseOptions: DatabaseOption[] = [
@@ -164,7 +171,12 @@ const fieldConfigs: FieldConfig[] = [
   },
 ];
 
-const ConnectionForm: React.FC = () => {
+const ConnectionForm: React.FC<ConnectionFormProps> = ({
+  baseUrl,
+  isAdmin,
+  userId,
+  onSuccess,
+}) => {
   const { theme } = useTheme();
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -188,7 +200,7 @@ const ConnectionForm: React.FC = () => {
   const [isSelectOpen, setIsSelectOpen] = useState(false);
 
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
-  
+
   const isFormValid = useMemo(() => {
     const { connectionName, hostname, port, database, username, password } =
       formData;
@@ -294,24 +306,27 @@ const ConnectionForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
-    const userId = sessionStorage.getItem("userId");
     if (!userId) {
-      toast.error("User ID not found. Please log in again.",{theme:mode});
+      toast.error("User ID not found. Please log in again.", { theme: mode });
       return;
     }
     const payload = { userId, connectionDetails: formData };
     try {
       setLoading(true);
       setLoadingText("Submitting form, please wait...");
-      const response = await axios.post(`${API_URL}/createdbcon`, payload, {
-        headers: { "Content-Type": "application/json" },
+      const response = await axios.post(`${baseUrl}/createdbcon`, payload, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userId}`,
+        },
       });
       setLoading(false);
       if (response.status === 200) {
         toast.success("Connection created successfully.", { theme: mode });
         handleClearForm();
+        if (onSuccess) onSuccess();
       } else {
-        toast.error(`Error: ${response.data.message}`,{theme:mode});
+        toast.error(`Error: ${response.data.message}`, { theme: mode });
       }
     } catch (error) {
       setLoading(false);
@@ -320,7 +335,8 @@ const ConnectionForm: React.FC = () => {
           axios.isAxiosError(error)
             ? error.response?.data?.message
             : (error as Error).message
-        }`,{theme:mode}
+        }`,
+        { theme: mode }
       );
     }
   };
@@ -330,24 +346,20 @@ const ConnectionForm: React.FC = () => {
     setLoading(true);
     setLoadingText("Testing connection, please wait...");
     try {
-      const response = await axios.post(
-        `${DBCON_API_URL}/testdbcon`,
-        formData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const response = await axios.post(`${DBCON_API_URL}/testdbcon`, formData, {
+        headers: { "Content-Type": "application/json" },
+      });
       setLoading(false);
       if (response.status === 200) {
-        toast.success("Connection established successfully.",{theme:mode});
+        toast.success("Connection established successfully.", { theme: mode });
         setIsSubmitButtonEnabled(true);
       } else {
-        toast.error(`Error: ${response.data.message}`,{theme:mode});
+        toast.error(`Error: ${response.data.message}`, { theme: mode });
         setIsSubmitButtonEnabled(false);
       }
     } catch {
       setLoading(false);
-      toast.error("Connection failed. Check details.",{theme:mode});
+      toast.error("Connection failed. Check details.", { theme: mode });
       setIsSubmitButtonEnabled(false);
     }
   };
@@ -396,6 +408,7 @@ const ConnectionForm: React.FC = () => {
         {type === "textarea" ? (
           <textarea
             name={name}
+            autoComplete="false"
             value={formData[name as keyof FormData]}
             onChange={handleChange}
             placeholder={placeholder}
@@ -413,6 +426,7 @@ const ConnectionForm: React.FC = () => {
           <input
             type={type}
             name={name}
+            autoComplete="false"
             value={formData[name as keyof FormData]}
             onChange={handleChange}
             required={required}
@@ -461,7 +475,7 @@ const ConnectionForm: React.FC = () => {
           className="h-8 w-8 mr-3"
         />
         <h2 className="text-2xl font-bold" style={{ color: theme.colors.text }}>
-          New Database Connection
+          {isAdmin?"Default Database Connection":"New Database Connection"}
         </h2>
       </div>
 

@@ -7,19 +7,29 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
 } from "lucide-react";
-import { menuItems } from "../menuItems";
 import { useTheme } from "../ThemeContext";
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; // Icon as React component
+  subMenu?: MenuItem[];
+}
 
 interface SidebarProps {
   onMenuClick: (id: string) => void;
   activeMenu: string | null;
   onLogout?: () => void;
+  menuItems?: MenuItem[]; // Optional custom menu items
+  defaultMenuItems?: MenuItem[];
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   onMenuClick,
   activeMenu,
   onLogout,
+  menuItems,
+  defaultMenuItems,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(() => {
@@ -31,6 +41,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
+  // Default menu items for regular users
+  const defaultItems = defaultMenuItems;
+
+  const items = menuItems??defaultItems;
+
   useEffect(() => {
     localStorage.setItem(
       "isDesktopSidebarOpen",
@@ -39,13 +54,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [isDesktopSidebarOpen]);
 
   useEffect(() => {
-    onMenuClick("home");
-  }, [onMenuClick]);
+    if (!menuItems) onMenuClick("home"); // Only set default for regular users
+  }, [onMenuClick, menuItems]);
 
   useEffect(() => {
-    if (activeMenu) {
-      setActiveMenuItem(activeMenu);
-    }
+    if (activeMenu) setActiveMenuItem(activeMenu);
   }, [activeMenu]);
 
   const handleMenuClick = (id: string) => {
@@ -62,11 +75,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleLogout = () => {
     sessionStorage.removeItem("userId");
-    if (onLogout) {
-      onLogout();
-    } else {
-      window.location.reload();
-    }
+    sessionStorage.removeItem("adminId");
+    if (onLogout) onLogout();
+    else window.location.reload();
   };
 
   useEffect(() => {
@@ -135,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     fontWeight: theme.typography.weight.bold,
                   }}
                 >
-                  Ask Your Data
+                  {menuItems ? "Admin Panel" : "Ask Your Data"}
                 </h1>
               </>
             )}
@@ -143,10 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="relative group hidden md:block">
             <button
               className="p-1 rounded-md transition-all duration-200 hover:bg-opacity-10"
-              style={{
-                backgroundColor: theme.colors.accent,
-                color: "white",
-              }}
+              style={{ backgroundColor: theme.colors.accent, color: "white" }}
               onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
               aria-label="Toggle Sidebar"
               aria-expanded={isDesktopSidebarOpen}
@@ -167,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <nav className="flex flex-col space-y-1 flex-grow">
-          {menuItems.map(({ id, icon: Icon, label, subMenu }) => (
+          {items.map(({ id, icon: Icon, label, subMenu }) => (
             <React.Fragment key={id}>
               <button
                 className={`flex items-center justify-between p-3 rounded-md w-full transition-colors duration-200 ${
@@ -194,13 +202,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }
               >
                 <div className="flex items-center relative group">
-                  <Icon
-                    size={20}
-                    style={{
-                      color: theme.colors.text,
-                    }}
-                  />
-                  {/* Tooltip only when sidebar is collapsed */}
+                  <Icon size={20} style={{ color: theme.colors.text }} />
                   {!isDesktopSidebarOpen && (
                     <div
                       className="absolute left-10 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"

@@ -8,43 +8,72 @@ import ConnectionForm from "./components/ConnectionForm";
 import ExistingConnections from "./components/ExistingConnections";
 import History from "./components/History";
 import Settings from "./components/Settings";
+import AdminLogin from "./components/AdminLogin";
+import AdminDashboard from "./components/AdminDashboard";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import { handleLogout } from "./utils";
 import "./index.css";
-import { API_URL } from "./config";
+import { API_URL, DBCON_API_URL, ADMIN_API_URL } from "./config"; // Added ADMIN_API_URL
 import axios from "axios";
+import { menuItems } from "./menuItems";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true); // Changed back to false for initial state
+  const [isAdminAuthenticated, setIsAdminAuthenticated] =
+    useState<boolean>(false);
 
-  // useEffect(() => {
-  //   validateUser();
-  // }, []);
-
-  const validateUser = async () => {
-    const userId = sessionStorage.getItem("userId");
+  const validateUser = async (type: "user" | "admin") => {
+    const key = type === "user" ? "userId" : "adminId";
+    const userId = sessionStorage.getItem(key);
     if (userId) {
       try {
-        const response = await axios.post(`${API_URL}/validate-token`, {
+        // Use different API URLs based on type
+        const validationUrl = type === "user" ? API_URL : ADMIN_API_URL;
+        const response = await axios.post(`${validationUrl}/validate-token`, {
           token: userId,
         });
         if (response.status === 200) {
-          setIsAuthenticated(true);
+          type === "user"
+            ? setIsAuthenticated(true)
+            : setIsAdminAuthenticated(true);
+          if (type === "user") setActiveMenu("home");
         } else {
-          sessionStorage.removeItem("userId");
+          sessionStorage.removeItem(key);
+          type === "user"
+            ? setIsAuthenticated(false)
+            : setIsAdminAuthenticated(false);
         }
-      } catch {
-        sessionStorage.removeItem("userId");
+      } catch (error) {
+        console.error(`Error validating ${type} token:`, error);
+        sessionStorage.removeItem(key);
+        type === "user"
+          ? setIsAuthenticated(false)
+          : setIsAdminAuthenticated(false);
       }
     }
   };
 
-  const handleLoginSuccess = (userId: string) => {
-    console.log("handleLoginSuccess called, userId:", userId);
-    sessionStorage.setItem("userId", userId);
-    setIsAuthenticated(true);
-    setActiveMenu("home"); // Redirect to home after login
+  useEffect(() => {
+    validateUser("user");
+    validateUser("admin");
+  }, []);
+
+  const handleLoginSuccess = (userId: string, isAdmin: boolean = false) => {
+    console.log(
+      "handleLoginSuccess called, userId:",
+      userId,
+      "isAdmin:",
+      isAdmin
+    );
+    const key = isAdmin ? "adminId" : "userId";
+    sessionStorage.setItem(key, userId);
+    if (isAdmin) {
+      setIsAdminAuthenticated(true);
+    } else {
+      setIsAuthenticated(true);
+      setActiveMenu("home");
+    }
   };
 
   const handleCreateConSelected = () => {
@@ -74,6 +103,20 @@ function App() {
               />
             }
           />
+          <Route
+            path="/admin"
+            element={
+              isAdminAuthenticated ? (
+                <AdminDashboard
+                  onLogout={() => setIsAdminAuthenticated(false)}
+                />
+              ) : (
+                <AdminLogin
+                  onLoginSuccess={(userId) => handleLoginSuccess(userId, true)}
+                />
+              )
+            }
+          />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
         </Routes>
       </Router>
@@ -85,7 +128,7 @@ const AppContent: React.FC<{
   isAuthenticated: boolean;
   activeMenu: string | null;
   setActiveMenu: (menu: string | null) => void;
-  onLoginSuccess: (userId: string) => void;
+  onLoginSuccess: (userId: string, isAdmin?: boolean) => void;
   onLogout: () => void;
   onCreateConSelected: () => void;
   onHomePage: () => void;
@@ -99,6 +142,7 @@ const AppContent: React.FC<{
   onHomePage,
 }) => {
   const { theme } = useTheme();
+  const userId = sessionStorage.getItem("userId") || "";
 
   return (
     <div
@@ -113,6 +157,7 @@ const AppContent: React.FC<{
           <Sidebar
             onMenuClick={setActiveMenu}
             activeMenu={activeMenu}
+            defaultMenuItems={menuItems}
             onLogout={onLogout}
           />
           <main
@@ -122,9 +167,18 @@ const AppContent: React.FC<{
             {activeMenu === "home" && (
               <ChatInterface onCreateConSelected={onCreateConSelected} />
             )}
-            {activeMenu === "new-connection" && <ConnectionForm />}
+            {activeMenu === "new-connection" && (
+              <ConnectionForm
+                baseUrl={DBCON_API_URL} // Regular user endpoint
+                userId={userId}
+                isAdmin={false}
+                onSuccess={() => setActiveMenu("existing-connection")}
+              />
+            )}
             {activeMenu === "existing-connection" && <ExistingConnections />}
-            {activeMenu === "history" && <History onSessionClicked={onHomePage} />}
+            {activeMenu === "history" && (
+              <History onSessionClicked={onHomePage} />
+            )}
             {activeMenu === "settings" && <Settings />}
           </main>
         </div>
