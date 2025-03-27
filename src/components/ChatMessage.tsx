@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   Bot,
   User,
@@ -25,14 +25,12 @@ import { CHATBOT_API_URL } from "../config";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 
-const messagesRef = { current: [] as Message[] };
-
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({ message, loading, onEditMessage, selectedConnection }) => {
     const { theme } = useTheme();
     const [csvData, setCsvData] = useState<any[]>([]);
     const [hasNumericData, setHasNumericData] = useState<boolean>(true);
-    const [showTable, setShowTable] = useState<boolean>(false); // Will be set based on numeric data
+    const [showTable, setShowTable] = useState<boolean>(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [hasChanges, setHasChanges] = useState(false);
@@ -41,6 +39,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [isDisliked, setIsDisliked] = useState(false);
     const [showDislikeOptions, setShowDislikeOptions] = useState(false);
     const [dislikeReason, setDislikeReason] = useState<string | null>(null);
+    const [isHovered, setIsHovered] = useState(false);
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
 
@@ -55,11 +54,10 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         }
       } catch {
         setCsvData([]);
-        setShowTable(true); // Default to table on error
+        setShowTable(true);
       }
     }, [message.content]);
 
-    // Handle click outside to hide dislike options
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -69,20 +67,15 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           setShowDislikeOptions(false);
         }
       };
-
       if (showDislikeOptions) {
         document.addEventListener("mousedown", handleClickOutside);
       }
-
-      return () => {
+      return () =>
         document.removeEventListener("mousedown", handleClickOutside);
-      };
     }, [showDislikeOptions]);
 
     const handleSwap = () => {
-      if (hasNumericData) {
-        setShowTable((prev) => !prev);
-      }
+      if (hasNumericData) setShowTable((prev) => !prev);
     };
 
     const handleEdit = () => setIsEditing(true);
@@ -120,22 +113,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const handleSave = async () => {
       setIsEditing(false);
       if (!selectedConnection || !editedContent.trim() || !hasChanges) return;
-
       try {
         onEditMessage(message.id, editedContent);
         setHasChanges(false);
-        const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-          question: editedContent,
-          connection: selectedConnection,
-        });
-        const botResponse = JSON.stringify(response.data, null, 2);
-
-        const messageIndex = messagesRef.current.findIndex(
-          (msg) => msg.id === message.id
-        );
-        if (messageIndex + 1 < messagesRef.current.length) {
-          onEditMessage(messagesRef.current[messageIndex + 1].id, botResponse);
-        }
       } catch (error) {
         console.error("Error updating message:", error);
       }
@@ -153,11 +133,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         const tableData = Array.isArray(data.answer)
           ? data.answer
           : [data.answer];
-
         const worksheet = XLSX.utils.json_to_sheet(tableData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-
         XLSX.writeFile(workbook, "table_data.xlsx");
       } catch (error) {
         console.error("Error downloading XLSX:", error);
@@ -169,7 +147,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         try {
           const scale = resolution === "high" ? 2 : 1;
           const canvas = await html2canvas(graphRef.current, {
-            scale: scale,
+            scale,
             useCORS: true,
             logging: false,
           });
@@ -210,12 +188,10 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
       try {
         const data = JSON.parse(message.content);
-
         if (data?.answer) {
           const tableData = Array.isArray(data.answer)
             ? data.answer
             : [data.answer];
-
           return (
             <div className="relative">
               <div
@@ -253,7 +229,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     )}
                   </Tooltip>
                 </motion.button>
-
                 {!showTable && hasNumericData && (
                   <div className="relative">
                     <motion.button
@@ -297,7 +272,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     )}
                   </div>
                 )}
-
                 {showTable && (
                   <motion.button
                     whileHover={{ scale: 1.1 }}
@@ -315,7 +289,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   </motion.button>
                 )}
               </div>
-
               <div
                 className="p-4 shadow-md"
                 style={{
@@ -340,7 +313,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   </>
                 ) : (
                   <div ref={graphRef} style={{ width: "100%" }}>
-                    <DynamicBarGraph showTable={setShowTable} isValidGraph={setHasNumericData} data={data.answer} />
+                    <DynamicBarGraph
+                      showTable={setShowTable}
+                      isValidGraph={setHasNumericData}
+                      data={data.answer}
+                    />
                     <div
                       className="mt-2 text-right text-xs"
                       style={{ color: theme.colors.textSecondary }}
@@ -356,7 +333,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             </div>
           );
         }
-
         return (
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -426,75 +402,111 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             >
               <Bot size={20} style={{ color: "white" }} />
             </div>
-            <div className="max-w-[80%] flex flex-col gap-2">
+            <div
+              className="max-w-[80%] flex flex-col gap-2"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
               {renderContent()}
-              {!loading && (
-                <div className="flex justify-end gap-2">
-                  <Tooltip
-                    title={isLiked ? "Remove like" : "Like this response"}
-                    position="top"
-                    arrow={true}
-                  >
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleLike}
-                      className={`p-1 rounded-md border transition-colors duration-200 ${
-                        isLiked
-                          ? "bg-green-500 border-green-500 text-white dark:bg-green-500 dark:border-green-500 dark:text-gray-900"
-                          : "bg-white border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
-                      }`}
-                    >
-                      <ThumbsUp size={16} />
-                    </motion.button>
-                  </Tooltip>
-                  <div className="relative" ref={dislikeRef}>
+              {/* Updated condition to keep buttons visible when dislike options are shown */}
+              {!loading &&
+                (isHovered || isLiked || isDisliked || showDislikeOptions) && (
+                  <div className="flex justify-end gap-2">
                     <Tooltip
-                      title={
-                        isDisliked ? "Remove dislike" : "Dislike this response"
-                      }
+                      title={isLiked ? "Remove like" : "Like this response"}
                       position="top"
-                      arrow={true}
+                      arrow
                     >
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={handleDislike}
-                        className={`p-1 rounded-md border transition-colors duration-200 ${
-                          isDisliked
-                            ? "bg-red-500 border-red-500 text-white dark:bg-red-500 dark:border-red-500 dark:text-gray-900"
-                            : "bg-white border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
-                        }`}
+                        onClick={handleLike}
+                        style={{
+                          backgroundColor: isLiked
+                            ? theme.colors.success
+                            : theme.colors.surface,
+                          borderColor: isLiked
+                            ? theme.colors.success
+                            : theme.colors.border,
+                          color: isLiked ? "white" : theme.colors.textSecondary,
+                        }}
+                        className="p-1 rounded-md border transition-colors duration-200"
                       >
-                        <ThumbsDown size={16} />
+                        <ThumbsUp size={16} />
                       </motion.button>
                     </Tooltip>
-                    {showDislikeOptions && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-md shadow-md p-2 z-10 min-w-[150px] dark:bg-gray-800 dark:border-gray-600"
+                    <div className="relative" ref={dislikeRef}>
+                      <Tooltip
+                        title={
+                          isDisliked
+                            ? "Remove dislike"
+                            : "Dislike this response"
+                        }
+                        position="top"
+                        arrow
                       >
-                        {[
-                          "Incorrect data",
-                          "Takes too long",
-                          "Irrelevant response",
-                          "Confusing answer",
-                          "Other",
-                        ].map((reason) => (
-                          <button
-                            key={reason}
-                            onClick={() => handleDislikeOption(reason)}
-                            className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200 dark:text-gray-200 dark:hover:bg-gray-700"
-                          >
-                            {reason}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleDislike}
+                          style={{
+                            backgroundColor: isDisliked
+                              ? theme.colors.error
+                              : theme.colors.surface,
+                            borderColor: isDisliked
+                              ? theme.colors.error
+                              : theme.colors.border,
+                            color: isDisliked
+                              ? "white"
+                              : theme.colors.textSecondary,
+                          }}
+                          className="p-1 rounded-md border transition-colors duration-200"
+                        >
+                          <ThumbsDown size={16} />
+                        </motion.button>
+                      </Tooltip>
+                      {showDislikeOptions && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                          style={{
+                            background: theme.colors.surface,
+                            border: `1px solid ${theme.colors.border}`,
+                            boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                          }}
+                        >
+                          {[
+                            "Incorrect data",
+                            "Takes too long",
+                            "Irrelevant response",
+                            "Confusing answer",
+                            "Other",
+                          ].map((reason) => (
+                            <button
+                              key={reason}
+                              onClick={() => handleDislikeOption(reason)}
+                              className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
+                              style={{
+                                color: theme.colors.text,
+                                backgroundColor: "transparent",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "transparent")
+                              }
+                            >
+                              {reason}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         ) : (
@@ -524,14 +536,14 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 >
                   <span
                     className="text-xs"
-                    style={{ color: `${theme.colors.background}70` }}
+                    style={{ color: theme.colors.textSecondary }}
                   >
                     {new Date(message.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
                   </span>
-                  <Tooltip title="Edit message" position="bottom" arrow={true}>
+                  <Tooltip title="Edit message" position="bottom" arrow>
                     <button
                       onClick={handleEdit}
                       className="p-2 transition-colors duration-200 hover:opacity-80"

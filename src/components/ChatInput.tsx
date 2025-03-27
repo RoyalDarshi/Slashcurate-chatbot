@@ -4,6 +4,8 @@ import { ChatInputProps, Connection } from "../types";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 import { FaFilePdf } from "react-icons/fa";
+import { Tooltip } from "react-tippy"; // Ensure this is imported
+import "react-tippy/dist/tippy.css"; // Ensure styles are included
 
 const ChatInput: React.FC<ChatInputProps> = ({
   input,
@@ -23,6 +25,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const MAX_CHARS = 500;
 
+  // Existing useEffect hooks remain unchanged
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -46,6 +49,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Existing handlers remain unchanged
   const handleConnectionSelect = (connection: string | null) => {
     if (connection === "create-con") {
       onSelect({ value: "create-con" });
@@ -80,19 +84,23 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  const options = [
-    { value: "create-con", label: "Create Connection" },
-    ...connections.map((connection: Connection) => ({
-      value: connection.connectionName,
-      label: connection.connectionName,
-    })),
-  ];
+  const options =
+    connections.length === 0
+      ? [{ value: "create-con", label: "Create Connection" }]
+      : [
+          { value: "create-con", label: "Create Connection" },
+          ...connections.map((connection: Connection) => ({
+            value: connection.connectionName,
+            label: connection.connectionName,
+          })),
+        ];
 
   return (
     <form
       onSubmit={onSubmit}
       style={{
         background: theme.colors.background,
+        padding: "16px",
         width: "100%",
       }}
     >
@@ -143,7 +151,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
         <div className="flex items-center justify-between gap-3">
           <div
-            className="flex items-center gap-2 max-w-[300px] relative"
+            className="flex items-center gap-2 max-w-[250px] relative"
             ref={dropdownRef}
           >
             <Database
@@ -151,39 +159,49 @@ const ChatInput: React.FC<ChatInputProps> = ({
               style={{ color: theme.colors.accent, opacity: 0.9 }}
               className="transition-transform duration-300 hover:scale-105 flex-shrink-0"
             />
-            <button
-              type="button"
-              onClick={() => !isDisabled && setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center justify-between w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
-              style={{
-                color: theme.colors.text,
-                backgroundColor: "transparent",
-                border: `1px solid ${theme.colors.accent}`,
-                borderRadius: theme.borderRadius.pill,
-                padding: "6px 10px",
-              }}
-              onMouseOver={(e) =>
-                !isDisabled &&
-                (e.currentTarget.style.backgroundColor =
-                  theme.colors.accentHover + "20")
-              }
-              onMouseOut={(e) =>
-                !isDisabled &&
-                (e.currentTarget.style.backgroundColor = "transparent")
-              }
-              disabled={isDisabled}
+            {/* Tooltip for Connection Dropdown */}
+            <Tooltip
+              title="Change or create a connection"
+              position="top"
+              arrow={true}
+              theme={theme.mode} // Adapts to light or dark theme
             >
-              <span className="truncate max-w-[130px]">
-                {selectedConnection || "Select Connection"}
-              </span>
-              <ChevronDown
-                size={16}
-                style={{ color: theme.colors.accent }}
-                className={`transition-transform duration-200 ${
-                  isDropdownOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+              <button
+                type="button"
+                onClick={() =>
+                  !isDisabled && setIsDropdownOpen(!isDropdownOpen)
+                }
+                className="flex items-center justify-between w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                style={{
+                  color: theme.colors.text,
+                  backgroundColor: "transparent",
+                  border: `1px solid ${theme.colors.accent}`,
+                  borderRadius: theme.borderRadius.pill,
+                  padding: "6px 10px",
+                }}
+                onMouseOver={(e) =>
+                  !isDisabled &&
+                  (e.currentTarget.style.backgroundColor =
+                    theme.colors.accentHover + "20")
+                }
+                onMouseOut={(e) =>
+                  !isDisabled &&
+                  (e.currentTarget.style.backgroundColor = "transparent")
+                }
+                disabled={isDisabled}
+              >
+                <span className="truncate max-w-[130px]">
+                  {selectedConnection || "Select Connection"}
+                </span>
+                <ChevronDown
+                  size={16}
+                  style={{ color: theme.colors.accent }}
+                  className={`transition-transform duration-200 ${
+                    isDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+            </Tooltip>
 
             {isDropdownOpen && (
               <div
@@ -248,55 +266,69 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 ))}
               </div>
             )}
-
-            {/* New Chat Button */}
-            <button
-              type="button"
-              onClick={onNewChat}
-              className="flex min-w-[120px] items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                color: theme.colors.text,
-                backgroundColor: "transparent",
-                border: `1px solid ${theme.colors.accent}`,
-                borderRadius: theme.borderRadius.pill,
-              }}
-              onMouseOver={(e) =>
-                !isDisabled &&
-                (e.currentTarget.style.backgroundColor =
-                  theme.colors.accentHover + "20")
-              }
-              onMouseOut={(e) =>
-                !isDisabled &&
-                (e.currentTarget.style.backgroundColor = "transparent")
-              }
-              disabled={isDisabled}
+            <Tooltip
+              title="Create new session"
+              position="top"
+              arrow={true}
+              theme={theme.mode} // Adapts to light or dark theme
             >
-              <PlusCircle size={16} style={{ color: theme.colors.accent }} />
-              New Chat
-            </button>
+              {/* New Chat Button */}
+              <button
+                type="button"
+                onClick={onNewChat}
+                className="flex min-w-[120px] items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  color: theme.colors.text,
+                  backgroundColor: "transparent",
+                  border: `1px solid ${theme.colors.accent}`,
+                  borderRadius: theme.borderRadius.pill,
+                }}
+                onMouseOver={(e) =>
+                  !isDisabled &&
+                  (e.currentTarget.style.backgroundColor =
+                    theme.colors.accentHover + "20")
+                }
+                onMouseOut={(e) =>
+                  !isDisabled &&
+                  (e.currentTarget.style.backgroundColor = "transparent")
+                }
+                disabled={isDisabled}
+              >
+                <PlusCircle size={16} style={{ color: theme.colors.accent }} />
+                New Chat
+              </button>
+            </Tooltip>
           </div>
 
-          <button
-            type="submit"
-            disabled={isDisabled}
-            className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
-            style={{
-              background: isDisabled
-                ? `${theme.colors.text}20`
-                : theme.colors.accent,
-              color: "white",
-              boxShadow: isDisabled
-                ? "none"
-                : `0 0 10px ${theme.colors.accent}40`,
-            }}
-            aria-label="Send message"
+          {/* Tooltip for Send Button */}
+          <Tooltip
+            title="Send message"
+            position="top"
+            arrow={true}
+            theme={theme.mode} // Adapts to light or dark theme
           >
-            {isSubmitting ? (
-              <MiniLoader />
-            ) : (
-              <Send size={18} className="transition-transform duration-300" />
-            )}
-          </button>
+            <button
+              type="submit"
+              disabled={isDisabled}
+              className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
+              style={{
+                background: isDisabled
+                  ? `${theme.colors.text}20`
+                  : theme.colors.accent,
+                color: "white",
+                boxShadow: isDisabled
+                  ? "none"
+                  : `0 0 10px ${theme.colors.accent}40`,
+              }}
+              aria-label="Send message"
+            >
+              {isSubmitting ? (
+                <MiniLoader />
+              ) : (
+                <Send size={18} className="transition-transform duration-300" />
+              )}
+            </button>
+          </Tooltip>
         </div>
       </div>
     </form>

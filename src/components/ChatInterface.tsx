@@ -257,7 +257,6 @@ const ChatInterface: React.FC<
     saveSession(); // Save the current session before resetting
     messagesRef.current = [];
     setMessages([]);
-    setSelectedConnection(null);
     localStorage.removeItem("selectedConnection");
     localStorage.setItem("chatMessages", JSON.stringify([]));
     setConnectionError(null);
@@ -318,11 +317,6 @@ const ChatInterface: React.FC<
         );
         if (!selectedConnectionObj)
           throw new Error("Selected connection not found");
-
-        // const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-        //   question: state.input,
-        //   connection: selectedConnectionObj,
-        // });
 
         const response = await askChatbot(state.input, selectedConnectionObj);
 
@@ -413,7 +407,11 @@ const ChatInterface: React.FC<
         );
         if (!selectedConnectionObj)
           throw new Error("Selected connection not found");
-        const response = await askChatbot(newContent, selectedConnectionObj);
+
+        const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
+          question: newContent,
+          connection: selectedConnectionObj,
+        });
         const botResponse = JSON.stringify(response.data, null, 2);
         const botResponseMessage: Message = {
           id: Date.now().toString(),
