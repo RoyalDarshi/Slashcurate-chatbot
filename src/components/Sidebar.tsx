@@ -74,8 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("userId");
-    sessionStorage.removeItem("adminId");
+    sessionStorage.removeItem("token");
     if (onLogout) onLogout();
     else window.location.reload();
   };
@@ -175,7 +174,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <nav className="flex flex-col space-y-1 flex-grow">
-          {items.map(({ id, icon: Icon, label, subMenu }) => (
+          {items?.map(({ id, icon: Icon, label, subMenu }) => (
             <React.Fragment key={id}>
               <button
                 className={`flex items-center justify-between p-3 rounded-md w-full transition-colors duration-200 ${

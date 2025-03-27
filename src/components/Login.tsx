@@ -46,7 +46,7 @@ const Login: React.FC<LoginProps> = ({
     try {
       setLoading(true);
       const response = await axios.post(
-        `${API_URL}/login`,
+        `${API_URL}/login/user`,
         { email, password },
         { headers: { "Content-Type": "application/json" } }
       );

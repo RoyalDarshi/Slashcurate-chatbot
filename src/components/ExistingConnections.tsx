@@ -3,9 +3,13 @@ import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Loader from "./Loader";
-import { API_URL } from "../config";
-import { Trash2 } from "react-feather"; // Import the Trash2 icon
+import { Trash2 } from "react-feather";
 import { useTheme } from "../ThemeContext";
+import {
+  deleteConnection,
+  getAdminConnections,
+  getUserConnections,
+} from "../api";
 
 interface Connection {
   id: number;
@@ -22,7 +26,13 @@ interface Connection {
   created_at: string;
 }
 
-const ExistingConnections: React.FC = () => {
+interface ExistingConnectionsProps {
+  isAdmin: boolean;
+}
+
+const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
+  isAdmin,
+}) => {
   const { theme } = useTheme();
   const [connections, setConnections] = useState<Connection[]>([]);
   const fetched = useRef(false);
@@ -30,85 +40,118 @@ const ExistingConnections: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
+  const token = sessionStorage.getItem("token");
 
   const fetchConnections = useCallback(async () => {
-    const userId = sessionStorage.getItem("userId");
-    if (!userId) {
-      toast.error("User ID not found. Please log in again.", { theme: mode });
+    if (!token) {
+      toast.error("Authentication token not found. Please log in again.", {
+        theme: mode,
+      });
       return;
     }
 
     try {
+      // const payload = isAdmin ? {} : { token: token };
       setLoading(true);
       setError(null);
-      const response = await axios.post<{ connections: Connection[] }>(
-        `${API_URL}/getuserconnections`,
-        {
-          userId,
-        }
-      );
+      // const response = await axios.get<{ connections: Connection[] }>(
+      //   `${URL}/${endpoint}`,
+      //   {
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //       ...(isAdmin && { Authorization: `Bearer ${token}` }),
+      //     },
+      //   }
+      // );
+      let response = {};
+      if (isAdmin) {
+        response = await getAdminConnections(token);
+      } else {
+        response = await getUserConnections(token);
+      }
 
       if (
         !response.data.connections ||
         response.data.connections.length === 0
       ) {
         setError("No connections found.");
-        setLoading(false);
+        setConnections([]);
+      } else {
+        setConnections(response.data.connections);
+      }
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<{ message?: string }>;
+        const errorMsg =
+          axiosError.response?.data?.message ?? axiosError.message;
+        toast.error(`Error: ${errorMsg}`, { theme: mode });
+        setError(errorMsg);
+      } else {
+        const errorMsg = (error as Error).message;
+        toast.error(`Error: ${errorMsg}`, { theme: mode });
+        setError(errorMsg);
+      }
+    }
+  }, [isAdmin, mode]);
+
+  const handleDeleteConnection = useCallback(
+    async (connectionId: number) => {
+      if (!token) {
+        toast.error("Authentication token not found. Please log in again.", {
+          theme: mode,
+        });
         return;
       }
 
-      setConnections(response.data.connections);
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<{ message?: string }>;
-        toast.error(
-          `Error: ${axiosError.response?.data?.message ?? axiosError.message}`,
-          { theme: mode }
-        );
-        setError(axiosError.response?.data?.message ?? axiosError.message);
-      } else {
-        toast.error(`Error: ${(error as Error).message}`, { theme: mode });
-        setError((error as Error).message);
-      }
-    }
-  }, []);
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await deleteConnection(token, connectionId);
+        // if (isAdmin) {
+        //   // Use DELETE for admin
+        //   // await axios.delete(`${URL}/${endpoint}`, {
+        //   //   headers: {
+        //   //     "Content-Type": "application/json",
+        //   //     Authorization: `Bearer ${token}`,
+        //   //   },
+        //   //   data: { connectionId }, // Payload in DELETE request body
+        //   // });
 
-  const handleDeleteConnection = async (connectionId: number) => {
-    const userId = sessionStorage.getItem("userId");
-    if (!userId) {
-      toast.error("User ID not found. Please log in again.", { theme: mode });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      await axios.post(`${API_URL}/deleteuserconnection`, {
-        userId,
-        connectionId,
-      });
-      toast.success("Connection deleted successfully!", { theme: mode });
-      // Refresh connections after deletion
-      fetchConnections();
-    } catch (error) {
-      setLoading(false);
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<{ message?: string }>;
-        toast.error(
-          `Error: ${axiosError.response?.data?.message ?? axiosError.message}`,
-          { theme: mode }
-        );
-        setError(axiosError.response?.data?.message ?? axiosError.message);
-      } else {
-        toast.error(`Error: ${(error as Error).message}`, { theme: mode });
-        setError((error as Error).message);
+        // } else {
+        //   // Use POST for user (as per your backend)
+        //   await axios.post(
+        //     `${URL}/${endpoint}`,
+        //     { token: token, connectionId },
+        //     {
+        //       headers: {
+        //         "Content-Type": "application/json",
+        //       },
+        //     }
+        //   );
+        // }
+        if (response.status === 200) {
+          toast.success("Connection deleted successfully!", { theme: mode });
+          fetchConnections();
+        }
+      } catch (error) {
+        setLoading(false);
+        if (axios.isAxiosError(error)) {
+          const axiosError = error as AxiosError<{ message?: string }>;
+          const errorMsg =
+            axiosError.response?.data?.message ?? axiosError.message;
+          toast.error(`Error: ${errorMsg}`, { theme: mode });
+          setError(errorMsg);
+        } else {
+          const errorMsg = (error as Error).message;
+          toast.error(`Error: ${errorMsg}`, { theme: mode });
+          setError(errorMsg);
+        }
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [isAdmin, mode, fetchConnections]
+  );
 
   useEffect(() => {
     if (fetched.current) return;
@@ -150,11 +193,7 @@ const ExistingConnections: React.FC = () => {
           >
             {connections.length > 0 && (
               <>
-                <thead
-                  style={{
-                    backgroundColor: theme.colors.accent,
-                  }}
-                >
+                <thead style={{ backgroundColor: theme.colors.accent }}>
                   <tr>
                     <th className="py-2 px-3 text-left w-32 text-white">
                       Connection Name
@@ -194,7 +233,7 @@ const ExistingConnections: React.FC = () => {
                 <tbody>
                   {connections.map((connection, index) => (
                     <tr
-                      key={connection.connectionName}
+                      key={connection.id}
                       className="transition-colors duration-150"
                       style={{
                         backgroundColor:
@@ -280,16 +319,15 @@ const ExistingConnections: React.FC = () => {
                 </tbody>
               </>
             )}
-
-            {loading && <Loader text={""} />}
           </table>
+          {/* {loading && <Loader text="Loading connections..." />} */}
         </div>
-        {connections.length === 0 && !loading && !error && (
+        {connections.length === 0 && !loading && (
           <div
             className="text-center mt-4"
             style={{ color: theme.colors.text }}
           >
-            No connections available.
+            {error || "No connections available."}
           </div>
         )}
       </div>

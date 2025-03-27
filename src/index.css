@@ -20,6 +20,33 @@
   100% { transform: scale(1); opacity: 0.8; }
 }
 
+/* Mobile-first adjustments */
+@media (max-width: 767px) {
+  body {
+    overflow-x: hidden;
+  }
+  
+  .main-content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Smooth transitions */
+.sidebar-transition {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Mobile header spacing */
+.mobile-header-spacer {
+  height: 4rem;
+}
+
+/* Prevent content shift */
+html {
+  scroll-behavior: smooth;
+}
+
 /* Remove browser default autofill styles */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

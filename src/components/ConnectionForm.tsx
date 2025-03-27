@@ -24,8 +24,13 @@ import {
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import "./ConnectionForm.css";
-import { API_URL, DBCON_API_URL } from "../config";
+import {
+  createAdminConnection,
+  createUserConnection,
+  testConnection,
+} from "../api";
 
+// Define interfaces for type safety
 interface FormData {
   connectionName: string;
   description: string;
@@ -52,7 +57,7 @@ interface DatabaseOption {
 
 interface FieldConfig {
   label: string;
-  name: string;
+  name: keyof FormData; // Ensure name matches FormData keys
   type: string;
   required?: boolean;
   icon: React.ReactNode;
@@ -60,9 +65,8 @@ interface FieldConfig {
 }
 
 interface ConnectionFormProps {
-  baseUrl: string; // Base URL for API requests (e.g., "http://localhost:5000" or "http://localhost:5001")
-  isAdmin: boolean;
-  userId: string; // User ID or Admin ID from sessionStorage
+  isAdmin: boolean; // Determines if creating admin default connection or user connection
+  token: string; // Token from sessionStorage (JWT for user or admin)
   onSuccess?: () => void; // Optional callback after successful submission
 }
 
@@ -172,9 +176,8 @@ const fieldConfigs: FieldConfig[] = [
 ];
 
 const ConnectionForm: React.FC<ConnectionFormProps> = ({
-  baseUrl,
   isAdmin,
-  userId,
+  token,
   onSuccess,
 }) => {
   const { theme } = useTheme();
@@ -225,7 +228,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       const isModified = Object.entries(formData).some(
         ([key, value]) => key !== "selectedDB" && !!value
       );
-      setIsSubmitButtonEnabled(false);
+      setIsSubmitButtonEnabled(false); // Reset until tested
       setIsFormModified(isModified);
     }, 500);
     return () => {
@@ -243,7 +246,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   }, []);
 
   const debouncedValidateField = useCallback(
-    debounce((name: string, value: string) => {
+    debounce((name: keyof FormData, value: string) => {
       let error = "";
       switch (name) {
         case "connectionName":
@@ -284,6 +287,8 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
         case "password":
           error = !value ? "Password is required." : "";
           break;
+        default:
+          break;
       }
       setErrors((prev) => ({ ...prev, [name]: error }));
     }, 300),
@@ -295,7 +300,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    debouncedValidateField(name, value);
+    debouncedValidateField(name as keyof FormData, value);
   };
 
   const handleSelectDB = (value: string) => {
@@ -305,35 +310,54 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid) return;
-    if (!userId) {
-      toast.error("User ID not found. Please log in again.", { theme: mode });
+    if (!isFormValid) {
+      toast.error("Please fill all required fields correctly.", {
+        theme: mode,
+      });
       return;
     }
-    const payload = { userId, connectionDetails: formData };
+    if (!token) {
+      toast.error("Authentication token not found. Please log in again.", {
+        theme: mode,
+      });
+      return;
+    }
+
     try {
       setLoading(true);
-      setLoadingText("Submitting form, please wait...");
-      const response = await axios.post(`${baseUrl}/createdbcon`, payload, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userId}`,
-        },
-      });
+      setLoadingText("Submitting connection, please wait...");
+      // const response = await axios.post(`${API_URL}/${endpoint}`, payload, {
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      // });
+      let response = {};
+      if (isAdmin) {
+        response = await createAdminConnection(token, formData);
+      } else {
+        response = await createUserConnection(token, formData);
+      }
       setLoading(false);
+
       if (response.status === 200) {
-        toast.success("Connection created successfully.", { theme: mode });
+        toast.success(
+          `${isAdmin ? "Default" : "User"} connection created successfully.`,
+          { theme: mode }
+        );
         handleClearForm();
         if (onSuccess) onSuccess();
       } else {
-        toast.error(`Error: ${response.data.message}`, { theme: mode });
+        toast.error(`Error: ${response.data.message || "Unknown error"}`, {
+          theme: mode,
+        });
       }
     } catch (error) {
       setLoading(false);
       toast.error(
         `Error: ${
           axios.isAxiosError(error)
-            ? error.response?.data?.message
+            ? error.response?.data?.message || "Request failed"
             : (error as Error).message
         }`,
         { theme: mode }
@@ -342,24 +366,43 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   };
 
   const handleTestConnection = async () => {
-    if (!isFormValid) return;
+    if (!isFormValid) {
+      toast.error("Please fill all required fields correctly.", {
+        theme: mode,
+      });
+      return;
+    }
+
     setLoading(true);
     setLoadingText("Testing connection, please wait...");
     try {
-      const response = await axios.post(`${DBCON_API_URL}/testdbcon`, formData, {
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await testConnection(formData);
       setLoading(false);
+
       if (response.status === 200) {
-        toast.success("Connection established successfully.", { theme: mode });
+        toast.success("Connection test successful.", { theme: mode });
         setIsSubmitButtonEnabled(true);
       } else {
-        toast.error(`Error: ${response.data.message}`, { theme: mode });
+        toast.error(
+          `Error: ${
+            response.data.message || response.data?.error || "Test failed"
+          }`,
+          {
+            theme: mode,
+          }
+        );
         setIsSubmitButtonEnabled(false);
       }
-    } catch {
+    } catch (error) {
       setLoading(false);
-      toast.error("Connection failed. Check details.", { theme: mode });
+      toast.error(
+        `Connection test failed: ${
+          axios.isAxiosError(error)
+            ? error.response?.data?.message || "Unknown error"
+            : "Network error"
+        }`,
+        { theme: mode }
+      );
       setIsSubmitButtonEnabled(false);
     }
   };
@@ -375,7 +418,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       maxTransportObjects: "",
       username: "",
       password: "",
-      selectedDB: formData.selectedDB,
+      selectedDB: formData.selectedDB, // Retain selected DB
     });
     setErrors({});
     setIsSubmitButtonEnabled(false);
@@ -408,8 +451,8 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
         {type === "textarea" ? (
           <textarea
             name={name}
-            autoComplete="false"
-            value={formData[name as keyof FormData]}
+            autoComplete="off"
+            value={formData[name]}
             onChange={handleChange}
             placeholder={placeholder}
             className="pl-10 w-full p-3 rounded-md focus:outline-none focus:ring-2 transition-all duration-200"
@@ -426,8 +469,8 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
           <input
             type={type}
             name={name}
-            autoComplete="false"
-            value={formData[name as keyof FormData]}
+            autoComplete="off"
+            value={formData[name]}
             onChange={handleChange}
             required={required}
             placeholder={placeholder}
@@ -475,7 +518,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
           className="h-8 w-8 mr-3"
         />
         <h2 className="text-2xl font-bold" style={{ color: theme.colors.text }}>
-          {isAdmin?"Default Database Connection":"New Database Connection"}
+          {isAdmin ? "Default Database Connection" : "New Database Connection"}
         </h2>
       </div>
 
@@ -535,7 +578,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
                     backgroundColor:
                       formData.selectedDB === option.value
                         ? `${theme.colors.accent}30`
-                        : undefined,
+                        : "transparent",
                   }}
                   onMouseOver={(e) =>
                     (e.currentTarget.style.backgroundColor = theme.colors.hover)

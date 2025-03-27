@@ -54,6 +54,10 @@ export interface ChatInputProps {
   isSubmitting: boolean;
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  connections: Connection[];
+  selectedConnection: string | null;
+  onSelect: (option: any) => void;
+  onNewChat: () => void; // New prop
 }
 
 // Connection Selector Types

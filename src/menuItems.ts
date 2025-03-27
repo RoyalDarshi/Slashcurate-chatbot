@@ -1,6 +1,5 @@
 // menuItems.ts
 import {
-  MessageCircle,
   Home,
   History,
   Settings,
@@ -11,7 +10,14 @@ import {
   LogOut,
 } from "lucide-react";
 
-export const menuItems = [
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType; // Icon as React component
+  subMenu?: MenuItem[];
+}
+
+export const menuItems: MenuItem[] = [
   { id: "home", icon: Home, label: "Home" },
   // {
   //   id: "connections",
@@ -26,7 +32,7 @@ export const menuItems = [
   { id: "existing-connection", label: "Existing Connection", icon: Link },
   // { id: "new-chat", icon: MessageCircle, label: "New Chat" },
   { id: "history", icon: History, label: "History" },
-  { id: "saved", icon: Heart, label: "Favourite" },
+  { id: "favourite", icon: Heart, label: "Favourite" },
   { id: "settings", icon: Settings, label: "Settings" },
   { id: "help", icon: HelpCircle, label: "Help" },
   { id: "logout", icon: LogOut, label: "Logout" },

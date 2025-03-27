@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Send, Database, ChevronDown } from "lucide-react";
+import { Send, Database, ChevronDown, PlusCircle } from "lucide-react"; // Added PlusCircle
 import { ChatInputProps, Connection } from "../types";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
@@ -14,6 +14,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   connections = [],
   selectedConnection,
   onSelect,
+  onNewChat, // New prop for handling new chat
 }) => {
   const { theme } = useTheme();
   const isDisabled = isLoading || isSubmitting;
@@ -28,7 +29,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       textareaRef.current.style.height = `${Math.min(
         textareaRef.current.scrollHeight,
         120
-      )}px`; // Cap at 120px
+      )}px`;
     }
   }, [input]);
 
@@ -79,23 +80,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  const options =
-    connections.length === 0
-      ? [{ value: "create-con", label: "Create Connection" }]
-      : [
-          { value: "create-con", label: "Create Connection" },
-          ...connections.map((connection: Connection) => ({
-            value: connection.connectionName,
-            label: connection.connectionName,
-          })),
-        ];
+  const options = [
+    { value: "create-con", label: "Create Connection" },
+    ...connections.map((connection: Connection) => ({
+      value: connection.connectionName,
+      label: connection.connectionName,
+    })),
+  ];
 
   return (
     <form
       onSubmit={onSubmit}
       style={{
         background: theme.colors.background,
-        padding: "16px",
         width: "100%",
       }}
     >
@@ -109,7 +106,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
           padding: "12px",
         }}
       >
-        {/* Textarea (Inspired by Login Input Fields) */}
         <textarea
           ref={textareaRef}
           value={input}
@@ -145,10 +141,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
           }}
         />
 
-        {/* Connection Dropdown and Send Button */}
         <div className="flex items-center justify-between gap-3">
           <div
-            className="flex items-center gap-2 max-w-[250px] relative"
+            className="flex items-center gap-2 max-w-[300px] relative"
             ref={dropdownRef}
           >
             <Database
@@ -190,7 +185,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
               />
             </button>
 
-            {/* Dropdown Menu */}
             {isDropdownOpen && (
               <div
                 className="absolute bottom-full left-0 rounded-md shadow-lg z-20 transition-all duration-300 mb-2"
@@ -254,6 +248,32 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 ))}
               </div>
             )}
+
+            {/* New Chat Button */}
+            <button
+              type="button"
+              onClick={onNewChat}
+              className="flex min-w-[120px] items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                color: theme.colors.text,
+                backgroundColor: "transparent",
+                border: `1px solid ${theme.colors.accent}`,
+                borderRadius: theme.borderRadius.pill,
+              }}
+              onMouseOver={(e) =>
+                !isDisabled &&
+                (e.currentTarget.style.backgroundColor =
+                  theme.colors.accentHover + "20")
+              }
+              onMouseOut={(e) =>
+                !isDisabled &&
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
+              disabled={isDisabled}
+            >
+              <PlusCircle size={16} style={{ color: theme.colors.accent }} />
+              New Chat
+            </button>
           </div>
 
           <button

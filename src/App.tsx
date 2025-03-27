@@ -13,61 +13,47 @@ import AdminDashboard from "./components/AdminDashboard";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import { handleLogout } from "./utils";
 import "./index.css";
-import { API_URL, DBCON_API_URL, ADMIN_API_URL } from "./config"; // Added ADMIN_API_URL
-import axios from "axios";
+import { validateToken } from "./api";
 import { menuItems } from "./menuItems";
+import Favourites from "./components/Favourites";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true); // Changed back to false for initial state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] =
     useState<boolean>(false);
 
-  const validateUser = async (type: "user" | "admin") => {
-    const key = type === "user" ? "userId" : "adminId";
-    const userId = sessionStorage.getItem(key);
-    if (userId) {
+  const validateUser = async () => {
+    const key = "token";
+    const token = sessionStorage.getItem(key);
+    if (token) {
       try {
-        // Use different API URLs based on type
-        const validationUrl = type === "user" ? API_URL : ADMIN_API_URL;
-        const response = await axios.post(`${validationUrl}/validate-token`, {
-          token: userId,
-        });
+        const response = await validateToken(token);
         if (response.status === 200) {
-          type === "user"
+          !response.data.isAdmin
             ? setIsAuthenticated(true)
             : setIsAdminAuthenticated(true);
-          if (type === "user") setActiveMenu("home");
+          setActiveMenu("home");
         } else {
           sessionStorage.removeItem(key);
-          type === "user"
-            ? setIsAuthenticated(false)
-            : setIsAdminAuthenticated(false);
+          setIsAuthenticated(false);
+          setIsAdminAuthenticated(false);
         }
       } catch (error) {
-        console.error(`Error validating ${type} token:`, error);
+        console.error(`Error validating token:`, error);
         sessionStorage.removeItem(key);
-        type === "user"
-          ? setIsAuthenticated(false)
-          : setIsAdminAuthenticated(false);
+        setIsAuthenticated(false);
+        setIsAdminAuthenticated(false);
       }
     }
   };
 
   useEffect(() => {
-    validateUser("user");
-    validateUser("admin");
+    validateUser();
   }, []);
 
-  const handleLoginSuccess = (userId: string, isAdmin: boolean = false) => {
-    console.log(
-      "handleLoginSuccess called, userId:",
-      userId,
-      "isAdmin:",
-      isAdmin
-    );
-    const key = isAdmin ? "adminId" : "userId";
-    sessionStorage.setItem(key, userId);
+  const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
+    sessionStorage.setItem("token", token);
     if (isAdmin) {
       setIsAdminAuthenticated(true);
     } else {
@@ -77,7 +63,6 @@ function App() {
   };
 
   const handleCreateConSelected = () => {
-    console.log("handleCreateConSelected called");
     setActiveMenu("new-connection");
   };
 
@@ -97,7 +82,7 @@ function App() {
                 activeMenu={activeMenu}
                 setActiveMenu={setActiveMenu}
                 onLoginSuccess={handleLoginSuccess}
-                onLogout={handleLogout}
+                onLogout={() => handleLogout(setIsAuthenticated)}
                 onCreateConSelected={handleCreateConSelected}
                 onHomePage={handleHomePage}
               />
@@ -112,7 +97,7 @@ function App() {
                 />
               ) : (
                 <AdminLogin
-                  onLoginSuccess={(userId) => handleLoginSuccess(userId, true)}
+                  onLoginSuccess={(token) => handleLoginSuccess(token, true)}
                 />
               )
             }
@@ -128,7 +113,7 @@ const AppContent: React.FC<{
   isAuthenticated: boolean;
   activeMenu: string | null;
   setActiveMenu: (menu: string | null) => void;
-  onLoginSuccess: (userId: string, isAdmin?: boolean) => void;
+  onLoginSuccess: (token: string, isAdmin?: boolean) => void;
   onLogout: () => void;
   onCreateConSelected: () => void;
   onHomePage: () => void;
@@ -142,7 +127,7 @@ const AppContent: React.FC<{
   onHomePage,
 }) => {
   const { theme } = useTheme();
-  const userId = sessionStorage.getItem("userId") || "";
+  const userToken = sessionStorage.getItem("token") || "";
 
   return (
     <div
@@ -153,31 +138,42 @@ const AppContent: React.FC<{
       }}
     >
       {isAuthenticated ? (
-        <div className="flex h-screen">
+        <div className="flex flex-col md:flex-row h-screen bg-transparent">
+          {/* Mobile header spacer */}
+          <div className="md:hidden h-16 w-full" />
+
           <Sidebar
             onMenuClick={setActiveMenu}
             activeMenu={activeMenu}
             defaultMenuItems={menuItems}
             onLogout={onLogout}
           />
+
           <main
-            className="flex-1 flex flex-col overflow-y-auto"
-            style={{ backgroundColor: theme.colors.surface }}
+            className="flex-1 flex flex-col overflow-y-auto md:mt-0 mt-16"
+            style={{
+              backgroundColor: theme.colors.surface,
+              minHeight: "calc(100vh - 64px)", // Ensure full height
+            }}
           >
             {activeMenu === "home" && (
               <ChatInterface onCreateConSelected={onCreateConSelected} />
             )}
             {activeMenu === "new-connection" && (
               <ConnectionForm
-                baseUrl={DBCON_API_URL} // Regular user endpoint
-                userId={userId}
+                userId={userToken}
                 isAdmin={false}
                 onSuccess={() => setActiveMenu("existing-connection")}
               />
             )}
-            {activeMenu === "existing-connection" && <ExistingConnections />}
+            {activeMenu === "existing-connection" && (
+              <ExistingConnections isAdmin={false} />
+            )}
             {activeMenu === "history" && (
               <History onSessionClicked={onHomePage} />
+            )}
+            {activeMenu === "favourite" && (
+              <Favourites onSessionClicked={onHomePage} />
             )}
             {activeMenu === "settings" && <Settings />}
           </main>

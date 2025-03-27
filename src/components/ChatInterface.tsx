@@ -14,18 +14,21 @@ import {
   ChatAction,
   ChatInterfaceProps,
 } from "../types";
-import {
-  CHATBOT_API_URL,
-  API_URL,
-  CHATBOT_CON_DETAILS_API_URL,
-} from "../config";
+import { CHATBOT_API_URL } from "../config";
 import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
-import { handleLogout } from "../utils";
+import { askChatbot, getConnectionDetails, getUserConnections } from "../api";
 
-// Helper function to convert hex to RGB
+interface Session {
+  id: string;
+  messages: Message[];
+  timestamp: string;
+  title: string;
+  isFavorite: boolean;
+}
+
 const hexToRgb = (hex: string) => {
   const cleanedHex = hex.replace("#", "");
   const bigint = parseInt(cleanedHex, 16);
@@ -54,9 +57,9 @@ const reducer = (state: ChatState, action: ChatAction): ChatState => {
   }
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({
-  onCreateConSelected,
-}) => {
+const ChatInterface: React.FC<
+  ChatInterfaceProps & { onSessionSelected?: (session: Session) => void }
+> = ({ onCreateConSelected, onSessionSelected }) => {
   const { theme } = useTheme();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -70,6 +73,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [connectionsLoading, setConnectionsLoading] = useState(true);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null); // Track current session
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
@@ -93,20 +97,71 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const saveMessages = useCallback(() => {
     try {
       localStorage.setItem("chatMessages", JSON.stringify(messagesRef.current));
+      if (currentSessionId) {
+        const storedSessions = localStorage.getItem("chatSessions");
+        const sessions = storedSessions ? JSON.parse(storedSessions) : [];
+        const updatedSessions = sessions.map((session: Session) =>
+          session.id === currentSessionId
+            ? { ...session, messages: messagesRef.current }
+            : session
+        );
+        localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
+      }
     } catch (error) {
       console.error("Failed to save messages", error);
     }
-  }, []);
+  }, [currentSessionId]);
+
+  const saveSession = useCallback(() => {
+    if (messagesRef.current.length > 0 && !currentSessionId) {
+      const storedSessions = localStorage.getItem("chatSessions");
+      const sessions = storedSessions ? JSON.parse(storedSessions) : [];
+      const newSession = {
+        id: `session-${Date.now()}`,
+        messages: [...messagesRef.current],
+        timestamp: new Date().toISOString(),
+        title:
+          messagesRef.current[0]?.content.substring(0, 50) + "..." ||
+          "Untitled",
+        isFavorite: false,
+      };
+      sessions.push(newSession);
+      localStorage.setItem("chatSessions", JSON.stringify(sessions));
+      setCurrentSessionId(newSession.id);
+      localStorage.setItem("currentSessionId", newSession.id); // Persist the new session ID
+    }
+  }, [currentSessionId]);
 
   useEffect(() => {
     const loadInitialMessages = () => {
+      // Check for an existing current session first
+      const currentSessionId = localStorage.getItem("currentSessionId");
+      if (currentSessionId) {
+        const storedSessions = localStorage.getItem("chatSessions");
+        const sessions = storedSessions ? JSON.parse(storedSessions) : [];
+        const currentSession = sessions.find(
+          (session: Session) => session.id === currentSessionId
+        );
+        if (currentSession) {
+          messagesRef.current = currentSession.messages;
+          setMessages(currentSession.messages);
+          setCurrentSessionId(currentSessionId);
+          return; // Exit after loading the current session
+        }
+      }
+
+      // If no current session, check for a newly selected session
       const selectedSession = localStorage.getItem("selectedSession");
       if (selectedSession) {
-        const session = JSON.parse(selectedSession);
+        const session: Session = JSON.parse(selectedSession);
         messagesRef.current = session.messages;
         setMessages(session.messages);
-        localStorage.removeItem("selectedSession"); // Clear after loading
+        setCurrentSessionId(session.id);
+        localStorage.setItem("currentSessionId", session.id); // Persist the session ID
+        localStorage.removeItem("selectedSession"); // Clean up after transferring
+        if (onSessionSelected) onSessionSelected(session);
       } else {
+        // Fallback to unsaved messages if no session is selected
         const storedMessages = localStorage.getItem("chatMessages");
         if (storedMessages) {
           messagesRef.current = JSON.parse(storedMessages);
@@ -117,26 +172,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     loadInitialMessages();
     fetchConnections();
-  }, [theme]);
+  }, [theme, onSessionSelected]);
 
   const fetchConnections = async () => {
     setConnectionsLoading(true);
-    const userId = sessionStorage.getItem("userId");
-    if (!userId) {
+    const token = sessionStorage.getItem("token");
+    if (!token) {
       toast.error("User ID not found. Please log in again.", {
         style: {
           background: theme.colors.surface,
           color: theme.colors.error,
         },
-        theme:mode,
+        theme: mode,
       });
       setConnectionsLoading(false);
       return;
     }
     try {
-      const response = await axios.post(`${API_URL}/getuserconnections`, {
-        userId,
-      });
+      const response = await getUserConnections(token);
       setConnections(response.data.connections);
 
       if (response.data.connections.length === 0) {
@@ -158,18 +211,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         );
 
         if (defaultConnection) {
-          await axios.post(
-            `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
-            {
-              connection: defaultConnection,
-            }
-          );
+          await getConnectionDetails(defaultConnection);
         }
       }
       setConnectionError(null);
     } catch (error) {
+      setSelectedConnection("");
       console.error("Error fetching connections:", error);
-      setConnectionError("Failed to fetch connections. Please try again.");
+      setConnectionError("Failed to make connection. Please try again.");
     } finally {
       setConnectionsLoading(false);
     }
@@ -186,12 +235,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       );
       if (selectedConnectionObj) {
         try {
-          await axios.post(
-            `${CHATBOT_CON_DETAILS_API_URL}/connection_details`,
-            {
-              connection: selectedConnectionObj,
-            }
-          );
+          await getConnectionDetails(selectedConnectionObj);
           setSelectedConnection(selectedConnectionObj.connectionName);
           localStorage.setItem(
             "selectedConnection",
@@ -200,7 +244,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           setConnectionError(null);
         } catch (error) {
           console.error("Error fetching connection details:", error);
-          setConnectionError("Failed to load connection details.");
+          setConnectionError("Failed to make connection. Please try again.");
         }
       }
     } else {
@@ -209,22 +253,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  const handleNewChat = () => {
+    saveSession(); // Save the current session before resetting
+    messagesRef.current = [];
+    setMessages([]);
+    setSelectedConnection(null);
+    localStorage.removeItem("selectedConnection");
+    localStorage.setItem("chatMessages", JSON.stringify([]));
+    setConnectionError(null);
+    dispatch({ type: "SET_INPUT", payload: "" });
+    setEditingMessageId(null);
+    setCurrentSessionId(null);
+    localStorage.removeItem("currentSessionId"); // Clear the current session ID
+  };
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!state.input.trim() || state.isLoading) return;
       if (!selectedConnection) {
         toast.error(
-    "No connection selected. Please create or select a connection first.",
-    {
-        style: {
-            background: theme.colors.surface,
-            color: theme.colors.error,
-            border: `1px solid ${theme.colors.error}20`,
-        },
-         theme: mode,
-    }
-);
+          "No connection selected. Please create or select a connection first.",
+          {
+            style: {
+              background: theme.colors.surface,
+              color: theme.colors.error,
+              border: `1px solid ${theme.colors.error}20`,
+            },
+            theme: mode,
+          }
+        );
         return;
       }
 
@@ -261,10 +319,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         if (!selectedConnectionObj)
           throw new Error("Selected connection not found");
 
-        const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-          question: state.input,
-          connection: selectedConnectionObj,
-        });
+        // const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
+        //   question: state.input,
+        //   connection: selectedConnectionObj,
+        // });
+
+        const response = await askChatbot(state.input, selectedConnectionObj);
 
         const botResponseMessage: Message = {
           id: Date.now().toString(),
@@ -348,10 +408,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setMessages([...messagesRef.current]);
 
       try {
-        const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-          question: newContent,
-          connection: selectedConnection,
-        });
+        const selectedConnectionObj = connections.find(
+          (conn) => conn.connectionName === selectedConnection
+        );
+        if (!selectedConnectionObj)
+          throw new Error("Selected connection not found");
+        const response = await askChatbot(newContent, selectedConnectionObj);
         const botResponse = JSON.stringify(response.data, null, 2);
         const botResponseMessage: Message = {
           id: Date.now().toString(),
@@ -386,9 +448,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  // Convert hex accent color to RGB for RGBA usage
-  const { r, g, b } = hexToRgb(theme.colors.accent);
-
   return (
     <div
       className="flex flex-col h-full"
@@ -413,7 +472,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       >
         {connectionsLoading ? (
           <Loader />
-        ) : connections.length === 0 ? (
+        ) : connections.length === 0 && !selectedConnection ? (
           <div
             className="flex flex-col items-center justify-center h-full text-center"
             style={{ color: theme.colors.text }}
@@ -498,6 +557,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           connections={connections}
           selectedConnection={selectedConnection}
           onSelect={handleSelect}
+          onNewChat={handleNewChat}
         />
       </div>
 

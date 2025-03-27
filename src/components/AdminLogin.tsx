@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
 import Loader from "./Loader";
-import { ADMIN_API_URL } from "../config";
+import { API_URL } from "../config";
 import { useTheme } from "../ThemeContext";
+import { loginAdmin } from "../api";
 
 interface AdminLoginProps {
   onLoginSuccess: (token: string) => void;
@@ -39,37 +40,33 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
 
     try {
       setLoading(true);
-      const response = await axios.post(
-        `${ADMIN_API_URL}/admin-login`,
-        { email, password },
-        { headers: { "Content-Type": "application/json" } }
-      );
-      setLoading(false);
+      // const response = await axios.post(
+      //   `${API_URL}/login/admin`, // Updated to match our Flask route
+      //   { email, password },
+      //   { headers: { "Content-Type": "application/json" } }
+      // );
+      const response = await loginAdmin(email, password)
 
-      if (response.status === 200) {
+       if (response.status === 200 && response.data.token) {
         const token = response.data.token;
+        sessionStorage.setItem("token", token); // Store token for ExistingConnections
         toast.success("Admin login successful!", { theme: mode });
         onLoginSuccess(token);
+        setFormData({ email: "", password: "" }); // Clear form
       } else {
-        toast.error(`Error: ${response.data.message || "Admin login failed"}`, {
+        toast.error(`Error: ${response.data?.message || "Admin login failed"}`, {
           theme: mode,
         });
+      setLoading(false);
       }
+       
     } catch (error) {
       setLoading(false);
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          `Error: ${error.response?.data?.message || error.message}`,
-          { theme: mode }
-        );
-      } else {
-        toast.error(
-          `Error: ${
-            (error as Error).message || "An unexpected error occurred"
-          }`,
-          { theme: mode }
-        );
-      }
+      const errorMsg =
+        (error as AxiosError<{ message?: string }>).response?.data?.message ||
+        (error as Error).message ||
+        "An unexpected error occurred";
+      toast.error(`Error: ${errorMsg}`, { theme: mode });
     }
   };
 
@@ -78,14 +75,13 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     setTimeout(() => setShowPassword(false), 750);
   };
 
-  // Placeholder handlers for forgot password and signup (can be implemented later if needed)
-  const handleForgotPassword = () => {
-    toast.info("Admin password reset not implemented yet.", { theme: mode });
-  };
+  // const handleForgotPassword = () => {
+  //   toast.info("Admin password reset not implemented yet.", { theme: mode });
+  // };
 
-  const handleSwitchToSignup = () => {
-    toast.info("Admin registration not available here.", { theme: mode });
-  };
+  // const handleSwitchToSignup = () => {
+  //   toast.info("Admin registration not available here.", { theme: mode });
+  // };
 
   return (
     <div
@@ -95,15 +91,13 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
         fontFamily: theme.typography.fontFamily,
       }}
     >
-      {/* Subtle Background Effect */}
       <div
         className="absolute inset-0 opacity-50 pointer-events-none"
         style={{
           background: `radial-gradient(circle at 50% 50%, ${theme.colors.accent}20, transparent 70%)`,
         }}
-      ></div>
+      />
 
-      {/* Company Logo - Top Left */}
       <div
         className="absolute top-4 left-4 flex items-center space-x-2"
         style={{ color: theme.colors.textSecondary }}
@@ -151,116 +145,106 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
             }}
           />
 
-          <div
-            className="relative"
-            style={{ fontFamily: theme.typography.fontFamily }}
-          >
-            <form onSubmit={handleLogin} className="space-y-4">
-              {/* Email Field */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="email"
-                  className="text-sm font-semibold tracking-wide"
-                  style={{ color: theme.colors.text }}
-                >
-                  Admin Username
-                </label>
-                <InputField
-                  type="text"
-                  name="email"
-                  placeholder="Enter your admin username"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
-                  style={{
-                    backgroundColor: theme.colors.bubbleBot,
-                    color: theme.colors.text,
-                    borderRadius: theme.borderRadius.default,
-                    focusRingColor: theme.colors.accent,
-                  }}
-                />
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="password"
-                  className="text-sm font-semibold tracking-wide"
-                  style={{ color: theme.colors.text }}
-                >
-                  Admin Passcode
-                </label>
-                <PasswordField
-                  name="password"
-                  placeholder="Enter your admin passcode"
-                  value={formData.password}
-                  onChange={handleChange}
-                  showPassword={showPassword}
-                  toggleShowPassword={handleShowPassword}
-                  disabled={loading}
-                  className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
-                  style={{
-                    backgroundColor: theme.colors.bubbleBot,
-                    color: theme.colors.text,
-                    borderRadius: theme.borderRadius.default,
-                    focusRingColor: theme.colors.accent,
-                  }}
-                />
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-1">
+              <label
+                htmlFor="email"
+                className="text-sm font-semibold tracking-wide"
+                style={{ color: theme.colors.text }}
+              >
+                Admin Username
+              </label>
+              <InputField
+                type="text"
+                name="email"
+                placeholder="Enter your admin username"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
                 style={{
+                  backgroundColor: theme.colors.bubbleBot,
                   color: theme.colors.text,
-                  backgroundColor: "transparent",
-                  border: `1px solid ${theme.colors.accent}`,
-                  borderRadius: theme.borderRadius.pill,
+                  borderRadius: theme.borderRadius.default,
                 }}
-                onMouseOver={(e) =>
-                  !loading &&
-                  (e.currentTarget.style.backgroundColor =
-                    theme.colors.accentHover + "20")
-                }
-                onMouseOut={(e) =>
-                  !loading &&
-                  (e.currentTarget.style.backgroundColor = "transparent")
-                }
-                disabled={loading}
-                title="Access admin panel"
-              >
-                {loading ? "Processing..." : "Start Managing"}
-              </button>
-            </form>
-
-            {/* Links */}
-            <div className="flex flex-col items-center space-y-2 text-sm mt-4">
-              <button
-                type="button"
-                className="transition-all duration-200 hover:underline"
-                style={{ color: theme.colors.textSecondary }}
-                onClick={handleForgotPassword}
-                disabled={loading}
-                title="Recover your admin account"
-              >
-                Forgot Your Passcode?
-              </button>
-              <button
-                type="button"
-                className="transition-all duration-200 hover:underline"
-                style={{ color: theme.colors.textSecondary }}
-                onClick={handleSwitchToSignup}
-                disabled={loading}
-                title="Register as an admin (if applicable)"
-              >
-                New Admin? Register
-              </button>
-              {loading && <Loader text="" />}
+                focusRingColor={theme.colors.accent}
+              />
             </div>
-          </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor="password"
+                className="text-sm font-semibold tracking-wide"
+                style={{ color: theme.colors.text }}
+              >
+                Admin Passcode
+              </label>
+              <PasswordField
+                name="password"
+                placeholder="Enter your admin passcode"
+                value={formData.password}
+                onChange={handleChange}
+                showPassword={showPassword}
+                toggleShowPassword={handleShowPassword}
+                disabled={loading}
+                className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+                style={{
+                  backgroundColor: theme.colors.bubbleBot,
+                  color: theme.colors.text,
+                  borderRadius: theme.borderRadius.default,
+                }}
+                focusRingColor={theme.colors.accent}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                color: theme.colors.text,
+                backgroundColor: "transparent",
+                border: `1px solid ${theme.colors.accent}`,
+                borderRadius: theme.borderRadius.pill,
+              }}
+              onMouseOver={(e) =>
+                !loading &&
+                (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+              }
+              onMouseOut={(e) =>
+                !loading &&
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
+              disabled={loading}
+              title="Access admin panel"
+            >
+              {loading ? "Processing..." : "Start Managing"}
+            </button>
+          </form>
+
+          {/* <div className="flex flex-col items-center space-y-2 text-sm mt-4">
+            <button
+              type="button"
+              className="transition-all duration-200 hover:underline"
+              style={{ color: theme.colors.textSecondary }}
+              onClick={handleForgotPassword}
+              disabled={loading}
+              title="Recover your admin account"
+            >
+              Forgot Your Passcode?
+            </button>
+            <button
+              type="button"
+              className="transition-all duration-200 hover:underline"
+              style={{ color: theme.colors.textSecondary }}
+              onClick={handleSwitchToSignup}
+              disabled={loading}
+              title="Register as an admin (if applicable)"
+            >
+              New Admin? Register
+            </button>
+            {loading && <Loader text="Logging in..." />}
+          </div> */}
         </div>
       </div>
     </div>

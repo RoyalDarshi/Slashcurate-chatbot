@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Message } from "../types";
 import { Search, Heart } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../ThemeContext";
 
@@ -13,17 +12,17 @@ interface Session {
   isFavorite: boolean;
 }
 
-interface HistoryProps {
-  onSessionClicked: () => void; // Update prop type
+interface FavouritesProps {
+  onSessionClicked: () => void;
 }
 
-const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
+const Favourites: React.FC<FavouritesProps> = ({ onSessionClicked }) => {
   const { theme } = useTheme();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
-  const [activeFilter, setActiveFilter] = useState<string>("today");
 
+  // Load favorite sessions from local storage on mount
   useEffect(() => {
     loadSessions();
   }, []);
@@ -33,133 +32,58 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
       const storedSessions = localStorage.getItem("chatSessions");
       if (storedSessions) {
         const parsedSessions: Session[] = JSON.parse(storedSessions);
-        setSessions(parsedSessions);
-        filterSessions(parsedSessions, activeFilter);
+        const favoriteSessions = parsedSessions.filter(
+          (session) => session.isFavorite
+        );
+        setSessions(favoriteSessions);
+        setFilteredSessions(favoriteSessions);
       }
     } catch (error) {
       console.error("Failed to load sessions from local storage", error);
     }
   };
 
+  // Toggle favorite status and update local storage
   const toggleFavorite = (sessionId: string) => {
     const updatedSessions = sessions.map((session) =>
       session.id === sessionId
         ? { ...session, isFavorite: !session.isFavorite }
         : session
     );
-    setSessions(updatedSessions);
-    filterSessions(updatedSessions, activeFilter);
-    localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
+    const newSessions = updatedSessions.filter((session) => session.isFavorite);
+    setSessions(newSessions);
+    setFilteredSessions(newSessions);
+
+    const storedSessions = localStorage.getItem("chatSessions");
+    if (storedSessions) {
+      const allSessions: Session[] = JSON.parse(storedSessions);
+      const updatedAllSessions = allSessions.map((session) =>
+        session.id === sessionId
+          ? { ...session, isFavorite: !session.isFavorite }
+          : session
+      );
+      localStorage.setItem("chatSessions", JSON.stringify(updatedAllSessions));
+    }
   };
 
-  const filterSessions = (sessions: Session[], filter: string) => {
-    const now = new Date();
-    const filtered = sessions.filter((session) => {
-      const sessionDate = new Date(session.timestamp);
-      const diffInMs = now.getTime() - sessionDate.getTime();
-      const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
-
-      switch (filter) {
-        case "today":
-          return diffInDays < 1;
-        case "yesterday":
-          return diffInDays >= 1 && diffInDays < 2;
-        case "last7days":
-          return diffInDays < 7;
-        case "last1month":
-          return diffInDays < 30;
-        default:
-          return true;
-      }
-    });
-    setFilteredSessions(filtered);
-  };
-
+  // Handle search within favorite sessions
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-
     if (term) {
       const filtered = sessions.filter((session) =>
         session.title.toLowerCase().includes(term.toLowerCase())
       );
       setFilteredSessions(filtered);
     } else {
-      filterSessions(sessions, activeFilter);
+      setFilteredSessions(sessions);
     }
   };
 
-  const handleFilterChange = (filter: string) => {
-    setActiveFilter(filter);
-    setSearchTerm("");
-    filterSessions(sessions, filter);
-  };
-
+  // Handle session click to load messages on home page
   const handleSessionClick = (session: Session) => {
     localStorage.setItem("selectedSession", JSON.stringify(session));
-    onSessionClicked();
-  };
-
-  const filters = [
-    { id: "today", label: "Today" },
-    { id: "yesterday", label: "Yesterday" },
-    { id: "last7days", label: "Last 7 Days" },
-    { id: "last1month", label: "Last 1 Month" },
-  ];
-
-  const sessionListVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.3,
-        ease: "easeInOut",
-        when: "beforeChildren",
-      },
-    },
-    exit: {
-      opacity: 0,
-      transition: {
-        duration: 0.2,
-        ease: "easeInOut",
-      },
-    },
-  };
-
-  const sessionItemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.3,
-        ease: "easeInOut",
-      },
-    },
-    exit: {
-      opacity: 0,
-      y: -10,
-      transition: {
-        duration: 0.2,
-        ease: "easeInOut",
-      },
-    },
-  };
-
-  const heartVariants = {
-    unfavorite: {
-      scale: 1,
-      transition: {
-        duration: 0.2,
-      },
-    },
-    favorite: {
-      scale: [1, 1.3, 1],
-      transition: {
-        duration: 0.3,
-        times: [0, 0.5, 1],
-      },
-    },
+    onSessionClicked()
   };
 
   return (
@@ -170,12 +94,10 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
         padding: `${theme.spacing.lg} ${theme.spacing.xl}`,
       }}
     >
+      {/* Header with title and search bar */}
       <div
         className="flex items-center justify-between border-b pb-4 mb-6"
-        style={{
-          borderColor: theme.colors.border,
-          gap: theme.spacing.lg,
-        }}
+        style={{ borderColor: theme.colors.border, gap: theme.spacing.lg }}
       >
         <h2
           className="text-2xl font-semibold tracking-tight"
@@ -185,12 +107,12 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
             fontWeight: theme.typography.weight.bold,
           }}
         >
-          Chat History
+          Favorite Sessions
         </h2>
         <div className="relative w-full max-w-sm">
           <input
             type="text"
-            placeholder="Search sessions"
+            placeholder="Search favorite sessions"
             value={searchTerm}
             onChange={handleSearchChange}
             className="w-full px-4 py-2 pl-10 text-sm transition-all focus:outline-none"
@@ -214,62 +136,21 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
         </div>
       </div>
 
-      <div className="flex flex-wrap mb-6" style={{ gap: theme.spacing.sm }}>
-        {filters.map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => handleFilterChange(filter.id)}
-            className="px-4 py-1.5 text-sm transition-all"
-            style={{
-              background:
-                activeFilter === filter.id
-                  ? theme.colors.accent
-                  : "transparent",
-              color:
-                activeFilter === filter.id
-                  ? "white"
-                  : theme.colors.textSecondary,
-              border: `1px solid ${
-                activeFilter === filter.id
-                  ? theme.colors.accent
-                  : theme.colors.border
-              }`,
-              borderRadius: theme.borderRadius.pill,
-              fontFamily: theme.typography.fontFamily,
-              fontSize: theme.typography.size.sm,
-              fontWeight: theme.typography.weight.medium,
-              transition: theme.transition.default,
-            }}
-            onMouseOver={(e) =>
-              activeFilter !== filter.id &&
-              (e.target.style.color = theme.colors.text)
-            }
-            onMouseOut={(e) =>
-              activeFilter !== filter.id &&
-              (e.target.style.color = theme.colors.textSecondary)
-            }
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
-
+      {/* List of favorite sessions */}
       <motion.div
         className="flex-1 overflow-y-auto"
-        variants={sessionListVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
       >
         <AnimatePresence>
           {filteredSessions.length > 0 ? (
             filteredSessions.map((session) => (
               <motion.div
                 key={session.id}
-                variants={sessionItemVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
                 className="mb-3 px-4 py-3 cursor-pointer border-b"
                 style={{
                   background: `${theme.colors.accent}20`,
@@ -335,23 +216,17 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                       }}
                       className="p-1 rounded-full transition-colors"
                     >
-                      <motion.div
-                        variants={heartVariants}
-                        initial="unfavorite"
-                        animate={session.isFavorite ? "favorite" : "unfavorite"}
-                      >
-                        <Heart
-                          className="h-5 w-5"
-                          style={{
-                            color: session.isFavorite
-                              ? theme.colors.accent
-                              : theme.colors.textSecondary,
-                            fill: session.isFavorite
-                              ? theme.colors.accent
-                              : "none",
-                          }}
-                        />
-                      </motion.div>
+                      <Heart
+                        className="h-5 w-5"
+                        style={{
+                          color: session.isFavorite
+                            ? theme.colors.accent
+                            : theme.colors.textSecondary,
+                          fill: session.isFavorite
+                            ? theme.colors.accent
+                            : "none",
+                        }}
+                      />
                     </motion.button>
                   </div>
                 </div>
@@ -359,10 +234,9 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
             ))
           ) : (
             <motion.div
-              variants={sessionItemVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="flex items-center justify-center h-full"
               style={{ minHeight: "300px" }}
             >
@@ -379,7 +253,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                   border: `1px solid ${theme.colors.border}`,
                 }}
               >
-                No sessions found for this period
+                No favorite sessions found
               </p>
             </motion.div>
           )}
@@ -389,4 +263,4 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
   );
 };
 
-export default History;
+export default Favourites;
