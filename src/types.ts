@@ -10,6 +10,7 @@ export interface Message {
 export interface Connection {
   connectionName: string;
   value: string;
+  isAdmin: boolean;
 }
 
 // Chat Interface Types
@@ -144,6 +145,7 @@ export interface Theme {
   typography: {
     fontFamily: string; // Primary font stack
     size: {
+      xs: string; // Extra small text (e.g., fine print)
       sm: string; // Small text (e.g., timestamps)
       base: string; // Default text size
       lg: string; // Larger text (e.g., headings)

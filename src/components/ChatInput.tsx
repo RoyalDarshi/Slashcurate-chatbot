@@ -91,9 +91,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
           ...connections.map((connection: Connection) => ({
             value: connection.connectionName,
             label: connection.connectionName,
+            isAdmin: connection.isAdmin, // Add isAdmin to options
           })),
         ];
-
   return (
     <form
       onSubmit={onSubmit}
@@ -234,6 +234,24 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     >
                       {option.label}
                     </span>
+                    {option.isAdmin && (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          backgroundColor: theme.colors.background,
+                          color: theme.colors.accent,
+                          fontSize: theme.typography.size.xs,
+                          fontWeight: theme.typography.weight.normal,
+                          padding: `0 ${theme.spacing.sm}`,
+                          borderRadius: theme.borderRadius.default,
+                          marginLeft: theme.spacing.sm,
+                          textTransform: "lowercase",
+                        }}
+                      >
+                        Default
+                      </span>
+                    )}
                     {option.value !== "create-con" && (
                       <div className="relative group">
                         <button

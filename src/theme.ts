@@ -32,6 +32,7 @@ export const themes: Record<"light" | "dark", Theme> = {
       fontFamily:
         "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       size: {
+        xs: "0.25rem",
         sm: "0.875rem",
         base: "1rem",
         lg: "1.25rem",
