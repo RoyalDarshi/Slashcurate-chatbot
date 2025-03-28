@@ -5,7 +5,6 @@ import LDAPForm from "./LDAPForm";
 import ExistingConnections from "./ExistingConnections";
 import { useTheme } from "../ThemeContext";
 import { Database, Key, User, Settings, LogOut, Link } from "lucide-react";
-import { ADMIN_API_URL } from "../config";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 

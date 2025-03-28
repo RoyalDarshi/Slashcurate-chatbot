@@ -693,7 +693,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
                   cursor: isSubmitButtonEnabled ? "pointer" : "not-allowed",
                 }}
               >
-                Submit
+                Create Connection
               </button>
             </div>
             {loading && (

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Loader from "./Loader";
 import { Trash2 } from "react-feather";
 import { useTheme } from "../ThemeContext";
 import {
@@ -10,6 +9,7 @@ import {
   getAdminConnections,
   getUserConnections,
 } from "../api";
+import CustomTooltip from "./CustomTooltip";
 
 interface Connection {
   id: number;
@@ -222,9 +222,9 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                     <th className="py-2 px-3 text-left w-32 text-white">
                       Selected DB
                     </th>
-                    <th className="py-2 px-3 text-left w-40 text-white">
+                    {/* <th className="py-2 px-3 text-left w-40 text-white">
                       Created At
-                    </th>
+                    </th> */}
                     <th className="py-2 px-3 text-left w-20 sticky right-0 bg-inherit text-white">
                       Actions
                     </th>
@@ -296,23 +296,31 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                       >
                         {connection.selectedDB}
                       </td>
-                      <td
+                      {/* <td
                         className="py-2 px-3 w-40"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.created_at}
-                      </td>
+                      </td> */}
                       <td
                         className="py-2 px-3 w-20 sticky right-0 bg-inherit"
                         style={{ backgroundColor: "inherit" }}
                       >
-                        <button
-                          onClick={() => handleDeleteConnection(connection.id)}
-                          className="text-red-500 hover:text-red-700 focus:outline-none"
-                          aria-label="Delete connection"
+                        <CustomTooltip
+                          title="Delete Connection"
+                          position="top"
+                          variant="dark"
                         >
-                          <Trash2 size={18} />
-                        </button>
+                          <button
+                            onClick={() =>
+                              handleDeleteConnection(connection.id)
+                            }
+                            className="text-red-500 hover:text-red-700 focus:outline-none"
+                            aria-label="Delete connection"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </CustomTooltip>
                       </td>
                     </tr>
                   ))}

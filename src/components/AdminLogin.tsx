@@ -1,11 +1,9 @@
 import React, { useState } from "react";
-import axios, { AxiosError } from "axios";
+import { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
-import Loader from "./Loader";
-import { API_URL } from "../config";
 import { useTheme } from "../ThemeContext";
 import { loginAdmin } from "../api";
 

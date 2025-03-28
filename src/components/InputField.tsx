@@ -28,12 +28,13 @@ const InputField: React.FC<InputFieldProps> = ({
     <input
       type={type}
       name={name}
+      autoComplete="off"
       placeholder={placeholder}
       value={value}
       onChange={onChange}
       required={required}
       disabled={disabled}
-      className={`w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`w-full px-3 py-2 text-sm border-none border-transparent active:border-none  focus:outline-none focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       style={{
         backgroundColor: theme.colors.bubbleBot,
         color: theme.colors.text,
@@ -41,7 +42,6 @@ const InputField: React.FC<InputFieldProps> = ({
         fontFamily: theme.typography.fontFamily,
         fontSize: theme.typography.size.sm,
         transition: theme.transition.default,
-        focusRingColor: theme.colors.accent,
       }}
     />
   );

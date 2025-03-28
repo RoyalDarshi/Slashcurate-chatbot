@@ -121,7 +121,7 @@ const Login: React.FC<LoginProps> = ({
             onChange={handleChange}
             required
             disabled={loading}
-            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            className="w-full px-3 py-2 text-sm rounded-lg"
             style={{
               backgroundColor: theme.colors.bubbleBot,
               color: theme.colors.text,

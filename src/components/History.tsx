@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Message } from "../types";
 import { Search, Heart } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../ThemeContext";
+import CustomTooltip from "./CustomTooltip";
 
 interface Session {
   id: string;
@@ -328,6 +328,14 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                     >
                       {session.messages.length} msg
                     </span>
+                    <CustomTooltip
+                          title={
+                            session.isFavorite
+                              ? "Remove from favorites"
+                              : "Add to favorites"
+                          }
+                          position="top"
+                        >
                     <motion.button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -340,19 +348,21 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                         initial="unfavorite"
                         animate={session.isFavorite ? "favorite" : "unfavorite"}
                       >
-                        <Heart
-                          className="h-5 w-5"
-                          style={{
-                            color: session.isFavorite
-                              ? theme.colors.accent
-                              : theme.colors.textSecondary,
-                            fill: session.isFavorite
-                              ? theme.colors.accent
-                              : "none",
-                          }}
-                        />
+                        
+                          <Heart
+                            className="h-5 w-5"
+                            style={{
+                              color: session.isFavorite
+                                ? theme.colors.accent
+                                : theme.colors.textSecondary,
+                              fill: session.isFavorite
+                                ? theme.colors.accent
+                                : "none",
+                            }}
+                          />
                       </motion.div>
                     </motion.button>
+                    </CustomTooltip>
                   </div>
                 </div>
               </motion.div>

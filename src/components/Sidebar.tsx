@@ -194,6 +194,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                     ? "0.75rem"
                     : "0.5rem 1.75rem 0.5rem 0.5rem",
                 }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.backgroundColor = theme.colors.hover)
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.backgroundColor =
+                    activeMenuItem === id
+                      ? `${theme.colors.accent}40`
+                      : "transparent")
+                }
                 onClick={() => handleMenuClick(id)}
                 aria-expanded={id === "connections" && isConnectionsOpen}
                 aria-controls={

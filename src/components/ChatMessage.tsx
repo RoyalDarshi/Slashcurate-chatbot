@@ -3,17 +3,15 @@ import {
   Bot,
   User,
   Table,
-  LineChart as ChartSpline,
+  LineChart,
   Edit3,
   Download,
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
-import axios from "axios";
-import { Message, ChatMessageProps } from "../types";
+import { ChatMessageProps } from "../types";
 import DataTable from "./DataTable";
-import { Tooltip } from "react-tippy";
-import "react-tippy/dist/tippy.css";
+import CustomTooltip from "./CustomTooltip";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -21,7 +19,6 @@ import html2canvas from "html2canvas";
 import * as XLSX from "xlsx";
 import EditableMessage from "./EditableMessage";
 import { motion } from "framer-motion";
-import { CHATBOT_API_URL } from "../config";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 
@@ -210,7 +207,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   style={{ background: theme.colors.surface }}
                   disabled={!hasNumericData}
                 >
-                  <Tooltip
+                  <CustomTooltip
                     title={
                       !hasNumericData
                         ? "Graph unavailable: No numeric data to visualize"
@@ -218,16 +215,17 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                         ? "Switch to Graph View"
                         : "Switch to Table View"
                     }
+                    position="top"
                   >
                     {showTable ? (
-                      <ChartSpline
+                      <LineChart
                         size={20}
                         style={{ color: theme.colors.accent }}
                       />
                     ) : (
                       <Table size={20} style={{ color: theme.colors.accent }} />
                     )}
-                  </Tooltip>
+                  </CustomTooltip>
                 </motion.button>
                 {!showTable && hasNumericData && (
                   <div className="relative">
@@ -240,12 +238,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
                       style={{ background: theme.colors.surface }}
                     >
-                      <Tooltip title="Download Graph">
+                      <CustomTooltip title="Download Graph" position="top">
                         <Download
                           size={20}
                           style={{ color: theme.colors.accent }}
                         />
-                      </Tooltip>
+                      </CustomTooltip>
                     </motion.button>
                     {showResolutionOptions && (
                       <motion.div
@@ -280,12 +278,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
                     style={{ background: theme.colors.surface }}
                   >
-                    <Tooltip title="Download XLSX">
+                    <CustomTooltip title="Download XLSX" position="top">
                       <Download
                         size={20}
                         style={{ color: theme.colors.accent }}
                       />
-                    </Tooltip>
+                    </CustomTooltip>
                   </motion.button>
                 )}
               </div>
@@ -412,13 +410,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               {!loading &&
                 (isHovered || isLiked || isDisliked || showDislikeOptions) && (
                   <div className="flex justify-end gap-2">
-                    <Tooltip
+                    <CustomTooltip
                       title={isLiked ? "Remove like" : "Like this response"}
-                      position="top"
-                      arrow
+                      position="bottom"
                     >
                       <motion.button
-                        whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleLike}
                         style={{
@@ -434,19 +430,17 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       >
                         <ThumbsUp size={16} />
                       </motion.button>
-                    </Tooltip>
+                    </CustomTooltip>
                     <div className="relative" ref={dislikeRef}>
-                      <Tooltip
+                      <CustomTooltip
                         title={
                           isDisliked
                             ? "Remove dislike"
                             : "Dislike this response"
                         }
-                        position="top"
-                        arrow
+                        position="bottom"
                       >
                         <motion.button
-                          whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={handleDislike}
                           style={{
@@ -464,7 +458,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                         >
                           <ThumbsDown size={16} />
                         </motion.button>
-                      </Tooltip>
+                      </CustomTooltip>
                       {showDislikeOptions && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
@@ -543,7 +537,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       minute: "2-digit",
                     })}
                   </span>
-                  <Tooltip title="Edit message" position="bottom" arrow>
+                  <CustomTooltip title="Edit message" position="bottom">
                     <button
                       onClick={handleEdit}
                       className="p-2 transition-colors duration-200 hover:opacity-80"
@@ -551,7 +545,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     >
                       <Edit3 size={16} />
                     </button>
-                  </Tooltip>
+                  </CustomTooltip>
                 </div>
               </div>
             ) : (

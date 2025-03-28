@@ -4,8 +4,7 @@ import { ChatInputProps, Connection } from "../types";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 import { FaFilePdf } from "react-icons/fa";
-import { Tooltip } from "react-tippy"; // Ensure this is imported
-import "react-tippy/dist/tippy.css"; // Ensure styles are included
+import CustomTooltip from "./CustomTooltip";
 
 const ChatInput: React.FC<ChatInputProps> = ({
   input,
@@ -100,7 +99,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
       onSubmit={onSubmit}
       style={{
         background: theme.colors.background,
-        padding: "16px",
         width: "100%",
       }}
     >
@@ -111,7 +109,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           borderRadius: theme.borderRadius.large,
           border: `1px solid ${theme.colors.border}`,
           boxShadow: `0 2px 10px ${theme.colors.text}10`,
-          padding: "12px",
+          padding: "10px",
         }}
       >
         <textarea
@@ -124,6 +122,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           }}
           placeholder="Ask about your data..."
           className="w-full min-h-[40px] max-h-32 px-3 py-2 text-base border-none rounded-lg focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed resize-none overflow-y-auto placeholder-opacity-50"
+          rows={1}
           style={{
             backgroundColor: "transparent",
             color: theme.colors.text,
@@ -134,7 +133,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             boxShadow: theme.mode === "dark" ? theme.shadow.sm : "none",
             borderRadius: theme.borderRadius.default,
             fontFamily: theme.typography.fontFamily,
-            fontSize: theme.typography.size.lg,
+            fontSize: theme.typography.size.base,
             transition: theme.transition.default,
             outline: "none",
             "--tw-ring-color": theme.colors.accent,
@@ -160,11 +159,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
               className="transition-transform duration-300 hover:scale-105 flex-shrink-0"
             />
             {/* Tooltip for Connection Dropdown */}
-            <Tooltip
+            <CustomTooltip
               title="Change or create a connection"
-              position="top"
-              arrow={true}
-              theme={theme.mode} // Adapts to light or dark theme
+              position="left"
             >
               <button
                 type="button"
@@ -201,7 +198,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   }`}
                 />
               </button>
-            </Tooltip>
+            </CustomTooltip>
 
             {isDropdownOpen && (
               <div
@@ -251,7 +248,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                           />
                         </button>
                         <span
-                          className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
+                          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
                           style={{
                             background: theme.colors.accent,
                             color: theme.colors.surface,
@@ -266,12 +263,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 ))}
               </div>
             )}
-            <Tooltip
-              title="Create new session"
-              position="top"
-              arrow={true}
-              theme={theme.mode} // Adapts to light or dark theme
-            >
+            <CustomTooltip title="Create a new session" position="bottom">
               {/* New Chat Button */}
               <button
                 type="button"
@@ -297,16 +289,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 <PlusCircle size={16} style={{ color: theme.colors.accent }} />
                 New Chat
               </button>
-            </Tooltip>
+            </CustomTooltip>
           </div>
 
           {/* Tooltip for Send Button */}
-          <Tooltip
-            title="Send message"
-            position="top"
-            arrow={true}
-            theme={theme.mode} // Adapts to light or dark theme
-          >
+          <CustomTooltip title="Ask Question" position="bottom">
             <button
               type="submit"
               disabled={isDisabled}
@@ -328,7 +315,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 <Send size={18} className="transition-transform duration-300" />
               )}
             </button>
-          </Tooltip>
+          </CustomTooltip>
         </div>
       </div>
     </form>

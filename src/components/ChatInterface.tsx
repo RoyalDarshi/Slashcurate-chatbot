@@ -1,10 +1,4 @@
-import React, {
-  useReducer,
-  useRef,
-  useEffect,
-  useCallback,
-  useState,
-} from "react";
+import { useReducer, useRef, useEffect, useCallback, useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import {
@@ -28,15 +22,6 @@ interface Session {
   title: string;
   isFavorite: boolean;
 }
-
-const hexToRgb = (hex: string) => {
-  const cleanedHex = hex.replace("#", "");
-  const bigint = parseInt(cleanedHex, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return { r, g, b };
-};
 
 const initialState: ChatState = {
   isLoading: false,
@@ -71,7 +56,7 @@ const ChatInterface: React.FC<
     localStorage.getItem("selectedConnection") || null
   );
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [connectionsLoading, setConnectionsLoading] = useState(true);
+  const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null); // Track current session
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -175,7 +160,7 @@ const ChatInterface: React.FC<
   }, [theme, onSessionSelected]);
 
   const fetchConnections = async () => {
-    setConnectionsLoading(true);
+    setConnectionsLoading(false);
     const token = sessionStorage.getItem("token");
     if (!token) {
       toast.error("User ID not found. Please log in again.", {
@@ -541,7 +526,7 @@ const ChatInterface: React.FC<
           position: "sticky",
           bottom: 0,
           background: theme.colors.background,
-          padding: theme.spacing.lg,
+          padding: theme.spacing.md,
         }}
       >
         <ChatInput
