@@ -42,6 +42,13 @@ interface ApiResponse {
   message: string;
 }
 
+interface LDAPConfigResponse {
+  LDAP_SERVER: string;
+  LDAP_PORT: number;
+  LDAP_BASE_DN: string;
+  LDAP_USER_RDN: string;
+}
+
 // Axios Instances
 const api = axios.create({
   baseURL: API_URL,
@@ -116,6 +123,17 @@ export const getConnectionDetails = async (
   selectedConnectionObj: object
 ): Promise<AxiosResponse<ApiResponse>> =>
   chatbotApi.post("/connection_details", { connection: selectedConnectionObj });
+
+export const storeLdapConfig = async (
+  token: string,
+  ldapConfig: object
+): Promise<AxiosResponse<LDAPConfigResponse>> =>
+  api.post("/ldap-config", { token: token, ldapConfig });
+
+export const getLdapConfig = async (
+  token: string
+): Promise<AxiosResponse<LDAPConfigResponse>> =>
+  api.post("/get-ldap-config", { token: token });
 
 export const askChatbot = async (
   question: string,

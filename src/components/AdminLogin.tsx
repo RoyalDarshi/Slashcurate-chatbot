@@ -150,12 +150,12 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                 className="text-sm font-semibold tracking-wide"
                 style={{ color: theme.colors.text }}
               >
-                Admin Username
+                Admin Email
               </label>
               <InputField
-                type="text"
+                type="email"
                 name="email"
-                placeholder="Enter your admin username"
+                placeholder="Enter your admin email"
                 value={formData.email}
                 onChange={handleChange}
                 required

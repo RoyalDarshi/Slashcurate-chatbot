@@ -184,7 +184,7 @@ const Login: React.FC<LoginProps> = ({
       </form>
 
       {/* Links */}
-      <div className="flex flex-col items-center space-y-2 text-sm mt-4">
+      {/* <div className="flex flex-col items-center space-y-2 text-sm mt-4">
         <button
           type="button"
           className="transition-all duration-200 hover:underline"
@@ -205,8 +205,8 @@ const Login: React.FC<LoginProps> = ({
         >
           New User? Register
         </button>
-        {loading && <Loader text="" />}
-      </div>
+        {loading && <Loader text="Almost there, please wait..." />}
+      </div> */}
     </div>
   );
 };

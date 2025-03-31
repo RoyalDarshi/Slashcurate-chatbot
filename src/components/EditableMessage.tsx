@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Textarea, Button } from "@material-tailwind/react";
-import { useTheme } from "../ThemeContext"; // Import the theme context
+import { useTheme } from "../ThemeContext";
 
 interface EditableMessageProps {
   messageContent: string;
@@ -15,17 +15,17 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
   onCancel,
   onContentChange,
 }) => {
-  const { theme } = useTheme(); // Access the theme from context
+  const { theme } = useTheme();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [editedContent, setEditedContent] = useState<string>();
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   useEffect(() => {
-    setEditedContent(messageContent); // Reset content when prop changes
+    setEditedContent(messageContent);
   }, [messageContent]);
 
   useEffect(() => {
-    inputRef.current?.focus(); // Auto-focus the textarea
+    inputRef.current?.focus();
   }, []);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -37,10 +37,10 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
 
   return (
     <div
-      className="w-screen max-w-2xl rounded-2xl rounded-tr-none p-4 shadow-lg"
+      className="w-screen max-w-xl rounded-2xl rounded-tr-none p-4 pt-0 shadow-lg"
       style={{
-        background: theme.colors.accent, // Use accent color from the theme
-        color: theme.colors.text, // Use text color from the theme
+        background: theme.colors.accent,
+        color: theme.colors.text,
       }}
     >
       <Textarea
@@ -48,28 +48,24 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
         placeholder="Edit your message..."
         value={editedContent}
         onChange={handleTextareaChange}
-        rows={4}
+        rows={3}
         autoFocus={true}
         ref={inputRef}
         className="outline-none border-none w-full text-lg placeholder-gray-100 bg-transparent resize-none"
         style={{
-          fontSize: theme.typography.size.lg,
+          fontSize: theme.typography.size.base,
           color: "white",
           placeholderColor: theme.colors.textSecondary,
         }}
       />
-      <div className="flex justify-end mt-4 space-x-3">
+      <div className="flex justify-end space-x-3">
         <Button
           size="sm"
-          className="rounded-2xl px-4 py-2 transition-all duration-200 shadow-md normal-case"
+          className="rounded-2xl px-4 py-2 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95" // Modern styles
           style={{
-            backgroundColor: theme.colors.disabled,
-            color: "white",
+            backgroundColor: theme.colors.bubbleBot,
+            color: theme.colors.text,
             cursor: "pointer",
-            opacity: 1,
-            ":hover": {
-              backgroundColor: theme.colors.hover,
-            },
           }}
           onClick={onCancel}
         >
@@ -77,19 +73,11 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
         </Button>
         <Button
           size="sm"
-          className="rounded-2xl px-5 py-2 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed normal-case"
+          className="rounded-2xl px-5 py-2 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95" // Modern styles
           style={{
-            backgroundColor: hasChanges
-              ? theme.colors.success
-              : theme.colors.disabled,
+            backgroundColor: hasChanges ? theme.colors.success : theme.colors.disabled,
             color: "white",
             cursor: hasChanges ? "pointer" : "not-allowed",
-            opacity: hasChanges ? 1 : 0.5,
-            ":hover": {
-              backgroundColor: hasChanges
-                ? theme.colors.successHover
-                : theme.colors.disabled,
-            },
           }}
           onClick={onSave}
           disabled={!hasChanges}
@@ -99,6 +87,5 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
       </div>
     </div>
   );
-};
-
+}
 export default EditableMessage;

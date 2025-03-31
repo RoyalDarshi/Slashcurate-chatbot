@@ -326,12 +326,6 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     try {
       setLoading(true);
       setLoadingText("Submitting connection, please wait...");
-      // const response = await axios.post(`${API_URL}/${endpoint}`, payload, {
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //     Authorization: `Bearer ${token}`,
-      //   },
-      // });
       let response = {};
       if (isAdmin) {
         response = await createAdminConnection(token, formData);
@@ -501,8 +495,6 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       className="p-6 rounded-lg shadow-md h-full overflow-y-auto"
       style={{
         backgroundColor: theme.colors.surface,
-        border: `1px solid ${theme.colors.text}20`,
-        borderRadius: theme.borderRadius.default,
       }}
     >
       <ToastContainer

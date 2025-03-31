@@ -34,7 +34,7 @@ const PasswordField: React.FC<PasswordFieldProps> = ({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`w-full px-3 py-2 text-sm border-none border-transparent active:border-none  focus:outline-none focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`w-full px-3 py-2 text-sm border-none border-transparent active:border-none  focus:outline-none focus:ring-2 focus:ring-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         style={{
           backgroundColor: theme.colors.bubbleBot,
           color: theme.colors.text,
@@ -43,7 +43,6 @@ const PasswordField: React.FC<PasswordFieldProps> = ({
           fontSize: theme.typography.size.sm,
           transition: theme.transition.default,
         }}
-        
         required
       />
       <button

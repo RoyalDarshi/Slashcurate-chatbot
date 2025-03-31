@@ -2,11 +2,21 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import ConnectionForm from "./ConnectionForm";
 import LDAPForm from "./LDAPForm";
+import Setting from "./Settings";
 import ExistingConnections from "./ExistingConnections";
 import { useTheme } from "../ThemeContext";
-import { Database, Key, User, Settings, LogOut, Link } from "lucide-react";
+import {
+  Database,
+  Key,
+  User,
+  Settings,
+  LogOut,
+  Link,
+  Server,
+} from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import LDAPConfigDisplay from "./LDAPConfigDisplay";
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -30,7 +40,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     { id: "create-connection", label: "Create Connection", icon: Database },
     { id: "create-ldap", label: "Create LDAP Details", icon: Key },
     { id: "existing-connection", label: "Existing Connection", icon: Link },
-    { id: "users", label: "Manage Users", icon: User },
+    // { id: "users", label: "Manage Users", icon: User },
+    { id: "ldap-config", label: "LDAP Config", icon: Server },
     { id: "settings", label: "Settings", icon: Settings },
     { id: "logout", label: "Logout", icon: LogOut },
   ];
@@ -54,6 +65,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     } else {
       setActiveMenu(id);
     }
+  };
+
+  const handleCreateConnection = () => {
+    setActiveMenu("create-connection");
   };
 
   if (!token) {
@@ -95,8 +110,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         )}
         {activeMenu === "create-ldap" && <LDAPForm adminId={token} />}
         {activeMenu === "existing-connection" && (
-          <ExistingConnections isAdmin={true} />
+          <ExistingConnections
+            isAdmin={true}
+            createConnection={handleCreateConnection}
+          />
         )}
+        {activeMenu === "ldap-config" && <LDAPConfigDisplay />}
         {activeMenu === "users" && (
           <div
             className="p-6 rounded-lg shadow-md"
@@ -108,17 +127,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             Manage Users (Placeholder)
           </div>
         )}
-        {activeMenu === "settings" && (
-          <div
-            className="p-6 rounded-lg shadow-md"
-            style={{
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-            }}
-          >
-            Settings (Placeholder)
-          </div>
-        )}
+        {activeMenu === "settings" && <Setting />}
       </main>
     </div>
   );

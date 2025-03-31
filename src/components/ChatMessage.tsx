@@ -9,6 +9,12 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
+import {
+  BsHandThumbsDown,
+  BsHandThumbsDownFill,
+  BsHandThumbsUp,
+  BsHandThumbsUpFill,
+} from "react-icons/bs";
 import { ChatMessageProps } from "../types";
 import DataTable from "./DataTable";
 import CustomTooltip from "./CustomTooltip";
@@ -388,7 +394,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     };
 
     return (
-      <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
+      <div className="flex w-full " style={{ marginBottom: theme.spacing.md }}>
         {message.isBot ? (
           <div
             className="flex w-full items-start"
@@ -404,103 +410,102 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               className="max-w-[80%] flex flex-col gap-2"
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
+              style={{ position: "relative" }}
             >
               {renderContent()}
               {/* Updated condition to keep buttons visible when dislike options are shown */}
-              {!loading &&
-                (isHovered || isLiked || isDisliked || showDislikeOptions) && (
-                  <div className="flex justify-end gap-2">
+              {!loading && (
+                //isHovered || isLiked || isDisliked || showDislikeOptions) && (
+                <div className="flex justify-end items-center gap-2">
+                  <CustomTooltip
+                    title={isLiked ? "Remove like" : "Like this response"}
+                    position="bottom"
+                  >
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleLike}
+                      className="rounded-md transition-colors duration-200"
+                    >
+                      {isLiked ? (
+                        <BsHandThumbsUpFill
+                          size={20}
+                          style={{ color: theme.colors.textSecondary }}
+                        />
+                      ) : (
+                        <BsHandThumbsUp
+                          size={20}
+                          style={{ color: theme.colors.textSecondary }}
+                        />
+                      )}
+                    </motion.button>
+                  </CustomTooltip>
+                  <div className="relative" ref={dislikeRef}>
                     <CustomTooltip
-                      title={isLiked ? "Remove like" : "Like this response"}
+                      title={
+                        isDisliked ? "Remove dislike" : "Dislike this response"
+                      }
                       position="bottom"
                     >
                       <motion.button
                         whileTap={{ scale: 0.95 }}
-                        onClick={handleLike}
-                        style={{
-                          backgroundColor: isLiked
-                            ? theme.colors.success
-                            : theme.colors.surface,
-                          borderColor: isLiked
-                            ? theme.colors.success
-                            : theme.colors.border,
-                          color: isLiked ? "white" : theme.colors.textSecondary,
-                        }}
-                        className="p-1 rounded-md border transition-colors duration-200"
+                        onClick={handleDislike}
+                        className="pt-2 pr-2 rounded-md transition-colors duration-200"
                       >
-                        <ThumbsUp size={16} />
+                        {isDisliked ? (
+                          <BsHandThumbsDownFill
+                            size={20}
+                            style={{ color: theme.colors.textSecondary }}
+                          />
+                        ) : (
+                          <BsHandThumbsDown
+                            size={20}
+                            style={{ color: theme.colors.textSecondary }}
+                          />
+                        )}
                       </motion.button>
                     </CustomTooltip>
-                    <div className="relative" ref={dislikeRef}>
-                      <CustomTooltip
-                        title={
-                          isDisliked
-                            ? "Remove dislike"
-                            : "Dislike this response"
-                        }
-                        position="bottom"
+                    {showDislikeOptions && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                        style={{
+                          background: theme.colors.surface,
+                          border: `1px solid ${theme.colors.border}`,
+                          boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                        }}
                       >
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleDislike}
-                          style={{
-                            backgroundColor: isDisliked
-                              ? theme.colors.error
-                              : theme.colors.surface,
-                            borderColor: isDisliked
-                              ? theme.colors.error
-                              : theme.colors.border,
-                            color: isDisliked
-                              ? "white"
-                              : theme.colors.textSecondary,
-                          }}
-                          className="p-1 rounded-md border transition-colors duration-200"
-                        >
-                          <ThumbsDown size={16} />
-                        </motion.button>
-                      </CustomTooltip>
-                      {showDislikeOptions && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
-                          style={{
-                            background: theme.colors.surface,
-                            border: `1px solid ${theme.colors.border}`,
-                            boxShadow: `0 4px 12px ${theme.colors.text}20`,
-                          }}
-                        >
-                          {[
-                            "Incorrect data",
-                            "Takes too long",
-                            "Irrelevant response",
-                            "Confusing answer",
-                            "Other",
-                          ].map((reason) => (
-                            <button
-                              key={reason}
-                              onClick={() => handleDislikeOption(reason)}
-                              className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
-                              style={{
-                                color: theme.colors.text,
-                                backgroundColor: "transparent",
-                              }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  "transparent")
-                              }
-                            >
-                              {reason}
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </div>
+                        {[
+                          "Incorrect data",
+                          "Takes too long",
+                          "Irrelevant response",
+                          "Confusing answer",
+                          "Other",
+                        ].map((reason) => (
+                          <button
+                            key={reason}
+                            onClick={() => handleDislikeOption(reason)}
+                            className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
+                            style={{
+                              color: theme.colors.text,
+                              backgroundColor: "transparent",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                "transparent")
+                            }
+                          >
+                            {reason}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
             </div>
           </div>
         ) : (

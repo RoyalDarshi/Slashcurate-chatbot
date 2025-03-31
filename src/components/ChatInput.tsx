@@ -241,7 +241,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                           alignItems: "center",
                           backgroundColor: theme.colors.background,
                           color: theme.colors.accent,
-                          fontSize: theme.typography.size.xs,
+                          fontSize: theme.typography.size.sm,
                           fontWeight: theme.typography.weight.normal,
                           padding: `0 ${theme.spacing.sm}`,
                           borderRadius: theme.borderRadius.default,

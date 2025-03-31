@@ -1,22 +1,38 @@
 import React, { useState } from "react";
 import axios from "axios";
+import styled from "styled-components";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Server, Network, Users, Shield } from "lucide-react"; // Updated icons
 import Loader from "./Loader";
-import { ADMIN_API_URL } from "../config";
 import { useTheme } from "../ThemeContext";
+import { Theme } from "../types";
+import { storeLdapConfig } from "../api";
 
 interface LDAPFormData {
   ldapHost: string;
   ldapPort: number;
   baseDn: string;
-  userDn: string;
+  userRdn: string;
 }
 
 interface LDAPFormProps {
   adminId: string; // Passed as a prop
 }
+
+export const StyledInput = styled.input<{ theme: Theme }>`
+  &:-webkit-autofill,
+  &:-webkit-autofill:hover,
+  &:-webkit-autofill:focus,
+  &:-webkit-autofill:active {
+    -webkit-text-fill-color: ${(props) => props.theme.colors.text} !important;
+    color: ${(props) => props.theme.colors.text} !important;
+    background-color: ${(props) => props.theme.colors.background} !important;
+    caret-color: ${(props) =>
+      props.theme.colors.text} !important; /* Cursor color */
+    transition: background-color 5000s ease-in-out 0s;
+  }
+`;
 
 const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
   const { theme } = useTheme();
@@ -24,7 +40,7 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
     ldapHost: "",
     ldapPort: 0,
     baseDn: "",
-    userDn: "",
+    userRdn: "",
   });
   const [loading, setLoading] = useState(false);
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
@@ -39,7 +55,8 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminId) {
+    const token=sessionStorage.getItem("token")
+    if (!token) {
       toast.error("Admin session expired. Please log in again.", {
         theme: mode,
       });
@@ -47,15 +64,16 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
     }
     try {
       setLoading(true);
-      const response = await axios.post(
-        `${ADMIN_API_URL}/store-ldap`,
-        { ...formData },
-        {
-          headers: {
-            Authorization: `Bearer ${adminId}`,
-          },
-        }
-      );
+      // const response = await axios.post(
+      //   `${ADMIN_API_URL}/store-ldap`,
+      //   { ...formData },
+      //   {
+      //     headers: {
+      //       Authorization: `Bearer ${adminId}`,
+      //     },
+      //   }
+      // );
+      const response = await storeLdapConfig(token, formData);
       setLoading(false);
       if (response.status === 200) {
         toast.success("LDAP settings saved successfully!", { theme: mode });
@@ -63,7 +81,7 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
           ldapHost: "",
           ldapPort: 0,
           baseDn: "",
-          userDn: "",
+          userRdn: "",
         });
       }
     } catch (error) {
@@ -99,18 +117,18 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
               />
               LDAP Server Host
             </label>
-            <input
+            <StyledInput
               type="text"
               name="ldapHost"
               value={formData.ldapHost}
               onChange={handleChange}
+              theme={theme}
+              spellCheck="false"
               placeholder="e.g., ldap.example.com"
-              className="w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all duration-300 hover:border-opacity-75"
+              className="w-full p-3 rounded-lg focus:outline-none focus:ring-2  transition-all duration-300"
               style={{
                 backgroundColor: theme.colors.background,
                 color: theme.colors.text,
-                borderColor: `${theme.colors.text}40`,
-                focusRingColor: theme.colors.accent,
               }}
               required
             />
@@ -126,18 +144,17 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
               />
               LDAP Port
             </label>
-            <input
+            <StyledInput
+              theme={theme}
               type="number"
               name="ldapPort"
               value={formData.ldapPort || ""}
               onChange={handleChange}
               placeholder="e.g., 389 (LDAP) or 636 (LDAPS)"
-              className="w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all duration-300 hover:border-opacity-75"
+              className="w-full p-3 rounded-lg focus:outline-none focus:ring-2  transition-all duration-300"
               style={{
                 backgroundColor: theme.colors.background,
                 color: theme.colors.text,
-                borderColor: `${theme.colors.text}40`,
-                focusRingColor: theme.colors.accent,
               }}
               required
             />
@@ -153,18 +170,18 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
               />
               Base Distinguished Name
             </label>
-            <input
+            <StyledInput
+              theme={theme}
               type="text"
               name="baseDn"
+              spellCheck="false"
               value={formData.baseDn}
               onChange={handleChange}
               placeholder="e.g., dc=domain,dc=com"
-              className="w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all duration-300 hover:border-opacity-75"
+              className="w-full p-3 rounded-lg focus:outline-none focus:ring-2  transition-all duration-300"
               style={{
                 backgroundColor: theme.colors.background,
                 color: theme.colors.text,
-                borderColor: `${theme.colors.text}40`,
-                focusRingColor: theme.colors.accent,
               }}
               required
             />
@@ -178,20 +195,20 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
                 className="mr-2 h-5 w-5"
                 style={{ color: theme.colors.accent }}
               />
-              Admin User DN
+              User RDN
             </label>
-            <input
+            <StyledInput
+              theme={theme}
               type="text"
-              name="userDn"
-              value={formData.userDn}
+              name="userRdn"
+              value={formData.userRdn}
               onChange={handleChange}
-              placeholder="e.g., cn=admin,dc=domain,dc=com"
-              className="w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all duration-300 hover:border-opacity-75"
+              spellCheck="false"
+              placeholder="e.g., uid={},ou=people"
+              className="w-full p-3 rounded-lg focus:outline-none focus:ring-2  transition-all duration-300"
               style={{
                 backgroundColor: theme.colors.background,
                 color: theme.colors.text,
-                borderColor: `${theme.colors.text}40`,
-                focusRingColor: theme.colors.accent,
               }}
               required
             />
@@ -199,11 +216,10 @@ const LDAPForm: React.FC<LDAPFormProps> = ({ adminId }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg font-semibold shadow-lg transition-all duration-300 hover:shadow-md hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full p-3 rounded-lg focus:outline-none focus:ring-2  transition-all duration-300"
             style={{
               backgroundColor: theme.colors.accent,
               color: "white",
-              boxShadow: `0 6px 12px ${theme.colors.text}20`,
             }}
           >
             {loading ? "Saving..." : "Save LDAP Settings"}

@@ -28,31 +28,30 @@ function App() {
     const key = "token";
     const token = sessionStorage.getItem(key);
     if (token) {
-      // try {
-      //   const response = await validateToken(token);
-      //   if (response.status === 200) {
-      //     !response.data.isAdmin
-      //       ? setIsAuthenticated(true)
-      //       : setIsAdminAuthenticated(true);
-      //     setActiveMenu("home");
-      //   } else {
-      //     sessionStorage.removeItem(key);
-      //     setIsAuthenticated(false);
-      //     setIsAdminAuthenticated(false);
-      //   }
-      // } catch (error) {
-      //   console.error(`Error validating token:`, error);
-      //   sessionStorage.removeItem(key);
-      //   setIsAuthenticated(false);
-      //   setIsAdminAuthenticated(false);
-      // }
-      setIsAuthenticated(true);
+      try {
+        const response = await validateToken(token);
+        if (response.status === 200) {
+          !response.data.isAdmin
+            ? setIsAuthenticated(true)
+            : setIsAdminAuthenticated(true);
+          setActiveMenu("home");
+        } else {
+          sessionStorage.removeItem(key);
+          setIsAuthenticated(false);
+          setIsAdminAuthenticated(false);
+        }
+      } catch (error) {
+        console.error(`Error validating token:`, error);
+        sessionStorage.removeItem(key);
+        setIsAuthenticated(false);
+        setIsAdminAuthenticated(false);
+      }
     }
   };
 
-  // useEffect(() => {
-  //   validateUser();
-  // }, []);
+  useEffect(() => {
+    validateUser();
+  }, []);
 
   const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
     sessionStorage.setItem("token", token);
@@ -140,7 +139,10 @@ const AppContent: React.FC<{
       }}
     >
       {isAuthenticated ? (
-        <div className="flex flex-col md:flex-row h-screen bg-transparent">
+        <div
+          className="flex flex-col md:flex-row h-screen"
+          style={{ backgroundColor: theme.colors.background }}
+        >
           {/* Mobile header spacer */}
           <div className="md:hidden h-16 w-full" />
 
@@ -163,13 +165,16 @@ const AppContent: React.FC<{
             )}
             {activeMenu === "new-connection" && (
               <ConnectionForm
-                userId={userToken}
+                token={userToken}
                 isAdmin={false}
                 onSuccess={() => setActiveMenu("existing-connection")}
               />
             )}
             {activeMenu === "existing-connection" && (
-              <ExistingConnections isAdmin={false} />
+              <ExistingConnections
+                isAdmin={false}
+                createConnection={onCreateConSelected}
+              />
             )}
             {activeMenu === "history" && (
               <History onSessionClicked={onHomePage} />

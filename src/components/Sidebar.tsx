@@ -108,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           className="md:hidden p-3 fixed top-4 left-4 rounded-full shadow-lg transition-opacity hover:opacity-90 z-30"
           style={{
             backgroundColor: theme.colors.accent,
-            color: theme.colors.surface,
+            color: "white",
           }}
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Toggle Sidebar"

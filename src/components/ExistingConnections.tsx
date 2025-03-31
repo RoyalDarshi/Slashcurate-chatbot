@@ -24,14 +24,17 @@ interface Connection {
   selectedDB: string;
   username: string;
   created_at: string;
+  isAdmin: boolean;
 }
 
 interface ExistingConnectionsProps {
   isAdmin: boolean;
+  createConnection: () => void;
 }
 
 const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
   isAdmin,
+  createConnection,
 }) => {
   const { theme } = useTheme();
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -51,24 +54,12 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
     }
 
     try {
-      // const payload = isAdmin ? {} : { token: token };
       setLoading(true);
       setError(null);
-      // const response = await axios.get<{ connections: Connection[] }>(
-      //   `${URL}/${endpoint}`,
-      //   {
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //       ...(isAdmin && { Authorization: `Bearer ${token}` }),
-      //     },
-      //   }
-      // );
-      let response = {};
-      if (isAdmin) {
-        response = await getAdminConnections(token);
-      } else {
-        response = await getUserConnections(token);
-      }
+
+      let response = isAdmin
+        ? await getAdminConnections(token)
+        : await getUserConnections(token);
 
       if (
         !response.data.connections ||
@@ -109,28 +100,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
         setLoading(true);
         setError(null);
         const response = await deleteConnection(token, connectionId);
-        // if (isAdmin) {
-        //   // Use DELETE for admin
-        //   // await axios.delete(`${URL}/${endpoint}`, {
-        //   //   headers: {
-        //   //     "Content-Type": "application/json",
-        //   //     Authorization: `Bearer ${token}`,
-        //   //   },
-        //   //   data: { connectionId }, // Payload in DELETE request body
-        //   // });
 
-        // } else {
-        //   // Use POST for user (as per your backend)
-        //   await axios.post(
-        //     `${URL}/${endpoint}`,
-        //     { token: token, connectionId },
-        //     {
-        //       headers: {
-        //         "Content-Type": "application/json",
-        //       },
-        //     }
-        //   );
-        // }
         if (response.status === 200) {
           toast.success("Connection deleted successfully!", { theme: mode });
           fetchConnections();
@@ -163,9 +133,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
     <div
       className="p-6 shadow-md h-full overflow-y-auto"
       style={{
-        backgroundColor: theme.colors.surface,
-        border: `1px solid ${theme.colors.text}20`,
-        borderRadius: theme.borderRadius.default,
+        backgroundColor: theme.colors.background,
       }}
     >
       <ToastContainer
@@ -184,50 +152,37 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
       <div className="overflow-x-auto mb-40 relative">
         <div ref={tableContainerRef} className="relative">
           <table
-            className="min-w-full mb-6 rounded-lg overflow-hidden shadow-sm"
+            className="min-w-full mb-6 rounded-lg overflow-hidden"
             style={{
               backgroundColor: theme.colors.surface,
-              border: `1px solid ${theme.colors.text}20`,
+              // border: `1px solid ${theme.colors.text}20`,
               borderRadius: theme.borderRadius.default,
             }}
           >
-            {connections.length > 0 && (
+            {connections.length > 0 ? (
               <>
                 <thead style={{ backgroundColor: theme.colors.accent }}>
                   <tr>
-                    <th className="py-2 px-3 text-left w-32 text-white">
+                    <th className="py-2 px-3 text-left text-white">
                       Connection Name
                     </th>
-                    <th className="py-2 px-3 text-left w-48 text-white">
+                    <th className="py-2 px-3 text-left text-white">
                       Description
                     </th>
-                    <th className="py-2 px-3 text-left w-32 text-white">
-                      Hostname
-                    </th>
-                    <th className="py-2 px-3 text-left w-20 text-white">
-                      Port
-                    </th>
-                    <th className="py-2 px-3 text-left w-32 text-white">
-                      Database
-                    </th>
-                    <th className="py-2 px-3 text-left w-32 text-white">
-                      Username
-                    </th>
-                    <th className="py-2 px-3 text-left w-32 text-white">
+                    <th className="py-2 px-3 text-left text-white">Hostname</th>
+                    <th className="py-2 px-3 text-left text-white">Port</th>
+                    <th className="py-2 px-3 text-left text-white">Database</th>
+                    <th className="py-2 px-3 text-left text-white">Username</th>
+                    <th className="py-2 px-3 text-left text-white">
                       Command Timeout
                     </th>
-                    <th className="py-2 px-3 text-left w-32 text-white">
+                    <th className="py-2 px-3 text-left text-white">
                       Max Transport Objects
                     </th>
-                    <th className="py-2 px-3 text-left w-32 text-white">
+                    <th className="py-2 px-3 text-left text-white">
                       Selected DB
                     </th>
-                    {/* <th className="py-2 px-3 text-left w-40 text-white">
-                      Created At
-                    </th> */}
-                    <th className="py-2 px-3 text-left w-20 sticky right-0 bg-inherit text-white">
-                      Actions
-                    </th>
+                    <th className="py-2 px-3 text-left text-white">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -243,71 +198,66 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                       }}
                     >
                       <td
-                        className="py-2 px-3 w-32"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.connectionName}
                       </td>
                       <td
-                        className="py-2 px-3 w-48"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.description}
                       </td>
                       <td
-                        className="py-2 px-3 w-32"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.hostname}
                       </td>
                       <td
-                        className="py-2 px-3 w-20"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.port}
                       </td>
                       <td
-                        className="py-2 px-3 w-32"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.database}
                       </td>
                       <td
-                        className="py-2 px-3 w-32"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.username}
                       </td>
                       <td
-                        className="py-2 px-3 w-32"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.commandTimeout}
                       </td>
                       <td
-                        className="py-2 px-3 w-32"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.maxTransportObjects}
                       </td>
                       <td
-                        className="py-2 px-3 w-32"
+                        className="py-2 px-3"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.selectedDB}
                       </td>
-                      {/* <td
-                        className="py-2 px-3 w-40"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.created_at}
-                      </td> */}
-                      <td
-                        className="py-2 px-3 w-20 sticky right-0 bg-inherit"
-                        style={{ backgroundColor: "inherit" }}
-                      >
+                      <td className="py-2 px-3">
                         <CustomTooltip
-                          title="Delete Connection"
+                          title={
+                            connection.isAdmin
+                              ? "Cannot delete default connections"
+                              : "Delete Connection"
+                          }
                           position="top"
                           variant="dark"
                         >
@@ -315,10 +265,18 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                             onClick={() =>
                               handleDeleteConnection(connection.id)
                             }
-                            className="text-red-500 hover:text-red-700 focus:outline-none"
+                            className="text-red-500 hover:text-red-700 disabled:cursor-not-allowed focus:outline-none"
                             aria-label="Delete connection"
+                            disabled={connection.isAdmin}
                           >
-                            <Trash2 size={18} />
+                            <Trash2
+                              size={18}
+                              style={{
+                                color: connection.isAdmin
+                                  ? theme.colors.disabled
+                                  : "",
+                              }}
+                            />
                           </button>
                         </CustomTooltip>
                       </td>
@@ -326,18 +284,43 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                   ))}
                 </tbody>
               </>
+            ) : (
+              <tbody
+                style={{
+                  backgroundColor: theme.colors.background,
+                }}
+              >
+                <tr>
+                  <td colSpan={10} className="text-center py-4 text-gray-500">
+                    <p className="mb-2">
+                      Oops! No connections here. Time to create one?
+                    </p>
+                    <button
+                      onClick={createConnection}
+                      className="w-40 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        color: theme.colors.text,
+                        backgroundColor: "transparent",
+                        border: `1px solid ${theme.colors.accent}`,
+                        borderRadius: theme.borderRadius.pill,
+                      }}
+                      onMouseOver={(e) =>
+                        !loading &&
+                        (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                      }
+                      onMouseOut={(e) =>
+                        !loading &&
+                        (e.currentTarget.style.backgroundColor = "transparent")
+                      }
+                    >
+                      Create Connection
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
             )}
           </table>
-          {/* {loading && <Loader text="Loading connections..." />} */}
         </div>
-        {connections.length === 0 && !loading && (
-          <div
-            className="text-center mt-4"
-            style={{ color: theme.colors.text }}
-          >
-            {error || "No connections available."}
-          </div>
-        )}
       </div>
     </div>
   );

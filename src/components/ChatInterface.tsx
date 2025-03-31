@@ -527,6 +527,7 @@ const ChatInterface: React.FC<
           bottom: 0,
           background: theme.colors.background,
           padding: theme.spacing.md,
+          paddingTop: 0,
         }}
       >
         <ChatInput
