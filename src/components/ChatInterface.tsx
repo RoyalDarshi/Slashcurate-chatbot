@@ -61,6 +61,7 @@ const ChatInterface: React.FC<
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null); // Track current session
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
+  const token = sessionStorage.getItem("token")??"";
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -196,7 +197,7 @@ const ChatInterface: React.FC<
         );
 
         if (defaultConnection) {
-          await getConnectionDetails(defaultConnection);
+          await getConnectionDetails(token, defaultConnection);
         }
       }
       setConnectionError(null);
@@ -220,7 +221,7 @@ const ChatInterface: React.FC<
       );
       if (selectedConnectionObj) {
         try {
-          await getConnectionDetails(selectedConnectionObj);
+          await getConnectionDetails(token, selectedConnectionObj);
           setSelectedConnection(selectedConnectionObj.connectionName);
           localStorage.setItem(
             "selectedConnection",

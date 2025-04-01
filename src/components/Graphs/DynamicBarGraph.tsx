@@ -23,6 +23,11 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
     processApiData(data);
   }, [data]);
 
+  useEffect(() => {
+    showTable(!isValidGraphData);
+    isValidGraph(isValidGraphData);
+  }, [isValidGraphData, showTable, isValidGraph]);
+
   const processApiData = (data: any[]) => {
     try {
       if (!data || data.length === 0) {
@@ -44,18 +49,27 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
       }
 
       const numericKeys = keys.filter((key) => {
-        if (foundBranchId && key === "branch_id") {
-          return false;
-        }
+        if (foundBranchId && key === "branch_id") return false;
+        const value = firstItem[key];
         return (
-          typeof firstItem[key] === "number" ||
-          (typeof firstItem[key] === "string" && !isNaN(Number(firstItem[key])))
+          typeof value === "number" ||
+          (typeof value === "string" && !isNaN(Number(value)))
         );
       });
 
       if (numericKeys.length >= 1) {
         if (!foundBranchId) {
-          setXKey(numericKeys[0]);
+          const xCandidates = numericKeys.filter(
+            (key) =>
+              !key.toLowerCase().endsWith("id") &&
+              !key.toLowerCase().endsWith("code") &&
+              key.toLowerCase() !== "phone_number"
+          );
+          if (xCandidates.length > 0) {
+            setXKey(xCandidates[0]);
+          } else {
+            setXKey(numericKeys[0]);
+          }
         }
 
         const filteredNumericKeys = numericKeys.filter(
@@ -70,16 +84,15 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
         const normalizedData = data.map((item) => {
           const newItem: { [key: string]: string | number } = {};
           keys.forEach((key) => {
+            const value = item[key];
             if (
-              typeof item[key] === "number" ||
-              (typeof item[key] === "string" && !isNaN(Number(firstItem[key])))
+              typeof value === "number" ||
+              (typeof value === "string" && !isNaN(Number(value)))
             ) {
               newItem[key] =
-                typeof item[key] === "string"
-                  ? parseFloat(item[key])
-                  : item[key];
-            } else if (typeof item[key] === "string") {
-              newItem[key] = item[key];
+                typeof value === "string" ? parseFloat(value) : value;
+            } else if (typeof value === "string") {
+              newItem[key] = value;
             }
           });
           return newItem;
@@ -96,8 +109,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
   };
 
   if (!isValidGraphData) {
-    showTable(true);
-    isValidGraph(false);
     return (
       <div
         style={{
@@ -120,19 +131,15 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
     );
   }
 
-  showTable(false);
-  isValidGraph(true);
-
-  // Define stunning solid colors
   const stunningColors = [
-    "#FF6B6B", // Vibrant Coral
-    "#4ECDC4", // Turquoise
-    "#45B7D1", // Sky Blue
-    "#96CEB4", // Mint Green
-    "#FFEEAD", // Soft Yellow
-    "#D4A5A5", // Dusty Pink
-    "#9B59B6", // Amethyst Purple
-    "#3498DB", // Bright Blue
+    "#FF6B6B",
+    "#4ECDC4",
+    "#45B7D1",
+    "#96CEB4",
+    "#FFEEAD",
+    "#D4A5A5",
+    "#9B59B6",
+    "#3498DB",
   ];
 
   return (
@@ -160,7 +167,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
           margin={{ top: 50, right: 130, bottom: 50, left: 60 }}
           padding={0.1}
           groupMode="grouped"
-          colors={stunningColors} // Use solid stunning colors
+          colors={stunningColors}
           borderRadius={4}
           axisBottom={{
             tickSize: 5,
@@ -195,10 +202,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
               },
               legend: { text: { fill: theme.colors.textSecondary } },
               domain: {
-                line: {
-                  stroke: theme.colors.textSecondary,
-                  strokeWidth: 1,
-                },
+                line: { stroke: theme.colors.textSecondary, strokeWidth: 1 },
               },
             },
             tooltip: {

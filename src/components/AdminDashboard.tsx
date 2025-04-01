@@ -5,15 +5,7 @@ import LDAPForm from "./LDAPForm";
 import Setting from "./Settings";
 import ExistingConnections from "./ExistingConnections";
 import { useTheme } from "../ThemeContext";
-import {
-  Database,
-  Key,
-  User,
-  Settings,
-  LogOut,
-  Link,
-  Server,
-} from "lucide-react";
+import { Database, Key, Settings, LogOut, Link, Server } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LDAPConfigDisplay from "./LDAPConfigDisplay";
@@ -25,7 +17,7 @@ interface AdminDashboardProps {
 interface MenuItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>; // Ensure icons accept props
+  icon: React.ComponentType;
   subMenu?: MenuItem[];
 }
 

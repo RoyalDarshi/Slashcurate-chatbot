@@ -42,6 +42,13 @@ interface ApiResponse {
   message: string;
 }
 
+interface FavouriteMessage {
+  id: number;
+  message: string;
+  query: string;
+  uid: string;
+}
+
 interface LDAPConfigResponse {
   LDAP_SERVER: string;
   LDAP_PORT: number;
@@ -119,10 +126,18 @@ export const deleteConnection = async (
 ): Promise<AxiosResponse<ApiResponse>> =>
   api.post("/connections/delete", { token: token, connectionId });
 
+// export const getFavouriteMessage=async (
+//   token:string,
+// ):
+
 export const getConnectionDetails = async (
+  token: string,
   selectedConnectionObj: object
 ): Promise<AxiosResponse<ApiResponse>> =>
-  chatbotApi.post("/connection_details", { connection: selectedConnectionObj });
+  chatbotApi.post("/connection_details", {
+    token,
+    connection: selectedConnectionObj,
+  });
 
 export const storeLdapConfig = async (
   token: string,

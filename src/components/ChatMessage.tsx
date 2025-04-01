@@ -1,14 +1,5 @@
-import React, { useRef, useEffect, useState } from "react";
-import {
-  Bot,
-  User,
-  Table,
-  LineChart,
-  Edit3,
-  Download,
-  ThumbsUp,
-  ThumbsDown,
-} from "lucide-react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import { Bot, User, Table, LineChart, Edit3, Download } from "lucide-react";
 import {
   BsHandThumbsDown,
   BsHandThumbsDownFill,
@@ -46,6 +37,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
 
+    // Stabilize csvData updates to prevent unnecessary re-renders
     useEffect(() => {
       try {
         const data = JSON.parse(message.content);
@@ -53,14 +45,22 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           const tableData = Array.isArray(data.answer)
             ? data.answer
             : [data.answer];
-          setCsvData(tableData);
+          if (JSON.stringify(tableData) !== JSON.stringify(csvData)) {
+            setCsvData(tableData);
+          }
+        } else if (csvData.length !== 0 || !showTable) {
+          setCsvData([]);
+          setShowTable(true);
         }
       } catch {
-        setCsvData([]);
-        setShowTable(true);
+        if (csvData.length !== 0 || !showTable) {
+          setCsvData([]);
+          setShowTable(true);
+        }
       }
-    }, [message.content]);
+    }, [message.content, csvData, showTable]);
 
+    // Handle clicks outside dislike options
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -77,20 +77,20 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         document.removeEventListener("mousedown", handleClickOutside);
     }, [showDislikeOptions]);
 
-    const handleSwap = () => {
+    const handleSwap = useCallback(() => {
       if (hasNumericData) setShowTable((prev) => !prev);
-    };
+    }, [hasNumericData]);
 
-    const handleEdit = () => setIsEditing(true);
+    const handleEdit = useCallback(() => setIsEditing(true), []);
 
-    const handleLike = () => {
-      setIsLiked(!isLiked);
+    const handleLike = useCallback(() => {
+      setIsLiked((prev) => !prev);
       setIsDisliked(false);
       setShowDislikeOptions(false);
       setDislikeReason(null);
-    };
+    }, []);
 
-    const handleDislike = () => {
+    const handleDislike = useCallback(() => {
       if (isDisliked) {
         setIsDisliked(false);
         setDislikeReason(null);
@@ -99,21 +99,24 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         setShowDislikeOptions(true);
         setIsLiked(false);
       }
-    };
+    }, [isDisliked]);
 
-    const handleDislikeOption = (reason: string) => {
+    const handleDislikeOption = useCallback((reason: string) => {
       setDislikeReason(reason);
       setIsDisliked(true);
       setShowDislikeOptions(false);
-    };
+    }, []);
 
-    const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newContent = e.target.value;
-      setEditedContent(newContent);
-      setHasChanges(newContent !== message.content);
-    };
+    const handleContentChange = useCallback(
+      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newContent = e.target.value;
+        setEditedContent(newContent);
+        setHasChanges(newContent !== message.content);
+      },
+      [message.content]
+    );
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
       setIsEditing(false);
       if (!selectedConnection || !editedContent.trim() || !hasChanges) return;
       try {
@@ -122,15 +125,21 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       } catch (error) {
         console.error("Error updating message:", error);
       }
-    };
+    }, [
+      editedContent,
+      hasChanges,
+      message.id,
+      onEditMessage,
+      selectedConnection,
+    ]);
 
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
       setEditedContent(message.content);
       setHasChanges(false);
       setIsEditing(false);
-    };
+    }, [message.content]);
 
-    const handleDownloadTableXLSX = () => {
+    const handleDownloadTableXLSX = useCallback(() => {
       try {
         const data = JSON.parse(message.content);
         const tableData = Array.isArray(data.answer)
@@ -143,30 +152,33 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       } catch (error) {
         console.error("Error downloading XLSX:", error);
       }
-    };
+    }, [message.content]);
 
-    const handleDownloadGraph = async (resolution: "low" | "high") => {
-      if (graphRef.current) {
-        try {
-          const scale = resolution === "high" ? 2 : 1;
-          const canvas = await html2canvas(graphRef.current, {
-            scale,
-            useCORS: true,
-            logging: false,
-          });
-          const image = canvas.toDataURL("image/png");
-          const link = document.createElement("a");
-          link.href = image;
-          link.download = `graph_${resolution}.png`;
-          link.click();
-        } catch (error) {
-          console.error("Error downloading graph:", error);
+    const handleDownloadGraph = useCallback(
+      async (resolution: "low" | "high") => {
+        if (graphRef.current) {
+          try {
+            const scale = resolution === "high" ? 2 : 1;
+            const canvas = await html2canvas(graphRef.current, {
+              scale,
+              useCORS: true,
+              logging: false,
+            });
+            const image = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = image;
+            link.download = `graph_${resolution}.png`;
+            link.click();
+          } catch (error) {
+            console.error("Error downloading graph:", error);
+          }
         }
-      }
-      setShowResolutionOptions(false);
-    };
+        setShowResolutionOptions(false);
+      },
+      []
+    );
 
-    const renderContent = () => {
+    const renderContent = useCallback(() => {
       if (loading) {
         return (
           <div
@@ -238,9 +250,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() =>
-                        setShowResolutionOptions(!showResolutionOptions)
-                      }
+                      onClick={() => setShowResolutionOptions((prev) => !prev)}
                       className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
                       style={{ background: theme.colors.surface }}
                     >
@@ -391,10 +401,24 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           </div>
         );
       }
-    };
+    }, [
+      loading,
+      message.content,
+      message.timestamp,
+      message.isBot,
+      showTable,
+      hasNumericData,
+      theme,
+      handleSwap,
+      handleDownloadTableXLSX,
+      handleDownloadGraph,
+      showResolutionOptions,
+      setShowTable,
+      setHasNumericData,
+    ]);
 
     return (
-      <div className="flex w-full " style={{ marginBottom: theme.spacing.md }}>
+      <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
         {message.isBot ? (
           <div
             className="flex w-full items-start"
@@ -413,9 +437,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               style={{ position: "relative" }}
             >
               {renderContent()}
-              {/* Updated condition to keep buttons visible when dislike options are shown */}
               {!loading && (
-                //isHovered || isLiked || isDisliked || showDislikeOptions) && (
                 <div className="flex justify-end items-center gap-2">
                   <CustomTooltip
                     title={isLiked ? "Remove like" : "Like this response"}
@@ -571,7 +593,14 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         )}
       </div>
     );
-  }
+  },
+  (prevProps, nextProps) =>
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.timestamp === nextProps.message.timestamp &&
+    prevProps.message.isBot === nextProps.message.isBot &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.selectedConnection === nextProps.selectedConnection
 );
 
 export default ChatMessage;
