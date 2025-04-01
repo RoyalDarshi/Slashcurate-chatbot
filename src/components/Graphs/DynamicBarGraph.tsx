@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { ResponsiveBar } from "@nivo/bar";
 import { useTheme } from "../../ThemeContext";
 
@@ -17,34 +17,27 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
   const [graphData, setGraphData] = useState<any[]>([]);
   const [xKey, setXKey] = useState<string | null>(null);
   const [yKeys, setYKeys] = useState<string[]>([]);
-  const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
+  const prevIsValidGraphData = useRef<boolean>(false);
 
-  useEffect(() => {
-    processApiData(data);
-  }, [data]);
+  const { processedData, xAxisKey, yAxisKeys } = useMemo(() => {
+    const result = {
+      processedData: [] as any[],
+      xAxisKey: null as string | null,
+      yAxisKeys: [] as string[],
+    };
 
-  useEffect(() => {
-    showTable(!isValidGraphData);
-    isValidGraph(isValidGraphData);
-  }, [isValidGraphData, showTable, isValidGraph]);
-
-  const processApiData = (data: any[]) => {
     try {
-      if (!data || data.length === 0) {
-        setIsValidGraphData(false);
-        return;
-      }
+      if (!data || data.length === 0) return result;
 
       const firstItem = data[0];
       const keys = Object.keys(firstItem);
-
       let foundBranchId = false;
 
       if (keys.includes("branch_id")) {
-        setXKey("branch_id");
+        result.xAxisKey = "branch_id";
         foundBranchId = true;
       } else if (keys.includes("customer_id")) {
-        setXKey("customer_id");
+        result.xAxisKey = "customer_id";
         foundBranchId = true;
       }
 
@@ -65,23 +58,18 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
               !key.toLowerCase().endsWith("code") &&
               key.toLowerCase() !== "phone_number"
           );
-          if (xCandidates.length > 0) {
-            setXKey(xCandidates[0]);
-          } else {
-            setXKey(numericKeys[0]);
-          }
+          result.xAxisKey =
+            xCandidates.length > 0 ? xCandidates[0] : numericKeys[0];
         }
 
-        const filteredNumericKeys = numericKeys.filter(
+        result.yAxisKeys = numericKeys.filter(
           (key) =>
             !key.toLowerCase().endsWith("id") &&
             !key.toLowerCase().endsWith("code") &&
             key.toLowerCase() !== "phone_number"
         );
 
-        setYKeys(filteredNumericKeys);
-
-        const normalizedData = data.map((item) => {
+        result.processedData = data.map((item) => {
           const newItem: { [key: string]: string | number } = {};
           keys.forEach((key) => {
             const value = item[key];
@@ -97,16 +85,32 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
           });
           return newItem;
         });
-        setGraphData(normalizedData);
-        setIsValidGraphData(filteredNumericKeys.length > 0);
-      } else {
-        setIsValidGraphData(false);
       }
+
+      return result;
     } catch (error) {
       console.error("Error processing data:", error);
-      setIsValidGraphData(false);
+      return result;
     }
-  };
+  }, [data]);
+
+  useEffect(() => {
+    setGraphData(processedData);
+    setXKey(xAxisKey);
+    setYKeys(yAxisKeys);
+  }, [processedData, xAxisKey, yAxisKeys]);
+
+  const isValidGraphData = useMemo(() => {
+    return yKeys.length > 0 && xKey !== null;
+  }, [xKey, yKeys]);
+
+  useEffect(() => {
+    if (prevIsValidGraphData.current !== isValidGraphData) {
+      isValidGraph(isValidGraphData);
+      showTable(!isValidGraphData);
+      prevIsValidGraphData.current = isValidGraphData;
+    }
+  }, [isValidGraphData, isValidGraph, showTable]);
 
   if (!isValidGraphData) {
     return (

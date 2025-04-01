@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -13,27 +13,27 @@ import { useTheme } from "../ThemeContext";
 const DataTable: React.FC<DataTableProps> = ({ data }) => {
   const { theme } = useTheme();
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [processedData, setProcessedData] = useState<any[]>([]);
-  const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!data) {
-      setHeaders([]);
-      setProcessedData([]);
-      return;
-    }
-
-    const normalizedData = Array.isArray(data) ? data : [data];
-
-    if (typeof normalizedData[0] === "object") {
-      setHeaders(Object.keys(normalizedData[0]));
-      setProcessedData(normalizedData);
-    } else {
-      setHeaders(["Value"]);
-      setProcessedData(normalizedData.map((item) => ({ Value: item })));
-    }
+  const normalizedData = useMemo(() => {
+    if (!data) return [];
+    return Array.isArray(data) ? data : [data];
   }, [data]);
+
+  const headers = useMemo(() => {
+    if (normalizedData.length === 0) return [];
+    if (typeof normalizedData[0] === "object") {
+      return Object.keys(normalizedData[0]);
+    }
+    return ["Value"];
+  }, [normalizedData]);
+
+  const processedData = useMemo(() => {
+    if (headers.length === 0) return [];
+    if (headers[0] === "Value") {
+      return normalizedData.map((item) => ({ Value: item }));
+    }
+    return normalizedData;
+  }, [headers, normalizedData]);
 
   const columnHelper = createColumnHelper<any>();
 
@@ -92,7 +92,6 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
       }}
     >
       <div
-        ref={tableContainerRef}
         className="overflow-auto max-h-96 scrollbar-thin"
         style={{
           scrollbarColor: `${theme.colors.textSecondary} ${theme.colors.surface}`,
