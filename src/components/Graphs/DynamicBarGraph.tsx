@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { ResponsiveBar } from "@nivo/bar";
 import { useTheme } from "../../ThemeContext";
 
@@ -17,102 +17,87 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
   const [graphData, setGraphData] = useState<any[]>([]);
   const [xKey, setXKey] = useState<string | null>(null);
   const [yKeys, setYKeys] = useState<string[]>([]);
-  const prevIsValidGraphData = useRef<boolean>(false);
+  const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
 
-  const { processedData, xAxisKey, yAxisKeys } = useMemo(() => {
-    const result = {
-      processedData: [] as any[],
-      xAxisKey: null as string | null,
-      yAxisKeys: [] as string[],
-    };
+  useEffect(() => {
+    processApiData(data);
+  }, [data]);
 
+  const processApiData = (data: any[]) => {
     try {
-      if (!data || data.length === 0) return result;
+      if (!data || data.length === 0) {
+        setIsValidGraphData(false);
+        return;
+      }
 
       const firstItem = data[0];
       const keys = Object.keys(firstItem);
+
       let foundBranchId = false;
 
       if (keys.includes("branch_id")) {
-        result.xAxisKey = "branch_id";
+        setXKey("branch_id");
         foundBranchId = true;
       } else if (keys.includes("customer_id")) {
-        result.xAxisKey = "customer_id";
+        setXKey("customer_id");
         foundBranchId = true;
       }
 
       const numericKeys = keys.filter((key) => {
-        if (foundBranchId && key === "branch_id") return false;
-        const value = firstItem[key];
+        if (foundBranchId && key === "branch_id") {
+          return false;
+        }
         return (
-          typeof value === "number" ||
-          (typeof value === "string" && !isNaN(Number(value)))
+          typeof firstItem[key] === "number" ||
+          (typeof firstItem[key] === "string" && !isNaN(Number(firstItem[key])))
         );
       });
 
       if (numericKeys.length >= 1) {
         if (!foundBranchId) {
-          const xCandidates = numericKeys.filter(
-            (key) =>
-              !key.toLowerCase().endsWith("id") &&
-              !key.toLowerCase().endsWith("code") &&
-              key.toLowerCase() !== "phone_number"
-          );
-          result.xAxisKey =
-            xCandidates.length > 0 ? xCandidates[0] : numericKeys[0];
+          setXKey(numericKeys[0]);
         }
 
-        result.yAxisKeys = numericKeys.filter(
+        const filteredNumericKeys = numericKeys.filter(
           (key) =>
             !key.toLowerCase().endsWith("id") &&
             !key.toLowerCase().endsWith("code") &&
             key.toLowerCase() !== "phone_number"
         );
 
-        result.processedData = data.map((item) => {
+        setYKeys(filteredNumericKeys);
+
+        const normalizedData = data.map((item) => {
           const newItem: { [key: string]: string | number } = {};
           keys.forEach((key) => {
-            const value = item[key];
             if (
-              typeof value === "number" ||
-              (typeof value === "string" && !isNaN(Number(value)))
+              typeof item[key] === "number" ||
+              (typeof item[key] === "string" && !isNaN(Number(firstItem[key])))
             ) {
               newItem[key] =
-                typeof value === "string" ? parseFloat(value) : value;
-            } else if (typeof value === "string") {
-              newItem[key] = value;
+                typeof item[key] === "string"
+                  ? parseFloat(item[key])
+                  : item[key];
+            } else if (typeof item[key] === "string") {
+              newItem[key] = item[key];
             }
           });
           return newItem;
         });
+        setGraphData(normalizedData);
+        setIsValidGraphData(filteredNumericKeys.length > 0);
+      } else {
+        setIsValidGraphData(false);
       }
-
-      return result;
     } catch (error) {
       console.error("Error processing data:", error);
-      return result;
+      setIsValidGraphData(false);
     }
-  }, [data]);
-
-  useEffect(() => {
-    setGraphData(processedData);
-    setXKey(xAxisKey);
-    setYKeys(yAxisKeys);
-  }, [processedData, xAxisKey, yAxisKeys]);
-
-  const isValidGraphData = useMemo(() => {
-    return yKeys.length > 0 && xKey !== null;
-  }, [xKey, yKeys]);
-
-  useEffect(() => {
-    if (prevIsValidGraphData.current !== isValidGraphData) {
-      isValidGraph(isValidGraphData);
-      showTable(!isValidGraphData);
-      prevIsValidGraphData.current = isValidGraphData;
-    }
-  }, [isValidGraphData, isValidGraph, showTable]);
+  };
 
   if (!isValidGraphData) {
+    showTable(true);
+    isValidGraph(false);
     return (
       <div
         style={{
@@ -135,15 +120,19 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
     );
   }
 
+  showTable(false);
+  isValidGraph(true);
+
+  // Define stunning solid colors
   const stunningColors = [
-    "#FF6B6B",
-    "#4ECDC4",
-    "#45B7D1",
-    "#96CEB4",
-    "#FFEEAD",
-    "#D4A5A5",
-    "#9B59B6",
-    "#3498DB",
+    "#FF6B6B", // Vibrant Coral
+    "#4ECDC4", // Turquoise
+    "#45B7D1", // Sky Blue
+    "#96CEB4", // Mint Green
+    "#FFEEAD", // Soft Yellow
+    "#D4A5A5", // Dusty Pink
+    "#9B59B6", // Amethyst Purple
+    "#3498DB", // Bright Blue
   ];
 
   return (
@@ -171,7 +160,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
           margin={{ top: 50, right: 130, bottom: 50, left: 60 }}
           padding={0.1}
           groupMode="grouped"
-          colors={stunningColors}
+          colors={stunningColors} // Use solid stunning colors
           borderRadius={4}
           axisBottom={{
             tickSize: 5,
@@ -206,7 +195,10 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
               },
               legend: { text: { fill: theme.colors.textSecondary } },
               domain: {
-                line: { stroke: theme.colors.textSecondary, strokeWidth: 1 },
+                line: {
+                  stroke: theme.colors.textSecondary,
+                  strokeWidth: 1,
+                },
               },
             },
             tooltip: {

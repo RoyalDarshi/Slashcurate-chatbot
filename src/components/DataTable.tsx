@@ -82,6 +82,8 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     getSortedRowModel: getSortedRowModel(),
   });
 
+  console.log("Table is rendering");
+
   return (
     <div
       className="rounded-lg border shadow-sm transition-colors duration-200"

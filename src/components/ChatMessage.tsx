@@ -1,11 +1,14 @@
-import React, {
-  useRef,
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-} from "react";
-import { Bot, User, Table, LineChart, Edit3, Download } from "lucide-react";
+import React, { useRef, useEffect, useState } from "react";
+import {
+  Bot,
+  User,
+  Table,
+  LineChart,
+  Edit3,
+  Download,
+  ThumbsUp,
+  ThumbsDown,
+} from "lucide-react";
 import {
   BsHandThumbsDown,
   BsHandThumbsDownFill,
@@ -28,27 +31,9 @@ import MiniLoader from "./MiniLoader";
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({ message, loading, onEditMessage, selectedConnection }) => {
     const { theme } = useTheme();
-
-    // Memoize parsed data to prevent unnecessary re-parsing
-    const parsedData = useMemo(() => {
-      try {
-        return JSON.parse(message.content);
-      } catch {
-        return null;
-      }
-    }, [message.content]);
-
-    // Memoize table data
-    const tableData = useMemo(() => {
-      if (!parsedData?.answer) return [];
-      return Array.isArray(parsedData.answer)
-        ? parsedData.answer
-        : [parsedData.answer];
-    }, [parsedData]);
-
-    const [csvData, setCsvData] = useState<any[]>(tableData);
+    const [csvData, setCsvData] = useState<any[]>([]);
     const [hasNumericData, setHasNumericData] = useState<boolean>(true);
-    const [showTable, setShowTable] = useState<boolean>(!parsedData?.answer);
+    const [showTable, setShowTable] = useState<boolean>(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [hasChanges, setHasChanges] = useState(false);
@@ -57,21 +42,25 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [isDisliked, setIsDisliked] = useState(false);
     const [showDislikeOptions, setShowDislikeOptions] = useState(false);
     const [dislikeReason, setDislikeReason] = useState<string | null>(null);
-    const [isHovered, setIsHovered] = useState(false);
+
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
 
-    // Update csvData only when tableData actually changes
     useEffect(() => {
-      setCsvData(tableData);
-    }, [tableData]);
+      try {
+        const data = JSON.parse(message.content);
+        if (data && data.answer) {
+          const tableData = Array.isArray(data.answer)
+            ? data.answer
+            : [data.answer];
+          setCsvData(tableData);
+        }
+      } catch {
+        setCsvData([]);
+        setShowTable(true);
+      }
+    }, [message.content]);
 
-    // Reset showTable when message changes
-    useEffect(() => {
-      setShowTable(!parsedData?.answer);
-    }, [parsedData]);
-
-    // Handle clicks outside dislike options
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -88,20 +77,20 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         document.removeEventListener("mousedown", handleClickOutside);
     }, [showDislikeOptions]);
 
-    const handleSwap = useCallback(() => {
+    const handleSwap = () => {
       if (hasNumericData) setShowTable((prev) => !prev);
-    }, [hasNumericData]);
+    };
 
-    const handleEdit = useCallback(() => setIsEditing(true), []);
+    const handleEdit = () => setIsEditing(true);
 
-    const handleLike = useCallback(() => {
-      setIsLiked((prev) => !prev);
+    const handleLike = () => {
+      setIsLiked(!isLiked);
       setIsDisliked(false);
       setShowDislikeOptions(false);
       setDislikeReason(null);
-    }, []);
+    };
 
-    const handleDislike = useCallback(() => {
+    const handleDislike = () => {
       if (isDisliked) {
         setIsDisliked(false);
         setDislikeReason(null);
@@ -110,24 +99,21 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         setShowDislikeOptions(true);
         setIsLiked(false);
       }
-    }, [isDisliked]);
+    };
 
-    const handleDislikeOption = useCallback((reason: string) => {
+    const handleDislikeOption = (reason: string) => {
       setDislikeReason(reason);
       setIsDisliked(true);
       setShowDislikeOptions(false);
-    }, []);
+    };
 
-    const handleContentChange = useCallback(
-      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newContent = e.target.value;
-        setEditedContent(newContent);
-        setHasChanges(newContent !== message.content);
-      },
-      [message.content]
-    );
+    const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newContent = e.target.value;
+      setEditedContent(newContent);
+      setHasChanges(newContent !== message.content);
+    };
 
-    const handleSave = useCallback(async () => {
+    const handleSave = async () => {
       setIsEditing(false);
       if (!selectedConnection || !editedContent.trim() || !hasChanges) return;
       try {
@@ -136,22 +122,20 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       } catch (error) {
         console.error("Error updating message:", error);
       }
-    }, [
-      editedContent,
-      hasChanges,
-      message.id,
-      onEditMessage,
-      selectedConnection,
-    ]);
+    };
 
-    const handleCancel = useCallback(() => {
+    const handleCancel = () => {
       setEditedContent(message.content);
       setHasChanges(false);
       setIsEditing(false);
-    }, [message.content]);
+    };
 
-    const handleDownloadTableXLSX = useCallback(() => {
+    const handleDownloadTableXLSX = () => {
       try {
+        const data = JSON.parse(message.content);
+        const tableData = Array.isArray(data.answer)
+          ? data.answer
+          : [data.answer];
         const worksheet = XLSX.utils.json_to_sheet(tableData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
@@ -159,33 +143,30 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       } catch (error) {
         console.error("Error downloading XLSX:", error);
       }
-    }, [tableData]);
+    };
 
-    const handleDownloadGraph = useCallback(
-      async (resolution: "low" | "high") => {
-        if (graphRef.current) {
-          try {
-            const scale = resolution === "high" ? 2 : 1;
-            const canvas = await html2canvas(graphRef.current, {
-              scale,
-              useCORS: true,
-              logging: false,
-            });
-            const image = canvas.toDataURL("image/png");
-            const link = document.createElement("a");
-            link.href = image;
-            link.download = `graph_${resolution}.png`;
-            link.click();
-          } catch (error) {
-            console.error("Error downloading graph:", error);
-          }
+    const handleDownloadGraph = async (resolution: "low" | "high") => {
+      if (graphRef.current) {
+        try {
+          const scale = resolution === "high" ? 2 : 1;
+          const canvas = await html2canvas(graphRef.current, {
+            scale,
+            useCORS: true,
+            logging: false,
+          });
+          const image = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = image;
+          link.download = `graph_${resolution}.png`;
+          link.click();
+        } catch (error) {
+          console.error("Error downloading graph:", error);
         }
-        setShowResolutionOptions(false);
-      },
-      []
-    );
+      }
+      setShowResolutionOptions(false);
+    };
 
-    const renderContent = useCallback(() => {
+    const renderContent = () => {
       if (loading) {
         return (
           <div
@@ -208,159 +189,156 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         );
       }
 
-      if (parsedData?.answer) {
-        return (
-          <div className="relative">
-            <div
-              className="absolute -right-12 top-0 flex flex-col items-center"
-              style={{ gap: theme.spacing.sm }}
-            >
-              <motion.button
-                whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
-                whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
-                onClick={handleSwap}
-                className={`rounded-full p-2 shadow-sm transition-colors duration-200 ${
-                  !hasNumericData
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:opacity-85"
-                }`}
-                style={{ background: theme.colors.surface }}
-                disabled={!hasNumericData}
+      try {
+        console.log("Chat message is rendering");
+        const data = JSON.parse(message.content);
+        if (data?.answer) {
+          const tableData = Array.isArray(data.answer)
+            ? data.answer
+            : [data.answer];
+          return (
+            <div className="relative">
+              <div
+                className="absolute -right-12 top-0 flex flex-col items-center"
+                style={{ gap: theme.spacing.sm }}
               >
-                <CustomTooltip
-                  title={
+                <motion.button
+                  whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
+                  whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
+                  onClick={handleSwap}
+                  className={`rounded-full p-2 shadow-sm transition-colors duration-200 ${
                     !hasNumericData
-                      ? "Graph unavailable: No numeric data to visualize"
-                      : showTable
-                      ? "Switch to Graph View"
-                      : "Switch to Table View"
-                  }
-                  position="top"
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:opacity-85"
+                  }`}
+                  style={{ background: theme.colors.surface }}
+                  disabled={!hasNumericData}
                 >
-                  {showTable ? (
-                    <LineChart
-                      size={20}
-                      style={{ color: theme.colors.accent }}
-                    />
-                  ) : (
-                    <Table size={20} style={{ color: theme.colors.accent }} />
-                  )}
-                </CustomTooltip>
-              </motion.button>
-              {!showTable && hasNumericData && (
-                <div className="relative">
+                  <CustomTooltip
+                    title={
+                      !hasNumericData
+                        ? "Graph unavailable: No numeric data to visualize"
+                        : showTable
+                        ? "Switch to Graph View"
+                        : "Switch to Table View"
+                    }
+                    position="top"
+                  >
+                    {showTable ? (
+                      <LineChart
+                        size={20}
+                        style={{ color: theme.colors.accent }}
+                      />
+                    ) : (
+                      <Table size={20} style={{ color: theme.colors.accent }} />
+                    )}
+                  </CustomTooltip>
+                </motion.button>
+                {!showTable && hasNumericData && (
+                  <div className="relative">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() =>
+                        setShowResolutionOptions(!showResolutionOptions)
+                      }
+                      className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                      style={{ background: theme.colors.surface }}
+                    >
+                      <CustomTooltip title="Download Graph" position="top">
+                        <Download
+                          size={20}
+                          style={{ color: theme.colors.accent }}
+                        />
+                      </CustomTooltip>
+                    </motion.button>
+                    {showResolutionOptions && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute top-full mt-2 right-0 shadow-lg rounded-md p-2 z-10"
+                        style={{ background: theme.colors.surface }}
+                      >
+                        <button
+                          onClick={() => handleDownloadGraph("low")}
+                          className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          style={{ color: theme.colors.text }}
+                        >
+                          Low Resolution
+                        </button>
+                        <button
+                          onClick={() => handleDownloadGraph("high")}
+                          className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          style={{ color: theme.colors.text }}
+                        >
+                          High Resolution
+                        </button>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+                {showTable && (
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowResolutionOptions((prev) => !prev)}
+                    onClick={handleDownloadTableXLSX}
                     className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
                     style={{ background: theme.colors.surface }}
                   >
-                    <CustomTooltip title="Download Graph" position="top">
+                    <CustomTooltip title="Download XLSX" position="top">
                       <Download
                         size={20}
                         style={{ color: theme.colors.accent }}
                       />
                     </CustomTooltip>
                   </motion.button>
-                  {showResolutionOptions && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="absolute top-full mt-2 right-0 shadow-lg rounded-md p-2 z-10"
-                      style={{ background: theme.colors.surface }}
+                )}
+              </div>
+              <div
+                className="p-4 shadow-md"
+                style={{
+                  background: theme.colors.surface,
+                  borderRadius: theme.borderRadius.large,
+                  boxShadow: `0 2px 6px ${theme.colors.text}20`,
+                  width: "100%",
+                }}
+              >
+                {showTable ? (
+                  <>
+                    <DataTable data={tableData} />
+                    <div
+                      className="mt-2 text-right text-xs"
+                      style={{ color: theme.colors.textSecondary }}
                     >
-                      <button
-                        onClick={() => handleDownloadGraph("low")}
-                        className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        style={{ color: theme.colors.text }}
-                      >
-                        Low Resolution
-                      </button>
-                      <button
-                        onClick={() => handleDownloadGraph("high")}
-                        className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        style={{ color: theme.colors.text }}
-                      >
-                        High Resolution
-                      </button>
-                    </motion.div>
-                  )}
-                </div>
-              )}
-              {showTable && (
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleDownloadTableXLSX}
-                  className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                  style={{ background: theme.colors.surface }}
-                >
-                  <CustomTooltip title="Download XLSX" position="top">
-                    <Download
-                      size={20}
-                      style={{ color: theme.colors.accent }}
+                      {new Date(message.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div ref={graphRef} style={{ width: "100%" }}>
+                    <DynamicBarGraph
+                      showTable={setShowTable}
+                      isValidGraph={setHasNumericData}
+                      data={data.answer}
                     />
-                  </CustomTooltip>
-                </motion.button>
-              )}
-            </div>
-            <div
-              className="p-4 shadow-md"
-              style={{
-                background: theme.colors.surface,
-                borderRadius: theme.borderRadius.large,
-                boxShadow: `0 2px 6px ${theme.colors.text}20`,
-                width: "100%",
-              }}
-            >
-              {showTable ? (
-                <>
-                  <DataTable data={tableData} />
-                  <div
-                    className="mt-2 text-right text-xs"
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    {new Date(message.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    <div
+                      className="mt-2 text-right text-xs"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
+                      {new Date(message.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
                   </div>
-                </>
-              ) : (
-                <div ref={graphRef} style={{ width: "100%" }}>
-                  <DynamicBarGraph
-                    showTable={setShowTable}
-                    isValidGraph={setHasNumericData}
-                    data={parsedData.answer}
-                  />
-                  <div
-                    className="mt-2 text-right text-xs"
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    {new Date(message.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        );
-      }
-
-      return (
-        <div
-          className="p-4 shadow-md"
-          style={{
-            background: theme.colors.surface,
-            borderRadius: theme.borderRadius.large,
-            borderTopLeftRadius: message.isBot ? "0" : undefined,
-            borderTopRightRadius: !message.isBot ? "0" : undefined,
-            boxShadow: `0 2px 6px ${theme.colors.text}20`,
-          }}
-        >
+          );
+        }
+        return (
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -375,35 +353,49 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           >
             {message.content}
           </ReactMarkdown>
+        );
+      } catch {
+        return (
           <div
-            className="mt-2 text-right text-xs"
-            style={{ color: theme.colors.textSecondary }}
+            className="p-4 shadow-md"
+            style={{
+              background: theme.colors.surface,
+              borderRadius: theme.borderRadius.large,
+              borderTopLeftRadius: message.isBot ? "0" : undefined,
+              borderTopRightRadius: !message.isBot ? "0" : undefined,
+              boxShadow: `0 2px 6px ${theme.colors.text}20`,
+            }}
           >
-            {new Date(message.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ node, ...props }) => (
+                  <p
+                    className="whitespace-pre-wrap break-words leading-relaxed"
+                    style={{ color: theme.colors.text }}
+                    {...props}
+                  />
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+            <div
+              className="mt-2 text-right text-xs"
+              style={{ color: theme.colors.textSecondary }}
+            >
+              {new Date(message.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
           </div>
-        </div>
-      );
-    }, [
-      loading,
-      parsedData,
-      tableData,
-      message.content,
-      message.timestamp,
-      message.isBot,
-      theme,
-      showTable,
-      hasNumericData,
-      handleSwap,
-      handleDownloadTableXLSX,
-      handleDownloadGraph,
-      showResolutionOptions,
-    ]);
+        );
+      }
+    };
 
     return (
-      <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
+      <div className="flex w-full " style={{ marginBottom: theme.spacing.md }}>
         {message.isBot ? (
           <div
             className="flex w-full items-start"
@@ -417,12 +409,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             </div>
             <div
               className="max-w-[80%] flex flex-col gap-2"
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
               style={{ position: "relative" }}
             >
               {renderContent()}
+              {/* Updated condition to keep buttons visible when dislike options are shown */}
               {!loading && (
+                //isHovered || isLiked || isDisliked || showDislikeOptions) && (
                 <div className="flex justify-end items-center gap-2">
                   <CustomTooltip
                     title={isLiked ? "Remove like" : "Like this response"}
@@ -578,14 +570,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         )}
       </div>
     );
-  },
-  (prevProps, nextProps) =>
-    prevProps.message.content === nextProps.message.content &&
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.message.timestamp === nextProps.message.timestamp &&
-    prevProps.message.isBot === nextProps.message.isBot &&
-    prevProps.loading === nextProps.loading &&
-    prevProps.selectedConnection === nextProps.selectedConnection
+  }
 );
 
 export default ChatMessage;
