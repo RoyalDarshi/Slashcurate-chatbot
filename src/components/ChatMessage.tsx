@@ -202,27 +202,27 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 className="absolute -right-12 top-0 flex flex-col items-center"
                 style={{ gap: theme.spacing.sm }}
               >
-                <motion.button
-                  whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
-                  whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
-                  onClick={handleSwap}
-                  className={`rounded-full p-2 shadow-sm transition-colors duration-200 ${
+                <CustomTooltip
+                  title={
                     !hasNumericData
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:opacity-85"
-                  }`}
-                  style={{ background: theme.colors.surface }}
-                  disabled={!hasNumericData}
+                      ? "Graph unavailable: No numeric data to visualize"
+                      : showTable
+                      ? "Switch to Graph View"
+                      : "Switch to Table View"
+                  }
+                  position="top"
                 >
-                  <CustomTooltip
-                    title={
+                  <motion.button
+                    whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
+                    whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
+                    onClick={handleSwap}
+                    className={`rounded-full p-2 shadow-sm transition-colors duration-200 ${
                       !hasNumericData
-                        ? "Graph unavailable: No numeric data to visualize"
-                        : showTable
-                        ? "Switch to Graph View"
-                        : "Switch to Table View"
-                    }
-                    position="top"
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:opacity-85"
+                    }`}
+                    style={{ background: theme.colors.surface }}
+                    disabled={!hasNumericData}
                   >
                     {showTable ? (
                       <LineChart
@@ -232,26 +232,27 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     ) : (
                       <Table size={20} style={{ color: theme.colors.accent }} />
                     )}
-                  </CustomTooltip>
-                </motion.button>
+                  </motion.button>
+                </CustomTooltip>
                 {!showTable && hasNumericData && (
                   <div className="relative">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() =>
-                        setShowResolutionOptions(!showResolutionOptions)
-                      }
-                      className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                      style={{ background: theme.colors.surface }}
-                    >
-                      <CustomTooltip title="Download Graph" position="top">
+                    <CustomTooltip title="Download Graph" position="top">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() =>
+                          setShowResolutionOptions(!showResolutionOptions)
+                        }
+                        className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                        style={{ background: theme.colors.surface }}
+                      >
                         <Download
                           size={20}
-                          style={{ color: theme.colors.accent }}
+                          className="border-none"
+                          style={{ color: theme.colors.accent, border: "none" }}
                         />
-                      </CustomTooltip>
-                    </motion.button>
+                      </motion.button>
+                    </CustomTooltip>
                     {showResolutionOptions && (
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
@@ -261,14 +262,14 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       >
                         <button
                           onClick={() => handleDownloadGraph("low")}
-                          className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          className="block w-full border-none text-left px-2 py-1 hover:bg-gray-500"
                           style={{ color: theme.colors.text }}
                         >
                           Low Resolution
                         </button>
                         <button
                           onClick={() => handleDownloadGraph("high")}
-                          className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          className="block w-full border-none text-left px-2 py-1 hover:bg-gray-500"
                           style={{ color: theme.colors.text }}
                         >
                           High Resolution
@@ -278,20 +279,20 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   </div>
                 )}
                 {showTable && (
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleDownloadTableXLSX}
-                    className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                    style={{ background: theme.colors.surface }}
-                  >
-                    <CustomTooltip title="Download XLSX" position="top">
+                  <CustomTooltip title="Download XLSX" position="top">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleDownloadTableXLSX}
+                      className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                      style={{ background: theme.colors.surface }}
+                    >
                       <Download
                         size={20}
                         style={{ color: theme.colors.accent }}
                       />
-                    </CustomTooltip>
-                  </motion.button>
+                    </motion.button>
+                  </CustomTooltip>
                 )}
               </div>
               <div

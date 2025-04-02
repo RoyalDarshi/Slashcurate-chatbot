@@ -1,13 +1,7 @@
-import { useReducer, useRef, useEffect, useCallback, useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
-import {
-  Message,
-  Connection,
-  ChatState,
-  ChatAction,
-  ChatInterfaceProps,
-} from "../types";
+import { Message, Connection, ChatInterfaceProps } from "../types";
 import { CHATBOT_API_URL } from "../config";
 import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
@@ -23,31 +17,13 @@ interface Session {
   isFavorite: boolean;
 }
 
-const initialState: ChatState = {
-  isLoading: false,
-  input: "",
-  isSubmitting: false,
-};
-
-const reducer = (state: ChatState, action: ChatAction): ChatState => {
-  switch (action.type) {
-    case "SET_LOADING":
-      return { ...state, isLoading: action.payload };
-    case "SET_INPUT":
-      return { ...state, input: action.payload };
-    case "SET_SUBMITTING":
-      return { ...state, isSubmitting: action.payload };
-    default:
-      return state;
-  }
-};
-
 const ChatInterface: React.FC<
   ChatInterfaceProps & { onSessionSelected?: (session: Session) => void }
 > = ({ onCreateConSelected, onSessionSelected }) => {
   const { theme } = useTheme();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [input, setInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const messagesRef = useRef<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -58,10 +34,10 @@ const ChatInterface: React.FC<
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null); // Track current session
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
-  const token = sessionStorage.getItem("token")??"";
+  const token = sessionStorage.getItem("token") ?? "";
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -114,13 +90,12 @@ const ChatInterface: React.FC<
       sessions.push(newSession);
       localStorage.setItem("chatSessions", JSON.stringify(sessions));
       setCurrentSessionId(newSession.id);
-      localStorage.setItem("currentSessionId", newSession.id); // Persist the new session ID
+      localStorage.setItem("currentSessionId", newSession.id);
     }
   }, [currentSessionId]);
 
   useEffect(() => {
     const loadInitialMessages = () => {
-      // Check for an existing current session first
       const currentSessionId = localStorage.getItem("currentSessionId");
       if (currentSessionId) {
         const storedSessions = localStorage.getItem("chatSessions");
@@ -132,22 +107,20 @@ const ChatInterface: React.FC<
           messagesRef.current = currentSession.messages;
           setMessages(currentSession.messages);
           setCurrentSessionId(currentSessionId);
-          return; // Exit after loading the current session
+          return;
         }
       }
 
-      // If no current session, check for a newly selected session
       const selectedSession = localStorage.getItem("selectedSession");
       if (selectedSession) {
         const session: Session = JSON.parse(selectedSession);
         messagesRef.current = session.messages;
         setMessages(session.messages);
         setCurrentSessionId(session.id);
-        localStorage.setItem("currentSessionId", session.id); // Persist the session ID
-        localStorage.removeItem("selectedSession"); // Clean up after transferring
+        localStorage.setItem("currentSessionId", session.id);
+        localStorage.removeItem("selectedSession");
         if (onSessionSelected) onSessionSelected(session);
       } else {
-        // Fallback to unsaved messages if no session is selected
         const storedMessages = localStorage.getItem("chatMessages");
         if (storedMessages) {
           messagesRef.current = JSON.parse(storedMessages);
@@ -161,7 +134,7 @@ const ChatInterface: React.FC<
   }, [theme, onSessionSelected]);
 
   const fetchConnections = async () => {
-    setConnectionsLoading(false);
+    setConnectionsLoading(true);
     const token = sessionStorage.getItem("token");
     if (!token) {
       toast.error("User ID not found. Please log in again.", {
@@ -240,22 +213,22 @@ const ChatInterface: React.FC<
   };
 
   const handleNewChat = () => {
-    saveSession(); // Save the current session before resetting
+    saveSession();
     messagesRef.current = [];
     setMessages([]);
     localStorage.removeItem("selectedConnection");
     localStorage.setItem("chatMessages", JSON.stringify([]));
     setConnectionError(null);
-    dispatch({ type: "SET_INPUT", payload: "" });
+    setInput("");
     setEditingMessageId(null);
     setCurrentSessionId(null);
-    localStorage.removeItem("currentSessionId"); // Clear the current session ID
+    localStorage.removeItem("currentSessionId");
   };
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!state.input.trim() || state.isLoading) return;
+      if (!input.trim() || isSubmitting) return;
       if (!selectedConnection) {
         toast.error(
           "No connection selected. Please create or select a connection first.",
@@ -271,11 +244,11 @@ const ChatInterface: React.FC<
         return;
       }
 
-      dispatch({ type: "SET_SUBMITTING", payload: true });
+      setIsSubmitting(true);
 
       const userMessage: Message = {
         id: Date.now().toString(),
-        content: state.input,
+        content: input,
         isBot: false,
         timestamp: new Date().toISOString(),
       };
@@ -293,7 +266,7 @@ const ChatInterface: React.FC<
         botLoadingMessage,
       ];
       setMessages([...messagesRef.current]);
-      dispatch({ type: "SET_INPUT", payload: "" });
+      setInput("");
       setEditingMessageId(null);
       scrollToBottom();
 
@@ -304,7 +277,7 @@ const ChatInterface: React.FC<
         if (!selectedConnectionObj)
           throw new Error("Selected connection not found");
 
-        const response = await askChatbot(state.input, selectedConnectionObj);
+        const response = await askChatbot(input, selectedConnectionObj);
 
         const botResponseMessage: Message = {
           id: Date.now().toString(),
@@ -330,107 +303,106 @@ const ChatInterface: React.FC<
       } finally {
         setLoadingMessageId(null);
         setMessages([...messagesRef.current]);
-        dispatch({ type: "SET_SUBMITTING", payload: false });
+        setIsSubmitting(false);
         saveMessages();
       }
     },
-    [
-      state.input,
-      state.isLoading,
-      selectedConnection,
-      connections,
-      saveMessages,
-    ]
+    [input, isSubmitting, selectedConnection, connections, saveMessages]
   );
 
-  const handleEditMessage = async (id: string, newContent: string) => {
-    const messageIndex = messagesRef.current.findIndex((msg) => msg.id === id);
-    if (messageIndex === -1) return;
-
-    if (!selectedConnection) {
-      toast.error(
-        "No connection selected. Please create or select a connection first.",
-        {
-          style: {
-            background: theme.colors.surface,
-            color: theme.colors.error,
-            border: `1px solid ${theme.colors.error}20`,
-          },
-        }
+  const handleEditMessage = useCallback(
+    async (id: string, newContent: string) => {
+      const messageIndex = messagesRef.current.findIndex(
+        (msg) => msg.id === id
       );
-      return;
-    }
+      if (messageIndex === -1) return;
 
-    messagesRef.current = messagesRef.current.map((msg) =>
-      msg.id === id ? { ...msg, content: newContent } : msg
-    );
-    setMessages([...messagesRef.current]);
-    setEditingMessageId(id);
-
-    const editedMessage = messagesRef.current[messageIndex];
-    if (!editedMessage.isBot && selectedConnection) {
-      const botLoadingMessage: Message = {
-        id: `loading-${Date.now()}`,
-        content: "loading...",
-        isBot: true,
-        timestamp: new Date().toISOString(),
-      };
-      setLoadingMessageId(botLoadingMessage.id);
-
-      if (
-        messageIndex + 1 < messagesRef.current.length &&
-        messagesRef.current[messageIndex + 1].isBot
-      ) {
-        messagesRef.current[messageIndex + 1] = botLoadingMessage;
-      } else {
-        messagesRef.current.splice(messageIndex + 1, 0, botLoadingMessage);
+      if (!selectedConnection) {
+        toast.error(
+          "No connection selected. Please create or select a connection first.",
+          {
+            style: {
+              background: theme.colors.surface,
+              color: theme.colors.error,
+              border: `1px solid ${theme.colors.error}20`,
+            },
+          }
+        );
+        return;
       }
+
+      messagesRef.current = messagesRef.current.map((msg) =>
+        msg.id === id ? { ...msg, content: newContent } : msg
+      );
       setMessages([...messagesRef.current]);
+      setEditingMessageId(id);
 
-      try {
-        const selectedConnectionObj = connections.find(
-          (conn) => conn.connectionName === selectedConnection
-        );
-        if (!selectedConnectionObj)
-          throw new Error("Selected connection not found");
-
-        const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-          question: newContent,
-          connection: selectedConnectionObj,
-        });
-        const botResponse = JSON.stringify(response.data, null, 2);
-        const botResponseMessage: Message = {
-          id: Date.now().toString(),
-          content: botResponse,
+      const editedMessage = messagesRef.current[messageIndex];
+      if (!editedMessage.isBot && selectedConnection) {
+        const botLoadingMessage = {
+          id: `loading-${Date.now()}`,
+          content: "loading...",
           isBot: true,
           timestamp: new Date().toISOString(),
         };
+        setLoadingMessageId(botLoadingMessage.id);
 
-        messagesRef.current = messagesRef.current.map((msg) =>
-          msg.id === botLoadingMessage.id ? botResponseMessage : msg
-        );
+        if (
+          messageIndex + 1 < messagesRef.current.length &&
+          messagesRef.current[messageIndex + 1].isBot
+        ) {
+          messagesRef.current[messageIndex + 1] = botLoadingMessage;
+        } else {
+          messagesRef.current.splice(messageIndex + 1, 0, botLoadingMessage);
+        }
         setMessages([...messagesRef.current]);
-        setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
-      } catch (error) {
-        console.error("Error updating message:", error);
-        const errorMessage: Message = {
-          id: Date.now().toString(),
-          content: "Sorry, an error occurred. Please try again.",
-          isBot: true,
-          timestamp: new Date().toISOString(),
-        };
-        messagesRef.current = messagesRef.current.map((msg) =>
-          msg.id === botLoadingMessage.id ? errorMessage : msg
-        );
-        setMessages([...messagesRef.current]);
-        setTimeout(() => scrollToMessage(errorMessage.id), 100);
-      } finally {
-        setLoadingMessageId(null);
-        saveMessages();
-        setEditingMessageId(null);
+
+        try {
+          const selectedConnectionObj = connections.find(
+            (conn) => conn.connectionName === selectedConnection
+          );
+          if (!selectedConnectionObj)
+            throw new Error("Selected connection not found");
+
+          const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
+            question: newContent,
+            connection: selectedConnectionObj,
+          });
+          const botResponse = JSON.stringify(response.data, null, 2);
+          const botResponseMessage = {
+            id: Date.now().toString(),
+            content: botResponse,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          messagesRef.current = messagesRef.current.map((msg) =>
+            msg.id === botLoadingMessage.id ? botResponseMessage : msg
+          );
+          setMessages([...messagesRef.current]);
+          setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
+        } catch (error) {
+          console.error("Error updating message:", error);
+          const errorMessage = {
+            id: Date.now().toString(),
+            content: "Sorry, an error occurred. Please try again.",
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+          messagesRef.current = messagesRef.current.map((msg) =>
+            msg.id === botLoadingMessage.id ? errorMessage : msg
+          );
+          setMessages([...messagesRef.current]);
+          setTimeout(() => scrollToMessage(errorMessage.id), 100);
+        } finally {
+          setLoadingMessageId(null);
+          saveMessages();
+          setEditingMessageId(null);
+        }
       }
-    }
-  };
+    },
+    [selectedConnection, connections, scrollToMessage, saveMessages, theme]
+  );
 
   return (
     <div
@@ -507,13 +479,6 @@ const ChatInterface: React.FC<
                 message={message}
                 loading={message.id === loadingMessageId}
                 onEditMessage={handleEditMessage}
-                onDeleteMessage={(id) => {
-                  messagesRef.current = messagesRef.current.filter(
-                    (msg) => msg.id !== id
-                  );
-                  setMessages([...messagesRef.current]);
-                  saveMessages();
-                }}
                 selectedConnection={selectedConnection}
               />
             </div>
@@ -532,12 +497,9 @@ const ChatInterface: React.FC<
         }}
       >
         <ChatInput
-          input={state.input}
-          isLoading={state.isLoading}
-          onInputChange={(value) =>
-            dispatch({ type: "SET_INPUT", payload: value })
-          }
-          isSubmitting={state.isSubmitting}
+          input={input}
+          isSubmitting={isSubmitting}
+          onInputChange={setInput}
           onSubmit={handleSubmit}
           connections={connections}
           selectedConnection={selectedConnection}

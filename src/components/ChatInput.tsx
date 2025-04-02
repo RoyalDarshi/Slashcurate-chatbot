@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Send, Database, ChevronDown, PlusCircle } from "lucide-react"; // Added PlusCircle
+import { Send, Database, ChevronDown, PlusCircle } from "lucide-react";
 import { ChatInputProps, Connection } from "../types";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
@@ -8,23 +8,21 @@ import CustomTooltip from "./CustomTooltip";
 
 const ChatInput: React.FC<ChatInputProps> = ({
   input,
-  isLoading,
   isSubmitting,
   onInputChange,
   onSubmit,
   connections = [],
   selectedConnection,
   onSelect,
-  onNewChat, // New prop for handling new chat
+  onNewChat,
 }) => {
   const { theme } = useTheme();
-  const isDisabled = isLoading || isSubmitting;
+  const isDisabled = isSubmitting;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const MAX_CHARS = 500;
 
-  // Existing useEffect hooks remain unchanged
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -48,7 +46,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Existing handlers remain unchanged
   const handleConnectionSelect = (connection: string | null) => {
     if (connection === "create-con") {
       onSelect({ value: "create-con" });
@@ -91,9 +88,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
           ...connections.map((connection: Connection) => ({
             value: connection.connectionName,
             label: connection.connectionName,
-            isAdmin: connection.isAdmin, // Add isAdmin to options
+            isAdmin: connection.isAdmin,
           })),
         ];
+
   return (
     <form
       onSubmit={onSubmit}
@@ -158,7 +156,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
               style={{ color: theme.colors.accent, opacity: 0.9 }}
               className="transition-transform duration-300 hover:scale-105 flex-shrink-0"
             />
-            {/* Tooltip for Connection Dropdown */}
             <CustomTooltip
               title="Change or create a connection"
               position="left"
@@ -282,7 +279,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
               </div>
             )}
             <CustomTooltip title="Create a new session" position="bottom">
-              {/* New Chat Button */}
               <button
                 type="button"
                 onClick={onNewChat}
@@ -310,7 +306,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
             </CustomTooltip>
           </div>
 
-          {/* Tooltip for Send Button */}
           <CustomTooltip title="Ask Question" position="bottom">
             <button
               type="submit"
