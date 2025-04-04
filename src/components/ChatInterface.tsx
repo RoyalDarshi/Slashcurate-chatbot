@@ -2,12 +2,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import { Message, Connection, ChatInterfaceProps } from "../types";
-import { CHATBOT_API_URL } from "../config";
+import { API_URL, CHATBOT_API_URL } from "../config";
 import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
-import { askChatbot, getConnectionDetails, getUserConnections } from "../api";
+import { askChatbot, getUserConnections } from "../api";
 
 interface Session {
   id: string;
@@ -35,6 +35,10 @@ const ChatInterface: React.FC<
   const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<{
+    [messageId: string]: { count: number; isFavorited: boolean };
+  }>({});
+
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
   const token = sessionStorage.getItem("token") ?? "";
@@ -168,10 +172,6 @@ const ChatInterface: React.FC<
           "selectedConnection",
           defaultConnection?.connectionName || ""
         );
-
-        if (defaultConnection) {
-          await getConnectionDetails(token, defaultConnection);
-        }
       }
       setConnectionError(null);
     } catch (error) {
@@ -180,6 +180,19 @@ const ChatInterface: React.FC<
       setConnectionError("Failed to make connection. Please try again.");
     } finally {
       setConnectionsLoading(false);
+    }
+  };
+
+  const updateSessions = (updatedMessages: Message[]) => {
+    const storedSessions = localStorage.getItem("chatSessions");
+    if (storedSessions && currentSessionId) {
+      const sessions: Session[] = JSON.parse(storedSessions);
+      const updatedSessions = sessions.map((session) =>
+        session.id === currentSessionId
+          ? { ...session, messages: updatedMessages }
+          : session
+      );
+      localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
     }
   };
 
@@ -193,18 +206,12 @@ const ChatInterface: React.FC<
         (conn) => conn.connectionName === option.value.connectionName
       );
       if (selectedConnectionObj) {
-        try {
-          await getConnectionDetails(token, selectedConnectionObj);
-          setSelectedConnection(selectedConnectionObj.connectionName);
-          localStorage.setItem(
-            "selectedConnection",
-            selectedConnectionObj.connectionName
-          );
-          setConnectionError(null);
-        } catch (error) {
-          console.error("Error fetching connection details:", error);
-          setConnectionError("Failed to make connection. Please try again.");
-        }
+        setSelectedConnection(selectedConnectionObj.connectionName);
+        localStorage.setItem(
+          "selectedConnection",
+          selectedConnectionObj.connectionName
+        );
+        setConnectionError(null);
       }
     } else {
       setSelectedConnection(null);
@@ -309,6 +316,136 @@ const ChatInterface: React.FC<
     },
     [input, isSubmitting, selectedConnection, connections, saveMessages]
   );
+
+  const findBotResponse = (messageId: string) => {
+    try {
+      const messages = messagesRef.current;
+
+      // Find the index of the user's question
+      const questionIndex = messages.findIndex((msg) => msg.id === messageId);
+
+      // Validate message sequence
+      if (
+        questionIndex === -1 ||
+        questionIndex + 1 >= messages.length ||
+        messages[questionIndex].isBot
+      ) {
+        return null;
+      }
+
+      // Get the next message which should be the bot response
+      const botResponse = messages[questionIndex + 1];
+
+      // Verify it's actually a bot response
+      if (!botResponse.isBot) return null;
+
+      // Parse the bot response content
+      const parsedResponse = JSON.parse(botResponse.content);
+
+      // Validate response structure
+      const isValidResponse =
+        parsedResponse && (parsedResponse.answer || parsedResponse.sql_query);
+
+      return isValidResponse
+        ? {
+            ...botResponse,
+            parsedContent: {
+              answer: Array.isArray(parsedResponse.answer)
+                ? parsedResponse.answer
+                : [parsedResponse.answer],
+              sql_query: parsedResponse.sql_query || "",
+              explanation: parsedResponse.explanation || "",
+            },
+          }
+        : null;
+    } catch (error) {
+      console.error("Error parsing bot response:", error);
+      return null;
+    }
+  };
+
+  const handleFavoriteMessage = async (messageId: string) => {
+    try {
+      const token = sessionStorage.getItem("token");
+      const questionMessage = messages.find((m) => m.id === messageId);
+      const botResponse = findBotResponse(messageId);
+
+      if (!questionMessage) {
+        toast.error("Message not found");
+        return;
+      }
+      console.log(botResponse);
+
+      const response = await axios.post(
+        `${API_URL}/favorite`,
+        {
+          question: {
+            id: questionMessage.id,
+            content: questionMessage.content,
+          },
+          response: botResponse
+            ? {
+                id: botResponse.id,
+                query: botResponse.parsedContent.sql_query,
+              }
+            : null,
+          connection: selectedConnection,
+          token,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Update state and UI
+      setFavorites((prev) => ({
+        ...prev,
+        [messageId]: {
+          count: response.data.count,
+          isFavorited: true,
+        },
+      }));
+
+      updateMessageFavoriteStatus(messageId, response.data.count, true);
+      toast.success("Question & response favorited");
+    } catch (error) {
+      toast.error("Failed to favorite question");
+    }
+  };
+
+  const handleUnfavoriteMessage = async (messageId: string) => {
+    try {
+      const token = sessionStorage.getItem("token");
+      const response = await axios.delete(
+        `${API_URL}/messages/${messageId}/favorite`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setFavorites((prev) => ({
+        ...prev,
+        [messageId]: {
+          count: response.data.count,
+          isFavorited: false,
+        },
+      }));
+
+      updateMessageFavoriteStatus(messageId, response.data.count, false);
+    } catch (error) {
+      toast.error("Failed to unfavorite message");
+    }
+  };
+
+  const updateMessageFavoriteStatus = (
+    messageId: string,
+    count: number,
+    isFavorited: boolean
+  ) => {
+    const updatedMessages = messagesRef.current.map((msg) =>
+      msg.id === messageId ? { ...msg, favoriteCount: count, isFavorited } : msg
+    );
+
+    messagesRef.current = updatedMessages;
+    setMessages(updatedMessages);
+    updateSessions(updatedMessages);
+  };
 
   const handleEditMessage = useCallback(
     async (id: string, newContent: string) => {
@@ -427,7 +564,7 @@ const ChatInterface: React.FC<
         }}
       >
         {connectionsLoading ? (
-          <Loader />
+          <Loader text="" />
         ) : connections.length === 0 && !selectedConnection ? (
           <div
             className="flex flex-col items-center justify-center h-full text-center"
@@ -480,6 +617,10 @@ const ChatInterface: React.FC<
                 loading={message.id === loadingMessageId}
                 onEditMessage={handleEditMessage}
                 selectedConnection={selectedConnection}
+                onFavorite={handleFavoriteMessage}
+                onUnfavorite={handleUnfavoriteMessage}
+                favoriteCount={message.favoriteCount || 0}
+                isFavorited={message.isFavorited || false}
               />
             </div>
           ))

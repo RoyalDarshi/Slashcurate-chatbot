@@ -5,6 +5,9 @@ export interface Message {
   content: string;
   isBot: boolean;
   timestamp: string;
+  favoriteCount?: number;
+  isFavorited?: boolean;
+  sql_query: string;
 }
 
 export interface Connection {
@@ -43,9 +46,12 @@ export interface MessageListProps {
 export interface ChatMessageProps {
   message: Message;
   loading: boolean;
-  onEditMessage: (id: string, newContent: string, botResponse?: string) => void;
-  onDeleteMessage: (id: string) => void;
+  onEditMessage: (messageId: string, newContent: string) => Promise<void>;
   selectedConnection: string | null;
+  onFavorite: (messageId: string) => Promise<void>;
+  onUnfavorite: (messageId: string) => Promise<void>;
+  favoriteCount?: number;
+  isFavorited: boolean;
 }
 
 // Chat Input Types

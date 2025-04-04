@@ -4,13 +4,11 @@ import { useTheme } from "../../ThemeContext";
 
 interface DynamicBarGraphProps {
   data: any[];
-  showTable: (setTable: boolean) => void;
   isValidGraph: (validData: boolean) => void;
 }
 
 const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
   data,
-  showTable,
   isValidGraph,
 }) => {
   const { theme } = useTheme();
@@ -96,7 +94,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
   };
 
   if (!isValidGraphData) {
-    showTable(true);
     isValidGraph(false);
     return (
       <div
@@ -120,7 +117,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = ({
     );
   }
 
-  showTable(false);
   isValidGraph(true);
 
   // Define stunning solid colors
