@@ -54,8 +54,13 @@ const ChatInterface: React.FC<
     }
   }, []);
 
+  const prevMessagesLength = useRef(messages.length); // Add this line
+
   useEffect(() => {
-    if (!editingMessageId) {
+    const isNewMessageAdded = messages.length > prevMessagesLength.current;
+    prevMessagesLength.current = messages.length;
+
+    if (isNewMessageAdded && !editingMessageId) {
       scrollToBottom();
     }
   }, [messages, scrollToBottom, editingMessageId]);
@@ -395,14 +400,14 @@ const ChatInterface: React.FC<
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Update state and UI
-      setFavorites((prev) => ({
-        ...prev,
-        [messageId]: {
-          count: response.data.count,
-          isFavorited: true,
-        },
-      }));
+      // // Update state and UI
+      // setFavorites((prev) => ({
+      //   ...prev,
+      //   [messageId]: {
+      //     count: response.data.count,
+      //     isFavorited: true,
+      //   },
+      // }));
 
       updateMessageFavoriteStatus(messageId, response.data.count, true);
       toast.success("Question & response favorited");
@@ -414,18 +419,18 @@ const ChatInterface: React.FC<
   const handleUnfavoriteMessage = async (messageId: string) => {
     try {
       const token = sessionStorage.getItem("token");
-      const response = await axios.delete(
-        `${API_URL}/messages/${messageId}/favorite`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await axios.post(`${API_URL}/unfavorite`, {
+        token: token,
+        messageId: messageId,
+      });
 
-      setFavorites((prev) => ({
-        ...prev,
-        [messageId]: {
-          count: response.data.count,
-          isFavorited: false,
-        },
-      }));
+      // setFavorites((prev) => ({
+      //   ...prev,
+      //   [messageId]: {
+      //     count: response.data.count,
+      //     isFavorited: false,
+      //   },
+      // }));
 
       updateMessageFavoriteStatus(messageId, response.data.count, false);
     } catch (error) {

@@ -1,266 +1,198 @@
-import React, { useState, useEffect } from "react";
-import { Message } from "../types";
-import { Search, Heart } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 import { useTheme } from "../ThemeContext";
+import axios from "axios";
+import { API_URL } from "../config";
 
-interface Session {
+interface FavoriteMessage {
   id: string;
-  messages: Message[];
-  timestamp: string;
-  title: string;
+  text: string;
   isFavorite: boolean;
 }
 
-interface FavouritesProps {
-  onSessionClicked: () => void;
-}
-
-const Favourites: React.FC<FavouritesProps> = ({ onSessionClicked }) => {
+const Favorites = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [favorites, setFavorites] = useState<FavoriteMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
 
-  // Load favorite sessions from local storage on mount
+  // Fetch favorites from API
   useEffect(() => {
-    loadSessions();
+    const fetchFavorites = async () => {
+      try {
+        const token = sessionStorage.getItem("token");
+        if (!token) {
+          setError("Authentication required");
+          return;
+        }
+
+        const response = await axios.post(`${API_URL}/favorites`, { token });
+
+        if (response.status === 200) {
+          const formattedData: FavoriteMessage[] = response.data.map(
+            (item: any) => ({
+              id: item.question_id,
+              text: item.question,
+              isFavorite: true,
+            })
+          );
+          setFavorites(formattedData);
+          setError(null);
+        }
+      } catch (err) {
+        setError("Failed to load favorites");
+        console.error("API Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFavorites();
   }, []);
 
-  const loadSessions = () => {
+  // Handle favorite removal
+  const handleRemoveFavorite = async (id: string) => {
     try {
-      const storedSessions = localStorage.getItem("chatSessions");
-      if (storedSessions) {
-        const parsedSessions: Session[] = JSON.parse(storedSessions);
-        const favoriteSessions = parsedSessions.filter(
-          (session) => session.isFavorite
-        );
-        setSessions(favoriteSessions);
-        setFilteredSessions(favoriteSessions);
+      const token = sessionStorage.getItem("token");
+      if (!token) {
+        setError("Authentication required");
+        return;
       }
-    } catch (error) {
-      console.error("Failed to load sessions from local storage", error);
+
+      // API call to remove favorite
+      await axios.post(`${API_URL}/favorite/delete`, {
+        token: token,
+        messageId: id,
+      });
+
+      // Optimistically update UI
+      setFavorites((prev) => prev.filter((msg) => msg.id !== id));
+    } catch (err) {
+      // Revert UI if API call fails
+      setFavorites((prev) => [...prev]);
+      setError("Failed to remove favorite");
+      console.error("API Error:", err);
     }
   };
 
-  // Toggle favorite status and update local storage
-  const toggleFavorite = (sessionId: string) => {
-    const updatedSessions = sessions.map((session) =>
-      session.id === sessionId
-        ? { ...session, isFavorite: !session.isFavorite }
-        : session
-    );
-    const newSessions = updatedSessions.filter((session) => session.isFavorite);
-    setSessions(newSessions);
-    setFilteredSessions(newSessions);
-
-    const storedSessions = localStorage.getItem("chatSessions");
-    if (storedSessions) {
-      const allSessions: Session[] = JSON.parse(storedSessions);
-      const updatedAllSessions = allSessions.map((session) =>
-        session.id === sessionId
-          ? { ...session, isFavorite: !session.isFavorite }
-          : session
-      );
-      localStorage.setItem("chatSessions", JSON.stringify(updatedAllSessions));
-    }
-  };
-
-  // Handle search within favorite sessions
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    if (term) {
-      const filtered = sessions.filter((session) =>
-        session.title.toLowerCase().includes(term.toLowerCase())
-      );
-      setFilteredSessions(filtered);
-    } else {
-      setFilteredSessions(sessions);
-    }
-  };
-
-  // Handle session click to load messages on home page
-  const handleSessionClick = (session: Session) => {
-    localStorage.setItem("selectedSession", JSON.stringify(session));
-    onSessionClicked()
-  };
-
+  const filteredMessages = favorites.filter((message) =>
+    message.text.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   return (
     <div
-      className="flex h-full flex-col"
-      style={{
-        background: theme.colors.background,
-        padding: `${theme.spacing.lg} ${theme.spacing.xl}`,
-      }}
+      className={`p-4 h-full min-h-screen transition-colors duration-300`}
+      style={{ backgroundColor: theme.colors.background }}
     >
-      {/* Header with title and search bar */}
-      <div
-        className="flex items-center justify-between border-b pb-4 mb-6"
-        style={{ borderColor: theme.colors.border, gap: theme.spacing.lg }}
-      >
-        <h2
-          className="text-2xl font-semibold tracking-tight"
-          style={{
-            color: theme.colors.text,
-            fontFamily: theme.typography.fontFamily,
-            fontWeight: theme.typography.weight.bold,
-          }}
-        >
-          Favorite Sessions
-        </h2>
-        <div className="relative w-full max-w-sm">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: theme.colors.text }}
+          >
+            Favorite Messages ({filteredMessages.length})
+          </h1>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div
+            className="p-3 mb-4 rounded-lg"
+            style={{
+              backgroundColor: theme.colors.error,
+              color: theme.colors.text,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* Search Input */}
+        <div className="mb-6">
           <input
             type="text"
-            placeholder="Search favorite sessions"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="w-full px-4 py-2 pl-10 text-sm transition-all focus:outline-none"
+            placeholder="Search messages..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`w-full p-3 rounded-lg ${theme.typography.fontFamily} focus:outline-none`}
             style={{
-              background: theme.colors.surface,
+              backgroundColor: theme.colors.surface,
               color: theme.colors.text,
               border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.borderRadius.default,
-              boxShadow: theme.shadow.sm,
-              fontFamily: theme.typography.fontFamily,
-              fontSize: theme.typography.size.sm,
-              transition: theme.transition.default,
+              fontSize: theme.typography.size.base,
             }}
-            onFocus={(e) => (e.target.style.borderColor = theme.colors.accent)}
-            onBlur={(e) => (e.target.style.borderColor = theme.colors.border)}
-          />
-          <Search
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
-            style={{ color: theme.colors.textSecondary }}
           />
         </div>
-      </div>
 
-      {/* List of favorite sessions */}
-      <motion.div
-        className="flex-1 overflow-y-auto"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <AnimatePresence>
-          {filteredSessions.length > 0 ? (
-            filteredSessions.map((session) => (
-              <motion.div
-                key={session.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mb-3 px-4 py-3 cursor-pointer border-b"
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center" style={{ color: theme.colors.text }}>
+            <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full mb-2" />
+            <p>Loading favorites...</p>
+          </div>
+        )}
+
+        {/* Favorites List */}
+        {!loading && (
+          <div className="space-y-3">
+            {filteredMessages.map((message) => (
+              <div
+                key={message.id}
+                className={`p-4 rounded-lg flex items-center justify-between transition-all`}
                 style={{
-                  background: `${theme.colors.accent}20`,
-                  borderColor: `${theme.colors.border}50`,
-                  borderRadius: theme.borderRadius.default,
-                  transition: theme.transition.default,
-                }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.background = `${theme.colors.hover}90`)
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.background = `${theme.colors.accent}20`)
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <div
-                    className="flex-1"
-                    onClick={() => handleSessionClick(session)}
-                  >
-                    <h3
-                      className="text-base font-medium truncate max-w-[70%]"
-                      style={{
-                        color: theme.colors.text,
-                        fontFamily: theme.typography.fontFamily,
-                        fontWeight: theme.typography.weight.medium,
-                      }}
-                    >
-                      {session.title}
-                    </h3>
-                    <p
-                      className="text-sm"
-                      style={{
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.typography.fontFamily,
-                        fontSize: theme.typography.size.sm,
-                      }}
-                    >
-                      {new Date(session.timestamp).toLocaleString([], {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="text-xs px-2 py-1 rounded"
-                      style={{
-                        background: theme.colors.accent + "10",
-                        color: theme.colors.accent,
-                        fontFamily: theme.typography.fontFamily,
-                        fontWeight: theme.typography.weight.medium,
-                      }}
-                    >
-                      {session.messages.length} msg
-                    </span>
-                    <motion.button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(session.id);
-                      }}
-                      className="p-1 rounded-full transition-colors"
-                    >
-                      <Heart
-                        className="h-5 w-5"
-                        style={{
-                          color: session.isFavorite
-                            ? theme.colors.accent
-                            : theme.colors.textSecondary,
-                          fill: session.isFavorite
-                            ? theme.colors.accent
-                            : "none",
-                        }}
-                      />
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="flex items-center justify-center h-full"
-              style={{ minHeight: "300px" }}
-            >
-              <p
-                className="text-base"
-                style={{
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.typography.fontFamily,
-                  fontSize: theme.typography.size.base,
-                  fontWeight: theme.typography.weight.normal,
-                  background: theme.colors.surface,
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  borderRadius: theme.borderRadius.default,
+                  backgroundColor: theme.colors.surface,
                   border: `1px solid ${theme.colors.border}`,
                 }}
               >
-                No favorite sessions found
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+                <span
+                  style={{
+                    color: theme.colors.text,
+                    fontSize: theme.typography.size.base,
+                  }}
+                >
+                  {message.text}
+                </span>
+
+                <button
+                  onClick={() => handleRemoveFavorite(message.id)}
+                  className="focus:outline-none hover:opacity-75"
+                  aria-label="Remove favorite"
+                  style={{ transition: theme.transition.default }}
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill={theme.colors.accent}
+                    stroke={theme.colors.accent}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ))}
+
+            {/* Empty State */}
+            {!loading && filteredMessages.length === 0 && (
+              <div
+                className="text-center p-4 rounded-lg"
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {searchQuery ? "No matches found" : "No favorite messages"}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default Favourites;
+export default Favorites;

@@ -87,24 +87,34 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     useEffect(() => {
       try {
         const data = JSON.parse(message.content);
-        if (data && data.answer) {
+        if (data?.answer) {
           const tableData = Array.isArray(data.answer)
             ? data.answer
             : [data.answer];
           setCsvData(tableData);
 
-          // Helper function to check numeric values
+          // Helper to check if a value is numeric
           const isNumeric = (value: any) =>
             (typeof value === "number" && !isNaN(value)) ||
             (typeof value === "string" && !isNaN(Number(value)));
 
-          // Check if the data is suitable for graphing
-          const hasGraphicalData = tableData.some((row) =>
-            Object.entries(row).some(
-              ([key, value]) =>
-                !key.toLowerCase().endsWith("id") && isNumeric(value)
-            )
-          );
+          // Check for graphical data suitability
+          let hasGraphicalData = false;
+          if (tableData.length > 0) {
+            const columns = Object.keys(tableData[0]);
+
+            // Filter out ID-like columns and check if remaining columns are fully numeric
+            const numericColumns = columns.filter((key) => {
+              const isIdColumn = key.toLowerCase().endsWith("id");
+              if (isIdColumn) return false; // Skip ID columns
+
+              // Ensure EVERY value in the column is numeric
+              return tableData.every((row) => isNumeric(row[key]));
+            });
+
+            // Need at least two numeric columns for basic graphing (e.g., x-axis and y-axis)
+            hasGraphicalData = numericColumns.length >= 2;
+          }
 
           setHasNumericData(hasGraphicalData);
         } else {
@@ -524,17 +534,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                             .then(() => {
                               setCopied(true);
                               setCopyTooltipTxt("Copied!");
-                              // toast.success("Copied to clipboard!", {
-                              //   position: "top-center",
-                              //   autoClose: 2000,
-                              //   hideProgressBar: true,
-                              //   closeOnClick: false,
-                              //   pauseOnHover: true,
-                              //   draggable: true,
-                              //   progress: undefined,
-                              //   theme: "colored",
-                              //   transition: "Bounce",
-                              // });
                             })
                             .catch((error) => {
                               console.error("Copy failed:", error);
@@ -559,17 +558,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                             if (success) {
                               setCopied(true);
                               setCopyTooltipTxt("Copied!");
-                              // toast.success("Copied to clipboard!", {
-                              //   position: "top-center",
-                              //   autoClose: 2000,
-                              //   hideProgressBar: true,
-                              //   closeOnClick: false,
-                              //   pauseOnHover: true,
-                              //   draggable: true,
-                              //   progress: undefined,
-                              //   theme: "colored",
-                              //   transition: "Bounce",
-                              // });
                             } else {
                               toast.error("Copying failed. Try again.");
                             }
@@ -801,7 +789,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   boxShadow: `0 2px 6px ${theme.colors.text}20`,
                 }}
               >
-                <div className="absolute top-2 left-2 flex items-center gap-1">
+                <div className="absolute top-2 left-1 flex items-center gap-1">
                   <CustomTooltip
                     title={
                       isFavorited ? "Remove from favorites" : "Add to favorites"
@@ -826,12 +814,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       />
                     </motion.button>
                   </CustomTooltip>
-                  <span
+                  {/* <span
                     className="text-xs"
                     style={{ color: "rgba(255,255,255,0.8)" }}
                   >
                     {currentFavoriteCount}
-                  </span>
+                  </span> */}
                 </div>
                 <p
                   className="ml-3 whitespace-pre-wrap break-words"
