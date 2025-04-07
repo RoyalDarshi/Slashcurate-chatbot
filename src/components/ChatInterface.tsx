@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import { Message, Connection, ChatInterfaceProps } from "../types";
@@ -19,7 +19,7 @@ interface Session {
 
 const ChatInterface: React.FC<
   ChatInterfaceProps & { onSessionSelected?: (session: Session) => void }
-> = ({ onCreateConSelected, onSessionSelected }) => {
+> = memo(({ onCreateConSelected, onSessionSelected }) => {
   const { theme } = useTheme();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -381,37 +381,35 @@ const ChatInterface: React.FC<
       }
       console.log(botResponse);
 
-      const response = await axios.post(
-        `${API_URL}/favorite`,
-        {
-          question: {
-            id: questionMessage.id,
-            content: questionMessage.content,
-          },
-          response: botResponse
-            ? {
-                id: botResponse.id,
-                query: botResponse.parsedContent.sql_query,
-              }
-            : null,
-          connection: selectedConnection,
-          token,
+      const response = await axios.post(`${API_URL}/favorite`, {
+        question: {
+          id: questionMessage.id,
+          content: questionMessage.content,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        response: botResponse
+          ? {
+              id: botResponse.id,
+              query: botResponse.parsedContent.sql_query,
+            }
+          : null,
+        connection: selectedConnection,
+        token,
+      });
 
-      // // Update state and UI
-      // setFavorites((prev) => ({
-      //   ...prev,
-      //   [messageId]: {
-      //     count: response.data.count,
-      //     isFavorited: true,
-      //   },
-      // }));
+      // Update state and UI
+      setFavorites((prev) => ({
+        ...prev,
+        [messageId]: {
+          count: response.data.count,
+          isFavorited: true,
+        },
+      }));
+      console.log("response", response);
 
       updateMessageFavoriteStatus(messageId, response.data.count, true);
       toast.success("Question & response favorited");
     } catch (error) {
+      console.error("Error favoriting message:", error);
       toast.error("Failed to favorite question");
     }
   };
@@ -667,6 +665,21 @@ const ChatInterface: React.FC<
       )}
     </div>
   );
+});
+
+// Custom comparison function for props
+const areEqual = (
+  prevProps: ChatInterfaceProps & {
+    onSessionSelected?: (session: Session) => void;
+  },
+  nextProps: ChatInterfaceProps & {
+    onSessionSelected?: (session: Session) => void;
+  }
+) => {
+  return (
+    prevProps.onCreateConSelected === nextProps.onCreateConSelected &&
+    prevProps.onSessionSelected === nextProps.onSessionSelected
+  );
 };
 
-export default ChatInterface;
+export default memo(ChatInterface, areEqual);

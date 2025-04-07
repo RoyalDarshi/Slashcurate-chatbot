@@ -47,7 +47,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [csvData, setCsvData] = useState<any[]>([]);
     const [hasNumericData, setHasNumericData] = useState<boolean>(false);
     const [currentView, setCurrentView] = useState<"table" | "graph" | "query">(
-      "table"
+      "graph"
     );
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
@@ -115,12 +115,18 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             // Need at least two numeric columns for basic graphing (e.g., x-axis and y-axis)
             hasGraphicalData = numericColumns.length >= 2;
           }
-
+          if (hasGraphicalData) {
+            setCurrentView("graph");
+          } else {
+            setCurrentView("table");
+          }
           setHasNumericData(hasGraphicalData);
         } else {
+          setCurrentView("table");
           setHasNumericData(false);
         }
       } catch (error) {
+        setCurrentView("table");
         setCsvData([]);
         setHasNumericData(false);
       }
@@ -153,7 +159,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           await onFavorite(message.id);
           setCurrentFavoriteCount((prev) => prev + 1);
         }
-        setIsFavorited(!isFavorited);
+        // setIsFavorited(!isFavorited);
       } catch (error) {
         toast.error("Failed to update favorite status");
       }
@@ -321,7 +327,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               className="whitespace-pre-wrap break-words"
               style={{ color: theme.colors.text }}
             >
-              No data available.
+              No records found.
             </p>
             <div
               className="mt-2 text-right text-xs"
