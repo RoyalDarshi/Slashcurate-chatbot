@@ -54,7 +54,7 @@ const ChatInterface: React.FC<
     }
   }, []);
 
-  const prevMessagesLength = useRef(messages.length); // Add this line
+  const prevMessagesLength = useRef(messages.length);
 
   useEffect(() => {
     const isNewMessageAdded = messages.length > prevMessagesLength.current;
@@ -136,13 +136,18 @@ const ChatInterface: React.FC<
           setMessages(messagesRef.current);
         }
       }
+
+      // Scroll to bottom if there are messages after loading
+      if (messagesRef.current.length > 0) {
+        setTimeout(() => scrollToBottom(), 200); // Small delay to ensure DOM is updated
+      }
     };
 
     loadInitialMessages();
     fetchConnections();
-  }, [theme, onSessionSelected]);
+  }, [onSessionSelected, scrollToBottom]); // Added scrollToBottom to dependencies
 
-  const fetchConnections = async () => {
+  const fetchConnections = useCallback(async () => {
     setConnectionsLoading(true);
     const token = sessionStorage.getItem("token");
     if (!token) {
@@ -186,45 +191,51 @@ const ChatInterface: React.FC<
     } finally {
       setConnectionsLoading(false);
     }
-  };
+  }, [theme, mode]);
 
-  const updateSessions = (updatedMessages: Message[]) => {
-    const storedSessions = localStorage.getItem("chatSessions");
-    if (storedSessions && currentSessionId) {
-      const sessions: Session[] = JSON.parse(storedSessions);
-      const updatedSessions = sessions.map((session) =>
-        session.id === currentSessionId
-          ? { ...session, messages: updatedMessages }
-          : session
-      );
-      localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
-    }
-  };
-
-  const handleSelect = async (option: any) => {
-    if (option?.value === "create-con") {
-      onCreateConSelected();
-      setSelectedConnection(null);
-      localStorage.removeItem("selectedConnection");
-    } else if (option) {
-      const selectedConnectionObj = connections.find(
-        (conn) => conn.connectionName === option.value.connectionName
-      );
-      if (selectedConnectionObj) {
-        setSelectedConnection(selectedConnectionObj.connectionName);
-        localStorage.setItem(
-          "selectedConnection",
-          selectedConnectionObj.connectionName
+  const updateSessions = useCallback(
+    (updatedMessages: Message[]) => {
+      const storedSessions = localStorage.getItem("chatSessions");
+      if (storedSessions && currentSessionId) {
+        const sessions: Session[] = JSON.parse(storedSessions);
+        const updatedSessions = sessions.map((session) =>
+          session.id === currentSessionId
+            ? { ...session, messages: updatedMessages }
+            : session
         );
-        setConnectionError(null);
+        localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
       }
-    } else {
-      setSelectedConnection(null);
-      localStorage.removeItem("selectedConnection");
-    }
-  };
+    },
+    [currentSessionId]
+  );
 
-  const handleNewChat = () => {
+  const handleSelect = useCallback(
+    async (option: any) => {
+      if (option?.value === "create-con") {
+        onCreateConSelected();
+        setSelectedConnection(null);
+        localStorage.removeItem("selectedConnection");
+      } else if (option) {
+        const selectedConnectionObj = connections.find(
+          (conn) => conn.connectionName === option.value.connectionName
+        );
+        if (selectedConnectionObj) {
+          setSelectedConnection(selectedConnectionObj.connectionName);
+          localStorage.setItem(
+            "selectedConnection",
+            selectedConnectionObj.connectionName
+          );
+          setConnectionError(null);
+        }
+      } else {
+        setSelectedConnection(null);
+        localStorage.removeItem("selectedConnection");
+      }
+    },
+    [onCreateConSelected, connections]
+  );
+
+  const handleNewChat = useCallback(() => {
     saveSession();
     messagesRef.current = [];
     setMessages([]);
@@ -235,7 +246,7 @@ const ChatInterface: React.FC<
     setEditingMessageId(null);
     setCurrentSessionId(null);
     localStorage.removeItem("currentSessionId");
-  };
+  }, [saveSession]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -280,7 +291,6 @@ const ChatInterface: React.FC<
       setMessages([...messagesRef.current]);
       setInput("");
       setEditingMessageId(null);
-      scrollToBottom();
 
       try {
         const selectedConnectionObj = connections.find(
@@ -301,6 +311,7 @@ const ChatInterface: React.FC<
         messagesRef.current = messagesRef.current.map((msg) =>
           msg.id === botLoadingMessage.id ? botResponseMessage : msg
         );
+        setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
       } catch (error) {
         console.error("Error getting bot response:", error);
         const errorMessage: Message = {
@@ -312,6 +323,7 @@ const ChatInterface: React.FC<
         messagesRef.current = messagesRef.current.map((msg) =>
           msg.id === botLoadingMessage.id ? errorMessage : msg
         );
+        setTimeout(() => scrollToMessage(errorMessage.id), 100);
       } finally {
         setLoadingMessageId(null);
         setMessages([...messagesRef.current]);
@@ -319,17 +331,23 @@ const ChatInterface: React.FC<
         saveMessages();
       }
     },
-    [input, isSubmitting, selectedConnection, connections, saveMessages]
+    [
+      input,
+      isSubmitting,
+      selectedConnection,
+      connections,
+      saveMessages,
+      scrollToMessage,
+      mode,
+      theme,
+    ]
   );
 
-  const findBotResponse = (messageId: string) => {
+  const findBotResponse = useCallback((messageId: string) => {
     try {
       const messages = messagesRef.current;
-
-      // Find the index of the user's question
       const questionIndex = messages.findIndex((msg) => msg.id === messageId);
 
-      // Validate message sequence
       if (
         questionIndex === -1 ||
         questionIndex + 1 >= messages.length ||
@@ -338,16 +356,10 @@ const ChatInterface: React.FC<
         return null;
       }
 
-      // Get the next message which should be the bot response
       const botResponse = messages[questionIndex + 1];
-
-      // Verify it's actually a bot response
       if (!botResponse.isBot) return null;
 
-      // Parse the bot response content
       const parsedResponse = JSON.parse(botResponse.content);
-
-      // Validate response structure
       const isValidResponse =
         parsedResponse && (parsedResponse.answer || parsedResponse.sql_query);
 
@@ -367,54 +379,53 @@ const ChatInterface: React.FC<
       console.error("Error parsing bot response:", error);
       return null;
     }
-  };
+  }, []);
 
-  const handleFavoriteMessage = async (messageId: string) => {
-    try {
-      const token = sessionStorage.getItem("token");
-      const questionMessage = messages.find((m) => m.id === messageId);
-      const botResponse = findBotResponse(messageId);
+  const handleFavoriteMessage = useCallback(
+    async (messageId: string) => {
+      try {
+        const token = sessionStorage.getItem("token");
+        const questionMessage = messages.find((m) => m.id === messageId);
+        const botResponse = findBotResponse(messageId);
 
-      if (!questionMessage) {
-        toast.error("Message not found");
-        return;
+        if (!questionMessage) {
+          toast.error("Message not found");
+          return;
+        }
+
+        const response = await axios.post(`${API_URL}/favorite`, {
+          question: {
+            id: questionMessage.id,
+            content: questionMessage.content,
+          },
+          response: botResponse
+            ? {
+                id: botResponse.id,
+                query: botResponse.parsedContent.sql_query,
+              }
+            : null,
+          connection: selectedConnection,
+          token,
+        });
+
+        setFavorites((prev) => ({
+          ...prev,
+          [messageId]: {
+            count: response.data.count,
+            isFavorited: true,
+          },
+        }));
+        updateMessageFavoriteStatus(messageId, response.data.count, true);
+        toast.success("Question & response favorited");
+      } catch (error) {
+        console.error("Error favoriting message:", error);
+        toast.error("Failed to favorite question");
       }
-      console.log(botResponse);
+    },
+    [messages, selectedConnection, findBotResponse]
+  );
 
-      const response = await axios.post(`${API_URL}/favorite`, {
-        question: {
-          id: questionMessage.id,
-          content: questionMessage.content,
-        },
-        response: botResponse
-          ? {
-              id: botResponse.id,
-              query: botResponse.parsedContent.sql_query,
-            }
-          : null,
-        connection: selectedConnection,
-        token,
-      });
-
-      // Update state and UI
-      setFavorites((prev) => ({
-        ...prev,
-        [messageId]: {
-          count: response.data.count,
-          isFavorited: true,
-        },
-      }));
-      console.log("response", response);
-
-      updateMessageFavoriteStatus(messageId, response.data.count, true);
-      toast.success("Question & response favorited");
-    } catch (error) {
-      console.error("Error favoriting message:", error);
-      toast.error("Failed to favorite question");
-    }
-  };
-
-  const handleUnfavoriteMessage = async (messageId: string) => {
+  const handleUnfavoriteMessage = useCallback(async (messageId: string) => {
     try {
       const token = sessionStorage.getItem("token");
       const response = await axios.post(`${API_URL}/unfavorite`, {
@@ -422,33 +433,26 @@ const ChatInterface: React.FC<
         messageId: messageId,
       });
 
-      // setFavorites((prev) => ({
-      //   ...prev,
-      //   [messageId]: {
-      //     count: response.data.count,
-      //     isFavorited: false,
-      //   },
-      // }));
-
       updateMessageFavoriteStatus(messageId, response.data.count, false);
     } catch (error) {
       toast.error("Failed to unfavorite message");
     }
-  };
+  }, []);
 
-  const updateMessageFavoriteStatus = (
-    messageId: string,
-    count: number,
-    isFavorited: boolean
-  ) => {
-    const updatedMessages = messagesRef.current.map((msg) =>
-      msg.id === messageId ? { ...msg, favoriteCount: count, isFavorited } : msg
-    );
+  const updateMessageFavoriteStatus = useCallback(
+    (messageId: string, count: number, isFavorited: boolean) => {
+      const updatedMessages = messagesRef.current.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, favoriteCount: count, isFavorited }
+          : msg
+      );
 
-    messagesRef.current = updatedMessages;
-    setMessages(updatedMessages);
-    updateSessions(updatedMessages);
-  };
+      messagesRef.current = updatedMessages;
+      setMessages(updatedMessages);
+      updateSessions(updatedMessages);
+    },
+    [updateSessions]
+  );
 
   const handleEditMessage = useCallback(
     async (id: string, newContent: string) => {
@@ -667,7 +671,6 @@ const ChatInterface: React.FC<
   );
 });
 
-// Custom comparison function for props
 const areEqual = (
   prevProps: ChatInterfaceProps & {
     onSessionSelected?: (session: Session) => void;
@@ -678,7 +681,8 @@ const areEqual = (
 ) => {
   return (
     prevProps.onCreateConSelected === nextProps.onCreateConSelected &&
-    prevProps.onSessionSelected === nextProps.onSessionSelected
+    prevProps.onSessionSelected === nextProps.onSessionSelected &&
+    prevProps.messages === nextProps.messages
   );
 };
 

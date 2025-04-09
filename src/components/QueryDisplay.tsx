@@ -9,7 +9,7 @@ interface QueryDisplayProps {
 
 const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
   ({ query, title, language = "sql" }) => {
-    const { theme } = useTheme(); // Use the theme context
+    const { theme } = useTheme();
 
     const formattedQuery = useMemo(() => {
       if (typeof query === "string") {
@@ -28,35 +28,58 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
     const colorizedQuery = useMemo(() => {
       if (formattedQuery && typeof formattedQuery === "string") {
         if (language === "sql") {
+          // Improved regex patterns
           const keywords =
-            /\b(SELECT|FROM|WHERE|AND|OR|INSERT|UPDATE|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|GROUP BY|ORDER BY|LIMIT|OFFSET|AS|ON|DISTINCT|COUNT|AVG|SUM|MIN|MAX)\b/gi;
+            /\b(SELECT|FROM|WHERE|AND|OR|INSERT|UPDATE|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|GROUP\s+BY|ORDER\s+BY|LIMIT|OFFSET|AS|ON|DISTINCT|COUNT|AVG|SUM|MIN|MAX)\b/gi;
           const columns =
-            /\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*(?:,|\s+FROM|WHERE|AND|OR))/gi;
+            /\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*(?:,|\s+FROM|\s+WHERE|\s+AND|\s+OR|\s*\)))/gi;
           const tables =
-            /\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s+(?:FROM|JOIN|UPDATE|DELETE))/gi;
+            /\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s+(?:FROM|JOIN|UPDATE|DELETE)(?:\s|$))/gi;
           const strings = /'([^']*)'/g;
           const numbers = /\b\d+\b/g;
 
-          let coloredQuery = formattedQuery.replace(
-            keywords,
-            `<span style="color: ${theme.colors.accent};">$1</span>`
-          );
-          coloredQuery = coloredQuery.replace(
-            columns,
-            `<span style="color: ${theme.colors.success};">$1</span>`
-          );
-          coloredQuery = coloredQuery.replace(
-            tables,
-            `<span style="color: ${theme.colors.accent};">$1</span>`
-          );
+          // Escape special characters first to prevent HTML issues
+          let escapedQuery = formattedQuery
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+
+          // Apply replacements in a specific order to avoid overlap
+          let coloredQuery = escapedQuery;
+
+          // Strings first (highest specificity)
           coloredQuery = coloredQuery.replace(
             strings,
             `<span style="color: ${theme.colors.warning};">'$1'</span>`
           );
+
+          // Numbers
           coloredQuery = coloredQuery.replace(
             numbers,
-            `<span style="color: ${theme.colors.error};">$1</span>`
+            `<span style="color: ${theme.colors.error};">$&</span>`
           );
+
+          // Keywords (avoid overlapping with columns/tables)
+          coloredQuery = coloredQuery.replace(
+            keywords,
+            `<span style="color: ${theme.colors.accent};">$1</span>`
+          );
+
+          // Tables (after keywords to avoid overlap)
+          coloredQuery = coloredQuery.replace(tables, (match, p1) =>
+            keywords.test(match)
+              ? match
+              : `<span style="color: ${theme.colors.accent};">${p1}</span>`
+          );
+
+          // Columns (last, to avoid overlap with tables)
+          coloredQuery = coloredQuery.replace(columns, (match, p1) =>
+            keywords.test(match) || tables.test(match)
+              ? match
+              : `<span style="color: ${theme.colors.success};">${p1}</span>`
+          );
+
+          console.log("Colorized Query:", coloredQuery); // Debug output
 
           return <span dangerouslySetInnerHTML={{ __html: coloredQuery }} />;
         }
@@ -66,11 +89,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
     }, [formattedQuery, language, theme.colors]);
 
     return (
-      <div
-        style={{
-          backgroundColor: theme.colors.surface,
-        }}
-      >
+      <div style={{ backgroundColor: theme.colors.surface }}>
         {formattedQuery ? (
           <div className="query-content">
             {title && (
@@ -95,4 +114,15 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
   }
 );
 
-export default QueryDisplay;
+const areEqual = (
+  prevProps: QueryDisplayProps,
+  nextProps: QueryDisplayProps
+) => {
+  return (
+    prevProps.query === nextProps.query &&
+    prevProps.title === nextProps.title &&
+    prevProps.language === nextProps.language
+  );
+};
+
+export default React.memo(QueryDisplay, areEqual);

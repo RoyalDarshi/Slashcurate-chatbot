@@ -49,9 +49,9 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    validateUser();
-  }, []);
+  // useEffect(() => {
+  //   validateUser();
+  // }, []);
 
   const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
     sessionStorage.setItem("token", token);

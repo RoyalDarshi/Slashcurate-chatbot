@@ -46,9 +46,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const { theme } = useTheme();
     const [csvData, setCsvData] = useState<any[]>([]);
     const [hasNumericData, setHasNumericData] = useState<boolean>(false);
-    const [currentView, setCurrentView] = useState<"table" | "graph" | "query">(
-      "graph"
-    );
+    const [currentView, setCurrentView] = useState<
+      "table" | "graph" | "query" | "text"
+    >("text");
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [hasChanges, setHasChanges] = useState(false);
@@ -68,69 +68,43 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const dislikeRef = useRef<HTMLDivElement>(null);
     const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
-    // useEffect(() => {
-    //   try {
-    //     const data = JSON.parse(message.content);
-    //     if (data && data.answer) {
-    //       const tableData = Array.isArray(data.answer)
-    //         ? data.answer
-    //         : [data.answer];
-    //       setCsvData(tableData);
-    //     }
-    //   } catch {
-    //     setCsvData([]);
-    //     setCurrentView("table");
-    //   }
-    // }, [message.content]);
-
-    // Add this useEffect block (replace existing data-parsing logic):
-    useEffect(() => {
+    const parsedData = React.useMemo(() => {
       try {
-        const data = JSON.parse(message.content);
-        if (data?.answer) {
-          const tableData = Array.isArray(data.answer)
-            ? data.answer
-            : [data.answer];
-          setCsvData(tableData);
-
-          // Helper to check if a value is numeric
-          const isNumeric = (value: any) =>
-            (typeof value === "number" && !isNaN(value)) ||
-            (typeof value === "string" && !isNaN(Number(value)));
-
-          // Check for graphical data suitability
-          let hasGraphicalData = false;
-          if (tableData.length > 0) {
-            const columns = Object.keys(tableData[0]);
-
-            // Filter out ID-like columns and check if remaining columns are fully numeric
-            const numericColumns = columns.filter((key) => {
-              const isIdColumn = key.toLowerCase().endsWith("id");
-              if (isIdColumn) return false; // Skip ID columns
-
-              // Ensure EVERY value in the column is numeric
-              return tableData.every((row) => isNumeric(row[key]));
-            });
-
-            // Need at least two numeric columns for basic graphing (e.g., x-axis and y-axis)
-            hasGraphicalData = numericColumns.length >= 2;
-          }
-          if (hasGraphicalData) {
-            setCurrentView("graph");
-          } else {
-            setCurrentView("table");
-          }
-          setHasNumericData(hasGraphicalData);
-        } else {
-          setCurrentView("table");
-          setHasNumericData(false);
-        }
-      } catch (error) {
-        setCurrentView("table");
-        setCsvData([]);
-        setHasNumericData(false);
+        return JSON.parse(message.content);
+      } catch {
+        return null;
       }
     }, [message.content]);
+
+    useEffect(() => {
+      if (parsedData?.answer) {
+        const tableData = Array.isArray(parsedData.answer)
+          ? parsedData.answer
+          : [parsedData.answer];
+        setCsvData(tableData);
+
+        // Check for numeric data
+        const hasGraphicalData =
+          tableData.length > 0 &&
+          tableData.some((row) =>
+            Object.values(row).some(
+              (val) => typeof val === "number" && !isNaN(val)
+            )
+          );
+        setHasNumericData(hasGraphicalData);
+
+        // Set view based on data availability
+        if (tableData.length > 0) {
+          setCurrentView(hasGraphicalData ? "graph" : "table");
+        } else {
+          setCurrentView("text"); // No data, use text view
+        }
+      } else {
+        setCsvData([]);
+        setHasNumericData(false);
+        setCurrentView("text"); // No parsed data, default to text view
+      }
+    }, [parsedData]);
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -155,11 +129,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         if (isFavorited) {
           await onUnfavorite(message.id);
           setCurrentFavoriteCount((prev) => Math.max(prev - 1, 0));
+          setIsFavorited(false);
         } else {
           await onFavorite(message.id);
           setCurrentFavoriteCount((prev) => prev + 1);
+          setIsFavorited(true);
         }
-        // setIsFavorited(!isFavorited);
       } catch (error) {
         toast.error("Failed to update favorite status");
       }
@@ -271,10 +246,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         );
       }
 
-      let parsedData;
-      try {
-        parsedData = JSON.parse(message.content);
-      } catch {
+      if (!parsedData) {
         return (
           <div
             className="p-4 shadow-md"
@@ -312,93 +284,97 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         );
       }
 
-      if (!parsedData || !parsedData.answer || parsedData.answer.length === 0) {
-        return (
-          <div
-            className="p-4 shadow-md"
-            style={{
-              background: theme.colors.surface,
-              borderRadius: theme.borderRadius.large,
-              borderTopLeftRadius: "0",
-              boxShadow: `0 2px 6px ${theme.colors.text}20`,
-            }}
-          >
-            <p
-              className="whitespace-pre-wrap break-words"
-              style={{ color: theme.colors.text }}
-            >
-              No records found.
-            </p>
-            <div
-              className="mt-2 text-right text-xs"
-              style={{ color: theme.colors.textSecondary }}
-            >
-              {new Date(message.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </div>
-          </div>
-        );
-      }
-
-      const tableData = Array.isArray(parsedData.answer)
-        ? parsedData.answer
-        : [parsedData.answer];
-
       return (
         <div className="relative">
           <div
             className="absolute -right-12 top-0 flex flex-col items-center"
             style={{ gap: theme.spacing.sm }}
           >
-            {currentView === "table" && (
-              <>
-                <CustomTooltip
-                  title={
-                    !hasNumericData
-                      ? "No graph available for the selected data."
-                      : "Switch to Graph View"
-                  }
-                  position="top"
+            {/* Text Button: Show only in query view when no data */}
+            {currentView === "query" && csvData.length === 0 && (
+              <CustomTooltip title="Switch to Text View" position="top">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setCurrentView("text")}
+                  className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                  style={{ background: theme.colors.surface }}
                 >
-                  <motion.button
-                    whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
-                    whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
-                    onClick={() => setCurrentView("graph")}
-                    className={`rounded-full p-2 shadow-sm transition-colors duration-200 ${
-                      !hasNumericData
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:opacity-85"
-                    }`}
-                    style={{ background: theme.colors.surface }}
-                    disabled={!hasNumericData}
-                  >
-                    <LineChart
-                      size={20}
-                      style={{ color: theme.colors.accent }}
-                    />
-                  </motion.button>
-                </CustomTooltip>
-                <CustomTooltip title="Switch to Query View" position="top">
+                  <Table size={20} style={{ color: theme.colors.accent }} />
+                </motion.button>
+              </CustomTooltip>
+            )}
+
+            {/* Table Button: Show only when data exists and not in table view */}
+            {csvData.length > 0 && currentView !== "table" && (
+              <CustomTooltip title="Switch to Table View" position="top">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setCurrentView("table")}
+                  className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                  style={{ background: theme.colors.surface }}
+                >
+                  <Table size={20} style={{ color: theme.colors.accent }} />
+                </motion.button>
+              </CustomTooltip>
+            )}
+
+            {/* Graph Button: Show only when numeric data exists and not in graph view */}
+            {hasNumericData && currentView !== "graph" && (
+              <CustomTooltip title="Switch to Graph View" position="top">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setCurrentView("graph")}
+                  className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                  style={{ background: theme.colors.surface }}
+                >
+                  <LineChart size={20} style={{ color: theme.colors.accent }} />
+                </motion.button>
+              </CustomTooltip>
+            )}
+
+            {/* Query Button: Show only when sql_query exists and not in query view */}
+            {parsedData?.sql_query && currentView !== "query" && (
+              <CustomTooltip title="Switch to Query View" position="top">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setCurrentView("query")}
+                  className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                  style={{ background: theme.colors.surface }}
+                >
+                  <Database size={20} style={{ color: theme.colors.accent }} />
+                </motion.button>
+              </CustomTooltip>
+            )}
+
+            {/* Download XLSX Button: Show only in table view with data */}
+            {currentView === "table" && csvData.length > 0 && (
+              <CustomTooltip title="Download XLSX" position="top">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleDownloadTableXLSX}
+                  className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                  style={{ background: theme.colors.surface }}
+                >
+                  <Download size={20} style={{ color: theme.colors.accent }} />
+                </motion.button>
+              </CustomTooltip>
+            )}
+
+            {/* Download Graph Button: Show only in graph view with data */}
+            {currentView === "graph" && hasNumericData && (
+              <div className="relative">
+                <CustomTooltip title="Download Graph" position="top">
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setCurrentView("query")}
-                    className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                    style={{ background: theme.colors.surface }}
-                  >
-                    <Database
-                      size={20}
-                      style={{ color: theme.colors.accent }}
-                    />
-                  </motion.button>
-                </CustomTooltip>
-                <CustomTooltip title="Download XLSX" position="top">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleDownloadTableXLSX}
+                    onClick={() =>
+                      setShowResolutionOptions(!showResolutionOptions)
+                    }
                     className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
                     style={{ background: theme.colors.surface }}
                   >
@@ -408,200 +384,96 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     />
                   </motion.button>
                 </CustomTooltip>
-              </>
-            )}
-            {currentView === "graph" && hasNumericData && (
-              <>
-                <CustomTooltip title="Switch to Table View" position="top">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setCurrentView("table")}
-                    className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                {showResolutionOptions && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute top-full mt-2 right-0 shadow-lg rounded-md p-2 z-10"
                     style={{ background: theme.colors.surface }}
                   >
-                    <Table size={20} style={{ color: theme.colors.accent }} />
-                  </motion.button>
-                </CustomTooltip>
-                <CustomTooltip title="Switch to Query View" position="top">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setCurrentView("query")}
-                    className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                    style={{ background: theme.colors.surface }}
-                  >
-                    <Database
-                      size={20}
-                      style={{ color: theme.colors.accent }}
-                    />
-                  </motion.button>
-                </CustomTooltip>
-                <div className="relative">
-                  <CustomTooltip title="Download Graph" position="top">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() =>
-                        setShowResolutionOptions(!showResolutionOptions)
-                      }
-                      className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                      style={{ background: theme.colors.surface }}
+                    <button
+                      onClick={() => handleDownloadGraph("low")}
+                      className="block w-full border-none text-left px-2 py-1 hover:bg-gray-500"
+                      style={{ color: theme.colors.text }}
                     >
-                      <Download
-                        size={20}
-                        style={{ color: theme.colors.accent }}
-                      />
-                    </motion.button>
-                  </CustomTooltip>
-                  {showResolutionOptions && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="absolute top-full mt-2 right-0 shadow-lg rounded-md p-2 z-10"
-                      style={{ background: theme.colors.surface }}
+                      Low Resolution
+                    </button>
+                    <button
+                      onClick={() => handleDownloadGraph("high")}
+                      className="block w-full border-none text-left px-2 py-1 hover:bg-gray-500"
+                      style={{ color: theme.colors.text }}
                     >
-                      <button
-                        onClick={() => handleDownloadGraph("low")}
-                        className="block w-full border-none text-left px-2 py-1 hover:bg-gray-500"
-                        style={{ color: theme.colors.text }}
-                      >
-                        Low Resolution
-                      </button>
-                      <button
-                        onClick={() => handleDownloadGraph("high")}
-                        className="block w-full border-none text-left px-2 py-1 hover:bg-gray-500"
-                        style={{ color: theme.colors.text }}
-                      >
-                        High Resolution
-                      </button>
-                    </motion.div>
-                  )}
-                </div>
-              </>
-            )}
-            {currentView === "query" && (
-              <>
-                <CustomTooltip title="Switch to Table View" position="top">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setCurrentView("table")}
-                    className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                    style={{ background: theme.colors.surface }}
-                  >
-                    <Table size={20} style={{ color: theme.colors.accent }} />
-                  </motion.button>
-                </CustomTooltip>
-                <CustomTooltip
-                  title={
-                    !hasNumericData
-                      ? "No graph available for the selected data."
-                      : "Switch to Graph View"
-                  }
-                  position="top"
-                >
-                  <motion.button
-                    whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
-                    whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
-                    onClick={() => setCurrentView("graph")}
-                    className={`rounded-full p-2 shadow-sm transition-colors duration-200 ${
-                      !hasNumericData
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:opacity-85"
-                    }`}
-                    style={{ background: theme.colors.surface }}
-                    disabled={!hasNumericData}
-                  >
-                    <LineChart
-                      size={20}
-                      style={{ color: theme.colors.accent }}
-                    />
-                  </motion.button>
-                </CustomTooltip>
-                {parsedData.sql_query && (
-                  <CustomTooltip title={copyTooltipTxt} position="top">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        if (!canCopy) return; // Prevent clicking during cooldown
-
-                        setCanCopy(false); // Start cooldown
-
-                        if (
-                          navigator &&
-                          navigator.clipboard &&
-                          navigator.clipboard.writeText
-                        ) {
-                          // Modern browsers: Use Clipboard API
-                          navigator.clipboard
-                            .writeText(parsedData.sql_query)
-                            .then(() => {
-                              setCopied(true);
-                              setCopyTooltipTxt("Copied!");
-                            })
-                            .catch((error) => {
-                              console.error("Copy failed:", error);
-                              toast.error("Failed to copy. Try again.");
-                            })
-                            .finally(() => {
-                              // Re-enable after 2 seconds
-                              setTimeout(() => {
-                                setCopied(false);
-                                setCopyTooltipTxt("Copy SQL Query");
-                                setCanCopy(true);
-                              }, 2000);
-                            });
-                        } else {
-                          // Legacy browsers: Fallback using textarea + execCommand
-                          const textarea = document.createElement("textarea");
-                          textarea.value = parsedData.sql_query;
-                          document.body.appendChild(textarea);
-                          textarea.select();
-                          try {
-                            const success = document.execCommand("copy");
-                            if (success) {
-                              setCopied(true);
-                              setCopyTooltipTxt("Copied!");
-                            } else {
-                              toast.error("Copying failed. Try again.");
-                            }
-                          } catch (error) {
-                            console.error("Legacy copy failed:", error);
-                            toast.error(
-                              "Copying not supported in this browser."
-                            );
-                          } finally {
-                            document.body.removeChild(textarea);
-                            // Re-enable after 2 seconds
-                            setTimeout(() => {
-                              setCopied(false);
-                              setCopyTooltipTxt("Copy SQL Query");
-                              setCanCopy(true);
-                            }, 2000);
-                          }
-                        }
-                      }}
-                      className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                      style={{ background: theme.colors.surface }}
-                      disabled={!canCopy} // Disable button during cooldown
-                    >
-                      {copied ? (
-                        <Check
-                          size={20}
-                          style={{ color: theme.colors.accent }}
-                        />
-                      ) : (
-                        <Copy
-                          size={20}
-                          style={{ color: theme.colors.accent }}
-                        />
-                      )}
-                    </motion.button>
-                  </CustomTooltip>
+                      High Resolution
+                    </button>
+                  </motion.div>
                 )}
-              </>
+              </div>
+            )}
+
+            {/* Copy Query Button: Show only in query view with sql_query */}
+            {currentView === "query" && parsedData?.sql_query && (
+              <CustomTooltip title={copyTooltipTxt} position="top">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    if (!canCopy) return;
+                    setCanCopy(false);
+                    if (navigator?.clipboard?.writeText) {
+                      navigator.clipboard
+                        .writeText(parsedData.sql_query)
+                        .then(() => {
+                          setCopied(true);
+                          setCopyTooltipTxt("Copied!");
+                        })
+                        .catch((error) => {
+                          console.error("Copy failed:", error);
+                          toast.error("Failed to copy. Try again.");
+                        })
+                        .finally(() => {
+                          setTimeout(() => {
+                            setCopied(false);
+                            setCopyTooltipTxt("Copy SQL Query");
+                            setCanCopy(true);
+                          }, 2000);
+                        });
+                    } else {
+                      const textarea = document.createElement("textarea");
+                      textarea.value = parsedData.sql_query;
+                      document.body.appendChild(textarea);
+                      textarea.select();
+                      try {
+                        const success = document.execCommand("copy");
+                        if (success) {
+                          setCopied(true);
+                          setCopyTooltipTxt("Copied!");
+                        } else {
+                          toast.error("Copying failed. Try again.");
+                        }
+                      } catch (error) {
+                        console.error("Legacy copy failed:", error);
+                        toast.error("Copying not supported in this browser.");
+                      } finally {
+                        document.body.removeChild(textarea);
+                        setTimeout(() => {
+                          setCopied(false);
+                          setCopyTooltipTxt("Copy SQL Query");
+                          setCanCopy(true);
+                        }, 2000);
+                      }
+                    }
+                  }}
+                  className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                  style={{ background: theme.colors.surface }}
+                  disabled={!canCopy}
+                >
+                  {copied ? (
+                    <Check size={20} style={{ color: theme.colors.accent }} />
+                  ) : (
+                    <Copy size={20} style={{ color: theme.colors.accent }} />
+                  )}
+                </motion.button>
+              </CustomTooltip>
             )}
           </div>
           <div
@@ -613,9 +485,23 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               width: "100%",
             }}
           >
-            {currentView === "table" && (
+            {currentView === "text" && (
               <>
-                <DataTable data={tableData} />
+                <p style={{ color: theme.colors.text }}>No records found.</p>
+                <div
+                  className="mt-2 text-right text-xs"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  {new Date(message.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </>
+            )}
+            {currentView === "table" && csvData.length > 0 && (
+              <>
+                <DataTable data={csvData} />
                 <div
                   className="mt-2 text-right text-xs"
                   style={{ color: theme.colors.textSecondary }}
@@ -630,7 +516,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             {currentView === "graph" && hasNumericData && (
               <div ref={graphRef} style={{ width: "100%" }}>
                 <DynamicBarGraph
-                  data={parsedData.answer}
+                  data={csvData}
                   isValidGraph={setHasNumericData}
                 />
                 <div
@@ -820,12 +706,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       />
                     </motion.button>
                   </CustomTooltip>
-                  {/* <span
-                    className="text-xs"
-                    style={{ color: "rgba(255,255,255,0.8)" }}
-                  >
-                    {currentFavoriteCount}
-                  </span> */}
                 </div>
                 <p
                   className="ml-3 whitespace-pre-wrap break-words"
@@ -878,4 +758,17 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   }
 );
 
-export default ChatMessage;
+const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
+  return (
+    prevProps.message === nextProps.message &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.selectedConnection === nextProps.selectedConnection &&
+    prevProps.favoriteCount === nextProps.favoriteCount &&
+    prevProps.isFavorited === nextProps.isFavorited &&
+    prevProps.onEditMessage === nextProps.onEditMessage &&
+    prevProps.onFavorite === nextProps.onFavorite &&
+    prevProps.onUnfavorite === nextProps.onUnfavorite
+  );
+};
+
+export default React.memo(ChatMessage, areEqual);

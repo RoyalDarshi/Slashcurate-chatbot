@@ -10,23 +10,26 @@ import {
 import { DataTableProps } from "../types";
 import { useTheme } from "../ThemeContext";
 
-const DataTable: React.FC<DataTableProps> = ({ data }) => {
+const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const { theme } = useTheme();
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  // Normalize data to ensure it's an array
   const normalizedData = useMemo(() => {
     if (!data) return [];
     return Array.isArray(data) ? data : [data];
   }, [data]);
 
+  // Extract headers from the first row of data
   const headers = useMemo(() => {
     if (normalizedData.length === 0) return [];
-    if (typeof normalizedData[0] === "object") {
+    if (typeof normalizedData[0] === "object" && normalizedData[0] !== null) {
       return Object.keys(normalizedData[0]);
     }
     return ["Value"];
   }, [normalizedData]);
 
+  // Process data based on headers
   const processedData = useMemo(() => {
     if (headers.length === 0) return [];
     if (headers[0] === "Value") {
@@ -35,8 +38,8 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     return normalizedData;
   }, [headers, normalizedData]);
 
+  // Create column definitions
   const columnHelper = createColumnHelper<any>();
-
   const columns = useMemo(
     () =>
       headers.map((header) =>
@@ -65,7 +68,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
           cell: (info) => {
             const cellValue = info.getValue();
             return cellValue !== undefined && cellValue !== null
-              ? cellValue
+              ? String(cellValue)
               : "N/A";
           },
         })
@@ -73,6 +76,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     [headers, theme]
   );
 
+  // Initialize table instance
   const table = useReactTable({
     data: processedData,
     columns,
@@ -81,8 +85,6 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
-
-  console.log("Table is rendering");
 
   return (
     <div
@@ -106,32 +108,31 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
               style={{
                 background: theme.colors.surface,
                 color: theme.colors.text,
+                zIndex: 10, // Ensure header stays above content
               }}
             >
-              <tr>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <React.Fragment key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        scope="col"
-                        className="px-5 py-3 text-left text-sm font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer"
-                        style={{
-                          background: theme.colors.surface,
-                          color: theme.colors.text,
-                          borderBottom: `1px solid ${theme.colors.text}20`,
-                        }}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                      </th>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tr>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      scope="col"
+                      className="px-5 py-3 text-left text-sm font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer"
+                      style={{
+                        background: theme.colors.surface,
+                        color: theme.colors.text,
+                        borderBottom: `1px solid ${theme.colors.text}20`,
+                      }}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
             </thead>
             <tbody
               className="divide-y transition-colors duration-200"
@@ -143,7 +144,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
               {table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="transition-all duration-200 group"
+                  className="transition-all duration-200 hover:bg-opacity-5 hover:bg-gray-500"
                   style={{
                     background: theme.colors.surface,
                     color: theme.colors.text,
@@ -152,7 +153,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-5 py-4 whitespace-nowrap text-sm transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-200"
+                      className="px-5 py-4 whitespace-nowrap text-sm transition-colors duration-200"
                       style={{
                         color: theme.colors.textSecondary,
                         borderBottom: `1px solid ${theme.colors.text}20`,
@@ -172,6 +173,11 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
       </div>
     </div>
   );
+});
+
+// Custom comparison function for memoization
+const areEqual = (prevProps: DataTableProps, nextProps: DataTableProps) => {
+  return prevProps.data === nextProps.data;
 };
 
-export default DataTable;
+export default React.memo(DataTable, areEqual);
