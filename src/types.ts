@@ -19,6 +19,7 @@ export interface Connection {
 // Chat Interface Types
 export interface ChatInterfaceProps {
   onCreateConSelected: () => void;
+  onSessionSelected?: (session: any) => void;
 }
 
 export interface ChatState {

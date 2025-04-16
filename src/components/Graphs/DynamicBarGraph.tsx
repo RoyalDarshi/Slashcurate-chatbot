@@ -36,96 +36,68 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
     }, []);
 
     useEffect(() => {
-      const processApiData = (data: { [key: string]: any }[]) => {
-        console.log("Actual data:", data);
+      const processApiData = (dataset: any[]) => {
         try {
-          if (!data || data.length === 0) {
+          if (!dataset || dataset.length === 0) {
             setIsValidGraphData(false);
             return;
           }
 
-          const firstItem = data[0];
+          const firstItem = dataset[0];
           const keys = Object.keys(firstItem);
-          let localXKey = ""; // Use local variable for safe access
-          let foundBranchId = false;
-
-          if (keys.includes("branch_id")) {
-            localXKey = "branch_id";
-            foundBranchId = true;
-          } else if (keys.includes("customer_id")) {
-            localXKey = "customer_id";
-            foundBranchId = true;
-          }
-
-          // Identify numeric keys
-          const numericKeys = keys.filter((key) => {
-            if (foundBranchId && key === "branch_id") return false;
+          
+          // Find ID-like columns for x-axis
+          const idColumns = keys.filter(k => k.toLowerCase().endsWith("id"));
+          const hasIdColumn = idColumns.length > 0;
+          
+          // Set xKey priority: first ID column > first numeric column
+          let selectedXKey = hasIdColumn ? idColumns[0] : "";
+          const numericKeys = keys.filter(key => {
+            if (hasIdColumn && idColumns.includes(key)) return false;
             const value = firstItem[key];
-            return (
-              typeof value === "number" ||
-              (!isNaN(Number(value)) && value !== null && value !== "")
-            );
+            return !isNaN(Number(value)) && value !== "" && value !== null;
           });
 
-          if (numericKeys.length === 0) {
+          // Fallback to first numeric key if no ID columns
+          if (!selectedXKey && numericKeys.length > 0) {
+            selectedXKey = numericKeys[0];
+          }
+
+          // Validate we have viable keys
+          if (!selectedXKey || numericKeys.length === 0) {
             setIsValidGraphData(false);
             return;
           }
 
-          // If no branch_id or customer_id, fallback to the first numeric key as xKey
-          if (!foundBranchId) {
-            localXKey = numericKeys[0];
-          }
-
-          setXKey(localXKey); // Set state once determined
-
-          // Exclude IDs, codes, and phone numbers from yKeys
-          const filteredNumericKeys = numericKeys.filter(
-            (key) =>
-              !key.toLowerCase().endsWith("id") &&
-              !key.toLowerCase().endsWith("code") &&
-              !key.toLowerCase().endsWith("number") &&
-              key.toLowerCase() !== "phone_number" &&
-              key.toLowerCase() !== "role" &&
-              key.toLowerCase() !== "otp"
+          // Filter out non-quantitative yKeys
+          const quantitativeKeys = numericKeys.filter(key => 
+            !/[_-](?:id|code|number|phone|identifier|pincode|pin|phone_number)$/i.test(key)
           );
 
-          setYKeys(filteredNumericKeys);
-
           // Aggregate data by xKey
-          const groupedData: {
-            [key: string]: { [key: string]: number | string };
-          } = {};
-
-          data.forEach((item) => {
-            const groupKey = item[localXKey];
-            if (!groupKey) return;
-
-            if (!groupedData[groupKey]) {
-              groupedData[groupKey] = { [localXKey]: groupKey };
-              filteredNumericKeys.forEach((yKey) => {
-                groupedData[groupKey][yKey] = 0;
-              });
+          const aggregated = dataset.reduce((acc, item) => {
+            const xValue = item[selectedXKey];
+            if (!acc[xValue]) {
+              acc[xValue] = { [selectedXKey]: xValue };
+              quantitativeKeys.forEach(k => acc[xValue][k] = 0);
             }
-
-            filteredNumericKeys.forEach((yKey) => {
-              const value = Number(item[yKey]);
-              if (!isNaN(value)) {
-                groupedData[groupKey][yKey] =
-                  (groupedData[groupKey][yKey] as number) + value;
-              }
+            quantitativeKeys.forEach(k => {
+              acc[xValue][k] += Number(item[k]) || 0;
             });
-          });
+            return acc;
+          }, {});
 
-          const aggregatedData = Object.values(groupedData);
-          setGraphData(aggregatedData);
-          console.log("Aggregated data:", aggregatedData);
-          setIsValidGraphData(filteredNumericKeys.length > 0);
+          setXKey(selectedXKey);
+          setYKeys(quantitativeKeys);
+          setGraphData(Object.values(aggregated));
+          setIsValidGraphData(quantitativeKeys.length > 0);
+
         } catch (error) {
-          console.error("Error processing data:", error);
+          console.error("Data processing error:", error);
           setIsValidGraphData(false);
         }
       };
+
 
       processApiData(data);
     }, [data]);

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import ChatInterface from "./components/ChatInterface";
+import ChatInterface, { ChatInterfaceHandle } from './components/ChatInterface';
 import LoginSignup from "./components/LoginSignup";
 import ResetPassword from "./components/ResetPassword";
 import ConnectionForm from "./components/ConnectionForm";
@@ -23,6 +23,22 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] =
     useState<boolean>(false);
+  const chatRef = useRef<ChatInterfaceHandle>(null);
+
+  useEffect(() => {
+    if (isAuthenticated && chatRef.current) {
+      chatRef.current.handleNewChat();
+    }
+  }, [isAuthenticated]);
+
+  const triggerChatFunction = () => {
+    console.log("Triggering chat function");
+    console.log(chatRef);
+    if (chatRef.current) {
+      console.log("Chat ref is not null");
+      chatRef.current.handleNewChat();
+    }
+  };
 
   const validateUser = async () => {
     const key = "token";
@@ -58,6 +74,7 @@ function App() {
     if (isAdmin) {
       setIsAdminAuthenticated(true);
     } else {
+      console.log("User authenticated successfully");
       setIsAuthenticated(true);
       setActiveMenu("home");
     }
@@ -84,6 +101,7 @@ function App() {
                 setActiveMenu={setActiveMenu}
                 onLoginSuccess={handleLoginSuccess}
                 onLogout={() => handleLogout(setIsAuthenticated)}
+                chatRef={chatRef}
                 onCreateConSelected={handleCreateConSelected}
                 onHomePage={handleHomePage}
               />
@@ -118,6 +136,7 @@ const AppContent: React.FC<{
   onLogout: () => void;
   onCreateConSelected: () => void;
   onHomePage: () => void;
+  chatRef: React.RefObject<ChatInterfaceHandle>;
 }> = ({
   isAuthenticated,
   activeMenu,
@@ -126,6 +145,7 @@ const AppContent: React.FC<{
   onLogout,
   onCreateConSelected,
   onHomePage,
+  chatRef,
 }) => {
   const { theme } = useTheme();
   const userToken = sessionStorage.getItem("token") || "";
@@ -161,7 +181,7 @@ const AppContent: React.FC<{
             }}
           >
             {activeMenu === "home" && (
-              <ChatInterface onCreateConSelected={onCreateConSelected} />
+              <ChatInterface ref={chatRef} onCreateConSelected={onCreateConSelected} />
             )}
             {activeMenu === "new-connection" && (
               <ConnectionForm

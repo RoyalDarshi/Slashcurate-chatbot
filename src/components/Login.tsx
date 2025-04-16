@@ -61,6 +61,9 @@ const Login: React.FC<LoginProps> = ({
           theme: mode,
         });
       }
+      if (response.status === 401) {
+        toast.error("Invalid email or password.", { theme: mode });
+      }
     } catch (error) {
       setLoading(false);
       if (axios.isAxiosError(error)) {

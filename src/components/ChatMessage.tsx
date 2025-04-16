@@ -719,7 +719,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 >
                   <span
                     className="text-xs"
-                    style={{ color: theme.colors.textSecondary }}
+                    style={{ color: `${"#ffffff"}99` }}
                   >
                     {new Date(message.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
