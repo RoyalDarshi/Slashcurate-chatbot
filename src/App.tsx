@@ -65,67 +65,70 @@ function App() {
     }
   };
 
-  // useEffect(() => {
-  //   validateUser();
-  // }, []);
+const handleUserLogout = () => {
+  triggerChatFunction();
+  handleLogout();
+};
 
-  const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
-    sessionStorage.setItem("token", token);
-    if (isAdmin) {
-      setIsAdminAuthenticated(true);
-    } else {
-      console.log("User authenticated successfully");
-      setIsAuthenticated(true);
-      setActiveMenu("home");
-    }
-  };
+// useEffect(() => {
+//   validateUser();
+// }, []);
 
-  const handleCreateConSelected = () => {
-    setActiveMenu("new-connection");
-  };
-
-  const handleHomePage = () => {
+const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
+  sessionStorage.setItem("token", token);
+  if (isAdmin) {
+    setIsAdminAuthenticated(true);
+  } else {
+    console.log("User authenticated successfully");
+    setIsAuthenticated(true);
     setActiveMenu("home");
-  };
+  }
+};
 
-  return (
-    <ThemeProvider>
-      <Router>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <AppContent
-                isAuthenticated={isAuthenticated}
-                activeMenu={activeMenu}
-                setActiveMenu={setActiveMenu}
-                onLoginSuccess={handleLoginSuccess}
-                onLogout={() => handleLogout(setIsAuthenticated)}
-                chatRef={chatRef}
-                onCreateConSelected={handleCreateConSelected}
-                onHomePage={handleHomePage}
+const handleCreateConSelected = () => {
+  setActiveMenu("new-connection");
+};
+
+const handleHomePage = () => {
+  setActiveMenu("home");
+};
+
+return (
+  <ThemeProvider>
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <AppContent
+              isAuthenticated={isAuthenticated}
+              activeMenu={activeMenu}
+              setActiveMenu={setActiveMenu}
+              onLoginSuccess={handleLoginSuccess}
+              onLogout={handleUserLogout}
+              chatRef={chatRef}
+              onCreateConSelected={handleCreateConSelected}
+              onHomePage={handleHomePage}
+            />
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            isAdminAuthenticated ? (
+              <AdminDashboard onLogout={() => setIsAdminAuthenticated(false)} />
+            ) : (
+              <AdminLogin
+                onLoginSuccess={(token) => handleLoginSuccess(token, true)}
               />
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              isAdminAuthenticated ? (
-                <AdminDashboard
-                  onLogout={() => setIsAdminAuthenticated(false)}
-                />
-              ) : (
-                <AdminLogin
-                  onLoginSuccess={(token) => handleLoginSuccess(token, true)}
-                />
-              )
-            }
-          />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
-  );
+            )
+          }
+        />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+      </Routes>
+    </Router>
+  </ThemeProvider>
+);
 }
 
 const AppContent: React.FC<{

@@ -16,6 +16,7 @@ import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import { askChatbot, getUserConnections } from "../api";
+import { m } from "framer-motion";
 
 interface Session {
   id: string;
@@ -143,12 +144,12 @@ const ChatInterface = memo(
             : [];
 
           // Filter sessions to only include those with the current token
-          const validSessions = sessions.filter(
-            (session) => session.token === currentToken
-          );
-          if (sessions.length !== validSessions.length) {
-            localStorage.setItem("chatSessions", JSON.stringify(validSessions));
-          }
+          // const validSessions = sessions.filter(
+          //   (session) => session.token === currentToken
+          // );
+          // if (sessions.length !== validSessions.length) {
+          //   localStorage.setItem("chatSessions", JSON.stringify(validSessions));
+          // }
 
           // Proceed with loading the current session or selected session
           const currentSessionId = localStorage.getItem("currentSessionId");
@@ -285,17 +286,30 @@ const ChatInterface = memo(
       );
 
       const handleNewChat = useCallback(() => {
-        console.log("New chat started");
-        saveSession();
+        console.log("Starting new chat...");
+        console.log(messagesRef.current);
+        // Save current session if it has messages
+        if (messagesRef.current.length > 0) {
+          saveSession();
+        }
+
+        // Reset state
         messagesRef.current = [];
         setMessages([]);
-        localStorage.removeItem("selectedConnection");
-        localStorage.setItem("chatMessages", JSON.stringify([]));
-        setConnectionError(null);
         setInput("");
         setEditingMessageId(null);
         setCurrentSessionId(null);
+
+        // Force new session creation on next message
         localStorage.removeItem("currentSessionId");
+        localStorage.removeItem("selectedSession");
+        setCurrentSessionId(null);
+        localStorage.removeItem("chatMessages");
+
+        console.log(
+          "New chat started. Current sessions:",
+          JSON.parse(localStorage.getItem("chatSessions") || "[]")
+        );
       }, [saveSession]);
 
       useImperativeHandle(ref, () => ({
@@ -306,6 +320,7 @@ const ChatInterface = memo(
         async (e: React.FormEvent) => {
           e.preventDefault();
           if (!input.trim() || isSubmitting) return;
+          // Create new session when first message is sent
           if (!selectedConnection) {
             toast.error(
               "No connection selected. Please create or select a connection first.",
