@@ -1,7 +1,7 @@
-import React, { useState, useEffect,useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import ChatInterface, { ChatInterfaceHandle } from './components/ChatInterface';
+import ChatInterface, { ChatInterfaceHandle } from "./components/ChatInterface";
 import LoginSignup from "./components/LoginSignup";
 import ResetPassword from "./components/ResetPassword";
 import ConnectionForm from "./components/ConnectionForm";
@@ -23,6 +23,10 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] =
     useState<boolean>(false);
+  const [questionToAsk, setQuestionToAsk] = useState<{
+    text: string;
+    query?: string;
+  } | null>(null);
   const chatRef = useRef<ChatInterfaceHandle>(null);
 
   useEffect(() => {
@@ -32,10 +36,7 @@ function App() {
   }, [isAuthenticated]);
 
   const triggerChatFunction = () => {
-    console.log("Triggering chat function");
-    console.log(chatRef);
     if (chatRef.current) {
-      console.log("Chat ref is not null");
       chatRef.current.handleNewChat();
     }
   };
@@ -65,70 +66,69 @@ function App() {
     }
   };
 
-const handleUserLogout = () => {
-  triggerChatFunction();
-  handleLogout();
-};
+  const handleUserLogout = () => {
+    triggerChatFunction();
+    handleLogout();
+  };
 
-// useEffect(() => {
-//   validateUser();
-// }, []);
+  const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
+    sessionStorage.setItem("token", token);
+    if (isAdmin) {
+      setIsAdminAuthenticated(true);
+    } else {
+      setIsAuthenticated(true);
+      setActiveMenu("home");
+    }
+  };
 
-const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
-  sessionStorage.setItem("token", token);
-  if (isAdmin) {
-    setIsAdminAuthenticated(true);
-  } else {
-    console.log("User authenticated successfully");
-    setIsAuthenticated(true);
+  const handleCreateConSelected = () => {
+    setActiveMenu("new-connection");
+  };
+
+  const handleHomePage = () => {
     setActiveMenu("home");
-  }
-};
+  };
 
-const handleCreateConSelected = () => {
-  setActiveMenu("new-connection");
-};
-
-const handleHomePage = () => {
-  setActiveMenu("home");
-};
-
-return (
-  <ThemeProvider>
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <AppContent
-              isAuthenticated={isAuthenticated}
-              activeMenu={activeMenu}
-              setActiveMenu={setActiveMenu}
-              onLoginSuccess={handleLoginSuccess}
-              onLogout={handleUserLogout}
-              chatRef={chatRef}
-              onCreateConSelected={handleCreateConSelected}
-              onHomePage={handleHomePage}
-            />
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            isAdminAuthenticated ? (
-              <AdminDashboard onLogout={() => setIsAdminAuthenticated(false)} />
-            ) : (
-              <AdminLogin
-                onLoginSuccess={(token) => handleLoginSuccess(token, true)}
+  return (
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <AppContent
+                isAuthenticated={isAuthenticated}
+                activeMenu={activeMenu}
+                setActiveMenu={setActiveMenu}
+                onLoginSuccess={handleLoginSuccess}
+                onLogout={handleUserLogout}
+                chatRef={chatRef}
+                onCreateConSelected={handleCreateConSelected}
+                onHomePage={handleHomePage}
+                questionToAsk={questionToAsk}
+                setQuestionToAsk={setQuestionToAsk}
               />
-            )
-          }
-        />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-      </Routes>
-    </Router>
-  </ThemeProvider>
-);
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              isAdminAuthenticated ? (
+                <AdminDashboard
+                  onLogout={() => setIsAdminAuthenticated(false)}
+                />
+              ) : (
+                <AdminLogin
+                  onLoginSuccess={(token) => handleLoginSuccess(token, true)}
+                />
+              )
+            }
+          />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
+  );
 }
 
 const AppContent: React.FC<{
@@ -140,6 +140,8 @@ const AppContent: React.FC<{
   onCreateConSelected: () => void;
   onHomePage: () => void;
   chatRef: React.RefObject<ChatInterfaceHandle>;
+  questionToAsk: { text: string; query?: string } | null;
+  setQuestionToAsk: (question: { text: string; query?: string } | null) => void;
 }> = ({
   isAuthenticated,
   activeMenu,
@@ -149,6 +151,8 @@ const AppContent: React.FC<{
   onCreateConSelected,
   onHomePage,
   chatRef,
+  questionToAsk,
+  setQuestionToAsk,
 }) => {
   const { theme } = useTheme();
   const userToken = sessionStorage.getItem("token") || "";
@@ -166,7 +170,6 @@ const AppContent: React.FC<{
           className="flex flex-col md:flex-row h-screen"
           style={{ backgroundColor: theme.colors.background }}
         >
-          {/* Mobile header spacer */}
           <div className="md:hidden h-16 w-full" />
 
           <Sidebar
@@ -180,11 +183,16 @@ const AppContent: React.FC<{
             className="flex-1 flex flex-col overflow-y-auto md:mt-0 mt-16"
             style={{
               backgroundColor: theme.colors.surface,
-              minHeight: "calc(100vh - 64px)", // Ensure full height
+              minHeight: "calc(100vh - 64px)",
             }}
           >
             {activeMenu === "home" && (
-              <ChatInterface ref={chatRef} onCreateConSelected={onCreateConSelected} />
+              <ChatInterface
+                ref={chatRef}
+                onCreateConSelected={onCreateConSelected}
+                initialQuestion={questionToAsk}
+                onQuestionAsked={() => setQuestionToAsk(null)}
+              />
             )}
             {activeMenu === "new-connection" && (
               <ConnectionForm
@@ -203,7 +211,12 @@ const AppContent: React.FC<{
               <History onSessionClicked={onHomePage} />
             )}
             {activeMenu === "favourite" && (
-              <Favourites onSessionClicked={onHomePage} />
+              <Favourites
+                onFavoriteSelected={(question, query) => {
+                  setQuestionToAsk({ text: question, query });
+                  setActiveMenu("home");
+                }}
+              />
             )}
             {activeMenu === "settings" && <Settings />}
           </main>

@@ -16,7 +16,6 @@ import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import { askChatbot, getUserConnections } from "../api";
-import { m } from "framer-motion";
 
 interface Session {
   id: string;
@@ -29,11 +28,27 @@ interface Session {
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
+  handleAskFavoriteQuestion: (question: string, query?: string) => void;
 };
+
+export interface ChatInterfaceProps {
+  onCreateConSelected: () => void;
+  onSessionSelected?: (session: Session) => void;
+  initialQuestion?: { text: string; query?: string };
+  onQuestionAsked?: () => void;
+}
 
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
-    ({ onCreateConSelected, onSessionSelected }, ref) => {
+    (
+      {
+        onCreateConSelected,
+        onSessionSelected,
+        initialQuestion,
+        onQuestionAsked,
+      },
+      ref
+    ) => {
       const { theme } = useTheme();
       const [loadingMessageId, setLoadingMessageId] = useState<string | null>(
         null
@@ -112,11 +127,9 @@ const ChatInterface = memo(
       }, [currentSessionId]);
 
       const saveSession = useCallback(() => {
-        console.log("Saving session");
         if (messagesRef.current.length > 0 && !currentSessionId) {
           const storedSessions = localStorage.getItem("chatSessions");
           const sessions = storedSessions ? JSON.parse(storedSessions) : [];
-          console.log("Sessions:", sessions);
           const newSession: Session = {
             id: `session-${Date.now()}`,
             messages: [...messagesRef.current],
@@ -125,10 +138,9 @@ const ChatInterface = memo(
               messagesRef.current[0]?.content.substring(0, 50) + "..." ||
               "Untitled",
             isFavorite: false,
-            token: sessionStorage.getItem("token") ?? "", // Add current token
+            token: sessionStorage.getItem("token") ?? "",
           };
           sessions.push(newSession);
-          console.log("New session:", newSession);
           localStorage.setItem("chatSessions", JSON.stringify(sessions));
           setCurrentSessionId(newSession.id);
           localStorage.setItem("currentSessionId", newSession.id);
@@ -143,18 +155,9 @@ const ChatInterface = memo(
             ? JSON.parse(storedSessions)
             : [];
 
-          // Filter sessions to only include those with the current token
-          // const validSessions = sessions.filter(
-          //   (session) => session.token === currentToken
-          // );
-          // if (sessions.length !== validSessions.length) {
-          //   localStorage.setItem("chatSessions", JSON.stringify(validSessions));
-          // }
-
-          // Proceed with loading the current session or selected session
           const currentSessionId = localStorage.getItem("currentSessionId");
           if (currentSessionId) {
-            const currentSession = validSessions.find(
+            const currentSession = sessions.find(
               (session) => session.id === currentSessionId
             );
             if (currentSession) {
@@ -182,15 +185,14 @@ const ChatInterface = memo(
             }
           }
 
-          // Scroll to bottom if there are messages after loading
           if (messagesRef.current.length > 0) {
-            setTimeout(() => scrollToBottom(), 200); // Small delay to ensure DOM is updated
+            setTimeout(() => scrollToBottom(), 200);
           }
         };
 
         loadInitialMessages();
         fetchConnections();
-      }, [onSessionSelected, scrollToBottom]); // Added scrollToBottom to dependencies
+      }, [onSessionSelected, scrollToBottom]);
 
       const fetchConnections = useCallback(async () => {
         setConnectionsLoading(true);
@@ -232,13 +234,37 @@ const ChatInterface = memo(
           }
           setConnectionError(null);
         } catch (error) {
-          setSelectedConnection("");
+          setSelectedConnection(null);
           console.error("Error fetching connections:", error);
           setConnectionError("Failed to make connection. Please try again.");
         } finally {
           setConnectionsLoading(false);
         }
       }, [theme, mode]);
+
+      useEffect(() => {
+        if (initialQuestion && !connectionsLoading && connections.length > 0) {
+          if (!selectedConnection && connections.length > 0) {
+            const defaultConnection = connections[0];
+            setSelectedConnection(defaultConnection.connectionName);
+            localStorage.setItem(
+              "selectedConnection",
+              defaultConnection.connectionName
+            );
+          }
+          handleAskFavoriteQuestion(
+            initialQuestion.text,
+            initialQuestion.query
+          );
+          if (onQuestionAsked) onQuestionAsked();
+        }
+      }, [
+        initialQuestion,
+        connections,
+        connectionsLoading,
+        selectedConnection,
+        onQuestionAsked,
+      ]);
 
       const updateSessions = useCallback(
         (updatedMessages: Message[]) => {
@@ -286,41 +312,140 @@ const ChatInterface = memo(
       );
 
       const handleNewChat = useCallback(() => {
-        console.log("Starting new chat...");
-        console.log(messagesRef.current);
-        // Save current session if it has messages
         if (messagesRef.current.length > 0) {
           saveSession();
         }
 
-        // Reset state
         messagesRef.current = [];
         setMessages([]);
         setInput("");
         setEditingMessageId(null);
         setCurrentSessionId(null);
 
-        // Force new session creation on next message
         localStorage.removeItem("currentSessionId");
         localStorage.removeItem("selectedSession");
-        setCurrentSessionId(null);
         localStorage.removeItem("chatMessages");
-
-        console.log(
-          "New chat started. Current sessions:",
-          JSON.parse(localStorage.getItem("chatSessions") || "[]")
-        );
       }, [saveSession]);
+
+      const handleAskFavoriteQuestion = useCallback(
+        async (question: string, query?: string) => {
+          console.log("Asking favorite question:", question);
+          console.log("Query:", query);
+          if (!selectedConnection) {
+            toast.error(
+              "No connection selected. Please select a connection first.",
+              {
+                style: {
+                  background: theme.colors.surface,
+                  color: theme.colors.error,
+                  border: `1px solid ${theme.colors.error}20`,
+                },
+                theme: mode,
+              }
+            );
+            return;
+          }
+
+          if (messagesRef.current.length > 0) {
+            saveSession();
+          }
+
+          messagesRef.current = [];
+          setMessages([]);
+          setInput("");
+          setEditingMessageId(null);
+          setCurrentSessionId(null);
+          localStorage.removeItem("currentSessionId");
+          localStorage.removeItem("selectedSession");
+          localStorage.removeItem("chatMessages");
+
+          const userMessage: Message = {
+            id: Date.now().toString(),
+            content: question,
+            isBot: false,
+            timestamp: new Date().toISOString(),
+          };
+          const botLoadingMessage: Message = {
+            id: `loading-${Date.now()}`,
+            isBot: true,
+            content: "loading...",
+            timestamp: new Date().toISOString(),
+          };
+
+          setLoadingMessageId(botLoadingMessage.id);
+          messagesRef.current = [userMessage, botLoadingMessage];
+          setMessages([userMessage, botLoadingMessage]);
+
+          try {
+            const selectedConnectionObj = connections.find(
+              (conn) => conn.connectionName === selectedConnection
+            );
+            if (!selectedConnectionObj) {
+              throw new Error("Selected connection not found");
+            }
+
+            const payload = query
+              ? {
+                  question,
+                  sql_query: query,
+                  connection: selectedConnectionObj,
+                }
+              : { question, connection: selectedConnectionObj };
+            const response = await axios.post(
+              `${CHATBOT_API_URL}/ask`,
+              payload
+            );
+
+            const botResponseMessage: Message = {
+              id: Date.now().toString(),
+              content: JSON.stringify(response.data, null, 2),
+              isBot: true,
+              timestamp: new Date().toISOString(),
+            };
+
+            messagesRef.current = messagesRef.current.map((msg) =>
+              msg.id === botLoadingMessage.id ? botResponseMessage : msg
+            );
+            setMessages([...messagesRef.current]);
+            setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
+          } catch (error) {
+            console.error("Error getting bot response:", error);
+            const errorMessage: Message = {
+              id: Date.now().toString(),
+              content: "Sorry, an error occurred. Please try again.",
+              isBot: true,
+              timestamp: new Date().toISOString(),
+            };
+            messagesRef.current = messagesRef.current.map((msg) =>
+              msg.id === botLoadingMessage.id ? errorMessage : msg
+            );
+            setMessages([...messagesRef.current]);
+            setTimeout(() => scrollToMessage(errorMessage.id), 100);
+          } finally {
+            setLoadingMessageId(null);
+            saveMessages();
+          }
+        },
+        [
+          saveSession,
+          selectedConnection,
+          connections,
+          scrollToMessage,
+          saveMessages,
+          theme,
+          mode,
+        ]
+      );
 
       useImperativeHandle(ref, () => ({
         handleNewChat,
+        handleAskFavoriteQuestion,
       }));
 
       const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
           e.preventDefault();
           if (!input.trim() || isSubmitting) return;
-          // Create new session when first message is sent
           if (!selectedConnection) {
             toast.error(
               "No connection selected. Please create or select a connection first.",
@@ -482,10 +607,7 @@ const ChatInterface = memo(
 
             setFavorites((prev) => ({
               ...prev,
-              [messageId]: {
-                count: response.data.count,
-                isFavorited: true,
-              },
+              [messageId]: { count: response.data.count, isFavorited: true },
             }));
             updateMessageFavoriteStatus(messageId, response.data.count, true);
             toast.success("Question & response favorited");
@@ -737,10 +859,7 @@ const ChatInterface = memo(
           {connectionError && (
             <div
               className="text-center"
-              style={{
-                padding: theme.spacing.md,
-                color: theme.colors.error,
-              }}
+              style={{ padding: theme.spacing.md, color: theme.colors.error }}
             >
               {connectionError}
             </div>
@@ -752,17 +871,15 @@ const ChatInterface = memo(
 );
 
 const areEqual = (
-  prevProps: ChatInterfaceProps & {
-    onSessionSelected?: (session: Session) => void;
-  },
-  nextProps: ChatInterfaceProps & {
-    onSessionSelected?: (session: Session) => void;
-  }
+  prevProps: ChatInterfaceProps,
+  nextProps: ChatInterfaceProps
 ) => {
   return (
     prevProps.onCreateConSelected === nextProps.onCreateConSelected &&
     prevProps.onSessionSelected === nextProps.onSessionSelected &&
-    prevProps.messages === nextProps.messages
+    prevProps.initialQuestion?.text === nextProps.initialQuestion?.text &&
+    prevProps.initialQuestion?.query === nextProps.initialQuestion?.query &&
+    prevProps.onQuestionAsked === nextProps.onQuestionAsked
   );
 };
 

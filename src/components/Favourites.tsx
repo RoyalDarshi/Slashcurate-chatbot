@@ -6,17 +6,21 @@ import { API_URL } from "../config";
 interface FavoriteMessage {
   id: string;
   text: string;
+  query?: string;
   isFavorite: boolean;
 }
 
-const Favorites = () => {
+interface FavoritesProps {
+  onFavoriteSelected: (question: string, query?: string) => void;
+}
+
+const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [favorites, setFavorites] = useState<FavoriteMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
 
-  // Fetch favorites from API
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
@@ -33,6 +37,7 @@ const Favorites = () => {
             (item: any) => ({
               id: item.question_id,
               text: item.question,
+              query: item.response?.query || undefined,
               isFavorite: true,
             })
           );
@@ -50,7 +55,6 @@ const Favorites = () => {
     fetchFavorites();
   }, []);
 
-  // Handle favorite removal
   const handleRemoveFavorite = async (id: string) => {
     try {
       const token = sessionStorage.getItem("token");
@@ -59,16 +63,13 @@ const Favorites = () => {
         return;
       }
 
-      // API call to remove favorite
       await axios.post(`${API_URL}/favorite/delete`, {
         token: token,
         messageId: id,
       });
 
-      // Optimistically update UI
       setFavorites((prev) => prev.filter((msg) => msg.id !== id));
     } catch (err) {
-      // Revert UI if API call fails
       setFavorites((prev) => [...prev]);
       setError("Failed to remove favorite");
       console.error("API Error:", err);
@@ -78,13 +79,13 @@ const Favorites = () => {
   const filteredMessages = favorites.filter((message) =>
     message.text.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
   return (
     <div
       className={`p-4 h-full min-h-screen transition-colors duration-300`}
       style={{ backgroundColor: theme.colors.background }}
     >
       <div className="max-w-2xl mx-auto">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1
             className="text-2xl font-bold"
@@ -94,7 +95,6 @@ const Favorites = () => {
           </h1>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div
             className="p-3 mb-4 rounded-lg"
@@ -107,7 +107,6 @@ const Favorites = () => {
           </div>
         )}
 
-        {/* Search Input */}
         <div className="mb-6">
           <input
             type="text"
@@ -124,7 +123,6 @@ const Favorites = () => {
           />
         </div>
 
-        {/* Loading State */}
         {loading && (
           <div className="text-center" style={{ color: theme.colors.text }}>
             <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full mb-2" />
@@ -132,16 +130,20 @@ const Favorites = () => {
           </div>
         )}
 
-        {/* Favorites List */}
         {!loading && (
           <div className="space-y-3">
             {filteredMessages.map((message) => (
               <div
                 key={message.id}
-                className={`p-4 rounded-lg flex items-center justify-between transition-all`}
+                className={`p-4 rounded-lg flex items-center justify-between transition-all cursor-pointer`}
                 style={{
                   backgroundColor: theme.colors.surface,
                   border: `1px solid ${theme.colors.border}`,
+                }}
+                onClick={() => {
+                  console.log("Selected message:", message);
+                  return;
+                  onFavoriteSelected(message.text, message.query);
                 }}
               >
                 <span
@@ -154,7 +156,10 @@ const Favorites = () => {
                 </span>
 
                 <button
-                  onClick={() => handleRemoveFavorite(message.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveFavorite(message.id);
+                  }}
                   className="focus:outline-none hover:opacity-75"
                   aria-label="Remove favorite"
                   style={{ transition: theme.transition.default }}
@@ -176,7 +181,6 @@ const Favorites = () => {
               </div>
             ))}
 
-            {/* Empty State */}
             {!loading && filteredMessages.length === 0 && (
               <div
                 className="text-center p-4 rounded-lg"
