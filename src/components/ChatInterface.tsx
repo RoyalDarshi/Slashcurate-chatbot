@@ -16,7 +16,6 @@ import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import { askChatbot, getUserConnections } from "../api";
-import { debounce } from "lodash";
 
 interface Session {
   id: string;
@@ -30,7 +29,6 @@ interface Session {
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
   handleAskFavoriteQuestion: (question: string, query?: string) => void;
-  saveCurrentSession: () => void; // New method
 };
 
 export interface ChatInterfaceProps {
@@ -81,7 +79,6 @@ const ChatInterface = memo(
       const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
       const token = sessionStorage.getItem("token") ?? "";
-      const isInitialLoad = useRef(true);
 
       const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,8 +93,21 @@ const ChatInterface = memo(
 
       const prevMessagesLength = useRef(messages.length);
 
+      useEffect(() => {
+        const isNewMessageAdded = messages.length > prevMessagesLength.current;
+        prevMessagesLength.current = messages.length;
+
+        if (isNewMessageAdded && !editingMessageId) {
+          scrollToBottom();
+        }
+      }, [messages, scrollToBottom, editingMessageId]);
+
       const saveMessages = useCallback(() => {
         try {
+          // Avoid saving if there's a loading message
+          if (messagesRef.current.some((msg) => msg.content === "loading...")) {
+            return;
+          }
           localStorage.setItem(
             "chatMessages",
             JSON.stringify(messagesRef.current)
@@ -121,83 +131,29 @@ const ChatInterface = memo(
       }, [currentSessionId]);
 
       const saveSession = useCallback(() => {
-        if (messagesRef.current.length === 0) return; // Skip if no messages
-
-        try {
+        if (
+          messagesRef.current.length > 0 &&
+          !messagesRef.current.some((msg) => msg.content === "loading...") &&
+          !currentSessionId
+        ) {
           const storedSessions = localStorage.getItem("chatSessions");
-          let sessions: Session[] = storedSessions
-            ? JSON.parse(storedSessions)
-            : [];
-
-          if (currentSessionId) {
-            // Update existing session
-            sessions = sessions.map((session) =>
-              session.id === currentSessionId
-                ? {
-                    ...session,
-                    messages: [...messagesRef.current],
-                    timestamp: new Date().toISOString(),
-                    title:
-                      messagesRef.current[0]?.content.substring(0, 50) +
-                        "..." || "Untitled",
-                  }
-                : session
-            );
-          } else {
-            // Create new session
-            const newSession: Session = {
-              id: `session-${Date.now()}`,
-              messages: [...messagesRef.current],
-              timestamp: new Date().toISOString(),
-              title:
-                messagesRef.current[0]?.content.substring(0, 50) + "..." ||
-                "Untitled",
-              isFavorite: false,
-              token: sessionStorage.getItem("token") ?? "",
-            };
-            sessions.push(newSession);
-            setCurrentSessionId(newSession.id);
-            localStorage.setItem("currentSessionId", newSession.id);
-          }
-
+          const sessions = storedSessions ? JSON.parse(storedSessions) : [];
+          const newSession: Session = {
+            id: `session-${Date.now()}`,
+            messages: [...messagesRef.current],
+            timestamp: new Date().toISOString(),
+            title:
+              messagesRef.current[0]?.content.substring(0, 50) + "..." ||
+              "Untitled",
+            isFavorite: false,
+            token: sessionStorage.getItem("token") ?? "",
+          };
+          sessions.push(newSession);
           localStorage.setItem("chatSessions", JSON.stringify(sessions));
-        } catch (error) {
-          console.error("Failed to save session", error);
-          toast.error("Failed to save session. Storage may be full.", {
-            style: {
-              background: theme.colors.surface,
-              color: theme.colors.error,
-            },
-            theme: mode,
-          });
+          setCurrentSessionId(newSession.id);
+          localStorage.setItem("currentSessionId", newSession.id);
         }
-      }, [currentSessionId, theme, mode]);
-
-      const debouncedSaveSession = useCallback(
-        debounce(() => {
-          if (messagesRef.current.length > 0) {
-            saveSession();
-          }
-        }, 500),
-        [saveSession]
-      );
-
-      useEffect(() => {
-        const isNewMessageAdded = messages.length > prevMessagesLength.current;
-        prevMessagesLength.current = messages.length;
-        
-        if (isInitialLoad.current) {
-          isInitialLoad.current = false;
-          return;
-        }
-
-        if (isNewMessageAdded && !editingMessageId) {
-          scrollToBottom();
-          debouncedSaveSession();
-        } else if (editingMessageId) {
-          debouncedSaveSession();
-        }
-      }, [messages, scrollToBottom, editingMessageId, debouncedSaveSession]);
+      }, [currentSessionId]);
 
       useEffect(() => {
         const loadInitialMessages = () => {
@@ -207,7 +163,26 @@ const ChatInterface = memo(
             ? JSON.parse(storedSessions)
             : [];
 
-          // Prioritize selectedSession (e.g., from History)
+          // Save current session if it exists and has messages
+          if (messagesRef.current.length > 0 && currentSessionId) {
+            saveMessages();
+            saveSession();
+          }
+
+          const currentSessionIdFromStorage =
+            localStorage.getItem("currentSessionId");
+          if (currentSessionIdFromStorage) {
+            const currentSession = sessions.find(
+              (session) => session.id === currentSessionIdFromStorage
+            );
+            if (currentSession) {
+              messagesRef.current = currentSession.messages;
+              setMessages(currentSession.messages);
+              setCurrentSessionId(currentSessionIdFromStorage);
+              return;
+            }
+          }
+
           const selectedSession = localStorage.getItem("selectedSession");
           if (selectedSession) {
             const session: Session = JSON.parse(selectedSession);
@@ -217,34 +192,11 @@ const ChatInterface = memo(
             localStorage.setItem("currentSessionId", session.id);
             localStorage.removeItem("selectedSession");
             if (onSessionSelected) onSessionSelected(session);
-            console.log("Loaded selected session:", session.id); // Debugging
           } else {
-            // Load current session if available
-            const currentSessionId = localStorage.getItem("currentSessionId");
-            if (currentSessionId) {
-              const currentSession = sessions.find(
-                (session) => session.id === currentSessionId
-              );
-              if (currentSession) {
-                messagesRef.current = currentSession.messages;
-                setMessages(currentSession.messages);
-                setCurrentSessionId(currentSessionId);
-                console.log("Loaded current session:", currentSessionId); // Debugging
-              } else {
-                // Clear stale currentSessionId
-                localStorage.removeItem("currentSessionId");
-                messagesRef.current = [];
-                setMessages([]);
-                console.log("Cleared stale currentSessionId"); // Debugging
-              }
-            } else {
-              // Load legacy chatMessages if no session
-              const storedMessages = localStorage.getItem("chatMessages");
-              if (storedMessages) {
-                messagesRef.current = JSON.parse(storedMessages);
-                setMessages(messagesRef.current);
-                console.log("Loaded legacy chatMessages"); // Debugging
-              }
+            const storedMessages = localStorage.getItem("chatMessages");
+            if (storedMessages) {
+              messagesRef.current = JSON.parse(storedMessages);
+              setMessages(messagesRef.current);
             }
           }
 
@@ -255,7 +207,7 @@ const ChatInterface = memo(
 
         loadInitialMessages();
         fetchConnections();
-      }, [onSessionSelected, scrollToBottom]);
+      }, [onSessionSelected, scrollToBottom, saveMessages, saveSession]);
 
       const fetchConnections = useCallback(async () => {
         setConnectionsLoading(true);
@@ -376,6 +328,7 @@ const ChatInterface = memo(
 
       const handleNewChat = useCallback(() => {
         if (messagesRef.current.length > 0) {
+          saveMessages();
           saveSession();
         }
 
@@ -388,7 +341,7 @@ const ChatInterface = memo(
         localStorage.removeItem("currentSessionId");
         localStorage.removeItem("selectedSession");
         localStorage.removeItem("chatMessages");
-      }, [saveSession]);
+      }, [saveMessages, saveSession]);
 
       const handleAskFavoriteQuestion = useCallback(
         async (question: string, query?: string) => {
@@ -410,6 +363,7 @@ const ChatInterface = memo(
           }
 
           if (messagesRef.current.length > 0) {
+            saveMessages();
             saveSession();
           }
 
@@ -471,6 +425,10 @@ const ChatInterface = memo(
             );
             setMessages([...messagesRef.current]);
             setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
+
+            // Save messages and session after updating with bot response
+            saveMessages();
+            saveSession();
           } catch (error) {
             console.error("Error getting bot response:", error);
             const errorMessage: Message = {
@@ -484,17 +442,20 @@ const ChatInterface = memo(
             );
             setMessages([...messagesRef.current]);
             setTimeout(() => scrollToMessage(errorMessage.id), 100);
+
+            // Save messages and session even on error to capture the error message
+            saveMessages();
+            saveSession();
           } finally {
             setLoadingMessageId(null);
-            saveMessages();
           }
         },
         [
+          saveMessages,
           saveSession,
           selectedConnection,
           connections,
           scrollToMessage,
-          saveMessages,
           theme,
           mode,
         ]
@@ -503,11 +464,6 @@ const ChatInterface = memo(
       useImperativeHandle(ref, () => ({
         handleNewChat,
         handleAskFavoriteQuestion,
-        saveCurrentSession: () => {
-          if (messagesRef.current.length > 0) {
-            saveSession(); // Use existing saveSession logic
-          }
-        },
       }));
 
       const handleSubmit = useCallback(
@@ -573,7 +529,12 @@ const ChatInterface = memo(
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? botResponseMessage : msg
             );
+            setMessages([...messagesRef.current]);
             setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
+
+            // Save messages and session after updating with bot response
+            saveMessages();
+            saveSession();
           } catch (error) {
             console.error("Error getting bot response:", error);
             const errorMessage: Message = {
@@ -585,12 +546,15 @@ const ChatInterface = memo(
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? errorMessage : msg
             );
+            setMessages([...messagesRef.current]);
             setTimeout(() => scrollToMessage(errorMessage.id), 100);
+
+            // Save messages and session even on error to capture the error message
+            saveMessages();
+            saveSession();
           } finally {
             setLoadingMessageId(null);
-            setMessages([...messagesRef.current]);
             setIsSubmitting(false);
-            saveMessages();
           }
         },
         [
@@ -599,6 +563,7 @@ const ChatInterface = memo(
           selectedConnection,
           connections,
           saveMessages,
+          saveSession,
           scrollToMessage,
           mode,
           theme,
@@ -792,6 +757,10 @@ const ChatInterface = memo(
               );
               setMessages([...messagesRef.current]);
               setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
+
+              // Save messages and session after updating with bot response
+              saveMessages();
+              saveSession();
             } catch (error) {
               console.error("Error updating message:", error);
               const errorMessage = {
@@ -805,14 +774,24 @@ const ChatInterface = memo(
               );
               setMessages([...messagesRef.current]);
               setTimeout(() => scrollToMessage(errorMessage.id), 100);
+
+              // Save messages and session even on error to capture the error message
+              saveMessages();
+              saveSession();
             } finally {
               setLoadingMessageId(null);
-              saveMessages();
               setEditingMessageId(null);
             }
           }
         },
-        [selectedConnection, connections, scrollToMessage, saveMessages, theme]
+        [
+          selectedConnection,
+          connections,
+          scrollToMessage,
+          saveMessages,
+          saveSession,
+          theme,
+        ]
       );
 
       return (

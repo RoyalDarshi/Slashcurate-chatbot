@@ -292,7 +292,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                               boxShadow: `0 0 6px ${theme.colors.accent}40`,
                             }}
                           >
-                            View PDF
+                            View Data Atlas
                           </span>
                         </div>
                       )}

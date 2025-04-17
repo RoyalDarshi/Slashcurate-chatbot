@@ -110,7 +110,8 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
   };
 
   const handleSessionClick = (session: Session) => {
-    localStorage.setItem("selectedSession", JSON.stringify(session));
+    localStorage.setItem("currentSessionId", JSON.stringify(session.id));
+    localStorage.setItem("chatMessages", JSON.stringify(session.messages));
     onSessionClicked();
   };
 
