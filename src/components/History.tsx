@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Message } from "../types";
-import { Search, Heart } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
@@ -14,7 +14,7 @@ interface Session {
 }
 
 interface HistoryProps {
-  onSessionClicked: () => void; // Update prop type
+  onSessionClicked: () => void;
 }
 
 const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
@@ -50,6 +50,20 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
     setSessions(updatedSessions);
     filterSessions(updatedSessions, activeFilter);
     localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
+  };
+
+  const deleteSession = (sessionId: string) => {
+    const updatedSessions = sessions.filter(
+      (session) => session.id !== sessionId
+    );
+    setSessions(updatedSessions);
+    filterSessions(updatedSessions, activeFilter);
+    localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
+
+    const selectedSession = localStorage.getItem("selectedSession");
+    if (selectedSession && JSON.parse(selectedSession).id === sessionId) {
+      localStorage.removeItem("selectedSession");
+    }
   };
 
   const filterSessions = (sessions: Session[], filter: string) => {
@@ -146,255 +160,200 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
     },
   };
 
-  const heartVariants = {
-    unfavorite: {
-      scale: 1,
-      transition: {
-        duration: 0.2,
-      },
-    },
-    favorite: {
-      scale: [1, 1.3, 1],
-      transition: {
-        duration: 0.3,
-        times: [0, 0.5, 1],
-      },
-    },
-  };
-
   return (
     <div
-      className="flex h-full flex-col"
-      style={{
-        background: theme.colors.background,
-        padding: `${theme.spacing.lg} ${theme.spacing.xl}`,
-      }}
+      className="p-4 h-full min-h-screen overflow-y-hidden transition-colors duration-300 flex flex-col"
+      style={{ background: theme.colors.background }}
     >
-      <div
-        className="flex items-center justify-between border-b pb-4 mb-6"
-        style={{
-          borderColor: theme.colors.border,
-          gap: theme.spacing.lg,
-        }}
-      >
-        <h2
-          className="text-2xl font-semibold tracking-tight"
+      <div className="mx-auto overflow-y-hidden w-full flex-1 flex flex-col">
+        {/* Header with smaller search bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
+          <h2
+            className="text-xl font-bold whitespace-nowrap"
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.bold,
+            }}
+          >
+            Chat History ({filteredSessions.length})
+          </h2>
+          <div className="relative w-full sm:w-60">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full p-2 pl-8 text-sm transition-all focus:outline-none"
+              style={{
+                background: theme.colors.surface,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.borderRadius.default,
+                fontFamily: theme.typography.fontFamily,
+                fontSize: theme.typography.size.sm,
+              }}
+            />
+            <Search
+              className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2"
+              style={{ color: theme.colors.textSecondary }}
+            />
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap mb-3 gap-2">
+          {filters.map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => handleFilterChange(filter.id)}
+              className="px-3 py-1 text-sm transition-all"
+              style={{
+                background:
+                  activeFilter === filter.id
+                    ? theme.colors.accent
+                    : theme.colors.surface,
+                color: activeFilter === filter.id ? "white" : theme.colors.text,
+                border: `1px solid ${
+                  activeFilter === filter.id
+                    ? theme.colors.accent
+                    : theme.colors.border
+                }`,
+                borderRadius: theme.borderRadius.pill,
+                fontFamily: theme.typography.fontFamily,
+                fontSize: theme.typography.size.sm,
+                fontWeight: theme.typography.weight.medium,
+                transition: theme.transition.default,
+              }}
+              onMouseOver={(e) =>
+                activeFilter !== filter.id &&
+                (e.currentTarget.style.background = theme.colors.accent + "20")
+              }
+              onMouseOut={(e) =>
+                activeFilter !== filter.id &&
+                (e.currentTarget.style.background = theme.colors.surface)
+              }
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Scrollable session cards */}
+        <div
+          className="flex-1 overflow-y-auto"
           style={{
-            color: theme.colors.text,
-            fontFamily: theme.typography.fontFamily,
-            fontWeight: theme.typography.weight.bold,
+            maxHeight: "calc(100vh - 180px)",
+            WebkitOverflowScrolling: "touch",
           }}
         >
-          Chat History
-        </h2>
-        <div className="relative w-full max-w-sm">
-          <input
-            type="text"
-            placeholder="Search sessions"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="w-full px-4 py-2 pl-10 text-sm transition-all focus:outline-none"
-            style={{
-              background: theme.colors.surface,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.borderRadius.default,
-              boxShadow: theme.shadow.sm,
-              fontFamily: theme.typography.fontFamily,
-              fontSize: theme.typography.size.sm,
-              transition: theme.transition.default,
-            }}
-            onFocus={(e) => (e.target.style.borderColor = theme.colors.accent)}
-            onBlur={(e) => (e.target.style.borderColor = theme.colors.border)}
-          />
-          <Search
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
-            style={{ color: theme.colors.textSecondary }}
-          />
+          <motion.div
+            className="space-y-2"
+            variants={sessionListVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <AnimatePresence>
+              {filteredSessions.length > 0 ? (
+                filteredSessions.map((session) => (
+                  <motion.div
+                    key={session.id}
+                    variants={sessionItemVariants}
+                    className="p-3 rounded-lg overflow-x-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
+                    style={{
+                      background: theme.colors.surface,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.default,
+                      transition: theme.transition.default,
+                    }}
+                    onClick={() => handleSessionClick(session)}
+                    onMouseOver={(e) =>
+                      (e.currentTarget.style.background =
+                        theme.colors.accent + "10")
+                    }
+                    onMouseOut={(e) =>
+                      (e.currentTarget.style.background = theme.colors.surface)
+                    }
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className="font-medium truncate whitespace-nowrap"
+                        style={{
+                          color: theme.colors.text,
+                          fontFamily: theme.typography.fontFamily,
+                          fontWeight: theme.typography.weight.medium,
+                          fontSize: theme.typography.size.base,
+                        }}
+                      >
+                        {session.title}
+                      </h3>
+                      <p
+                        className="text-xs mt-1"
+                        style={{
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.typography.fontFamily,
+                        }}
+                      >
+                        {new Date(session.timestamp).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-xs px-2 py-1 rounded whitespace-nowrap"
+                        style={{
+                          background: theme.colors.accent + "10",
+                          color: theme.colors.accent,
+                          fontFamily: theme.typography.fontFamily,
+                          fontWeight: theme.typography.weight.medium,
+                        }}
+                      >
+                        {session.messages.length} msg
+                      </span>
+                      <CustomTooltip title="Delete session">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSession(session.id);
+                          }}
+                          className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </CustomTooltip>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div
+                  variants={sessionItemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="text-center p-4 rounded-lg"
+                  style={{
+                    background: theme.colors.surface,
+                    color: theme.colors.textSecondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.borderRadius.default,
+                  }}
+                >
+                  {searchTerm
+                    ? "No matches found"
+                    : "No sessions found for this period"}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
       </div>
-
-      <div className="flex flex-wrap mb-6" style={{ gap: theme.spacing.sm }}>
-        {filters.map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => handleFilterChange(filter.id)}
-            className="px-4 py-1.5 text-sm transition-all"
-            style={{
-              background:
-                activeFilter === filter.id
-                  ? theme.colors.accent
-                  : "transparent",
-              color:
-                activeFilter === filter.id
-                  ? "white"
-                  : theme.colors.textSecondary,
-              border: `1px solid ${
-                activeFilter === filter.id
-                  ? theme.colors.accent
-                  : theme.colors.border
-              }`,
-              borderRadius: theme.borderRadius.pill,
-              fontFamily: theme.typography.fontFamily,
-              fontSize: theme.typography.size.sm,
-              fontWeight: theme.typography.weight.medium,
-              transition: theme.transition.default,
-            }}
-            onMouseOver={(e) =>
-              activeFilter !== filter.id &&
-              (e.target.style.color = theme.colors.text)
-            }
-            onMouseOut={(e) =>
-              activeFilter !== filter.id &&
-              (e.target.style.color = theme.colors.textSecondary)
-            }
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
-
-      <motion.div
-        className="flex-1 overflow-y-auto"
-        variants={sessionListVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-      >
-        <AnimatePresence>
-          {filteredSessions.length > 0 ? (
-            filteredSessions.map((session) => (
-              <motion.div
-                key={session.id}
-                variants={sessionItemVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="mb-3 px-4 py-3 cursor-pointer border-b"
-                style={{
-                  background: `${theme.colors.accent}20`,
-                  borderColor: `${theme.colors.border}50`,
-                  borderRadius: theme.borderRadius.default,
-                  transition: theme.transition.default,
-                }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.background = `${theme.colors.hover}90`)
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.background = `${theme.colors.accent}20`)
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <div
-                    className="flex-1"
-                    onClick={() => handleSessionClick(session)}
-                  >
-                    <h3
-                      className="text-base font-medium truncate max-w-[70%]"
-                      style={{
-                        color: theme.colors.text,
-                        fontFamily: theme.typography.fontFamily,
-                        fontWeight: theme.typography.weight.medium,
-                      }}
-                    >
-                      {session.title}
-                    </h3>
-                    <p
-                      className="text-sm"
-                      style={{
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.typography.fontFamily,
-                        fontSize: theme.typography.size.sm,
-                      }}
-                    >
-                      {new Date(session.timestamp).toLocaleString([], {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="text-xs px-2 py-1 rounded"
-                      style={{
-                        background: theme.colors.accent + "10",
-                        color: theme.colors.accent,
-                        fontFamily: theme.typography.fontFamily,
-                        fontWeight: theme.typography.weight.medium,
-                      }}
-                    >
-                      {session.messages.length} msg
-                    </span>
-                    <CustomTooltip
-                          title={
-                            session.isFavorite
-                              ? "Remove from favorites"
-                              : "Add to favorites"
-                          }
-                          position="top"
-                        >
-                    <motion.button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(session.id);
-                      }}
-                      className="p-1 rounded-full transition-colors"
-                    >
-                      <motion.div
-                        variants={heartVariants}
-                        initial="unfavorite"
-                        animate={session.isFavorite ? "favorite" : "unfavorite"}
-                      >
-                        
-                          <Heart
-                            className="h-5 w-5"
-                            style={{
-                              color: session.isFavorite
-                                ? theme.colors.accent
-                                : theme.colors.textSecondary,
-                              fill: session.isFavorite
-                                ? theme.colors.accent
-                                : "none",
-                            }}
-                          />
-                      </motion.div>
-                    </motion.button>
-                    </CustomTooltip>
-                  </div>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            <motion.div
-              variants={sessionItemVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="flex items-center justify-center h-full"
-              style={{ minHeight: "300px" }}
-            >
-              <p
-                className="text-base"
-                style={{
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.typography.fontFamily,
-                  fontSize: theme.typography.size.base,
-                  fontWeight: theme.typography.weight.normal,
-                  background: theme.colors.surface,
-                  padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                  borderRadius: theme.borderRadius.default,
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                No sessions found for this period
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
     </div>
   );
 };

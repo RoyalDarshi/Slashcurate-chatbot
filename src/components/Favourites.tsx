@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "../ThemeContext";
 import axios from "axios";
 import { API_URL } from "../config";
+import CustomTooltip from "./CustomTooltip";
 
 interface FavoriteMessage {
   id: string;
@@ -34,12 +35,14 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
 
         if (response.status === 200) {
           const formattedData: FavoriteMessage[] = response.data.map(
-            (item: any) => ({
-              id: item.question_id,
-              text: item.question,
-              query: item.response?.query || undefined,
-              isFavorite: true,
-            })
+            (item: any) => {
+              return {
+                id: item.question_id,
+                text: item.question,
+                query: item?.query || undefined,
+                isFavorite: true,
+              };
+            }
           );
           setFavorites(formattedData);
           setError(null);
@@ -140,11 +143,7 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
                   backgroundColor: theme.colors.surface,
                   border: `1px solid ${theme.colors.border}`,
                 }}
-                onClick={() => {
-                  console.log("Selected message:", message);
-                  return;
-                  onFavoriteSelected(message.text, message.query);
-                }}
+                onClick={() => onFavoriteSelected(message.text, message.query)}
               >
                 <span
                   style={{
@@ -155,29 +154,33 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
                   {message.text}
                 </span>
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveFavorite(message.id);
-                  }}
-                  className="focus:outline-none hover:opacity-75"
-                  aria-label="Remove favorite"
-                  style={{ transition: theme.transition.default }}
+                <CustomTooltip
+                  title="Remove from favorites"
                 >
-                  <svg
-                    className="w-6 h-6"
-                    fill={theme.colors.accent}
-                    stroke={theme.colors.accent}
-                    viewBox="0 0 24 24"
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveFavorite(message.id);
+                    }}
+                    className="focus:outline-none hover:opacity-75"
+                    aria-label="Remove favorite"
+                    style={{ transition: theme.transition.default }}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      className="w-6 h-6"
+                      fill={theme.colors.accent}
+                      stroke={theme.colors.accent}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
+                    </svg>
+                  </button>
+                </CustomTooltip>
               </div>
             ))}
 
