@@ -610,10 +610,11 @@ const ChatInterface = memo(
               [messageId]: { count: response.data.count, isFavorited: true },
             }));
             updateMessageFavoriteStatus(messageId, response.data.count, true);
-            toast.success("Question & response favorited");
           } catch (error) {
             console.error("Error favoriting message:", error);
-            toast.error("Failed to favorite question");
+            toast.error(
+              "Failed to favorite, question doesnt have valid response!"
+            );
           }
         },
         [messages, selectedConnection, findBotResponse]

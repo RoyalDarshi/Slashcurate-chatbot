@@ -29,12 +29,6 @@ function App() {
   } | null>(null);
   const chatRef = useRef<ChatInterfaceHandle>(null);
 
-  useEffect(() => {
-    if (isAuthenticated && chatRef.current) {
-      chatRef.current.handleNewChat();
-    }
-  }, [isAuthenticated]);
-
   const triggerChatFunction = () => {
     if (chatRef.current) {
       chatRef.current.handleNewChat();

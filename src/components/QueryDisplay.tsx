@@ -79,8 +79,6 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
               : `<span style="color: ${theme.colors.success};">${p1}</span>`
           );
 
-          console.log("Colorized Query:", coloredQuery); // Debug output
-
           return <span dangerouslySetInnerHTML={{ __html: coloredQuery }} />;
         }
         return <span>{formattedQuery}</span>;

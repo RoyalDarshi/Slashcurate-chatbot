@@ -101,6 +101,12 @@ const databaseOptions: DatabaseOption[] = [
     icon: <Server className="h-5 w-5" />,
     description: "Microsoft's relational database management system",
   },
+  {
+    value: "mongodb",
+    label: "MongoDB",
+    icon: <Database className="h-5 w-5" />,
+    description: "NoSQL document-oriented database",
+  },
 ];
 
 const fieldConfigs: FieldConfig[] = [

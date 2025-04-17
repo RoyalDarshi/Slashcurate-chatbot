@@ -60,8 +60,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [copied, setCopied] = useState(false);
     const [canCopy, setCanCopy] = useState(true);
     const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
-    const [currentFavoriteCount, setCurrentFavoriteCount] =
-      useState(favoriteCount);
     const [copyTooltipTxt, setCopyTooltipTxt] = useState("Copy SQL Query");
 
     const graphRef = useRef<HTMLDivElement>(null);
@@ -72,12 +70,22 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       try {
         return JSON.parse(message.content);
       } catch {
-        return null;
+        // For user messages, return content as valid; for bot, null if invalid
+        return message.isBot ? null : { content: message.content };
       }
-    }, [message.content]);
+    }, [message.content, message.isBot]);
 
     useEffect(() => {
-      if (parsedData?.answer) {
+      // Debugging log to inspect parsedData and loading state
+      console.log({
+        messageId: message.id,
+        isBot: message.isBot,
+        loading,
+        parsedData,
+        content: message.content,
+      });
+
+      if (parsedData?.answer && message.isBot) {
         const tableData = Array.isArray(parsedData.answer)
           ? parsedData.answer
           : [parsedData.answer];
@@ -87,24 +95,39 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         const hasGraphicalData =
           tableData.length > 0 &&
           tableData.some((row) =>
-            Object.values(row).some(
-              (val) => typeof val === "number" && !isNaN(val)
-            )
+            Object.entries(row).some(([key, val]) => {
+              const isExcludedKey =
+                key.toLowerCase().endsWith("id") ||
+                key.toLowerCase().endsWith("code") ||
+                key.toLowerCase() === "phone_number";
+
+              const numericValue =
+                typeof val === "number"
+                  ? val
+                  : typeof val === "string"
+                  ? parseFloat(val)
+                  : NaN;
+
+              return !isExcludedKey && !isNaN(numericValue);
+            })
           );
+
+
+
         setHasNumericData(hasGraphicalData);
 
         // Set view based on data availability
         if (tableData.length > 0) {
           setCurrentView(hasGraphicalData ? "graph" : "table");
         } else {
-          setCurrentView("text"); // No data, use text view
+          setCurrentView("text");
         }
       } else {
         setCsvData([]);
         setHasNumericData(false);
-        setCurrentView("text"); // No parsed data, default to text view
+        setCurrentView("text");
       }
-    }, [parsedData]);
+    }, [parsedData, message.isBot]);
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -128,11 +151,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       try {
         if (isFavorited) {
           await onUnfavorite(message.id);
-          setCurrentFavoriteCount((prev) => Math.max(prev - 1, 0));
           setIsFavorited(false);
         } else {
           await onFavorite(message.id);
-          setCurrentFavoriteCount((prev) => prev + 1);
           setIsFavorited(true);
         }
       } catch (error) {
@@ -246,7 +267,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         );
       }
 
-      if (!parsedData) {
+      if (!parsedData && message.isBot) {
         return (
           <div
             className="p-4 shadow-md"
@@ -272,7 +293,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               {message.content}
             </ReactMarkdown>
             <div
-              className="mt-2 text-right text-xs"
+              className="mt-2 mr-2 text-right text-xs"
               style={{ color: theme.colors.textSecondary }}
             >
               {new Date(message.timestamp).toLocaleTimeString([], {
@@ -507,7 +528,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           >
             {currentView === "text" && (
               <>
-                <p style={{ color: theme.colors.text }}>No records found.</p>
+                <p style={{ color: theme.colors.text }}>
+                  {parsedData?.content || "No records found."}
+                </p>
                 <div
                   className="mt-2 mr-2 text-right text-xs"
                   style={{ color: theme.colors.textSecondary }}
@@ -552,7 +575,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             )}
             {currentView === "query" && (
               <>
-                {parsedData.sql_query ? (
+                {parsedData?.sql_query ? (
                   <QueryDisplay query={parsedData.sql_query.toUpperCase()} />
                 ) : (
                   <p style={{ color: theme.colors.text }}>
@@ -576,7 +599,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     };
 
     return (
-      <div className="flex w-full " style={{ marginBottom: theme.spacing.md }}>
+      <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
         {message.isBot ? (
           <div
             className="flex w-full items-start"
@@ -709,15 +732,18 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     position="top"
                   >
                     <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: loading ? 1 : 1.1 }}
+                      whileTap={{ scale: loading ? 1 : 0.95 }}
                       onClick={handleFavorite}
                       className="p-1 rounded-full transition-colors"
                       style={{
                         color: isFavorited
                           ? theme.colors.error
                           : "rgba(255,255,255,0.8)",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        opacity: loading ? 0.5 : 1,
                       }}
+                      disabled={loading}
                     >
                       <Heart
                         size={16}
@@ -737,10 +763,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   className="mt-2 border-t pt-2 flex items-center justify-between"
                   style={{ borderColor: `${theme.colors.surface}20` }}
                 >
-                  <span
-                    className="text-xs"
-                    style={{ color: `${"#ffffff"}99` }}
-                  >
+                  <span className="text-xs" style={{ color: `${"#ffffff"}99` }}>
                     {new Date(message.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
