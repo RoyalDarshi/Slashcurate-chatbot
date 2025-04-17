@@ -16,6 +16,7 @@ import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import { askChatbot, getUserConnections } from "../api";
+import { debounce } from "lodash";
 
 interface Session {
   id: string;
@@ -29,6 +30,7 @@ interface Session {
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
   handleAskFavoriteQuestion: (question: string, query?: string) => void;
+  saveCurrentSession: () => void; // New method
 };
 
 export interface ChatInterfaceProps {
@@ -79,6 +81,7 @@ const ChatInterface = memo(
       const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
       const token = sessionStorage.getItem("token") ?? "";
+      const isInitialLoad = useRef(true);
 
       const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -92,15 +95,6 @@ const ChatInterface = memo(
       }, []);
 
       const prevMessagesLength = useRef(messages.length);
-
-      useEffect(() => {
-        const isNewMessageAdded = messages.length > prevMessagesLength.current;
-        prevMessagesLength.current = messages.length;
-
-        if (isNewMessageAdded && !editingMessageId) {
-          scrollToBottom();
-        }
-      }, [messages, scrollToBottom, editingMessageId]);
 
       const saveMessages = useCallback(() => {
         try {
@@ -127,25 +121,83 @@ const ChatInterface = memo(
       }, [currentSessionId]);
 
       const saveSession = useCallback(() => {
-        if (messagesRef.current.length > 0 && !currentSessionId) {
+        if (messagesRef.current.length === 0) return; // Skip if no messages
+
+        try {
           const storedSessions = localStorage.getItem("chatSessions");
-          const sessions = storedSessions ? JSON.parse(storedSessions) : [];
-          const newSession: Session = {
-            id: `session-${Date.now()}`,
-            messages: [...messagesRef.current],
-            timestamp: new Date().toISOString(),
-            title:
-              messagesRef.current[0]?.content.substring(0, 50) + "..." ||
-              "Untitled",
-            isFavorite: false,
-            token: sessionStorage.getItem("token") ?? "",
-          };
-          sessions.push(newSession);
+          let sessions: Session[] = storedSessions
+            ? JSON.parse(storedSessions)
+            : [];
+
+          if (currentSessionId) {
+            // Update existing session
+            sessions = sessions.map((session) =>
+              session.id === currentSessionId
+                ? {
+                    ...session,
+                    messages: [...messagesRef.current],
+                    timestamp: new Date().toISOString(),
+                    title:
+                      messagesRef.current[0]?.content.substring(0, 50) +
+                        "..." || "Untitled",
+                  }
+                : session
+            );
+          } else {
+            // Create new session
+            const newSession: Session = {
+              id: `session-${Date.now()}`,
+              messages: [...messagesRef.current],
+              timestamp: new Date().toISOString(),
+              title:
+                messagesRef.current[0]?.content.substring(0, 50) + "..." ||
+                "Untitled",
+              isFavorite: false,
+              token: sessionStorage.getItem("token") ?? "",
+            };
+            sessions.push(newSession);
+            setCurrentSessionId(newSession.id);
+            localStorage.setItem("currentSessionId", newSession.id);
+          }
+
           localStorage.setItem("chatSessions", JSON.stringify(sessions));
-          setCurrentSessionId(newSession.id);
-          localStorage.setItem("currentSessionId", newSession.id);
+        } catch (error) {
+          console.error("Failed to save session", error);
+          toast.error("Failed to save session. Storage may be full.", {
+            style: {
+              background: theme.colors.surface,
+              color: theme.colors.error,
+            },
+            theme: mode,
+          });
         }
-      }, [currentSessionId]);
+      }, [currentSessionId, theme, mode]);
+
+      const debouncedSaveSession = useCallback(
+        debounce(() => {
+          if (messagesRef.current.length > 0) {
+            saveSession();
+          }
+        }, 500),
+        [saveSession]
+      );
+
+      useEffect(() => {
+        const isNewMessageAdded = messages.length > prevMessagesLength.current;
+        prevMessagesLength.current = messages.length;
+        
+        if (isInitialLoad.current) {
+          isInitialLoad.current = false;
+          return;
+        }
+
+        if (isNewMessageAdded && !editingMessageId) {
+          scrollToBottom();
+          debouncedSaveSession();
+        } else if (editingMessageId) {
+          debouncedSaveSession();
+        }
+      }, [messages, scrollToBottom, editingMessageId, debouncedSaveSession]);
 
       useEffect(() => {
         const loadInitialMessages = () => {
@@ -155,19 +207,7 @@ const ChatInterface = memo(
             ? JSON.parse(storedSessions)
             : [];
 
-          const currentSessionId = localStorage.getItem("currentSessionId");
-          if (currentSessionId) {
-            const currentSession = sessions.find(
-              (session) => session.id === currentSessionId
-            );
-            if (currentSession) {
-              messagesRef.current = currentSession.messages;
-              setMessages(currentSession.messages);
-              setCurrentSessionId(currentSessionId);
-              return;
-            }
-          }
-
+          // Prioritize selectedSession (e.g., from History)
           const selectedSession = localStorage.getItem("selectedSession");
           if (selectedSession) {
             const session: Session = JSON.parse(selectedSession);
@@ -177,11 +217,34 @@ const ChatInterface = memo(
             localStorage.setItem("currentSessionId", session.id);
             localStorage.removeItem("selectedSession");
             if (onSessionSelected) onSessionSelected(session);
+            console.log("Loaded selected session:", session.id); // Debugging
           } else {
-            const storedMessages = localStorage.getItem("chatMessages");
-            if (storedMessages) {
-              messagesRef.current = JSON.parse(storedMessages);
-              setMessages(messagesRef.current);
+            // Load current session if available
+            const currentSessionId = localStorage.getItem("currentSessionId");
+            if (currentSessionId) {
+              const currentSession = sessions.find(
+                (session) => session.id === currentSessionId
+              );
+              if (currentSession) {
+                messagesRef.current = currentSession.messages;
+                setMessages(currentSession.messages);
+                setCurrentSessionId(currentSessionId);
+                console.log("Loaded current session:", currentSessionId); // Debugging
+              } else {
+                // Clear stale currentSessionId
+                localStorage.removeItem("currentSessionId");
+                messagesRef.current = [];
+                setMessages([]);
+                console.log("Cleared stale currentSessionId"); // Debugging
+              }
+            } else {
+              // Load legacy chatMessages if no session
+              const storedMessages = localStorage.getItem("chatMessages");
+              if (storedMessages) {
+                messagesRef.current = JSON.parse(storedMessages);
+                setMessages(messagesRef.current);
+                console.log("Loaded legacy chatMessages"); // Debugging
+              }
             }
           }
 
@@ -440,6 +503,11 @@ const ChatInterface = memo(
       useImperativeHandle(ref, () => ({
         handleNewChat,
         handleAskFavoriteQuestion,
+        saveCurrentSession: () => {
+          if (messagesRef.current.length > 0) {
+            saveSession(); // Use existing saveSession logic
+          }
+        },
       }));
 
       const handleSubmit = useCallback(

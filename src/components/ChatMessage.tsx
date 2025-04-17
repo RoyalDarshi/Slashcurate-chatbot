@@ -76,15 +76,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     }, [message.content, message.isBot]);
 
     useEffect(() => {
-      // Debugging log to inspect parsedData and loading state
-      console.log({
-        messageId: message.id,
-        isBot: message.isBot,
-        loading,
-        parsedData,
-        content: message.content,
-      });
-
       if (parsedData?.answer && message.isBot) {
         const tableData = Array.isArray(parsedData.answer)
           ? parsedData.answer
@@ -111,8 +102,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               return !isExcludedKey && !isNaN(numericValue);
             })
           );
-
-
 
         setHasNumericData(hasGraphicalData);
 

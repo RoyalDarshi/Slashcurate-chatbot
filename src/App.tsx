@@ -151,6 +151,11 @@ const AppContent: React.FC<{
   const { theme } = useTheme();
   const userToken = sessionStorage.getItem("token") || "";
 
+  // Simplified callback to handle session click
+  const handleSessionClicked = () => {
+    onHomePage(); // Navigate to home
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -202,7 +207,7 @@ const AppContent: React.FC<{
               />
             )}
             {activeMenu === "history" && (
-              <History onSessionClicked={onHomePage} />
+              <History onSessionClicked={handleSessionClicked} />
             )}
             {activeMenu === "favourite" && (
               <Favourites
