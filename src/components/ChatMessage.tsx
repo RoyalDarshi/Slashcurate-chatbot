@@ -321,16 +321,35 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             )}
 
             {/* Graph Button: Show only when numeric data exists and not in graph view */}
-            {hasNumericData && currentView !== "graph" && (
-              <CustomTooltip title="Switch to Graph View" position="top">
+            {currentView !== "graph" && (
+              <CustomTooltip
+                title={
+                  !hasNumericData
+                    ? "No valid data for graph"
+                    : "Switch to Graph View"
+                }
+                position="top"
+              >
                 <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
+                  whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
+                  disabled={!hasNumericData}
                   onClick={() => setCurrentView("graph")}
-                  className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                  style={{ background: theme.colors.surface }}
+                  className="rounded-full disabled:cursor-not-allowed p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                  style={{
+                    background: hasNumericData
+                      ? theme.colors.surface
+                      : theme.colors.disabled,
+                  }}
                 >
-                  <LineChart size={20} style={{ color: theme.colors.accent }} />
+                  <LineChart
+                    size={20}
+                    style={{
+                      color: hasNumericData
+                        ? theme.colors.accent
+                        : theme.colors.disabledText,
+                    }}
+                  />
                 </motion.button>
               </CustomTooltip>
             )}
@@ -477,10 +496,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             )}
           </div>
           <div
-            className="p-4 shadow-md"
+            className="p-2 shadow-md"
             style={{
               background: theme.colors.surface,
               borderRadius: theme.borderRadius.large,
+              borderTopLeftRadius: message.isBot ? "0" : undefined,
               boxShadow: `0 2px 6px ${theme.colors.text}20`,
               width: "100%",
             }}
@@ -489,7 +509,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               <>
                 <p style={{ color: theme.colors.text }}>No records found.</p>
                 <div
-                  className="mt-2 text-right text-xs"
+                  className="mt-2 mr-2 text-right text-xs"
                   style={{ color: theme.colors.textSecondary }}
                 >
                   {new Date(message.timestamp).toLocaleTimeString([], {
@@ -503,7 +523,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               <>
                 <DataTable data={csvData} />
                 <div
-                  className="mt-2 text-right text-xs"
+                  className="mt-2 mr-2 text-right text-xs"
                   style={{ color: theme.colors.textSecondary }}
                 >
                   {new Date(message.timestamp).toLocaleTimeString([], {
@@ -520,7 +540,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   isValidGraph={setHasNumericData}
                 />
                 <div
-                  className="mt-2 text-right text-xs"
+                  className="mt-2 mr-2 text-right text-xs"
                   style={{ color: theme.colors.textSecondary }}
                 >
                   {new Date(message.timestamp).toLocaleTimeString([], {
@@ -540,7 +560,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   </p>
                 )}
                 <div
-                  className="mt-2 text-right text-xs"
+                  className="mt-2 mr-2 text-right text-xs"
                   style={{ color: theme.colors.textSecondary }}
                 >
                   {new Date(message.timestamp).toLocaleTimeString([], {

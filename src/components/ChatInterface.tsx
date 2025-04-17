@@ -846,7 +846,7 @@ const ChatInterface = memo(
           >
             <ChatInput
               input={input}
-              isSubmitting={isSubmitting}
+              isSubmitting={isSubmitting || loadingMessageId !== null}
               onInputChange={setInput}
               onSubmit={handleSubmit}
               connections={connections}

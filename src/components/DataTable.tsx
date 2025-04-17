@@ -88,11 +88,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
 
   return (
     <div
-      className="rounded-lg border shadow-sm transition-colors duration-200"
+      className="transition-colors duration-200"
       style={{
         background: theme.colors.surface,
-        borderColor: `${theme.colors.text}20`,
-        borderRadius: theme.borderRadius.default,
       }}
     >
       <div
@@ -101,7 +99,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           scrollbarColor: `${theme.colors.textSecondary} ${theme.colors.surface}`,
         }}
       >
-        <div className="align-middle mr-2">
+        <div className="align-middle">
           <table className="min-w-full divide-y">
             <thead
               className="sticky top-0 transition-colors duration-200"
