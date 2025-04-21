@@ -1,4 +1,5 @@
 export const handleLogout = () => {
-  sessionStorage.removeItem("userId");
   window.location.href = "/";
+  sessionStorage.removeItem("userId");
+  localStorage.removeItem("currentSessionId");
 };

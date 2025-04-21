@@ -8,6 +8,7 @@ export interface Message {
   favoriteCount?: number;
   isFavorited?: boolean;
   sql_query: string;
+  parentId?: string;
 }
 
 export interface Connection {
@@ -16,10 +17,33 @@ export interface Connection {
   isAdmin: boolean;
 }
 
-// Chat Interface Types
+export interface ChatInputProps {
+  input: string;
+  isSubmitting: boolean;
+  onInputChange: (value: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  connections: Connection[];
+  selectedConnection: string | null;
+  onSelect: (option: any) => void;
+  onNewChat: () => void;
+}
+
+export interface ChatMessageProps {
+  message: Message;
+  loading: boolean;
+  onEditMessage: (id: string, newContent: string) => void;
+  selectedConnection: string | null;
+  onFavorite: (messageId: string) => void;
+  onUnfavorite: (messageId: string) => void;
+  favoriteCount?: number;
+  isFavorited: boolean;
+}
+
 export interface ChatInterfaceProps {
   onCreateConSelected: () => void;
   onSessionSelected?: (session: any) => void;
+  initialQuestion?: { text: string; query?: string };
+  onQuestionAsked?: () => void;
 }
 
 export interface ChatState {
@@ -43,30 +67,6 @@ export interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
 
-// Chat Message Types
-export interface ChatMessageProps {
-  message: Message;
-  loading: boolean;
-  onEditMessage: (messageId: string, newContent: string) => Promise<void>;
-  selectedConnection: string | null;
-  onFavorite: (messageId: string) => Promise<void>;
-  onUnfavorite: (messageId: string) => Promise<void>;
-  favoriteCount?: number;
-  isFavorited: boolean;
-}
-
-// Chat Input Types
-export interface ChatInputProps {
-  input: string;
-  isLoading: boolean;
-  isSubmitting: boolean;
-  onInputChange: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  connections: Connection[];
-  selectedConnection: string | null;
-  onSelect: (option: any) => void;
-  onNewChat: () => void; // New prop
-}
 
 // Connection Selector Types
 export interface ConnectionSelectorProps {

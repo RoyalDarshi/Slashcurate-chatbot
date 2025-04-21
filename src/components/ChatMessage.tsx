@@ -70,7 +70,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       try {
         return JSON.parse(message.content);
       } catch {
-        // For user messages, return content as valid; for bot, null if invalid
         return message.isBot ? null : { content: message.content };
       }
     }, [message.content, message.isBot]);
@@ -82,7 +81,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           : [parsedData.answer];
         setCsvData(tableData);
 
-        // Check for numeric data
         const hasGraphicalData =
           tableData.length > 0 &&
           tableData.some((row) =>
@@ -90,6 +88,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               const isExcludedKey =
                 key.toLowerCase().endsWith("id") ||
                 key.toLowerCase().endsWith("code") ||
+                key.toLowerCase().endsWith("phone") ||
                 key.toLowerCase() === "phone_number";
 
               const numericValue =
@@ -105,7 +104,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
         setHasNumericData(hasGraphicalData);
 
-        // Set view based on data availability
         if (tableData.length > 0) {
           setCurrentView(hasGraphicalData ? "graph" : "table");
         } else {
@@ -300,7 +298,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             className="absolute -right-12 top-0 flex flex-col items-center"
             style={{ gap: theme.spacing.sm }}
           >
-            {/* Text Button: Show only in query view when no data */}
             {currentView === "query" && csvData.length === 0 && (
               <CustomTooltip title="Switch to Text View" position="top">
                 <motion.button
@@ -315,7 +312,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </CustomTooltip>
             )}
 
-            {/* Table Button: Show only when data exists and not in table view */}
             {csvData.length > 0 && currentView !== "table" && (
               <CustomTooltip title="Switch to Table View" position="top">
                 <motion.button
@@ -330,7 +326,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </CustomTooltip>
             )}
 
-            {/* Graph Button: Show only when numeric data exists and not in graph view */}
             {currentView !== "graph" && (
               <CustomTooltip
                 title={
@@ -364,7 +359,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </CustomTooltip>
             )}
 
-            {/* Query Button: Show only when sql_query exists and not in query view */}
             {parsedData?.sql_query && currentView !== "query" && (
               <CustomTooltip title="Switch to Query View" position="top">
                 <motion.button
@@ -379,7 +373,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </CustomTooltip>
             )}
 
-            {/* Download XLSX Button: Show only in table view with data */}
             {currentView === "table" && csvData.length > 0 && (
               <CustomTooltip title="Download XLSX" position="top">
                 <motion.button
@@ -394,7 +387,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </CustomTooltip>
             )}
 
-            {/* Download Graph Button: Show only in graph view with data */}
             {currentView === "graph" && hasNumericData && (
               <div className="relative">
                 <CustomTooltip title="Download Graph" position="top">
@@ -439,7 +431,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </div>
             )}
 
-            {/* Copy Query Button: Show only in query view with sql_query */}
             {currentView === "query" && parsedData?.sql_query && (
               <CustomTooltip title={copyTooltipTxt} position="top">
                 <motion.button

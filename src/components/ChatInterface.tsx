@@ -22,21 +22,12 @@ interface Session {
   messages: Message[];
   timestamp: string;
   title: string;
-  isFavorite: boolean;
-  token: string;
 }
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
   handleAskFavoriteQuestion: (question: string, query?: string) => void;
 };
-
-export interface ChatInterfaceProps {
-  onCreateConSelected: () => void;
-  onSessionSelected?: (session: Session) => void;
-  initialQuestion?: { text: string; query?: string };
-  onQuestionAsked?: () => void;
-}
 
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
@@ -72,9 +63,6 @@ const ChatInterface = memo(
       const [currentSessionId, setCurrentSessionId] = useState<string | null>(
         null
       );
-      const [favorites, setFavorites] = useState<{
-        [messageId: string]: { count: number; isFavorited: boolean };
-      }>({});
 
       const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
@@ -94,6 +82,7 @@ const ChatInterface = memo(
       const prevMessagesLength = useRef(messages.length);
 
       useEffect(() => {
+        if (!messages) return;
         const isNewMessageAdded = messages.length > prevMessagesLength.current;
         prevMessagesLength.current = messages.length;
 
@@ -102,116 +91,8 @@ const ChatInterface = memo(
         }
       }, [messages, scrollToBottom, editingMessageId]);
 
-      const saveMessages = useCallback(() => {
-        try {
-          // Avoid saving if there's a loading message
-          if (messagesRef.current.some((msg) => msg.content === "loading...")) {
-            return;
-          }
-          localStorage.setItem(
-            "chatMessages",
-            JSON.stringify(messagesRef.current)
-          );
-          if (currentSessionId) {
-            const storedSessions = localStorage.getItem("chatSessions");
-            const sessions = storedSessions ? JSON.parse(storedSessions) : [];
-            const updatedSessions = sessions.map((session: Session) =>
-              session.id === currentSessionId
-                ? { ...session, messages: messagesRef.current }
-                : session
-            );
-            localStorage.setItem(
-              "chatSessions",
-              JSON.stringify(updatedSessions)
-            );
-          }
-        } catch (error) {
-          console.error("Failed to save messages", error);
-        }
-      }, [currentSessionId]);
-
-      const saveSession = useCallback(() => {
-        if (
-          messagesRef.current.length > 0 &&
-          !messagesRef.current.some((msg) => msg.content === "loading...") &&
-          !currentSessionId
-        ) {
-          const storedSessions = localStorage.getItem("chatSessions");
-          const sessions = storedSessions ? JSON.parse(storedSessions) : [];
-          const newSession: Session = {
-            id: `session-${Date.now()}`,
-            messages: [...messagesRef.current],
-            timestamp: new Date().toISOString(),
-            title:
-              messagesRef.current[0]?.content.substring(0, 50) + "..." ||
-              "Untitled",
-            isFavorite: false,
-            token: sessionStorage.getItem("token") ?? "",
-          };
-          sessions.push(newSession);
-          localStorage.setItem("chatSessions", JSON.stringify(sessions));
-          setCurrentSessionId(newSession.id);
-          localStorage.setItem("currentSessionId", newSession.id);
-        }
-      }, [currentSessionId]);
-
-      useEffect(() => {
-        const loadInitialMessages = () => {
-          const currentToken = sessionStorage.getItem("token") ?? "";
-          const storedSessions = localStorage.getItem("chatSessions");
-          const sessions: Session[] = storedSessions
-            ? JSON.parse(storedSessions)
-            : [];
-
-          // Save current session if it exists and has messages
-          if (messagesRef.current.length > 0 && currentSessionId) {
-            saveMessages();
-            saveSession();
-          }
-
-          const currentSessionIdFromStorage =
-            localStorage.getItem("currentSessionId");
-          if (currentSessionIdFromStorage) {
-            const currentSession = sessions.find(
-              (session) => session.id === currentSessionIdFromStorage
-            );
-            if (currentSession) {
-              messagesRef.current = currentSession.messages;
-              setMessages(currentSession.messages);
-              setCurrentSessionId(currentSessionIdFromStorage);
-              return;
-            }
-          }
-
-          const selectedSession = localStorage.getItem("selectedSession");
-          if (selectedSession) {
-            const session: Session = JSON.parse(selectedSession);
-            messagesRef.current = session.messages;
-            setMessages(session.messages);
-            setCurrentSessionId(session.id);
-            localStorage.setItem("currentSessionId", session.id);
-            localStorage.removeItem("selectedSession");
-            if (onSessionSelected) onSessionSelected(session);
-          } else {
-            const storedMessages = localStorage.getItem("chatMessages");
-            if (storedMessages) {
-              messagesRef.current = JSON.parse(storedMessages);
-              setMessages(messagesRef.current);
-            }
-          }
-
-          if (messagesRef.current.length > 0) {
-            setTimeout(() => scrollToBottom(), 200);
-          }
-        };
-
-        loadInitialMessages();
-        fetchConnections();
-      }, [onSessionSelected, scrollToBottom, saveMessages, saveSession]);
-
       const fetchConnections = useCallback(async () => {
         setConnectionsLoading(true);
-        const token = sessionStorage.getItem("token");
         if (!token) {
           toast.error("User ID not found. Please log in again.", {
             style: {
@@ -255,7 +136,46 @@ const ChatInterface = memo(
         } finally {
           setConnectionsLoading(false);
         }
-      }, [theme, mode]);
+      }, [theme, mode, token]);
+
+      const fetchSession = useCallback(
+        async (sessionId: string) => {
+          try {
+            const response = await axios.get(
+              `${API_URL}/api/sessions/${sessionId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            messagesRef.current = response.data.messages || [];
+            setMessages(response.data.messages || []);
+            setCurrentSessionId(sessionId);
+            setTimeout(() => scrollToBottom(), 200);
+            if (onSessionSelected) {
+              onSessionSelected(response.data);
+            }
+          } catch (error) {
+            console.error("Error fetching session:", error);
+            setMessages([]);
+            toast.error("Failed to load session.");
+          }
+        },
+        [token, scrollToBottom, onSessionSelected]
+      );
+
+      useEffect(() => {
+        const loadInitialMessages = async () => {
+          const storedSessionId = localStorage.getItem("currentSessionId");
+          if (storedSessionId) {
+            await fetchSession(storedSessionId);
+          }
+          await fetchConnections();
+        };
+        loadInitialMessages();
+      }, [fetchConnections, fetchSession]);
 
       useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
@@ -280,25 +200,6 @@ const ChatInterface = memo(
         selectedConnection,
         onQuestionAsked,
       ]);
-
-      const updateSessions = useCallback(
-        (updatedMessages: Message[]) => {
-          const storedSessions = localStorage.getItem("chatSessions");
-          if (storedSessions && currentSessionId) {
-            const sessions: Session[] = JSON.parse(storedSessions);
-            const updatedSessions = sessions.map((session) =>
-              session.id === currentSessionId
-                ? { ...session, messages: updatedMessages }
-                : session
-            );
-            localStorage.setItem(
-              "chatSessions",
-              JSON.stringify(updatedSessions)
-            );
-          }
-        },
-        [currentSessionId]
-      );
 
       const handleSelect = useCallback(
         async (option: any) => {
@@ -326,27 +227,17 @@ const ChatInterface = memo(
         [onCreateConSelected, connections]
       );
 
-      const handleNewChat = useCallback(() => {
-        if (messagesRef.current.length > 0) {
-          saveMessages();
-          saveSession();
-        }
-
+      const handleNewChat = useCallback(async () => {
         messagesRef.current = [];
         setMessages([]);
         setInput("");
         setEditingMessageId(null);
         setCurrentSessionId(null);
-
         localStorage.removeItem("currentSessionId");
-        localStorage.removeItem("selectedSession");
-        localStorage.removeItem("chatMessages");
-      }, [saveMessages, saveSession]);
+      }, []);
 
       const handleAskFavoriteQuestion = useCallback(
         async (question: string, query?: string) => {
-          console.log("Asking favorite question:", question);
-          console.log("Query:", query);
           if (!selectedConnection) {
             toast.error(
               "No connection selected. Please select a connection first.",
@@ -362,32 +253,61 @@ const ChatInterface = memo(
             return;
           }
 
-          if (messagesRef.current.length > 0) {
-            saveMessages();
-            saveSession();
-          }
-
-          messagesRef.current = [];
-          setMessages([]);
-          setInput("");
-          setEditingMessageId(null);
-          setCurrentSessionId(null);
-          localStorage.removeItem("currentSessionId");
-          localStorage.removeItem("selectedSession");
-          localStorage.removeItem("chatMessages");
+          await handleNewChat();
 
           const userMessage: Message = {
             id: Date.now().toString(),
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
+            favoriteCount: 1,
+            isFavorited: true,
+            parentId: null,
           };
           const botLoadingMessage: Message = {
             id: `loading-${Date.now()}`,
             isBot: true,
             content: "loading...",
             timestamp: new Date().toISOString(),
+            favoriteCount: 0,
+            isFavorited: false,
+            parentId: userMessage.id,
           };
+
+          let sessionId: string;
+          try {
+            const response = await axios.post(
+              `${API_URL}/api/sessions`,
+              { token, title: question.substring(0, 50) + "..." },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            sessionId = response.data.id;
+            setCurrentSessionId(sessionId);
+            localStorage.setItem("currentSessionId", sessionId);
+          } catch (error) {
+            console.error("Error creating session:", error);
+            toast.error("Failed to create session.");
+            return;
+          }
+
+          try {
+            const userMessageResponse = await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: question,
+                isBot: false,
+                parentId: null,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            userMessage.id = userMessageResponse.data.id; // Update with server-generated ID
+          } catch (error) {
+            console.error("Error saving user message:", error);
+            toast.error("Failed to save message.");
+            return;
+          }
 
           setLoadingMessageId(botLoadingMessage.id);
           messagesRef.current = [userMessage, botLoadingMessage];
@@ -418,17 +338,28 @@ const ChatInterface = memo(
               content: JSON.stringify(response.data, null, 2),
               isBot: true,
               timestamp: new Date().toISOString(),
+              favoriteCount: 0,
+              isFavorited: true,
+              parentId: userMessage.id,
             };
+
+            await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: botResponseMessage.content,
+                isBot: true,
+                parentId: userMessage.id,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
 
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? botResponseMessage : msg
             );
             setMessages([...messagesRef.current]);
             setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
-
-            // Save messages and session after updating with bot response
-            saveMessages();
-            saveSession();
           } catch (error) {
             console.error("Error getting bot response:", error);
             const errorMessage: Message = {
@@ -436,28 +367,40 @@ const ChatInterface = memo(
               content: "Sorry, an error occurred. Please try again.",
               isBot: true,
               timestamp: new Date().toISOString(),
+              favoriteCount: 0,
+              isFavorited: false,
+              parentId: userMessage.id,
             };
+
+            await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: errorMessage.content,
+                isBot: true,
+                parentId: userMessage.id,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? errorMessage : msg
             );
             setMessages([...messagesRef.current]);
             setTimeout(() => scrollToMessage(errorMessage.id), 100);
-
-            // Save messages and session even on error to capture the error message
-            saveMessages();
-            saveSession();
           } finally {
             setLoadingMessageId(null);
           }
         },
         [
-          saveMessages,
-          saveSession,
           selectedConnection,
           connections,
           scrollToMessage,
           theme,
           mode,
+          token,
+          handleNewChat,
         ]
       );
 
@@ -492,13 +435,58 @@ const ChatInterface = memo(
             content: input,
             isBot: false,
             timestamp: new Date().toISOString(),
+            favoriteCount: 0,
+            isFavorited: false,
+            parentId: null,
           };
           const botLoadingMessage: Message = {
             id: `loading-${Date.now()}`,
             isBot: true,
             content: "loading...",
             timestamp: new Date().toISOString(),
+            favoriteCount: 0,
+            isFavorited: false,
+            parentId: userMessage.id,
           };
+
+          let sessionId = currentSessionId;
+          if (!sessionId) {
+            try {
+              const response = await axios.post(
+                `${API_URL}/api/sessions`,
+                { token, title: input.substring(0, 50) + "..." },
+                { headers: { "Content-Type": "application/json" } }
+              );
+              sessionId = response.data.id;
+              setCurrentSessionId(sessionId);
+              localStorage.setItem("currentSessionId", sessionId);
+            } catch (error) {
+              console.error("Error creating session:", error);
+              toast.error("Failed to create session.");
+              setIsSubmitting(false);
+              return;
+            }
+          }
+
+          try {
+            const userMessageResponse = await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: input,
+                isBot: false,
+                parentId: null,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            userMessage.id = userMessageResponse.data.id; // Update with server-generated ID
+          } catch (error) {
+            console.error("Error saving user message:", error);
+            toast.error("Failed to save message.");
+            setIsSubmitting(false);
+            return;
+          }
 
           setLoadingMessageId(botLoadingMessage.id);
           messagesRef.current = [
@@ -524,17 +512,28 @@ const ChatInterface = memo(
               content: JSON.stringify(response.data, null, 2),
               isBot: true,
               timestamp: new Date().toISOString(),
+              favoriteCount: 0,
+              isFavorited: false,
+              parentId: userMessage.id,
             };
+
+            await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: botResponseMessage.content,
+                isBot: true,
+                parentId: userMessage.id,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
 
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? botResponseMessage : msg
             );
             setMessages([...messagesRef.current]);
             setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
-
-            // Save messages and session after updating with bot response
-            saveMessages();
-            saveSession();
           } catch (error) {
             console.error("Error getting bot response:", error);
             const errorMessage: Message = {
@@ -542,16 +541,28 @@ const ChatInterface = memo(
               content: "Sorry, an error occurred. Please try again.",
               isBot: true,
               timestamp: new Date().toISOString(),
+              favoriteCount: 0,
+              isFavorited: false,
+              parentId: userMessage.id,
             };
+
+            await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: errorMessage.content,
+                isBot: true,
+                parentId: userMessage.id,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? errorMessage : msg
             );
             setMessages([...messagesRef.current]);
             setTimeout(() => scrollToMessage(errorMessage.id), 100);
-
-            // Save messages and session even on error to capture the error message
-            saveMessages();
-            saveSession();
           } finally {
             setLoadingMessageId(null);
             setIsSubmitting(false);
@@ -562,133 +573,104 @@ const ChatInterface = memo(
           isSubmitting,
           selectedConnection,
           connections,
-          saveMessages,
-          saveSession,
+          currentSessionId,
           scrollToMessage,
-          mode,
           theme,
+          mode,
+          token,
         ]
       );
 
-      const findBotResponse = useCallback((messageId: string) => {
-        try {
-          const messages = messagesRef.current;
-          const questionIndex = messages.findIndex(
-            (msg) => msg.id === messageId
-          );
-
-          if (
-            questionIndex === -1 ||
-            questionIndex + 1 >= messages.length ||
-            messages[questionIndex].isBot
-          ) {
-            return null;
-          }
-
-          const botResponse = messages[questionIndex + 1];
-          if (!botResponse.isBot) return null;
-
-          const parsedResponse = JSON.parse(botResponse.content);
-          const isValidResponse =
-            parsedResponse &&
-            (parsedResponse.answer || parsedResponse.sql_query);
-
-          return isValidResponse
-            ? {
-                ...botResponse,
-                parsedContent: {
-                  answer: Array.isArray(parsedResponse.answer)
-                    ? parsedResponse.answer
-                    : [parsedResponse.answer],
-                  sql_query: parsedResponse.sql_query || "",
-                  explanation: parsedResponse.explanation || "",
-                },
-              }
-            : null;
-        } catch (error) {
-          console.error("Error parsing bot response:", error);
-          return null;
-        }
-      }, []);
-
       const handleFavoriteMessage = useCallback(
         async (messageId: string) => {
-          try {
-            const token = sessionStorage.getItem("token");
-            const questionMessage = messages.find((m) => m.id === messageId);
-            const botResponse = findBotResponse(messageId);
+          if (!messages || !token) {
+            toast.error("Cannot favorite message: Messages or token missing.");
+            return;
+          }
 
-            if (!questionMessage) {
-              toast.error("Message not found");
+          try {
+            const questionMessage = messages.find(
+              (msg) => msg.id === messageId
+            );
+            if (!questionMessage || questionMessage.isBot) {
+              toast.error("Invalid question message.");
               return;
             }
 
-            const response = await axios.post(`${API_URL}/favorite`, {
-              question: {
-                id: questionMessage.id,
-                content: questionMessage.content,
-              },
-              response: botResponse
-                ? {
-                    id: botResponse.id,
-                    query: botResponse.parsedContent.sql_query,
-                  }
-                : null,
-              connection: selectedConnection,
-              token,
-            });
+            const responseMessage = messages.find(
+              (msg) => msg.parentId === messageId
+            );
 
-            setFavorites((prev) => ({
-              ...prev,
-              [messageId]: { count: response.data.count, isFavorited: true },
-            }));
-            updateMessageFavoriteStatus(messageId, response.data.count, true);
+            await axios.post(
+              `${API_URL}/favorite`,
+              {
+                token,
+                questionId: messageId,
+                questionContent: questionMessage.content,
+                responseQuery: responseMessage
+                  ? JSON.parse(responseMessage.content).sql_query
+                  : null,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
+            messagesRef.current = messagesRef.current.map((msg) => {
+              if (msg.id === messageId) {
+                return { ...msg, isFavorited: true };
+              }
+              if (msg.id === responseMessage?.id) {
+                return { ...msg, isFavorited: true };
+              }
+              return msg;
+            });
+            setMessages([...messagesRef.current]);
+            toast.success("Message favorited!");
           } catch (error) {
             console.error("Error favoriting message:", error);
-            toast.error(
-              "Failed to favorite, question doesnt have valid response!"
-            );
+            toast.error("Failed to favorite message.");
           }
         },
-        [messages, selectedConnection, findBotResponse]
+        [token, messages]
       );
 
-      const handleUnfavoriteMessage = useCallback(async (messageId: string) => {
-        try {
-          const token = sessionStorage.getItem("token");
-          const response = await axios.post(`${API_URL}/unfavorite`, {
-            token: token,
-            messageId: messageId,
-          });
+      const handleUnfavoriteMessage = useCallback(
+        async (messageId: string) => {
+          if (!messages || !token) {
+            toast.error(
+              "Cannot unfavorite message: Messages or token missing."
+            );
+            return;
+          }
 
-          updateMessageFavoriteStatus(messageId, response.data.count, false);
-        } catch (error) {
-          toast.error("Failed to unfavorite message");
-        }
-      }, []);
+          try {
+            await axios.post(
+              `${API_URL}/unfavorite`,
+              { token, questionId: messageId },
+              { headers: { "Content-Type": "application/json" } }
+            );
 
-      const updateMessageFavoriteStatus = useCallback(
-        (messageId: string, count: number, isFavorited: boolean) => {
-          const updatedMessages = messagesRef.current.map((msg) =>
-            msg.id === messageId
-              ? { ...msg, favoriteCount: count, isFavorited }
-              : msg
-          );
+            const responseMessage = messages.find(
+              (msg) => msg.parentId === messageId
+            );
 
-          messagesRef.current = updatedMessages;
-          setMessages(updatedMessages);
-          updateSessions(updatedMessages);
+            messagesRef.current = messagesRef.current.map((msg) => {
+              if (msg.id === messageId || msg.id === responseMessage?.id) {
+                return { ...msg, isFavorited: false };
+              }
+              return msg;
+            });
+            setMessages([...messagesRef.current]);
+            toast.success("Message unfavorited!");
+          } catch (error) {
+            console.error("Error unfavoriting message:", error);
+            toast.error("Failed to unfavorite message.");
+          }
         },
-        [updateSessions]
+        [token, messages]
       );
 
       const handleEditMessage = useCallback(
         async (id: string, newContent: string) => {
-          const messageIndex = messagesRef.current.findIndex(
-            (msg) => msg.id === id
-          );
-          if (messageIndex === -1) return;
-
           if (!selectedConnection) {
             toast.error(
               "No connection selected. Please create or select a connection first.",
@@ -698,99 +680,181 @@ const ChatInterface = memo(
                   color: theme.colors.error,
                   border: `1px solid ${theme.colors.error}20`,
                 },
+                theme: mode,
               }
             );
             return;
           }
 
-          messagesRef.current = messagesRef.current.map((msg) =>
-            msg.id === id ? { ...msg, content: newContent } : msg
+          const messageIndex = messagesRef.current.findIndex(
+            (msg) => msg.id === id
           );
-          setMessages([...messagesRef.current]);
-          setEditingMessageId(id);
+          if (messageIndex === -1) return;
 
-          const editedMessage = messagesRef.current[messageIndex];
-          if (!editedMessage.isBot && selectedConnection) {
-            const botLoadingMessage = {
-              id: `loading-${Date.now()}`,
-              content: "loading...",
-              isBot: true,
-              timestamp: new Date().toISOString(),
-            };
-            setLoadingMessageId(botLoadingMessage.id);
+          try {
+            // Update the user message
+            await axios.put(
+              `${API_URL}/api/messages/${id}`,
+              { token, content: newContent },
+              { headers: { "Content-Type": "application/json" } }
+            );
 
-            if (
-              messageIndex + 1 < messagesRef.current.length &&
-              messagesRef.current[messageIndex + 1].isBot
-            ) {
-              messagesRef.current[messageIndex + 1] = botLoadingMessage;
-            } else {
-              messagesRef.current.splice(
-                messageIndex + 1,
-                0,
-                botLoadingMessage
-              );
-            }
+            messagesRef.current = messagesRef.current.map((msg) =>
+              msg.id === id ? { ...msg, content: newContent } : msg
+            );
             setMessages([...messagesRef.current]);
+            setEditingMessageId(id);
 
-            try {
-              const selectedConnectionObj = connections.find(
-                (conn) => conn.connectionName === selectedConnection
+            const editedMessage = messagesRef.current[messageIndex];
+            if (!editedMessage.isBot && selectedConnection) {
+              // Find existing bot response
+              const responseMessage = messagesRef.current.find(
+                (msg) => msg.parentId === id
               );
-              if (!selectedConnectionObj)
-                throw new Error("Selected connection not found");
 
-              const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-                question: newContent,
-                connection: selectedConnectionObj,
-              });
-              const botResponse = JSON.stringify(response.data, null, 2);
-              const botResponseMessage = {
-                id: Date.now().toString(),
-                content: botResponse,
+              const botLoadingMessage: Message = {
+                id: responseMessage
+                  ? responseMessage.id
+                  : `loading-${Date.now()}`,
+                content: "loading...",
                 isBot: true,
                 timestamp: new Date().toISOString(),
+                favoriteCount: responseMessage
+                  ? responseMessage.favoriteCount
+                  : 0,
+                isFavorited: responseMessage
+                  ? responseMessage.isFavorited
+                  : false,
+                parentId: id,
               };
 
-              messagesRef.current = messagesRef.current.map((msg) =>
-                msg.id === botLoadingMessage.id ? botResponseMessage : msg
-              );
-              setMessages([...messagesRef.current]);
-              setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
+              setLoadingMessageId(botLoadingMessage.id);
 
-              // Save messages and session after updating with bot response
-              saveMessages();
-              saveSession();
-            } catch (error) {
-              console.error("Error updating message:", error);
-              const errorMessage = {
-                id: Date.now().toString(),
-                content: "Sorry, an error occurred. Please try again.",
-                isBot: true,
-                timestamp: new Date().toISOString(),
-              };
-              messagesRef.current = messagesRef.current.map((msg) =>
-                msg.id === botLoadingMessage.id ? errorMessage : msg
-              );
+              if (responseMessage) {
+                // Update existing bot response in state
+                messagesRef.current = messagesRef.current.map((msg) =>
+                  msg.id === responseMessage.id ? botLoadingMessage : msg
+                );
+              } else {
+                // Add new loading message
+                messagesRef.current.splice(
+                  messageIndex + 1,
+                  0,
+                  botLoadingMessage
+                );
+              }
               setMessages([...messagesRef.current]);
-              setTimeout(() => scrollToMessage(errorMessage.id), 100);
 
-              // Save messages and session even on error to capture the error message
-              saveMessages();
-              saveSession();
-            } finally {
-              setLoadingMessageId(null);
-              setEditingMessageId(null);
+              try {
+                const selectedConnectionObj = connections.find(
+                  (conn) => conn.connectionName === selectedConnection
+                );
+                if (!selectedConnectionObj)
+                  throw new Error("Selected connection not found");
+
+                const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
+                  question: newContent,
+                  connection: selectedConnectionObj,
+                });
+
+                const botResponse: Message = {
+                  id: botLoadingMessage.id,
+                  content: JSON.stringify(response.data, null, 2),
+                  isBot: true,
+                  timestamp: new Date().toISOString(),
+                  favoriteCount: botLoadingMessage.favoriteCount,
+                  isFavorited: botLoadingMessage.isFavorited,
+                  parentId: id,
+                };
+
+                if (responseMessage) {
+                  // Update existing bot response in database
+                  await axios.put(
+                    `${API_URL}/api/messages/${responseMessage.id}`,
+                    {
+                      token,
+                      content: botResponse.content,
+                    },
+                    { headers: { "Content-Type": "application/json" } }
+                  );
+                } else {
+                  // Create new bot response
+                  await axios.post(
+                    `${API_URL}/api/messages`,
+                    {
+                      token,
+                      session_id: currentSessionId,
+                      content: botResponse.content,
+                      isBot: true,
+                      parentId: id,
+                    },
+                    { headers: { "Content-Type": "application/json" } }
+                  );
+                }
+
+                messagesRef.current = messagesRef.current.map((msg) =>
+                  msg.id === botLoadingMessage.id ? botResponse : msg
+                );
+                setMessages([...messagesRef.current]);
+                setTimeout(() => scrollToMessage(botResponse.id), 100);
+              } catch (error) {
+                console.error("Error updating bot response:", error);
+                const errorMessage: Message = {
+                  id: botLoadingMessage.id,
+                  content: "Sorry, an error occurred. Please try again.",
+                  isBot: true,
+                  timestamp: new Date().toISOString(),
+                  favoriteCount: botLoadingMessage.favoriteCount,
+                  isFavorited: botLoadingMessage.isFavorited,
+                  parentId: id,
+                };
+
+                if (responseMessage) {
+                  await axios.put(
+                    `${API_URL}/api/messages/${responseMessage.id}`,
+                    {
+                      token,
+                      content: errorMessage.content,
+                    },
+                    { headers: { "Content-Type": "application/json" } }
+                  );
+                } else {
+                  await axios.post(
+                    `${API_URL}/api/messages`,
+                    {
+                      token,
+                      session_id: currentSessionId,
+                      content: errorMessage.content,
+                      isBot: true,
+                      parentId: id,
+                    },
+                    { headers: { "Content-Type": "application/json" } }
+                  );
+                }
+
+                messagesRef.current = messagesRef.current.map((msg) =>
+                  msg.id === botLoadingMessage.id ? errorMessage : msg
+                );
+                setMessages([...messagesRef.current]);
+                setTimeout(() => scrollToMessage(errorMessage.id), 100);
+              } finally {
+                setLoadingMessageId(null);
+                setEditingMessageId(null);
+              }
             }
+          } catch (error) {
+            console.error("Error updating message:", error);
+            toast.error("Failed to update message.");
           }
         },
         [
           selectedConnection,
           connections,
+          currentSessionId,
           scrollToMessage,
-          saveMessages,
-          saveSession,
           theme,
+          mode,
+          token,
         ]
       );
 

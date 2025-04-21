@@ -4,13 +4,15 @@ import { Search, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
+import { API_URL } from "../config";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 interface Session {
   id: string;
   messages: Message[];
   timestamp: string;
   title: string;
-  isFavorite: boolean;
 }
 
 interface HistoryProps {
@@ -23,46 +25,88 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("today");
+  const token = sessionStorage.getItem("token") ?? "";
 
   useEffect(() => {
     loadSessions();
   }, []);
 
-  const loadSessions = () => {
+  const loadSessions = async () => {
+    if (!token) {
+      toast.error("Please log in to view chat history.", {
+        style: {
+          background: theme.colors.surface,
+          color: theme.colors.error,
+          border: `1px solid ${theme.colors.error}20`,
+        },
+        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
+      });
+      return;
+    }
+
     try {
-      const storedSessions = localStorage.getItem("chatSessions");
-      if (storedSessions) {
-        const parsedSessions: Session[] = JSON.parse(storedSessions);
-        setSessions(parsedSessions);
-        filterSessions(parsedSessions, activeFilter);
-      }
+      const response = await axios.post(
+        `${API_URL}/api/fetchsessions`,
+        { token },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      const sessions = response.data;
+      // Normalize sessions to ensure messages is always an array
+      const normalizedSessions = sessions.map((session: Session) => ({
+        ...session,
+        messages: Array.isArray(session.messages) ? session.messages : [],
+      }));
+      setSessions(normalizedSessions);
+      filterSessions(normalizedSessions, activeFilter);
     } catch (error) {
-      console.error("Failed to load sessions from local storage", error);
+      console.error("Failed to load sessions from server", error);
+      toast.error("Failed to load chat history.", {
+        style: {
+          background: theme.colors.surface,
+          color: theme.colors.error,
+          border: `1px solid ${theme.colors.error}20`,
+        },
+        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
+      });
+      setSessions([]);
+      setFilteredSessions([]);
     }
   };
 
-  const toggleFavorite = (sessionId: string) => {
-    const updatedSessions = sessions.map((session) =>
-      session.id === sessionId
-        ? { ...session, isFavorite: !session.isFavorite }
-        : session
-    );
-    setSessions(updatedSessions);
-    filterSessions(updatedSessions, activeFilter);
-    localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
-  };
-
-  const deleteSession = (sessionId: string) => {
-    const updatedSessions = sessions.filter(
-      (session) => session.id !== sessionId
-    );
-    setSessions(updatedSessions);
-    filterSessions(updatedSessions, activeFilter);
-    localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
-
-    const selectedSession = localStorage.getItem("selectedSession");
-    if (selectedSession && JSON.parse(selectedSession).id === sessionId) {
-      localStorage.removeItem("selectedSession");
+  const deleteSession = async (sessionId: string) => {
+    try {
+      await axios.delete(`${API_URL}/api/sessions/${sessionId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const updatedSessions = sessions.filter(
+        (session) => session.id !== sessionId
+      );
+      setSessions(updatedSessions);
+      filterSessions(updatedSessions, activeFilter);
+      if (localStorage.getItem("currentSessionId") === sessionId) {
+        localStorage.removeItem("currentSessionId");
+      }
+      toast.success("Session deleted successfully.", {
+        style: {
+          background: theme.colors.surface,
+          color: theme.colors.text,
+          border: `1px solid ${theme.colors.accent}20`,
+        },
+        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
+      });
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      toast.error("Failed to delete session.", {
+        style: {
+          background: theme.colors.surface,
+          color: theme.colors.error,
+          border: `1px solid ${theme.colors.error}20`,
+        },
+        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
+      });
     }
   };
 
@@ -109,9 +153,8 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
     filterSessions(sessions, filter);
   };
 
-  const handleSessionClick = (session: Session) => {
-    localStorage.setItem("currentSessionId", JSON.stringify(session.id));
-    localStorage.setItem("chatMessages", JSON.stringify(session.messages));
+  const handleSessionClick = async (session: Session) => {
+    localStorage.setItem("currentSessionId", session.id);
     onSessionClicked();
   };
 
@@ -167,7 +210,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
       style={{ background: theme.colors.background }}
     >
       <div className="mx-auto overflow-y-hidden w-full flex-1 flex flex-col">
-        {/* Header with smaller search bar */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
           <h2
             className="text-xl font-bold whitespace-nowrap"
@@ -202,7 +244,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap mb-3 gap-2">
           {filters.map((filter) => (
             <button
@@ -240,7 +281,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
           ))}
         </div>
 
-        {/* Scrollable session cards */}
         <div
           className="flex-1 overflow-y-auto"
           style={{
@@ -315,7 +355,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                           fontWeight: theme.typography.weight.medium,
                         }}
                       >
-                        {session.messages.length} msg
+                        {(session.messages || []).length} msg
                       </span>
                       <CustomTooltip title="Delete session">
                         <button

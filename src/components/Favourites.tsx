@@ -8,7 +8,7 @@ interface FavoriteMessage {
   id: string;
   text: string;
   query?: string;
-  isFavorite: boolean;
+  isFavorited: boolean;
 }
 
 interface FavoritesProps {
@@ -21,11 +21,11 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
+  const token = sessionStorage.getItem("token") ?? "";
 
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const token = sessionStorage.getItem("token");
         if (!token) {
           setError("Authentication required");
           return;
@@ -35,14 +35,12 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
 
         if (response.status === 200) {
           const formattedData: FavoriteMessage[] = response.data.map(
-            (item: any) => {
-              return {
-                id: item.question_id,
-                text: item.question,
-                query: item?.query || undefined,
-                isFavorite: true,
-              };
-            }
+            (item: any) => ({
+              id: item.question_id,
+              text: item.question,
+              query: item.query || undefined,
+              isFavorited: true,
+            })
           );
           setFavorites(formattedData);
           setError(null);
@@ -56,24 +54,22 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
     };
 
     fetchFavorites();
-  }, []);
+  }, [token]);
 
   const handleRemoveFavorite = async (id: string) => {
     try {
-      const token = sessionStorage.getItem("token");
       if (!token) {
         setError("Authentication required");
         return;
       }
 
       await axios.post(`${API_URL}/favorite/delete`, {
-        token: token,
+        token,
         messageId: id,
       });
 
       setFavorites((prev) => prev.filter((msg) => msg.id !== id));
     } catch (err) {
-      setFavorites((prev) => [...prev]);
       setError("Failed to remove favorite");
       console.error("API Error:", err);
     }
@@ -154,9 +150,7 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
                   {message.text}
                 </span>
 
-                <CustomTooltip
-                  title="Remove from favorites"
-                >
+                <CustomTooltip title="Remove from favorites">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
