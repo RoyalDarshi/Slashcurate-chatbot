@@ -3,13 +3,11 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
   SortingState,
-  getPaginationRowModel,
 } from "@tanstack/react-table";
-import { DataTableProps } from "../types"; // Adjust import based on your project structure
-import { useTheme } from "../ThemeContext"; // Adjust import based on your project structure
+import { DataTableProps } from "../types";
+import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
 
 const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
@@ -17,21 +15,18 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 10, // Initial page size set to 10 for usability
+    pageSize: 10,
   });
 
-  // Normalize data to handle various input formats
   const normalizedData = useMemo(() => {
     if (!data) return [];
     return Array.isArray(data) ? data : [data];
   }, [data]);
 
-  // Reset to first page when data changes
   useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [normalizedData]);
 
-  // Extract headers from the first data item
   const headers = useMemo(() => {
     if (normalizedData.length === 0) return [];
     const firstItem = normalizedData[0];
@@ -40,7 +35,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       : ["Value"];
   }, [normalizedData]);
 
-  // Process data based on headers
   const processedData = useMemo(() => {
     if (headers.length === 0) return [];
     return headers[0] === "Value"
@@ -48,14 +42,33 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       : normalizedData;
   }, [headers, normalizedData]);
 
-  // Configure table columns
+  // Compute paginated data
+  const paginatedData = useMemo(() => {
+    const start = pagination.pageIndex * pagination.pageSize;
+    const end = start + pagination.pageSize;
+    return processedData.slice(start, end);
+  }, [processedData, pagination]);
+
+  // Sort only the paginated data
+  const sortedPaginatedData = useMemo(() => {
+    if (sorting.length === 0) return paginatedData;
+    const [{ id, desc }] = sorting;
+    return [...paginatedData].sort((a, b) => {
+      const aVal = a[id];
+      const bVal = b[id];
+      if (aVal < bVal) return desc ? 1 : -1;
+      if (aVal > bVal) return desc ? -1 : 1;
+      return 0;
+    });
+  }, [paginatedData, sorting]);
+
   const columnHelper = createColumnHelper<any>();
   const columns = useMemo(
     () =>
       headers.map((header) =>
         columnHelper.accessor(header, {
           id: header,
-          sortingFn: "alphanumeric",
+          sortingFn: "alphanumeric", // Note: This is informational since sorting is manual
           header: ({ column }) => (
             <div
               className="flex items-center space-x-1 cursor-pointer select-none"
@@ -84,20 +97,17 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     [headers, theme]
   );
 
-  // Initialize table instance
   const table = useReactTable({
-    data: processedData,
+    data: sortedPaginatedData,
     columns,
     state: { sorting, pagination },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
     pageCount: Math.ceil(processedData.length / pagination.pageSize),
   });
 
-  // Function to determine visible page numbers
   const getVisiblePages = (
     currentPage: number,
     totalPages: number,
@@ -131,7 +141,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
 
   const maxVisiblePages = 5;
   const visiblePages = getVisiblePages(
-    pagination.pageIndex + 1, // Convert 0-based to 1-based
+    pagination.pageIndex + 1,
     table.getPageCount(),
     maxVisiblePages
   );
@@ -141,7 +151,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       className="rounded-lg overflow-hidden"
       style={{ background: theme.colors.surface }}
     >
-      {/* Scrollable Table Container */}
       <div
         className="overflow-auto max-h-96 scrollbar-thin"
         style={{
@@ -149,7 +158,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         }}
       >
         <table className="w-full">
-          {/* Table Header */}
           <thead
             className="sticky top-0"
             style={{
@@ -178,8 +186,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               </tr>
             ))}
           </thead>
-
-          {/* Table Body */}
           <tbody
             className="divide-y"
             style={{ borderColor: `${theme.colors.text}20` }}
@@ -204,8 +210,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           </tbody>
         </table>
       </div>
-
-      {/* Pagination Controls */}
       <div
         className="flex items-center justify-between py-4 border-t"
         style={{
@@ -213,7 +217,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           backgroundColor: theme.colors.surface,
         }}
       >
-        {/* Rows Per Page Selector */}
         <div className="flex items-center space-x-2">
           <span
             className="text-sm"
@@ -245,8 +248,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             ))}
           </select>
         </div>
-
-        {/* Page Navigation */}
         <div className="flex items-center">
           <span
             className="text-sm px-2"
@@ -255,9 +256,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             Page <strong>{pagination.pageIndex + 1}</strong> of{" "}
             <strong>{table.getPageCount()}</strong>
           </span>
-
           <div className="flex items-center space-x-1">
-            {/* First Page Button */}
             <CustomTooltip title="Go to first page">
               <button
                 title="Go to first page"
@@ -284,8 +283,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 </svg>
               </button>
             </CustomTooltip>
-
-            {/* Previous Page Button */}
             <CustomTooltip title="Go to previous page">
               <button
                 title="Go to previous page"
@@ -312,8 +309,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 </svg>
               </button>
             </CustomTooltip>
-
-            {/* Page Numbers with Ellipses */}
             <div className="flex">
               {visiblePages.map((page, index) =>
                 typeof page === "number" ? (
@@ -352,8 +347,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 )
               )}
             </div>
-
-            {/* Next Page Button */}
             <CustomTooltip title="Go to next page">
               <button
                 title="Go to next page"
@@ -380,8 +373,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 </svg>
               </button>
             </CustomTooltip>
-
-            {/* Last Page Button */}
             <CustomTooltip title="Go to last page">
               <button
                 title="Go to last page"
@@ -415,7 +406,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   );
 });
 
-// Memoization comparison function
 const areEqual = (prevProps: DataTableProps, nextProps: DataTableProps) => {
   return prevProps.data === nextProps.data;
 };
