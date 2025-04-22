@@ -40,7 +40,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     selectedConnection,
     onFavorite,
     onUnfavorite,
-    favoriteCount = 0,
     isFavorited: initialIsFavorited,
   }) => {
     const { theme } = useTheme();

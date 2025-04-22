@@ -160,7 +160,7 @@ const ChatInterface = memo(
           } catch (error) {
             console.error("Error fetching session:", error);
             setMessages([]);
-            toast.error("Failed to load session.");
+            localStorage.removeItem("currentSessionId");
           }
         },
         [token, scrollToBottom, onSessionSelected]
@@ -253,7 +253,10 @@ const ChatInterface = memo(
             return;
           }
 
-          await handleNewChat();
+          // Only start a new chat if there’s no active session
+          if (!currentSessionId) {
+            await handleNewChat();
+          }
 
           const userMessage: Message = {
             id: Date.now().toString(),
@@ -274,20 +277,22 @@ const ChatInterface = memo(
             parentId: userMessage.id,
           };
 
-          let sessionId: string;
-          try {
-            const response = await axios.post(
-              `${API_URL}/api/sessions`,
-              { token, title: question.substring(0, 50) + "..." },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            sessionId = response.data.id;
-            setCurrentSessionId(sessionId);
-            localStorage.setItem("currentSessionId", sessionId);
-          } catch (error) {
-            console.error("Error creating session:", error);
-            toast.error("Failed to create session.");
-            return;
+          let sessionId = currentSessionId;
+          if (!sessionId) {
+            try {
+              const response = await axios.post(
+                `${API_URL}/api/sessions`,
+                { token, title: question.substring(0, 50) + "..." },
+                { headers: { "Content-Type": "application/json" } }
+              );
+              sessionId = response.data.id;
+              setCurrentSessionId(sessionId);
+              localStorage.setItem("currentSessionId", sessionId);
+            } catch (error) {
+              console.error("Error creating session:", error);
+              toast.error("Failed to create session.");
+              return;
+            }
           }
 
           try {
@@ -298,6 +303,7 @@ const ChatInterface = memo(
                 session_id: sessionId,
                 content: question,
                 isBot: false,
+                isFavorited: true,
                 parentId: null,
               },
               { headers: { "Content-Type": "application/json" } }
@@ -310,8 +316,12 @@ const ChatInterface = memo(
           }
 
           setLoadingMessageId(botLoadingMessage.id);
-          messagesRef.current = [userMessage, botLoadingMessage];
-          setMessages([userMessage, botLoadingMessage]);
+          messagesRef.current = [
+            ...messagesRef.current,
+            userMessage,
+            botLoadingMessage,
+          ];
+          setMessages([...messagesRef.current]);
 
           try {
             const selectedConnectionObj = connections.find(
@@ -350,6 +360,7 @@ const ChatInterface = memo(
                 session_id: sessionId,
                 content: botResponseMessage.content,
                 isBot: true,
+                isFavorited: true,
                 parentId: userMessage.id,
               },
               { headers: { "Content-Type": "application/json" } }
@@ -396,6 +407,7 @@ const ChatInterface = memo(
         [
           selectedConnection,
           connections,
+          currentSessionId, // Add currentSessionId to dependencies
           scrollToMessage,
           theme,
           mode,
@@ -698,10 +710,10 @@ const ChatInterface = memo(
               { token, content: newContent },
               { headers: { "Content-Type": "application/json" } }
             );
-
             messagesRef.current = messagesRef.current.map((msg) =>
-              msg.id === id ? { ...msg, content: newContent } : msg
+              msg.id === id ? { ...msg, content: newContent,isFavorited:false } : msg
             );
+            console.log("Updated message:", messagesRef.current);
             setMessages([...messagesRef.current]);
             setEditingMessageId(id);
 
@@ -722,9 +734,7 @@ const ChatInterface = memo(
                 favoriteCount: responseMessage
                   ? responseMessage.favoriteCount
                   : 0,
-                isFavorited: responseMessage
-                  ? responseMessage.isFavorited
-                  : false,
+                isFavorited: false,
                 parentId: id,
               };
 
@@ -763,7 +773,7 @@ const ChatInterface = memo(
                   isBot: true,
                   timestamp: new Date().toISOString(),
                   favoriteCount: botLoadingMessage.favoriteCount,
-                  isFavorited: botLoadingMessage.isFavorited,
+                  isFavorited: false,
                   parentId: id,
                 };
 
@@ -787,6 +797,7 @@ const ChatInterface = memo(
                       content: botResponse.content,
                       isBot: true,
                       parentId: id,
+                      isFavorited: false,
                     },
                     { headers: { "Content-Type": "application/json" } }
                   );
@@ -804,8 +815,8 @@ const ChatInterface = memo(
                   content: "Sorry, an error occurred. Please try again.",
                   isBot: true,
                   timestamp: new Date().toISOString(),
-                  favoriteCount: botLoadingMessage.favoriteCount,
-                  isFavorited: botLoadingMessage.isFavorited,
+                  favoriteCount: 0,
+                  isFavorited: false,
                   parentId: id,
                 };
 
@@ -827,6 +838,7 @@ const ChatInterface = memo(
                       content: errorMessage.content,
                       isBot: true,
                       parentId: id,
+                      isFavorited: false,
                     },
                     { headers: { "Content-Type": "application/json" } }
                   );

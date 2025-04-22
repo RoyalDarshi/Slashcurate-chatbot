@@ -7,7 +7,7 @@ import CustomTooltip from "./CustomTooltip";
 interface FavoriteMessage {
   id: string;
   text: string;
-  query?: string;
+  query: string;
   isFavorited: boolean;
 }
 
@@ -65,12 +65,34 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
 
       await axios.post(`${API_URL}/favorite/delete`, {
         token,
-        messageId: id,
+        questionId: id,
       });
 
       setFavorites((prev) => prev.filter((msg) => msg.id !== id));
     } catch (err) {
       setError("Failed to remove favorite");
+      console.error("API Error:", err);
+    }
+  };
+
+  const handleFavouriteAsk = async (
+    questionId: string,
+    questionContent: string,
+    responseQuery: string
+  ) => {
+    try {
+      if (!token) {
+        setError("Authentication required");
+        return;
+      }
+      await axios.post(`${API_URL}/favorite`, {
+        token,
+        questionId,
+        questionContent,
+        responseQuery,
+      });
+    } catch (err) {
+      setError("Failed to add favorite");
       console.error("API Error:", err);
     }
   };
@@ -139,7 +161,10 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
                   backgroundColor: theme.colors.surface,
                   border: `1px solid ${theme.colors.border}`,
                 }}
-                onClick={() => onFavoriteSelected(message.text, message.query)}
+                onClick={() => {
+                  onFavoriteSelected(message.text, message.query);
+                  handleFavouriteAsk(message.id, message.text, message.query);
+                }}
               >
                 <span
                   style={{
