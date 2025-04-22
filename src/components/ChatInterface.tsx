@@ -493,24 +493,17 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
             userMessage.id = userMessageResponse.data.id; // Update with server-generated ID
-          } catch (error) {
-            console.error("Error saving user message:", error);
-            toast.error("Failed to save message.");
-            setIsSubmitting(false);
-            return;
-          }
 
-          setLoadingMessageId(botLoadingMessage.id);
-          messagesRef.current = [
-            ...messagesRef.current,
-            userMessage,
-            botLoadingMessage,
-          ];
-          setMessages([...messagesRef.current]);
-          setInput("");
-          setEditingMessageId(null);
+            setLoadingMessageId(botLoadingMessage.id);
+            messagesRef.current = [
+              ...messagesRef.current,
+              userMessage,
+              botLoadingMessage,
+            ];
+            setMessages([...messagesRef.current]);
+            setInput("");
+            setEditingMessageId(null);
 
-          try {
             const selectedConnectionObj = connections.find(
               (conn) => conn.connectionName === selectedConnection
             );
@@ -520,7 +513,7 @@ const ChatInterface = memo(
             const response = await askChatbot(input, selectedConnectionObj);
 
             const botResponseMessage: Message = {
-              id: Date.now().toString(),
+              id: botLoadingMessage.id, // Temporary ID, will be updated
               content: JSON.stringify(response.data, null, 2),
               isBot: true,
               timestamp: new Date().toISOString(),
@@ -529,7 +522,7 @@ const ChatInterface = memo(
               parentId: userMessage.id,
             };
 
-            await axios.post(
+            const botResponseResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
                 token,
@@ -540,16 +533,18 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
+            const serverBotId = botResponseResponse.data.id; // Capture server-generated ID
+            botResponseMessage.id = serverBotId; // Update to server ID
 
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? botResponseMessage : msg
             );
             setMessages([...messagesRef.current]);
-            setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
+            setTimeout(() => scrollToMessage(serverBotId), 100);
           } catch (error) {
-            console.error("Error getting bot response:", error);
+            console.error("Error in handleSubmit:", error);
             const errorMessage: Message = {
-              id: Date.now().toString(),
+              id: botLoadingMessage.id,
               content: "Sorry, an error occurred. Please try again.",
               isBot: true,
               timestamp: new Date().toISOString(),
@@ -558,7 +553,7 @@ const ChatInterface = memo(
               parentId: userMessage.id,
             };
 
-            await axios.post(
+            const errorResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
                 token,
@@ -569,6 +564,7 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
+            errorMessage.id = errorResponse.data.id; // Update error message with server ID
 
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? errorMessage : msg

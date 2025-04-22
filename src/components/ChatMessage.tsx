@@ -179,6 +179,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
     const handleSave = async () => {
       setIsEditing(false);
+      setIsFavorited(false);
       if (!selectedConnection || !editedContent.trim() || !hasChanges) return;
       try {
         onEditMessage(message.id, editedContent);
