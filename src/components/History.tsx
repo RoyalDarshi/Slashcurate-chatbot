@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Message } from "../types";
-import { Search, Trash2 } from "lucide-react";
+import { Search, Trash2, Pencil, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
@@ -25,6 +25,8 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("today");
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>("");
   const token = sessionStorage.getItem("token") ?? "";
 
   useEffect(() => {
@@ -51,7 +53,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
         { headers: { "Content-Type": "application/json" } }
       );
       const sessions = response.data;
-      // Normalize sessions to ensure messages is always an array
       const normalizedSessions = sessions.map((session: Session) => ({
         ...session,
         messages: Array.isArray(session.messages) ? session.messages : [],
@@ -108,6 +109,73 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
         theme: theme.colors.background === "#0F172A" ? "dark" : "light",
       });
     }
+  };
+
+  const startEditing = (session: Session) => {
+    setEditingSessionId(session.id);
+    setEditingTitle(session.title);
+  };
+
+  const saveTitle = async (sessionId: string) => {
+    if (!editingTitle.trim()) {
+      toast.error("Title cannot be empty.", {
+        style: {
+          background: theme.colors.surface,
+          color: theme.colors.error,
+          border: `1px solid ${theme.colors.error}20`,
+        },
+        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
+      });
+      return;
+    }
+
+    try {
+      await axios.put(
+        `${API_URL}/api/sessions/${sessionId}`,
+        { title: editingTitle },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const updatedSessions = sessions.map((session) =>
+        session.id === sessionId ? { ...session, title: editingTitle } : session
+      );
+      setSessions(updatedSessions);
+      setFilteredSessions(
+        filteredSessions.map((session) =>
+          session.id === sessionId
+            ? { ...session, title: editingTitle }
+            : session
+        )
+      );
+      setEditingSessionId(null);
+      toast.success("Title updated successfully.", {
+        style: {
+          background: theme.colors.surface,
+          color: theme.colors.text,
+          border: `1px solid ${theme.colors.accent}20`,
+        },
+        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
+      });
+    } catch (error) {
+      console.error("Error updating session title:", error);
+      toast.error("Failed to update title.", {
+        style: {
+          background: theme.colors.surface,
+          color: theme.colors.error,
+          border: `1px solid ${theme.colors.error}20`,
+        },
+        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
+      });
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingSessionId(null);
+    setEditingTitle("");
   };
 
   const filterSessions = (sessions: Session[], filter: string) => {
@@ -318,17 +386,71 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                     }
                   >
                     <div className="flex-1 min-w-0">
-                      <h3
-                        className="font-medium truncate whitespace-nowrap"
-                        style={{
-                          color: theme.colors.text,
-                          fontFamily: theme.typography.fontFamily,
-                          fontWeight: theme.typography.weight.medium,
-                          fontSize: theme.typography.size.base,
-                        }}
-                      >
-                        {session.title}
-                      </h3>
+                      {session.id === editingSessionId ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                saveTitle(session.id);
+                              } else if (e.key === "Escape") {
+                                cancelEditing();
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            autoFocus
+                            className="flex-1 p-2 text-sm"
+                            style={{
+                              background: theme.colors.background,
+                              color: theme.colors.text,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: theme.borderRadius.default,
+                              fontFamily: theme.typography.fontFamily,
+                              fontSize: theme.typography.size.base,
+                            }}
+                          />
+                          <CustomTooltip title="Save title">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                saveTitle(session.id);
+                              }}
+                              className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
+                              style={{ color: theme.colors.textSecondary }}
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                          </CustomTooltip>
+                          <CustomTooltip title="Cancel editing">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelEditing();
+                              }}
+                              className="p-1 rounded-full hover:bg-gray-500/10 transition-colors"
+                              style={{ color: theme.colors.textSecondary }}
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </CustomTooltip>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <h3
+                            className="font-medium truncate whitespace-nowrap flex-1"
+                            style={{
+                              color: theme.colors.text,
+                              fontFamily: theme.typography.fontFamily,
+                              fontWeight: theme.typography.weight.medium,
+                              fontSize: theme.typography.size.base,
+                            }}
+                          >
+                            {session.title}
+                          </h3>
+                        </div>
+                      )}
                       <p
                         className="text-xs mt-1"
                         style={{
@@ -346,6 +468,18 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
+                      <CustomTooltip title="Edit title">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditing(session);
+                          }}
+                          className="p-1 rounded-full hover:bg-blue-500/10 transition-colors"
+                          style={{ color: theme.colors.textSecondary , visibility: editingSessionId === session.id ? "hidden" : "visible"}}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      </CustomTooltip>
                       <span
                         className="text-xs px-2 py-1 rounded whitespace-nowrap"
                         style={{

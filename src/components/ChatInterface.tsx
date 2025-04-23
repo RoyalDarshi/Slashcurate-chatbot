@@ -263,7 +263,6 @@ const ChatInterface = memo(
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
-            favoriteCount: 1, // Changed from 1 to 0
             isFavorited: true, // Changed from true to false
             parentId: null,
           };
@@ -272,7 +271,6 @@ const ChatInterface = memo(
             isBot: true,
             content: "loading...",
             timestamp: new Date().toISOString(),
-            favoriteCount: 0,
             isFavorited: false,
             parentId: userMessage.id,
           };
@@ -287,7 +285,7 @@ const ChatInterface = memo(
               );
               sessionId = response.data.id;
               setCurrentSessionId(sessionId);
-              localStorage.setItem("currentSessionId", sessionId);
+              localStorage.setItem("currentSessionId", sessionId || "");
             } catch (error) {
               console.error("Error creating session:", error);
               toast.error("Failed to create session.");
@@ -348,7 +346,6 @@ const ChatInterface = memo(
               content: JSON.stringify(response.data, null, 2),
               isBot: true,
               timestamp: new Date().toISOString(),
-              favoriteCount: 1,
               isFavorited: true, // Changed from true to false
               parentId: userMessage.id,
             };
@@ -378,7 +375,6 @@ const ChatInterface = memo(
               content: "Sorry, an error occurred. Please try again.",
               isBot: true,
               timestamp: new Date().toISOString(),
-              favoriteCount: 0,
               isFavorited: false,
               parentId: userMessage.id,
             };
@@ -447,7 +443,6 @@ const ChatInterface = memo(
             content: input,
             isBot: false,
             timestamp: new Date().toISOString(),
-            favoriteCount: 0,
             isFavorited: false,
             parentId: null,
           };
@@ -456,7 +451,6 @@ const ChatInterface = memo(
             isBot: true,
             content: "loading...",
             timestamp: new Date().toISOString(),
-            favoriteCount: 0,
             isFavorited: false,
             parentId: userMessage.id,
           };
@@ -471,7 +465,7 @@ const ChatInterface = memo(
               );
               sessionId = response.data.id;
               setCurrentSessionId(sessionId);
-              localStorage.setItem("currentSessionId", sessionId);
+              localStorage.setItem("currentSessionId", sessionId||"");
             } catch (error) {
               console.error("Error creating session:", error);
               toast.error("Failed to create session.");
@@ -517,7 +511,6 @@ const ChatInterface = memo(
               content: JSON.stringify(response.data, null, 2),
               isBot: true,
               timestamp: new Date().toISOString(),
-              favoriteCount: 0,
               isFavorited: false,
               parentId: userMessage.id,
             };
@@ -548,7 +541,6 @@ const ChatInterface = memo(
               content: "Sorry, an error occurred. Please try again.",
               isBot: true,
               timestamp: new Date().toISOString(),
-              favoriteCount: 0,
               isFavorited: false,
               parentId: userMessage.id,
             };
@@ -726,9 +718,6 @@ const ChatInterface = memo(
                 content: "loading...",
                 isBot: true,
                 timestamp: new Date().toISOString(),
-                favoriteCount: responseMessage
-                  ? responseMessage.favoriteCount
-                  : 0,
                 isFavorited: false,
                 parentId: id,
               };
@@ -767,7 +756,6 @@ const ChatInterface = memo(
                   content: JSON.stringify(response.data, null, 2),
                   isBot: true,
                   timestamp: new Date().toISOString(),
-                  favoriteCount: botLoadingMessage.favoriteCount,
                   isFavorited: false,
                   parentId: id,
                 };
@@ -810,7 +798,6 @@ const ChatInterface = memo(
                   content: "Sorry, an error occurred. Please try again.",
                   isBot: true,
                   timestamp: new Date().toISOString(),
-                  favoriteCount: 0,
                   isFavorited: false,
                   parentId: id,
                 };
@@ -964,7 +951,6 @@ const ChatInterface = memo(
                       selectedConnection={selectedConnection}
                       onFavorite={handleFavoriteMessage}
                       onUnfavorite={handleUnfavoriteMessage}
-                      favoriteCount={message.favoriteCount || 0}
                       isFavorited={message.isFavorited || false}
                       responseStatus={responseStatus}
                     />

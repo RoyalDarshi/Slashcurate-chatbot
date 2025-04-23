@@ -5,10 +5,9 @@ export interface Message {
   content: string;
   isBot: boolean;
   timestamp: string;
-  favoriteCount?: number;
-  isFavorited?: boolean;
-  sql_query: string;
-  parentId?: string;
+  isFavorited: boolean;
+  sql_query?: string;
+  parentId: string | null;
 }
 
 export interface Connection {

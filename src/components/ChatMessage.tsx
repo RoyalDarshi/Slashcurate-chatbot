@@ -30,7 +30,7 @@ import { motion } from "framer-motion";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 import QueryDisplay from "./QueryDisplay";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({

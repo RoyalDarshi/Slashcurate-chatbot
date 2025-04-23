@@ -61,8 +61,9 @@ function App() {
   };
 
   const handleUserLogout = () => {
-    triggerChatFunction();
     handleLogout();
+    setIsAuthenticated(false);
+    triggerChatFunction();
   };
 
   const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
