@@ -82,25 +82,33 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
         const hasGraphicalData =
           tableData.length > 0 &&
-          tableData.some((row) =>
-            Object.entries(row).some(([key, val]) => {
+          tableData.some((row) => {
+            return Object.entries(row).some(([key, val]) => {
+              const lowerKey = key.toLowerCase();
+
               const isExcludedKey =
-                key.toLowerCase().endsWith("id") ||
-                key.toLowerCase().endsWith("code") ||
-                key.toLowerCase().endsWith("phone") ||
-                key.toLowerCase() === "phone_number";
+                lowerKey.includes("id") ||
+                lowerKey.includes("code") ||
+                lowerKey.includes("phone") ||
+                lowerKey.includes("postal") ||
+                lowerKey === "phone_number";
 
-              const numericValue =
-                typeof val === "number"
-                  ? val
-                  : typeof val === "string"
-                  ? parseFloat(val)
-                  : NaN;
+              const numericValue = (() => {
+                if (typeof val === "number") return val;
+                if (typeof val === "string") {
+                  const cleaned = val.replace(/,/g, "").trim(); // Remove commas and spaces
+                  return /^\d+(\.\d+)?$/.test(cleaned)
+                    ? parseFloat(cleaned)
+                    : NaN;
+                }
+                return NaN;
+              })();
 
-              return !isExcludedKey && !isNaN(numericValue);
-            })
-          );
-
+              return (
+                !isExcludedKey && !isNaN(numericValue) && isFinite(numericValue)
+              );
+            });
+          });
         setHasNumericData(hasGraphicalData);
 
         if (tableData.length > 0) {
@@ -113,7 +121,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         setHasNumericData(false);
         setCurrentView("text");
       }
-    }, [parsedData, message.isBot]);
+    }, []);
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -718,7 +726,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       className="p-1 rounded-full transition-colors"
                       style={{
                         color: isFavorited
-                          ? theme.colors.error
+                          ? "#FF4D4D"
                           : "rgba(255,255,255,0.8)",
                         cursor: loading ? "not-allowed" : "pointer",
                         opacity: loading ? 0.5 : 1,

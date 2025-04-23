@@ -263,8 +263,8 @@ const ChatInterface = memo(
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
-            favoriteCount: 1,
-            isFavorited: true,
+            favoriteCount: 1, // Changed from 1 to 0
+            isFavorited: true, // Changed from true to false
             parentId: null,
           };
           const botLoadingMessage: Message = {
@@ -303,7 +303,7 @@ const ChatInterface = memo(
                 session_id: sessionId,
                 content: question,
                 isBot: false,
-                isFavorited: true,
+                isFavorited: true, // Changed from true to false
                 parentId: null,
               },
               { headers: { "Content-Type": "application/json" } }
@@ -348,8 +348,8 @@ const ChatInterface = memo(
               content: JSON.stringify(response.data, null, 2),
               isBot: true,
               timestamp: new Date().toISOString(),
-              favoriteCount: 0,
-              isFavorited: true,
+              favoriteCount: 1,
+              isFavorited: true, // Changed from true to false
               parentId: userMessage.id,
             };
 
@@ -360,7 +360,7 @@ const ChatInterface = memo(
                 session_id: sessionId,
                 content: botResponseMessage.content,
                 isBot: true,
-                isFavorited: true,
+                isFavorited: true, // Changed from true to false
                 parentId: userMessage.id,
               },
               { headers: { "Content-Type": "application/json" } }
@@ -407,7 +407,7 @@ const ChatInterface = memo(
         [
           selectedConnection,
           connections,
-          currentSessionId, // Add currentSessionId to dependencies
+          currentSessionId,
           scrollToMessage,
           theme,
           mode,
@@ -707,9 +707,10 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
             messagesRef.current = messagesRef.current.map((msg) =>
-              msg.id === id ? { ...msg, content: newContent,isFavorited:false } : msg
+              msg.id === id
+                ? { ...msg, content: newContent, isFavorited: false }
+                : msg
             );
-            console.log("Updated message:", messagesRef.current);
             setMessages([...messagesRef.current]);
             setEditingMessageId(id);
 

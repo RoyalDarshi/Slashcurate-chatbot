@@ -75,28 +75,6 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
     }
   };
 
-  const handleFavouriteAsk = async (
-    questionId: string,
-    questionContent: string,
-    responseQuery: string
-  ) => {
-    try {
-      if (!token) {
-        setError("Authentication required");
-        return;
-      }
-      await axios.post(`${API_URL}/favorite`, {
-        token,
-        questionId,
-        questionContent,
-        responseQuery,
-      });
-    } catch (err) {
-      setError("Failed to add favorite");
-      console.error("API Error:", err);
-    }
-  };
-
   const filteredMessages = favorites.filter((message) =>
     message.text.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -163,7 +141,6 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
                 }}
                 onClick={() => {
                   onFavoriteSelected(message.text, message.query);
-                  handleFavouriteAsk(message.id, message.text, message.query);
                 }}
               >
                 <span
