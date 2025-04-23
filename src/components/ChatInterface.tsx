@@ -632,7 +632,6 @@ const ChatInterface = memo(
               return msg;
             });
             setMessages([...messagesRef.current]);
-            toast.success("Message favorited!");
           } catch (error) {
             console.error("Error favoriting message:", error);
             toast.error("Failed to favorite message.");
@@ -668,7 +667,6 @@ const ChatInterface = memo(
               return msg;
             });
             setMessages([...messagesRef.current]);
-            toast.success("Message unfavorited!");
           } catch (error) {
             console.error("Error unfavoriting message:", error);
             toast.error("Failed to unfavorite message.");
