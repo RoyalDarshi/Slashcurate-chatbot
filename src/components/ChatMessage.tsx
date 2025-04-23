@@ -41,6 +41,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     onFavorite,
     onUnfavorite,
     isFavorited: initialIsFavorited,
+    responseStatus,
   }) => {
     const { theme } = useTheme();
     const [csvData, setCsvData] = useState<any[]>([]);
@@ -715,23 +716,55 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 <div className="absolute top-2 left-1 flex items-center gap-1">
                   <CustomTooltip
                     title={
-                      isFavorited ? "Remove from favorites" : "Add to favorites"
+                      responseStatus === "loading" || responseStatus === "error"
+                        ? "Cannot favorite while response is loading or failed"
+                        : isFavorited
+                        ? "Remove from favorites"
+                        : "Add to favorites"
                     }
                     position="top"
                   >
                     <motion.button
-                      whileHover={{ scale: loading ? 1 : 1.1 }}
-                      whileTap={{ scale: loading ? 1 : 0.95 }}
+                      whileHover={{
+                        scale:
+                          loading ||
+                          responseStatus === "loading" ||
+                          responseStatus === "error"
+                            ? 1
+                            : 1.1,
+                      }}
+                      whileTap={{
+                        scale:
+                          loading ||
+                          responseStatus === "loading" ||
+                          responseStatus === "error"
+                            ? 1
+                            : 0.95,
+                      }}
                       onClick={handleFavorite}
                       className="p-1 rounded-full transition-colors"
                       style={{
                         color: isFavorited
                           ? "#FF4D4D"
                           : "rgba(255,255,255,0.8)",
-                        cursor: loading ? "not-allowed" : "pointer",
-                        opacity: loading ? 0.5 : 1,
+                        cursor:
+                          loading ||
+                          responseStatus === "loading" ||
+                          responseStatus === "error"
+                            ? "not-allowed"
+                            : "pointer",
+                        opacity:
+                          loading ||
+                          responseStatus === "loading" ||
+                          responseStatus === "error"
+                            ? 0.5
+                            : 1,
                       }}
-                      disabled={loading}
+                      disabled={
+                        loading ||
+                        responseStatus === "loading" ||
+                        responseStatus === "error"
+                      }
                     >
                       <Heart
                         size={16}

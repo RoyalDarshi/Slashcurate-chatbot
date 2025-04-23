@@ -37,6 +37,7 @@ export interface ChatMessageProps {
   onUnfavorite: (messageId: string) => void;
   favoriteCount?: number;
   isFavorited: boolean;
+  responseStatus: "loading" | "success" | "error" | null;
 }
 
 export interface ChatInterfaceProps {

@@ -931,25 +931,46 @@ const ChatInterface = memo(
                 </p>
               </div>
             ) : (
-              messages.map((message) => (
-                <div
-                  className="flex flex-col w-full"
-                  style={{ gap: theme.spacing.md }}
-                  key={message.id}
-                  ref={(el) => (messageRefs.current[message.id] = el)}
-                >
-                  <ChatMessage
-                    message={message}
-                    loading={message.id === loadingMessageId}
-                    onEditMessage={handleEditMessage}
-                    selectedConnection={selectedConnection}
-                    onFavorite={handleFavoriteMessage}
-                    onUnfavorite={handleUnfavoriteMessage}
-                    favoriteCount={message.favoriteCount || 0}
-                    isFavorited={message.isFavorited || false}
-                  />
-                </div>
-              ))
+              messages.map((message) => {
+                let responseStatus: "loading" | "success" | "error" | null =
+                  null;
+                if (!message.isBot) {
+                  const botResponse = messages.find(
+                    (msg) => msg.isBot && msg.parentId === message.id
+                  );
+                  if (botResponse) {
+                    if (botResponse.content === "loading...") {
+                      responseStatus = "loading";
+                    } else if (
+                      botResponse.content.includes("Sorry, an error occurred.")
+                    ) {
+                      responseStatus = "error";
+                    } else {
+                      responseStatus = "success";
+                    }
+                  }
+                }
+                return (
+                  <div
+                    className="flex flex-col w-full"
+                    style={{ gap: theme.spacing.md }}
+                    key={message.id}
+                    ref={(el) => (messageRefs.current[message.id] = el)}
+                  >
+                    <ChatMessage
+                      message={message}
+                      loading={message.id === loadingMessageId}
+                      onEditMessage={handleEditMessage}
+                      selectedConnection={selectedConnection}
+                      onFavorite={handleFavoriteMessage}
+                      onUnfavorite={handleUnfavoriteMessage}
+                      favoriteCount={message.favoriteCount || 0}
+                      isFavorited={message.isFavorited || false}
+                      responseStatus={responseStatus}
+                    />
+                  </div>
+                );
+              })
             )}
             <div ref={messagesEndRef} />
           </div>
