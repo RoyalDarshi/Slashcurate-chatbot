@@ -3,7 +3,7 @@ import { Theme } from "./types";
 export const themes: Record<"light" | "dark", Theme> = {
   light: {
     colors: {
-      background: "#F9F9FB", // Soft, light off-white with a hint of blue
+      background: "#F9F9FB",
       surface: "#FFFFFF",
       text: "#2D3748",
       textSecondary: "#4B5563",
@@ -51,9 +51,11 @@ export const themes: Record<"light" | "dark", Theme> = {
     },
     shadow: {
       none: "none",
-      sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-      md: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-      lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+      xs: "0 1px 1px 0 rgba(0, 0, 0, 0.03)",
+      sm: "0 2px 4px 0 rgba(0, 0, 0, 0.05)",
+      md: "0 4px 8px -2px rgba(0, 0, 0, 0.08)",
+      lg: "0 8px 16px -4px rgba(0, 0, 0, 0.1)",
+      xl: "0 12px 24px -6px rgba(0, 0, 0, 0.12)",
     },
     transition: {
       default: "all 0.2s ease-in-out",
@@ -109,9 +111,11 @@ export const themes: Record<"light" | "dark", Theme> = {
     },
     shadow: {
       none: "none",
+      xs: "0 1px 1px 0 rgba(0, 0, 0, 0.5)",
       sm: "0 2px 4px 0 rgba(0, 0, 0, 0.6)",
-      md: "0 6px 10px -1px rgba(0, 0, 0, 0.7)",
-      lg: "0 12px 18px -3px rgba(0, 0, 0, 0.8)",
+      md: "0 4px 8px -2px rgba(0, 0, 0, 0.7)",
+      lg: "0 8px 16px -4px rgba(0, 0, 0, 0.8)",
+      xl: "0 12px 24px -6px rgba(0, 0, 0, 0.9)",
     },
     transition: {
       default: "all 0.3s ease-in-out",

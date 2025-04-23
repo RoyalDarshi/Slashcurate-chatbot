@@ -15,7 +15,12 @@ import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
-import { askChatbot, getUserConnections } from "../api";
+import {
+  askChatbot,
+  getUserConnections,
+  getRecommendedQuestions,
+} from "../api";
+import RecommendedQuestions from "./RecommendedQuestions";
 
 interface Session {
   id: string;
@@ -63,10 +68,27 @@ const ChatInterface = memo(
       const [currentSessionId, setCurrentSessionId] = useState<string | null>(
         null
       );
+      const [recommendedQuestions, setRecommendedQuestions] = useState<any[]>(
+        []
+      );
 
       const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
       const token = sessionStorage.getItem("token") ?? "";
+
+      useEffect(() => {
+        const fetchRecommendedQuestions = async () => {
+          if (token) {
+            try {
+              const data = await getRecommendedQuestions(token);
+              setRecommendedQuestions(data);
+            } catch (error) {
+              console.error("Failed to fetch recommended questions:", error);
+            }
+          }
+        };
+        fetchRecommendedQuestions();
+      }, [token]);
 
       const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -253,7 +275,6 @@ const ChatInterface = memo(
             return;
           }
 
-          // Only start a new chat if there’s no active session
           if (!currentSessionId) {
             await handleNewChat();
           }
@@ -263,7 +284,7 @@ const ChatInterface = memo(
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
-            isFavorited: true, // Changed from true to false
+            isFavorited: true,
             parentId: null,
           };
           const botLoadingMessage: Message = {
@@ -301,12 +322,12 @@ const ChatInterface = memo(
                 session_id: sessionId,
                 content: question,
                 isBot: false,
-                isFavorited: true, // Changed from true to false
+                isFavorited: true,
                 parentId: null,
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            userMessage.id = userMessageResponse.data.id; // Update with server-generated ID
+            userMessage.id = userMessageResponse.data.id;
           } catch (error) {
             console.error("Error saving user message:", error);
             toast.error("Failed to save message.");
@@ -346,7 +367,7 @@ const ChatInterface = memo(
               content: JSON.stringify(response.data, null, 2),
               isBot: true,
               timestamp: new Date().toISOString(),
-              isFavorited: true, // Changed from true to false
+              isFavorited: true,
               parentId: userMessage.id,
             };
 
@@ -357,7 +378,7 @@ const ChatInterface = memo(
                 session_id: sessionId,
                 content: botResponseMessage.content,
                 isBot: true,
-                isFavorited: true, // Changed from true to false
+                isFavorited: true,
                 parentId: userMessage.id,
               },
               { headers: { "Content-Type": "application/json" } }
@@ -465,7 +486,7 @@ const ChatInterface = memo(
               );
               sessionId = response.data.id;
               setCurrentSessionId(sessionId);
-              localStorage.setItem("currentSessionId", sessionId||"");
+              localStorage.setItem("currentSessionId", sessionId || "");
             } catch (error) {
               console.error("Error creating session:", error);
               toast.error("Failed to create session.");
@@ -486,7 +507,7 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            userMessage.id = userMessageResponse.data.id; // Update with server-generated ID
+            userMessage.id = userMessageResponse.data.id;
 
             setLoadingMessageId(botLoadingMessage.id);
             messagesRef.current = [
@@ -507,7 +528,7 @@ const ChatInterface = memo(
             const response = await askChatbot(input, selectedConnectionObj);
 
             const botResponseMessage: Message = {
-              id: botLoadingMessage.id, // Temporary ID, will be updated
+              id: botLoadingMessage.id,
               content: JSON.stringify(response.data, null, 2),
               isBot: true,
               timestamp: new Date().toISOString(),
@@ -526,8 +547,8 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            const serverBotId = botResponseResponse.data.id; // Capture server-generated ID
-            botResponseMessage.id = serverBotId; // Update to server ID
+            const serverBotId = botResponseResponse.data.id;
+            botResponseMessage.id = serverBotId;
 
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? botResponseMessage : msg
@@ -556,7 +577,7 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            errorMessage.id = errorResponse.data.id; // Update error message with server ID
+            errorMessage.id = errorResponse.data.id;
 
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? errorMessage : msg
@@ -615,12 +636,9 @@ const ChatInterface = memo(
             );
 
             messagesRef.current = messagesRef.current.map((msg) => {
-              if (msg.id === messageId) {
+              if (msg.id === messageId) return { ...msg, isFavorited: true };
+              if (msg.id === responseMessage?.id)
                 return { ...msg, isFavorited: true };
-              }
-              if (msg.id === responseMessage?.id) {
-                return { ...msg, isFavorited: true };
-              }
               return msg;
             });
             setMessages([...messagesRef.current]);
@@ -690,7 +708,6 @@ const ChatInterface = memo(
           if (messageIndex === -1) return;
 
           try {
-            // Update the user message
             await axios.put(
               `${API_URL}/api/messages/${id}`,
               { token, content: newContent },
@@ -706,7 +723,6 @@ const ChatInterface = memo(
 
             const editedMessage = messagesRef.current[messageIndex];
             if (!editedMessage.isBot && selectedConnection) {
-              // Find existing bot response
               const responseMessage = messagesRef.current.find(
                 (msg) => msg.parentId === id
               );
@@ -725,12 +741,10 @@ const ChatInterface = memo(
               setLoadingMessageId(botLoadingMessage.id);
 
               if (responseMessage) {
-                // Update existing bot response in state
                 messagesRef.current = messagesRef.current.map((msg) =>
                   msg.id === responseMessage.id ? botLoadingMessage : msg
                 );
               } else {
-                // Add new loading message
                 messagesRef.current.splice(
                   messageIndex + 1,
                   0,
@@ -761,17 +775,12 @@ const ChatInterface = memo(
                 };
 
                 if (responseMessage) {
-                  // Update existing bot response in database
                   await axios.put(
                     `${API_URL}/api/messages/${responseMessage.id}`,
-                    {
-                      token,
-                      content: botResponse.content,
-                    },
+                    { token, content: botResponse.content },
                     { headers: { "Content-Type": "application/json" } }
                   );
                 } else {
-                  // Create new bot response
                   await axios.post(
                     `${API_URL}/api/messages`,
                     {
@@ -805,10 +814,7 @@ const ChatInterface = memo(
                 if (responseMessage) {
                   await axios.put(
                     `${API_URL}/api/messages/${responseMessage.id}`,
-                    {
-                      token,
-                      content: errorMessage.content,
-                    },
+                    { token, content: errorMessage.content },
                     { headers: { "Content-Type": "application/json" } }
                   );
                 } else {
@@ -885,24 +891,25 @@ const ChatInterface = memo(
                   No Connections Found
                 </p>
                 <p className="text-lg">
-                  Please create one to start chatting with your data assistant.
+                  Please create a connection to start interacting with your data
+                  assistant.
                 </p>
                 <button
                   onClick={onCreateConSelected}
-                  className="mt-6 flex items-center justify-center w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200"
+                  className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide transition-all duration-200"
                   style={{
                     color: theme.colors.text,
-                    backgroundColor: "transparent",
-                    border: `1px solid ${theme.colors.accent}`,
+                    backgroundColor: theme.colors.accent,
                     borderRadius: theme.borderRadius.pill,
-                    padding: "6px 10px",
+                    padding: "8px 16px",
                   }}
                   onMouseOver={(e) =>
                     (e.currentTarget.style.backgroundColor =
-                      theme.colors.accentHover + "20")
+                      theme.colors.accentHover)
                   }
                   onMouseOut={(e) =>
-                    (e.currentTarget.style.backgroundColor = "transparent")
+                    (e.currentTarget.style.backgroundColor =
+                      theme.colors.accent)
                   }
                 >
                   Create Connection
@@ -910,12 +917,16 @@ const ChatInterface = memo(
               </div>
             ) : messages.length === 0 && !connectionError ? (
               <div
-                className="flex items-center justify-center h-full text-center"
+                className="flex flex-col items-center justify-center h-full text-center"
                 style={{ color: theme.colors.text }}
               >
-                <p className="text-3xl font-bold" style={{ maxWidth: "80%" }}>
+                <h1 className="text-3xl font-bold mb-4">
                   Hello! I’m your Data Assistant. How can I help you today?
-                </p>
+                </h1>
+                <RecommendedQuestions
+                  questions={recommendedQuestions}
+                  onQuestionClick={handleAskFavoriteQuestion}
+                />
               </div>
             ) : (
               messages.map((message) => {

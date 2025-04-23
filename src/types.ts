@@ -171,9 +171,11 @@ export interface Theme {
   };
   shadow: {
     none: string; // No shadow
+    xs: string; //
     sm: string; // Subtle shadow (inputs, buttons)
     md: string; // Medium shadow (cards, elevated elements)
     lg: string; // Large shadow (popups, modals)
+    xl: string; //
   };
   transition: {
     default: string; // Default transition timing (e.g., hover effects)

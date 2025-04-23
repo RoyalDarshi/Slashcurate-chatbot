@@ -159,4 +159,16 @@ export const askChatbot = async (
     connection: connection,
   });
 
+export const getRecommendedQuestions = async (token: string) => {
+  try {
+    const response = await axios.post(`${API_URL}/recommended_questions`, {
+      token,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching recommended questions:", error);
+    throw error;
+  }
+};
+
 export default api;
