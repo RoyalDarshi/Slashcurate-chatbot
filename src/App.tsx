@@ -212,8 +212,8 @@ const AppContent: React.FC<{
             {activeMenu === "favourite" && (
               <Favourites
                 onFavoriteSelected={(question, query) => {
-                  setQuestionToAsk({ text: question, query });
-                  setActiveMenu("home");
+                  setQuestionToAsk({ text: question, query }); // Set question first
+                  setTimeout(() => setActiveMenu("home"), 0); // Delay menu change
                 }}
               />
             )}
