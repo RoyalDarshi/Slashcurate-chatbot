@@ -38,7 +38,7 @@ const RecommendedQuestions = ({
           fontWeight: theme.typography.weight.bold,
         }}
       >
-        Would you like to ask your daily questions ?
+        Would you like to ask your daily questions?
       </h2>
       {questions.length === 0 ? (
         <p
@@ -51,7 +51,12 @@ const RecommendedQuestions = ({
           No recommended questions are available at this time.
         </p>
       ) : (
-        <ul className="grid gap-3 w-fit mx-auto">
+        <ul
+          className="grid gap-3 w-full"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          }}
+        >
           {questions.map((q) => (
             <li key={q.question_id}>
               <button
