@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect,useRef } from "react";
 import { useTheme } from "../ThemeContext";
 import { toast } from "react-toastify";
 
@@ -36,49 +36,67 @@ const tips = [
 ];
 
 const UserTips: React.FC<UserTipsProps> = ({ show, onClose }) => {
+let globalToastId: string | number | null = null;
   const { theme } = useTheme();
+  const isMounted = useRef(false);
+  const localToastId = useRef<string | number | null>(null);
 
   useEffect(() => {
-    console.log("UserTips useEffect triggered, show:", show);
-    console.log("Theme colors:", {
-      primary: theme.colors.accent,
-      text: theme.colors.text,
-    });
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      if (localToastId.current && toast.isActive(localToastId.current)) {
+        toast.dismiss(localToastId.current);
+      }
+    };
+  }, []);
 
-    if (show) {
-      const tipIndex = parseInt(localStorage.getItem("tipIndex") || "0") || 0;
-      const currentTip = tips[tipIndex];
+  useEffect(() => {
+    if (!show || !isMounted.current) return;
 
-      console.log("Creating toast, tipIndex:", tipIndex, "tip:", currentTip);
-      toast.info(
-        <div>
-          <p className="font-semibold">Tip of the Day</p>
-          <p className="mt-1">{currentTip}</p>
-        </div>,
-        {
-          position: "top-right",
-          autoClose: 7000, // Increased to ensure visibility
-          onClose: () => {
-            // Delay onClose to prevent rapid state toggle
-            setTimeout(() => onClose(), 100);
-          },
-          style: {
-            backgroundColor: theme.colors.accent || "#3b82f6",
-            color: "#ffffff",
-            width: "100%",
-            maxWidth: "320px",
-            zIndex: 10000,
-            // backgroundColor: "red", // Uncomment for debug visibility
-          },
-          className: "md:max-w-sm",
-        }
-      );
-
-      localStorage.setItem(
-        "tipIndex",
-        ((tipIndex + 1) % tips.length).toString()
-      );
+    // Clear any existing toast globally
+    if (globalToastId && toast.isActive(globalToastId)) {
+      toast.dismiss(globalToastId);
     }
+
+    const tipIndex = parseInt(localStorage.getItem("tipIndex") || "0", 10) || 0;
+    console.log(tipIndex)
+    const currentTip = tips[tipIndex];
+
+    const newToastId = `user-tip-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    globalToastId = newToastId;
+    localToastId.current = newToastId;
+
+    toast.info(
+      <div>
+        <p className="font-semibold">Tip of the Day</p>
+        <p className="mt-1">{currentTip}</p>
+      </div>,
+      {
+        toastId: newToastId,
+        position: "top-center",
+        autoClose: 7000,
+        onClose: () => {
+          if (isMounted.current) {
+            setTimeout(() => onClose(), 100);
+          }
+        },
+        style: {
+          backgroundColor: theme.colors.accent || "#3b82f6",
+          color: "#ffffff",
+          maxWidth: "320px",
+        },
+        className: "md:max-w-sm",
+      }
+    );
+
+    localStorage.setItem("tipIndex", ((tipIndex + 1) % tips.length).toString());
+
+    return () => {
+      if (localToastId.current === newToastId && toast.isActive(newToastId)) {
+        toast.dismiss(newToastId);
+      }
+    };
   }, [show, theme, onClose]);
 
   return null;
