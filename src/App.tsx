@@ -17,6 +17,9 @@ import "./index.css";
 import { validateToken } from "./api";
 import { menuItems } from "./menuItems";
 import Favourites from "./components/Favourites";
+import UserTips from "./components/UserTips";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
@@ -27,6 +30,7 @@ function App() {
     text: string;
     query?: string;
   } | null>(null);
+  const [showTip, setShowTip] = useState<boolean>(false);
   const chatRef = useRef<ChatInterfaceHandle>(null);
 
   const triggerChatFunction = () => {
@@ -67,12 +71,15 @@ function App() {
   };
 
   const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
+    console.log("Login success, isAdmin:", isAdmin);
     sessionStorage.setItem("token", token);
     if (isAdmin) {
       setIsAdminAuthenticated(true);
     } else {
       setIsAuthenticated(true);
       setActiveMenu("home");
+      setShowTip(true);
+      console.log("Setting showTip to true");
     }
   };
 
@@ -102,6 +109,8 @@ function App() {
                 onHomePage={handleHomePage}
                 questionToAsk={questionToAsk}
                 setQuestionToAsk={setQuestionToAsk}
+                showTip={showTip}
+                setShowTip={setShowTip}
               />
             }
           />
@@ -137,6 +146,8 @@ const AppContent: React.FC<{
   chatRef: React.RefObject<ChatInterfaceHandle>;
   questionToAsk: { text: string; query?: string } | null;
   setQuestionToAsk: (question: { text: string; query?: string } | null) => void;
+  showTip: boolean;
+  setShowTip: (show: boolean) => void;
 }> = ({
   isAuthenticated,
   activeMenu,
@@ -148,13 +159,18 @@ const AppContent: React.FC<{
   chatRef,
   questionToAsk,
   setQuestionToAsk,
+  showTip,
+  setShowTip,
 }) => {
   const { theme } = useTheme();
   const userToken = sessionStorage.getItem("token") || "";
 
-  // Simplified callback to handle session click
+  useEffect(() => {
+    console.log("AppContent showTip:", showTip);
+  }, [showTip]);
+
   const handleSessionClicked = () => {
-    onHomePage(); // Navigate to home
+    onHomePage();
   };
 
   return (
@@ -165,20 +181,31 @@ const AppContent: React.FC<{
         color: theme.colors.text,
       }}
     >
+      <ToastContainer
+        position="top-right"
+        autoClose={7000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={theme.colors.accent === "#7C3AED" ? "dark" : "light"}
+        style={{ zIndex: 10000 }}
+      />
       {isAuthenticated ? (
         <div
           className="flex flex-col md:flex-row h-screen"
           style={{ backgroundColor: theme.colors.background }}
         >
           <div className="md:hidden h-16 w-full" />
-
           <Sidebar
             onMenuClick={setActiveMenu}
             activeMenu={activeMenu}
             defaultMenuItems={menuItems}
             onLogout={onLogout}
           />
-
           <main
             className="flex-1 flex flex-col overflow-y-auto md:mt-0 mt-16"
             style={{
@@ -186,6 +213,7 @@ const AppContent: React.FC<{
               minHeight: "calc(100vh - 64px)",
             }}
           >
+            <UserTips show={showTip} onClose={() => setShowTip(false)} />
             {activeMenu === "home" && (
               <ChatInterface
                 ref={chatRef}
@@ -213,8 +241,8 @@ const AppContent: React.FC<{
             {activeMenu === "favourite" && (
               <Favourites
                 onFavoriteSelected={(question, query) => {
-                  setQuestionToAsk({ text: question, query }); // Set question first
-                  setTimeout(() => setActiveMenu("home"), 0); // Delay menu change
+                  setQuestionToAsk({ text: question, query });
+                  setTimeout(() => setActiveMenu("home"), 0);
                 }}
               />
             )}
