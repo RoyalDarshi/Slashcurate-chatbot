@@ -1,4 +1,4 @@
-import React, { useEffect,useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useTheme } from "../ThemeContext";
 import { toast } from "react-toastify";
 
@@ -8,12 +8,6 @@ interface UserTipsProps {
 }
 
 const tips = [
-  "Welcome to Ask Your Data! Start by asking a question about your data in the chat interface.",
-  "Toggle between Graph, Table, and Query views to explore your data in different formats.",
-  "Need to save your results? Click the download button to export graphs as images or tables as XLSX files.",
-  "Copy SQL queries with a single click to use them in other tools or share with your team.",
-  "Switch to dark mode in the Settings tab for a sleek, eye-friendly experience.",
-  "Love a question? Click the heart icon to mark it as a favorite and access it later.",
   "Check out your favorite questions in the Favourites tab to quickly re-ask them.",
   "Asked a favorite question more than 5 times? It might appear as a recommended question on new chats!",
   "View all your past sessions in the History tab to revisit your data conversations.",
@@ -37,70 +31,38 @@ const tips = [
 
 const UserTips: React.FC<UserTipsProps> = ({ show, onClose }) => {
   const { theme } = useTheme();
-  const isMounted = useRef(false);
-  const localToastId = useRef<string | number | null>(null);
+  const toastId = useRef<string | number | null>(null);
 
   useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-      if (localToastId.current && toast.isActive(localToastId.current)) {
-        toast.dismiss(localToastId.current);
-      }
-    };
-  }, []);
+    console.log("UserTips useEffect triggered, show:", show);
 
-  const toastShown = useRef(false); // ✅ New ref to track toast status
+    const tipIndex =
+      parseInt(localStorage.getItem("tipIndex") || "0", 10) % tips.length;
+    const currentTip = tips[tipIndex];
 
-  useEffect(() => {
-    if (!show || !isMounted.current || toastShown.current) return;
+    console.log("Creating toast, tipIndex:", tipIndex, "tip:", currentTip);
 
-    toastShown.current = true;
-
-    const tipIndex = parseInt(localStorage.getItem("tipIndex") || "0", 10) || 0;
-    const currentTip = tips[tipIndex % tips.length];
-    localStorage.setItem("tipIndex", ((tipIndex + 1) % tips.length).toString());
-
-    const newToastId = `user-tip-${tipIndex}`;
-    localToastId.current = newToastId;
-
-    console.log(tipIndex);
-
-    const val = toast.info(
+    toastId.current = toast.info(
       <div>
         <p className="font-semibold">Tip of the Day</p>
         <p className="mt-1">{currentTip}</p>
       </div>,
       {
-        toastId: newToastId,
-        position: "top-right",
+        toastId: `user-tip-${tipIndex}`, // Unique toastId per tip
+        position: "top-center",
         autoClose: 7000,
-        onClose: () => {
-          setTimeout(() => {
-            if (isMounted.current) {
-              onClose();
-              toastShown.current = false; // Reset for next trigger
-            }
-          }, 100);
-        },
+        onClose: () => setTimeout(onClose, 100),
         style: {
           backgroundColor: theme.colors.accent || "#3b82f6",
           color: "#ffffff",
           maxWidth: "320px",
-          zIndex: 9999,
+          zIndex: 99999, // Ensure high z-index
         },
-        className: "md:max-w-sm !z-[9999]",
+        className: "md:max-w-sm",
       }
     );
-
-    console.log(val);
-
-    return () => {
-      if (localToastId.current === newToastId && toast.isActive(newToastId)) {
-        toast.dismiss(newToastId);
-      }
-    };
-  }, [show, theme, onClose]);
+    localStorage.setItem("tipIndex", ((tipIndex + 1) % tips.length).toString());
+  }, []); // Depend on show and theme.colors.accent
 
   return null;
 };

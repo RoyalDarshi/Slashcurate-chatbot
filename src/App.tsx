@@ -32,7 +32,6 @@ function App() {
   } | null>(null);
   const [showTip, setShowTip] = useState<boolean>(false);
   const chatRef = useRef<ChatInterfaceHandle>(null);
-  const { theme } = useTheme();
 
   const triggerChatFunction = () => {
     if (chatRef.current) {
@@ -94,19 +93,6 @@ function App() {
 
   return (
     <ThemeProvider>
-      <ToastContainer
-        position="top-right"
-        autoClose={7000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme={theme.colors.accent === "#7C3AED" ? "dark" : "light"}
-        style={{ zIndex: 10000 }}
-      />
       <Router>
         <Routes>
           <Route
@@ -195,6 +181,19 @@ const AppContent: React.FC<{
         color: theme.colors.text,
       }}
     >
+      <ToastContainer
+        position="top-center"
+        autoClose={7000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={theme.colors.accent === "#7C3AED" ? "dark" : "light"}
+        style={{ zIndex: 10000 }}
+      />
       {isAuthenticated ? (
         <div
           className="flex flex-col md:flex-row h-screen"
