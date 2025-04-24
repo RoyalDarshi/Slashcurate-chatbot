@@ -28,6 +28,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>("");
   const token = sessionStorage.getItem("token") ?? "";
+  const currentSessionId = localStorage.getItem("currentSessionId");
 
   useEffect(() => {
     loadSessions();
@@ -438,8 +439,8 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <h3
-                            className="font-medium truncate whitespace-nowrap flex-1"
+                          <p
+                            className="font-mediu truncate whitespace-nowrap flex-1"
                             style={{
                               color: theme.colors.text,
                               fontFamily: theme.typography.fontFamily,
@@ -448,7 +449,20 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                             }}
                           >
                             {session.title}
-                          </h3>
+                            {session.id === currentSessionId && (
+                              <span
+                                className="text-xs ml-4 px-2 py-1 rounded"
+                                style={{
+                                  background: theme.colors.accent + "20",
+                                  color: theme.colors.accent,
+                                  fontFamily: theme.typography.fontFamily,
+                                  fontWeight: theme.typography.weight.medium,
+                                }}
+                              >
+                                Active
+                              </span>
+                            )}
+                          </p>
                         </div>
                       )}
                       <p
@@ -475,7 +489,13 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                             startEditing(session);
                           }}
                           className="p-1 rounded-full hover:bg-blue-500/10 transition-colors"
-                          style={{ color: theme.colors.textSecondary , visibility: editingSessionId === session.id ? "hidden" : "visible"}}
+                          style={{
+                            color: theme.colors.textSecondary,
+                            visibility:
+                              editingSessionId === session.id
+                                ? "hidden"
+                                : "visible",
+                          }}
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
