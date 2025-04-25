@@ -34,36 +34,33 @@ const UserTips: React.FC<UserTipsProps> = ({ show, onClose }) => {
   const toastId = useRef<string | number | null>(null);
 
   useEffect(() => {
-    console.log("UserTips useEffect triggered, show:", show);
+    if (show) {
+      const tipIndex =
+        parseInt(localStorage.getItem("tipIndex") || "0", 10) % tips.length;
+      const currentTip = tips[tipIndex];
 
-    const tipIndex =
-      parseInt(localStorage.getItem("tipIndex") || "0", 10) % tips.length;
-    const currentTip = tips[tipIndex];
-
-    console.log("Creating toast, tipIndex:", tipIndex, "tip:", currentTip);
-
-    toastId.current = toast.info(
-      <div>
-        <p className="font-semibold">Tip of the Day</p>
-        <p className="mt-1">{currentTip}</p>
-      </div>,
-      {
-        toastId: `user-tip-${tipIndex}`, // Unique toastId per tip
-        position: "top-center",
-        autoClose: 7000,
-        onClose: () => setTimeout(onClose, 100),
-        style: {
-          backgroundColor: theme.colors.accent || "#3b82f6",
-          color: "#ffffff",
-          maxWidth: "320px",
-          zIndex: 99999, // Ensure high z-index
-        },
-        className: "md:max-w-sm",
-      }
-    );
-    localStorage.setItem("tipIndex", ((tipIndex + 1) % tips.length).toString());
+      toastId.current = toast.info(
+        <div>
+          <p className="font-semibold">Tip of the Day</p>
+          <p className="mt-1">{currentTip}</p>
+        </div>,
+        {
+          toastId: `user-tip-${tipIndex}`, // Unique toastId per tip
+          position: "top-center",
+          autoClose: 7000,
+          theme: theme.colors.accent === "#7C3AED" ? "dark" : "light",
+          onClose: () => setTimeout(onClose, 100),
+          style: {
+            maxWidth: "320px",
+            zIndex: 99999, // Ensure high z-index
+          },
+          className: "md:max-w-sm",
+        }
+      );
+    }
   }, []); // Depend on show and theme.colors.accent
-
+  const tipIndex = JSON.parse(localStorage.getItem("tipIndex") || "0");
+  localStorage.setItem("tipIndex", ((tipIndex + 1) % tips.length).toString());
   return null;
 };
 

@@ -71,7 +71,6 @@ function App() {
   };
 
   const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
-    console.log("Login success, isAdmin:", isAdmin);
     sessionStorage.setItem("token", token);
     if (isAdmin) {
       setIsAdminAuthenticated(true);
@@ -79,7 +78,6 @@ function App() {
       setIsAuthenticated(true);
       setActiveMenu("home");
       setShowTip(true);
-      console.log("Setting showTip to true");
     }
   };
 
@@ -165,10 +163,6 @@ const AppContent: React.FC<{
   const { theme } = useTheme();
   const userToken = sessionStorage.getItem("token") || "";
 
-  useEffect(() => {
-    console.log("AppContent showTip:", showTip);
-  }, [showTip]);
-
   const handleSessionClicked = () => {
     onHomePage();
   };
@@ -182,7 +176,7 @@ const AppContent: React.FC<{
       }}
     >
       <ToastContainer
-        position="top-center"
+        position="top-right"
         autoClose={7000}
         hideProgressBar={false}
         newestOnTop={false}

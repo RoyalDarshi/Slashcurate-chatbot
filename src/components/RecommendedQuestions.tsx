@@ -38,7 +38,7 @@ const RecommendedQuestions = ({
           fontWeight: theme.typography.weight.bold,
         }}
       >
-        Would you like to ask your daily questions?
+        Would you like to ask your frequently asked questions?
       </h2>
       {questions.length === 0 ? (
         <p
