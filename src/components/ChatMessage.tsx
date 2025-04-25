@@ -70,6 +70,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
+    const resolutionRef = useRef<HTMLDivElement>(null);
     const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
     const { chatFontSizeValue } = useTheme();
 
@@ -133,6 +134,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
+        // Handle dislike options
         if (
           dislikeRef.current &&
           !dislikeRef.current.contains(event.target as Node)
@@ -140,13 +142,22 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           setShowDislikeOptions(false);
           setShowCustomInput(false);
         }
+
+        // Handle resolution options
+        if (
+          resolutionRef.current &&
+          !resolutionRef.current.contains(event.target as Node)
+        ) {
+          setShowResolutionOptions(false);
+        }
       };
-      if (showDislikeOptions) {
+
+      if (showDislikeOptions || showResolutionOptions) {
         document.addEventListener("mousedown", handleClickOutside);
       }
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
-    }, [showDislikeOptions]);
+    }, [showDislikeOptions, showResolutionOptions]);
 
     const handleEdit = () => setIsEditing(true);
 
@@ -187,7 +198,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       }
     };
 
-    const handleDislike = async() => {
+    const handleDislike = async () => {
       if (isDisliked) {
         try {
           await axios.post(
@@ -457,8 +468,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             )}
 
             {currentView === "graph" && hasNumericData && (
-              <div className="relative">
-                <CustomTooltip title="Download Graph" position="top">
+              <div className="relative" ref={resolutionRef}>
+                <CustomTooltip title="Download Graph" position="bottom">
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
@@ -478,20 +489,42 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute top-full mt-2 right-0 shadow-lg rounded-md p-2 z-10"
-                    style={{ background: theme.colors.surface }}
+                    className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                    style={{
+                      background: theme.colors.surface,
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                    }}
                   >
                     <button
                       onClick={() => handleDownloadGraph("low")}
-                      className="block w-full border-none text-left px-2 py-1 hover:bg-gray-500"
-                      style={{ color: theme.colors.text }}
+                      className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
+                      style={{
+                        color: theme.colors.text,
+                        backgroundColor: "transparent",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "transparent")
+                      }
                     >
                       Low Resolution
                     </button>
                     <button
                       onClick={() => handleDownloadGraph("high")}
-                      className="block w-full border-none text-left px-2 py-1 hover:bg-gray-500"
-                      style={{ color: theme.colors.text }}
+                      className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
+                      style={{
+                        color: theme.colors.text,
+                        backgroundColor: "transparent",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "transparent")
+                      }
                     >
                       High Resolution
                     </button>
