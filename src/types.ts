@@ -7,6 +7,8 @@ export interface Message {
   timestamp: string;
   isFavorited: boolean;
   sql_query?: string;
+  reaction?: string | null;
+  dislike_reason?: string | null;
   parentId: string | null;
 }
 

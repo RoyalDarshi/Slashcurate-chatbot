@@ -371,7 +371,7 @@ const ChatInterface = memo(
               parentId: userMessage.id,
             };
 
-            await axios.post(
+            const botMessageResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
                 token,
@@ -383,7 +383,7 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-
+            botResponseMessage.id = botMessageResponse.data.id;
             messagesRef.current = messagesRef.current.map((msg) =>
               msg.id === botLoadingMessage.id ? botResponseMessage : msg
             );

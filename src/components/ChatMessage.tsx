@@ -31,6 +31,8 @@ import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 import QueryDisplay from "./QueryDisplay";
 import { toast } from "react-toastify";
+import axios from "axios";
+import { API_URL } from "../config";
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({
@@ -53,17 +55,18 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [editedContent, setEditedContent] = useState(message.content);
     const [hasChanges, setHasChanges] = useState(false);
     const [showResolutionOptions, setShowResolutionOptions] = useState(false);
-    const [isLiked, setIsLiked] = useState(false);
-    const [isDisliked, setIsDisliked] = useState(false);
+    const [isLiked, setIsLiked] = useState(message.reaction === "like");
+    const [isDisliked, setIsDisliked] = useState(
+      message.reaction === "dislike"
+    );
+    const [dislikeReason, setDislikeReason] = useState(message.dislike_reason);
     const [showDislikeOptions, setShowDislikeOptions] = useState(false);
-    const [dislikeReason, setDislikeReason] = useState<string | null>(null);
+    const [showCustomInput, setShowCustomInput] = useState(false);
+    const [customReason, setCustomReason] = useState("");
     const [copied, setCopied] = useState(false);
     const [canCopy, setCanCopy] = useState(true);
     const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
     const [copyTooltipTxt, setCopyTooltipTxt] = useState("Copy SQL Query");
-    // New states for custom dislike reason
-    const [showCustomInput, setShowCustomInput] = useState(false);
-    const [customReason, setCustomReason] = useState("");
 
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
@@ -161,31 +164,74 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       }
     };
 
-    const handleLike = () => {
-      setIsLiked(!isLiked);
-      setIsDisliked(false);
-      setShowDislikeOptions(false);
-      setDislikeReason(null);
-      setShowCustomInput(false);
-    };
-
-    const handleDislike = () => {
-      if (isDisliked) {
+    const handleLike = async () => {
+      try {
+        const newReaction = isLiked ? null : "like";
+        await axios.post(
+          `${API_URL}/api/messages/${message.id}/reaction`,
+          {
+            token: sessionStorage.getItem("token"),
+            reaction: newReaction,
+            dislike_reason: null,
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
+        setIsLiked(!isLiked);
         setIsDisliked(false);
         setDislikeReason(null);
         setShowDislikeOptions(false);
         setShowCustomInput(false);
+      } catch (error) {
+        console.error("Error setting like reaction:", error);
+        toast.error("Failed to set like reaction.");
+      }
+    };
+
+    const handleDislike = async() => {
+      if (isDisliked) {
+        try {
+          await axios.post(
+            `${API_URL}/api/messages/${message.id}/reaction`,
+            {
+              token: sessionStorage.getItem("token"),
+              reaction: null,
+              dislike_reason: null,
+            },
+            { headers: { "Content-Type": "application/json" } }
+          );
+          setIsDisliked(false);
+          setDislikeReason(null);
+          setShowDislikeOptions(false);
+          setShowCustomInput(false);
+        } catch (error) {
+          console.error("Error unsetting dislike reaction:", error);
+          toast.error("Failed to unset dislike reaction.");
+        }
       } else {
         setShowDislikeOptions(true);
         setIsLiked(false);
       }
     };
 
-    const handleDislikeOption = (reason: string) => {
-      setDislikeReason(reason);
-      setIsDisliked(true);
-      setShowDislikeOptions(false);
-      setShowCustomInput(false);
+    const handleDislikeOption = async (reason: string) => {
+      try {
+        await axios.post(
+          `${API_URL}/api/messages/${message.id}/reaction`,
+          {
+            token: sessionStorage.getItem("token"),
+            reaction: "dislike",
+            dislike_reason: reason,
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
+        setDislikeReason(reason);
+        setIsDisliked(true);
+        setShowDislikeOptions(false);
+        setShowCustomInput(false);
+      } catch (error) {
+        console.error("Error setting dislike reaction:", error);
+        toast.error("Failed to set dislike reaction.");
+      }
     };
 
     const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
