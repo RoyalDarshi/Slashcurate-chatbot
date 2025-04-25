@@ -211,7 +211,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         </table>
       </div>
       <div
-        className="flex items-center justify-between py-4 border-t"
+        className="flex items-center justify-between pt-4 border-t"
         style={{
           borderColor: `${theme.colors.text}20`,
           backgroundColor: theme.colors.surface,
