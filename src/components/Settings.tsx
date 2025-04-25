@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useTheme } from "../ThemeContext";
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
-  const [chatFontSize, setChatFontSize] = useState("medium"); // Example: small, medium, large
+  const { chatFontSize, setChatFontSize } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     JSON.parse(localStorage.getItem("notificationsEnabled") || "true")
   );
@@ -18,8 +18,7 @@ const Settings = () => {
   };
 
   const handleFontSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setChatFontSize(e.target.value);
-    // TODO: Implement font size change in ChatInterface
+    setChatFontSize(e.target.value as "small" | "medium" | "large");
   };
 
   const renderApearanceSection = () => (

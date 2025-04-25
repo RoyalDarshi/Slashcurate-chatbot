@@ -7,6 +7,7 @@ interface EditableMessageProps {
   onSave: () => void;
   onCancel: () => void;
   onContentChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  fontSize: string;
 }
 
 const EditableMessage: React.FC<EditableMessageProps> = ({
@@ -14,6 +15,7 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
   onSave,
   onCancel,
   onContentChange,
+  fontSize,
 }) => {
   const { theme } = useTheme();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -53,7 +55,7 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
         ref={inputRef}
         className="outline-none border-none w-full text-lg placeholder-gray-100 bg-transparent resize-none"
         style={{
-          fontSize: theme.typography.size.base,
+          fontSize: fontSize,
           color: "white",
           placeholderColor: theme.colors.textSecondary,
         }}
@@ -75,7 +77,9 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
           size="sm"
           className="rounded-2xl px-5 py-2 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95" // Modern styles
           style={{
-            backgroundColor: hasChanges ? theme.colors.success : theme.colors.disabled,
+            backgroundColor: hasChanges
+              ? theme.colors.success
+              : theme.colors.disabled,
             color: "white",
             cursor: hasChanges ? "pointer" : "not-allowed",
           }}
@@ -87,5 +91,5 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
       </div>
     </div>
   );
-}
+};
 export default EditableMessage;

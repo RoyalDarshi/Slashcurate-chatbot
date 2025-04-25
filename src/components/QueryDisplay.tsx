@@ -5,10 +5,11 @@ interface QueryDisplayProps {
   query: string | object | null;
   title?: string;
   language?: string;
+  fontSize: string;
 }
 
 const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
-  ({ query, title, language = "sql" }) => {
+  ({ query, title, language = "sql",fontSize }) => {
     const { theme } = useTheme();
 
     const formattedQuery = useMemo(() => {
@@ -97,13 +98,19 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
             )}
             <pre
               className="p-1 rounded overflow-x-auto whitespace-pre-wrap font-mono"
-              style={{ backgroundColor: theme.colors.surface }}
+              style={{
+                backgroundColor: theme.colors.surface,
+                fontSize: fontSize,
+              }}
             >
               <code>{colorizedQuery}</code>
             </pre>
           </div>
         ) : (
-          <div className="italic" style={{ color: theme.colors.textSecondary }}>
+          <div
+            className="italic"
+            style={{ color: theme.colors.textSecondary, fontSize: fontSize }}
+          >
             No query to display.
           </div>
         )}

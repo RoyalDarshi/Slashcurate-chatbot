@@ -65,6 +65,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
     const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
+    const { chatFontSizeValue } = useTheme();
 
     const parsedData = React.useMemo(() => {
       try {
@@ -254,8 +255,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           >
             <MiniLoader />
             <span
-              className="ml-2 text-sm"
-              style={{ color: theme.colors.textSecondary }}
+              className="ml-2"
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: chatFontSizeValue,
+              }}
             >
               Thinking...
             </span>
@@ -280,7 +284,10 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 p: ({ node, ...props }) => (
                   <p
                     className="whitespace-pre-wrap break-words leading-relaxed"
-                    style={{ color: theme.colors.text }}
+                    style={{
+                      color: theme.colors.text,
+                      fontSize: chatFontSizeValue,
+                    }}
                     {...props}
                   />
                 ),
@@ -517,7 +524,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           >
             {currentView === "text" && (
               <>
-                <p style={{ color: theme.colors.text }}>
+                <p
+                  style={{
+                    color: theme.colors.text,
+                    fontSize: chatFontSizeValue,
+                  }}
+                >
                   {parsedData?.content || "No records found."}
                 </p>
                 <div
@@ -565,9 +577,14 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             {currentView === "query" && (
               <>
                 {parsedData?.sql_query ? (
-                  <QueryDisplay query={parsedData.sql_query.toUpperCase()} />
+                  <QueryDisplay query={parsedData.sql_query.toUpperCase()} fontSize={chatFontSizeValue} />
                 ) : (
-                  <p style={{ color: theme.colors.text }}>
+                  <p
+                    style={{
+                      color: theme.colors.text,
+                      fontSize: chatFontSizeValue,
+                    }}
+                  >
                     No query available.
                   </p>
                 )}
@@ -776,7 +793,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 </div>
                 <p
                   className="ml-3 whitespace-pre-wrap break-words"
-                  style={{ color: "white" }}
+                  style={{ color: "white", fontSize: chatFontSizeValue }}
                 >
                   {message.content}
                 </p>
@@ -803,10 +820,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </div>
             ) : (
               <EditableMessage
-                messageContent={editedContent}
-                onSave={handleSave}
-                onCancel={handleCancel}
-                onContentChange={handleContentChange}
+                    messageContent={editedContent}
+                    onSave={handleSave}
+                    onCancel={handleCancel}
+                    onContentChange={handleContentChange}
+                    fontSize={chatFontSizeValue}
               />
             )}
             <div
