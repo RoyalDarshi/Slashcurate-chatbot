@@ -61,6 +61,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [canCopy, setCanCopy] = useState(true);
     const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
     const [copyTooltipTxt, setCopyTooltipTxt] = useState("Copy SQL Query");
+    // New states for custom dislike reason
+    const [showCustomInput, setShowCustomInput] = useState(false);
+    const [customReason, setCustomReason] = useState("");
 
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
@@ -98,7 +101,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               const numericValue = (() => {
                 if (typeof val === "number") return val;
                 if (typeof val === "string") {
-                  const cleaned = val.replace(/,/g, "").trim(); // Remove commas and spaces
+                  const cleaned = val.replace(/,/g, "").trim();
                   return /^\d+(\.\d+)?$/.test(cleaned)
                     ? parseFloat(cleaned)
                     : NaN;
@@ -123,7 +126,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         setHasNumericData(false);
         setCurrentView("text");
       }
-    }, []);
+    }, [parsedData, message.isBot]);
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -132,6 +135,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           !dislikeRef.current.contains(event.target as Node)
         ) {
           setShowDislikeOptions(false);
+          setShowCustomInput(false);
         }
       };
       if (showDislikeOptions) {
@@ -162,6 +166,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       setIsDisliked(false);
       setShowDislikeOptions(false);
       setDislikeReason(null);
+      setShowCustomInput(false);
     };
 
     const handleDislike = () => {
@@ -169,6 +174,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         setIsDisliked(false);
         setDislikeReason(null);
         setShowDislikeOptions(false);
+        setShowCustomInput(false);
       } else {
         setShowDislikeOptions(true);
         setIsLiked(false);
@@ -179,6 +185,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       setDislikeReason(reason);
       setIsDisliked(true);
       setShowDislikeOptions(false);
+      setShowCustomInput(false);
     };
 
     const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -376,7 +383,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             )}
 
             {parsedData?.sql_query && currentView !== "query" && (
-              <CustomTooltip title="Switch to Query View" position="top">
+              <CustomTooltip title="Switch to Query slicing" position="top">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
@@ -577,7 +584,10 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             {currentView === "query" && (
               <>
                 {parsedData?.sql_query ? (
-                  <QueryDisplay query={parsedData.sql_query.toUpperCase()} fontSize={chatFontSizeValue} />
+                  <QueryDisplay
+                    query={parsedData.sql_query.toUpperCase()}
+                    fontSize={chatFontSizeValue}
+                  />
                 ) : (
                   <p
                     style={{
@@ -682,32 +692,88 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                           boxShadow: `0 4px 12px ${theme.colors.text}20`,
                         }}
                       >
-                        {[
-                          "Incorrect data",
-                          "Takes too long",
-                          "Irrelevant response",
-                          "Confusing answer",
-                          "Other",
-                        ].map((reason) => (
-                          <button
-                            key={reason}
-                            onClick={() => handleDislikeOption(reason)}
-                            className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
-                            style={{
-                              color: theme.colors.text,
-                              backgroundColor: "transparent",
-                            }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "transparent")
-                            }
-                          >
-                            {reason}
-                          </button>
-                        ))}
+                        {showCustomInput ? (
+                          <div className="px-3 py-2">
+                            <textarea
+                              value={customReason}
+                              onChange={(e) => setCustomReason(e.target.value)}
+                              placeholder="Enter your reason"
+                              rows={3}
+                              autoFocus={true}
+                              className="w-full p-2 rounded resize-none focus:outline-none focus:ring-2 focus:ring-accent"
+                              style={{
+                                background: theme.colors.surface,
+                                color: theme.colors.text,
+                                border: `1px solid ${theme.colors.border}`,
+                              }}
+                            />
+                            <div className="flex justify-end mt-2 gap-2">
+                              <button
+                                onClick={() => {
+                                  setShowCustomInput(false);
+                                  setCustomReason("");
+                                }}
+                                className="px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                                style={{
+                                  background: theme.colors.surface,
+                                  color: theme.colors.text,
+                                }}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (customReason.trim()) {
+                                    handleDislikeOption(customReason);
+                                    setCustomReason("");
+                                  }
+                                }}
+                                className="px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                                style={{
+                                  background: theme.colors.accent,
+                                  color: "white",
+                                }}
+                              >
+                                Submit
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {[
+                              "Incorrect data",
+                              "Takes too long",
+                              "Irrelevant response",
+                              "Confusing answer",
+                              "Other",
+                            ].map((reason) => (
+                              <button
+                                key={reason}
+                                onClick={() => {
+                                  if (reason === "Other") {
+                                    setShowCustomInput(true);
+                                  } else {
+                                    handleDislikeOption(reason);
+                                  }
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
+                                style={{
+                                  color: theme.colors.text,
+                                  backgroundColor: "transparent",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "transparent")
+                                }
+                              >
+                                {reason}
+                              </button>
+                            ))}
+                          </>
+                        )}
                       </motion.div>
                     )}
                   </div>
@@ -820,11 +886,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </div>
             ) : (
               <EditableMessage
-                    messageContent={editedContent}
-                    onSave={handleSave}
-                    onCancel={handleCancel}
-                    onContentChange={handleContentChange}
-                    fontSize={chatFontSizeValue}
+                messageContent={editedContent}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                onContentChange={handleContentChange}
+                fontSize={chatFontSizeValue}
               />
             )}
             <div
