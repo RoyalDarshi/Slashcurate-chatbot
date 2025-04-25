@@ -1,11 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTheme } from "../ThemeContext";
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
   const [chatFontSize, setChatFontSize] = useState("medium"); // Example: small, medium, large
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    JSON.parse(localStorage.getItem("notificationsEnabled") || "true")
+  );
   const [autoSaveChats, setAutoSaveChats] = useState(true);
+
+  const handleSetNotification = () => {
+    setNotificationsEnabled(!notificationsEnabled);
+    localStorage.setItem(
+      "notificationsEnabled",
+      JSON.stringify(!notificationsEnabled)
+    );
+  };
 
   const handleFontSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setChatFontSize(e.target.value);
@@ -142,7 +152,7 @@ const Settings = () => {
             <input
               type="checkbox"
               className="sr-only"
-              onChange={() => setNotificationsEnabled(!notificationsEnabled)}
+              onChange={handleSetNotification}
               checked={notificationsEnabled}
               aria-label="Toggle notifications"
             />

@@ -34,7 +34,11 @@ const UserTips: React.FC<UserTipsProps> = ({ show, onClose }) => {
   const toastId = useRef<string | number | null>(null);
 
   useEffect(() => {
-    if (show) {
+    // Check if notifications are enabled
+    const notificationsEnabled = JSON.parse(
+      localStorage.getItem("notificationsEnabled") || "true"
+    );
+    if (show && notificationsEnabled) {
       const tipIndex =
         parseInt(localStorage.getItem("tipIndex") || "0", 10) % tips.length;
       const currentTip = tips[tipIndex];
@@ -57,10 +61,15 @@ const UserTips: React.FC<UserTipsProps> = ({ show, onClose }) => {
           className: "md:max-w-sm",
         }
       );
+
+      // Update tipIndex after displaying the tip
+      localStorage.setItem(
+        "tipIndex",
+        ((tipIndex + 1) % tips.length).toString()
+      );
     }
-  }, []); // Depend on show and theme.colors.accent
-  const tipIndex = JSON.parse(localStorage.getItem("tipIndex") || "0");
-  localStorage.setItem("tipIndex", ((tipIndex + 1) % tips.length).toString());
+  }, [show, theme.colors.accent]);
+
   return null;
 };
 
