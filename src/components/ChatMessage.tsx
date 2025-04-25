@@ -429,7 +429,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             )}
 
             {parsedData?.sql_query && currentView !== "query" && (
-              <CustomTooltip title="Switch to Query slicing" position="top">
+              <CustomTooltip title="Switch to Query View" position="top">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}

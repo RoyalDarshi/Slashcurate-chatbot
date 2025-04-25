@@ -15,12 +15,14 @@ import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
+import { ArrowDown } from "lucide-react";
 import {
   askChatbot,
   getUserConnections,
   getRecommendedQuestions,
 } from "../api";
 import RecommendedQuestions from "./RecommendedQuestions";
+import CustomTooltip from "./CustomTooltip";
 
 interface Session {
   id: string;
@@ -53,6 +55,8 @@ const ChatInterface = memo(
       const [isSubmitting, setIsSubmitting] = useState(false);
       const messagesRef = useRef<Message[]>([]);
       const messagesEndRef = useRef<HTMLDivElement>(null);
+      // New ref for the chat container
+      const chatContainerRef = useRef<HTMLDivElement>(null);
       const [messages, setMessages] = useState<Message[]>([]);
       const [connections, setConnections] = useState<Connection[]>([]);
       const [selectedConnection, setSelectedConnection] = useState<
@@ -71,6 +75,8 @@ const ChatInterface = memo(
       const [recommendedQuestions, setRecommendedQuestions] = useState<any[]>(
         []
       );
+      // New state to track if the user has scrolled up
+      const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
 
       const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
@@ -103,15 +109,40 @@ const ChatInterface = memo(
 
       const prevMessagesLength = useRef(messages.length);
 
+      // Modified useEffect to only scroll if user is at the bottom
       useEffect(() => {
         if (!messages) return;
         const isNewMessageAdded = messages.length > prevMessagesLength.current;
         prevMessagesLength.current = messages.length;
 
-        if (isNewMessageAdded && !editingMessageId) {
+        if (isNewMessageAdded && !editingMessageId && !userHasScrolledUp) {
           scrollToBottom();
         }
-      }, [messages, scrollToBottom, editingMessageId]);
+      }, [messages, scrollToBottom, editingMessageId, userHasScrolledUp]);
+
+      // New useEffect to monitor scroll position
+      useEffect(() => {
+        const handleScroll = () => {
+          if (!chatContainerRef.current) return;
+          const { scrollTop, clientHeight, scrollHeight } =
+            chatContainerRef.current;
+          // Consider the user at the bottom if within 10px of the end
+          const atBottom = scrollTop + clientHeight >= scrollHeight - 10;
+          setUserHasScrolledUp(!atBottom);
+        };
+
+        const chatContainer = chatContainerRef.current;
+        if (chatContainer) {
+          chatContainer.addEventListener("scroll", handleScroll);
+        }
+
+        // Cleanup event listener on unmount
+        return () => {
+          if (chatContainer) {
+            chatContainer.removeEventListener("scroll", handleScroll);
+          }
+        };
+      }, []);
 
       const fetchConnections = useCallback(async () => {
         setConnectionsLoading(true);
@@ -874,6 +905,7 @@ const ChatInterface = memo(
           />
 
           <div
+            ref={chatContainerRef} // Attach ref to the chat container
             className="flex-1 overflow-y-auto"
             style={{
               padding: theme.spacing.lg,
@@ -981,6 +1013,33 @@ const ChatInterface = memo(
               paddingTop: 0,
             }}
           >
+            {/* New button to scroll to bottom when user has scrolled up */}
+            {userHasScrolledUp && (
+              <div
+                className=" flex justify-end"
+                style={{ marginBottom: "10px",marginRight: "10px",background: "transparent" }}
+              >
+                <CustomTooltip title="Scroll to Bottom" position="top">
+                  <button
+                    onClick={scrollToBottom}
+                    style={{
+                      background: theme.colors.accent,
+                      color: "white",
+                      padding: "8px",
+                      borderRadius: theme.borderRadius.large,
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    title="Scroll Bottom"
+                  >
+                    <ArrowDown size={20} />
+                  </button>
+                </CustomTooltip>
+              </div>
+            )}
             <ChatInput
               input={input}
               isSubmitting={isSubmitting || loadingMessageId !== null}
