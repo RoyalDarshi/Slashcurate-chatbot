@@ -34,173 +34,414 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
       }
 
       if (language === "sql") {
-        // This is a complete rewrite of the colorization logic using a token-based approach
-        // instead of complex regex replacements
+        // A more accurate lexical analysis approach for SQL
+        const lexSQL = (sql: string) => {
+          // First, escape HTML special characters
+          const escapedSql = sql
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
 
-        // Escape HTML special characters first
-        const escapedQuery = formattedQuery
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
+          // Tokenize the SQL into parts with proper coloring
+          const tokens = [];
 
-        // Create a tokenizer to properly handle SQL components
-        const sqlTokenizer = () => {
-          // Define token types with their patterns and colors
-          const tokenTypes = [
-            {
-              type: "keyword",
-              regex:
-                /\b(SELECT|FROM|WHERE|AND|OR|INSERT|UPDATE|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|GROUP BY|ORDER BY|LIMIT|OFFSET|AS|ON|DISTINCT|COUNT|AVG|SUM|MIN|MAX|DESC|ASC)\b/i,
-              color: theme.colors.accent,
-            },
-            {
-              type: "string",
-              regex: /'([^']*)'/g,
-              color: theme.colors.warning,
-            },
-            {
-              type: "number",
-              regex: /\b\d+(\.\d+)?\b/g,
-              color: theme.colors.error,
-            },
-            {
-              type: "column",
-              regex: /"([^"]*)"/g, // Handle double-quoted identifiers
-              color: theme.colors.success,
-            },
-            {
-              type: "bareColumn",
-              regex: /\b[a-zA-Z][a-zA-Z0-9_]*\b/g, // Handle bare (unquoted) column names
-              color: theme.colors.success,
-              test: (word, context) => {
-                // Only color as column in the right context, not keywords
-                if (
-                  /\b(SELECT|FROM|WHERE|AND|OR|INSERT|UPDATE|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|GROUP BY|ORDER BY|LIMIT|OFFSET|AS|ON|DISTINCT|COUNT|AVG|SUM|MIN|MAX|DESC|ASC)\b/i.test(
-                    word
-                  )
-                ) {
-                  return false;
-                }
-
-                // If we're in a SELECT list or appropriate context
-                return (
-                  context.inSelect ||
-                  context.inWhere ||
-                  context.inGroupBy ||
-                  context.inOrderBy
-                );
-              },
-            },
+          // Keywords list - case insensitive
+          const keywords = [
+            "SELECT",
+            "FROM",
+            "WHERE",
+            "AND",
+            "OR",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "JOIN",
+            "INNER",
+            "LEFT",
+            "RIGHT",
+            "OUTER",
+            "FULL",
+            "GROUP",
+            "BY",
+            "ORDER",
+            "HAVING",
+            "LIMIT",
+            "OFFSET",
+            "AS",
+            "ON",
+            "DISTINCT",
+            "COUNT",
+            "AVG",
+            "SUM",
+            "MIN",
+            "MAX",
+            "DESC",
+            "ASC",
+            "BETWEEN",
+            "IN",
+            "LIKE",
+            "IS",
+            "NULL",
+            "NOT",
+            "EXISTS",
+            "CASE",
+            "WHEN",
+            "THEN",
+            "ELSE",
+            "END",
           ];
 
-          // Split the query into meaningful parts
-          const tokens = [];
-          let currentPos = 0;
-          const context = {
-            inSelect: false,
-            inFrom: false,
-            inWhere: false,
-            inGroupBy: false,
-            inOrderBy: false,
-          };
-
-          // Simple SQL parser to update context
-          const parts = escapedQuery.split(
-            /\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY)\b/i
+          // Create a regex pattern for keywords with word boundaries
+          const keywordPattern = new RegExp(
+            `\\b(${keywords.join("|")})\\b`,
+            "i"
           );
-          for (let i = 0; i < parts.length; i++) {
-            const part = parts[i];
-            if (/SELECT/i.test(part)) {
-              context.inSelect = true;
-              context.inFrom =
-                context.inWhere =
-                context.inGroupBy =
-                context.inOrderBy =
-                  false;
-            } else if (/FROM/i.test(part)) {
-              context.inFrom = true;
-              context.inSelect =
-                context.inWhere =
-                context.inGroupBy =
-                context.inOrderBy =
-                  false;
-            } else if (/WHERE/i.test(part)) {
-              context.inWhere = true;
-              context.inSelect =
-                context.inFrom =
-                context.inGroupBy =
-                context.inOrderBy =
-                  false;
-            } else if (/GROUP BY/i.test(part)) {
-              context.inGroupBy = true;
-              context.inSelect =
-                context.inFrom =
-                context.inWhere =
-                context.inOrderBy =
-                  false;
-            } else if (/ORDER BY/i.test(part)) {
-              context.inOrderBy = true;
-              context.inSelect =
-                context.inFrom =
-                context.inWhere =
-                context.inGroupBy =
-                  false;
-            }
 
-            // Tokenize the current part based on token types
-            let text = part;
-            let textPos = 0;
+          // Process the SQL character by character to handle all edge cases
+          let i = 0;
+          let currentToken = "";
+          let state = "normal"; // States: normal, string, identifier, comment
 
-            // Process text against all token types
-            while (textPos < text.length) {
-              let matched = false;
+          while (i < escapedSql.length) {
+            const char = escapedSql[i];
+            const nextChar = i < escapedSql.length - 1 ? escapedSql[i + 1] : "";
 
-              for (const tokenType of tokenTypes) {
-                tokenType.regex.lastIndex = 0;
-                const match = tokenType.regex.exec(text.substring(textPos));
-
-                if (match && match.index === 0) {
-                  const value = match[0];
-                  // For bareColumns, test if it's in the right context
-                  if (
-                    tokenType.type === "bareColumn" &&
-                    tokenType.test &&
-                    !tokenType.test(value, context)
-                  ) {
-                    continue;
+            // Handle different states
+            if (state === "normal") {
+              // Check for the start of a quoted identifier
+              if (char === '"') {
+                // Process any accumulated token if needed
+                if (currentToken) {
+                  // Check if it's a keyword
+                  if (keywordPattern.test(currentToken)) {
+                    tokens.push({
+                      type: "keyword",
+                      value: currentToken,
+                      color: theme.colors.accent,
+                    });
+                  } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
+                    // It's a number
+                    tokens.push({
+                      type: "number",
+                      value: currentToken,
+                      color: theme.colors.error,
+                    });
+                  } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
+                    // It's an unquoted identifier/name
+                    tokens.push({
+                      type: "identifier",
+                      value: currentToken,
+                      color: theme.colors.success,
+                    });
+                  } else {
+                    // Regular text
+                    tokens.push({
+                      type: "text",
+                      value: currentToken,
+                      color: null,
+                    });
                   }
-
-                  tokens.push({
-                    type: tokenType.type,
-                    value: value,
-                    color: tokenType.color,
-                  });
-
-                  textPos += value.length;
-                  matched = true;
-                  break;
+                  currentToken = "";
                 }
-              }
 
-              // If no token matched, add the character as plain text
-              if (!matched) {
+                // Start of a quoted identifier
+                state = "identifier";
+                currentToken = char;
+              }
+              // Check for string literal
+              else if (char === "'") {
+                if (currentToken) {
+                  tokens.push({
+                    type: "text",
+                    value: currentToken,
+                    color: null,
+                  });
+                  currentToken = "";
+                }
+
+                state = "string";
+                currentToken = char;
+              }
+              // Check for operators and punctuation
+              else if (/[.,;()=<>!+\-*/%]/.test(char)) {
+                // Process any accumulated token
+                if (currentToken) {
+                  // Check if it's a keyword
+                  if (keywordPattern.test(currentToken)) {
+                    tokens.push({
+                      type: "keyword",
+                      value: currentToken,
+                      color: theme.colors.accent,
+                    });
+                  } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
+                    // It's a number
+                    tokens.push({
+                      type: "number",
+                      value: currentToken,
+                      color: theme.colors.error,
+                    });
+                  } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
+                    // It's an unquoted identifier/name
+                    tokens.push({
+                      type: "identifier",
+                      value: currentToken,
+                      color: theme.colors.success,
+                    });
+                  } else {
+                    // Regular text
+                    tokens.push({
+                      type: "text",
+                      value: currentToken,
+                      color: null,
+                    });
+                  }
+                  currentToken = "";
+                }
+
+                // Add operator/punctuation
                 tokens.push({
-                  type: "text",
-                  value: text[textPos],
+                  type: "operator",
+                  value: char,
                   color: null,
                 });
-                textPos++;
               }
+              // Handle spaces
+              else if (/\s/.test(char)) {
+                // Process any accumulated token
+                if (currentToken) {
+                  // Check if it's a keyword
+                  if (keywordPattern.test(currentToken)) {
+                    tokens.push({
+                      type: "keyword",
+                      value: currentToken,
+                      color: theme.colors.accent,
+                    });
+                  } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
+                    // It's a number
+                    tokens.push({
+                      type: "number",
+                      value: currentToken,
+                      color: theme.colors.error,
+                    });
+                  } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
+                    // It's an unquoted identifier/name
+                    tokens.push({
+                      type: "identifier",
+                      value: currentToken,
+                      color: theme.colors.success,
+                    });
+                  } else {
+                    // Regular text
+                    tokens.push({
+                      type: "text",
+                      value: currentToken,
+                      color: null,
+                    });
+                  }
+                  currentToken = "";
+                }
+
+                // Add whitespace
+                tokens.push({
+                  type: "whitespace",
+                  value: char,
+                  color: null,
+                });
+              }
+              // Regular character, accumulate
+              else {
+                currentToken += char;
+              }
+            }
+            // Handle string literal state
+            else if (state === "string") {
+              currentToken += char;
+              if (char === "'" && i > 0) {
+                tokens.push({
+                  type: "string",
+                  value: currentToken,
+                  color: theme.colors.warning,
+                });
+                currentToken = "";
+                state = "normal";
+              }
+            }
+            // Handle quoted identifier state
+            else if (state === "identifier") {
+              currentToken += char;
+              if (char === '"' && i > 0) {
+                tokens.push({
+                  type: "quotedIdentifier",
+                  value: currentToken,
+                  color: theme.colors.success,
+                });
+                currentToken = "";
+                state = "normal";
+              }
+            }
+
+            i++;
+          }
+
+          // Handle any remaining token
+          if (currentToken) {
+            // Check if it's a keyword
+            if (keywordPattern.test(currentToken)) {
+              tokens.push({
+                type: "keyword",
+                value: currentToken,
+                color: theme.colors.accent,
+              });
+            } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
+              // It's a number
+              tokens.push({
+                type: "number",
+                value: currentToken,
+                color: theme.colors.error,
+              });
+            } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
+              // It's an unquoted identifier/name
+              tokens.push({
+                type: "identifier",
+                value: currentToken,
+                color: theme.colors.success,
+              });
+            } else {
+              // Regular text
+              tokens.push({
+                type: "text",
+                value: currentToken,
+                color: null,
+              });
             }
           }
 
           return tokens;
         };
 
-        // Generate HTML based on tokens
-        const tokens = sqlTokenizer();
+        // Process the lexed tokens for second-pass context analysis
+        const processTokens = (tokens) => {
+          let inFrom = false;
+          let inOn = false;
+          let afterFrom = false;
+          let lastTableName = null;
+
+          // Function to identify a token sequence as a table reference
+          const isTableReference = (index) => {
+            // In the FROM clause, any identifier is a table
+            if (inFrom) {
+              return (
+                tokens[index].type === "identifier" ||
+                tokens[index].type === "quotedIdentifier"
+              );
+            }
+
+            // Check for table.column pattern
+            if (index + 2 < tokens.length) {
+              const isIdentifier =
+                tokens[index].type === "identifier" ||
+                tokens[index].type === "quotedIdentifier";
+              const isDot = tokens[index + 1].value === ".";
+              const isNextIdentifier =
+                tokens[index + 2].type === "identifier" ||
+                tokens[index + 2].type === "quotedIdentifier";
+
+              return isIdentifier && isDot && isNextIdentifier;
+            }
+
+            return false;
+          };
+
+          // Special handling for compound keywords like INNER JOIN and ORDER BY
+          const handleCompoundKeywords = () => {
+            for (let i = 0; i < tokens.length - 2; i++) {
+              // Handle "INNER JOIN"
+              if (
+                tokens[i].type === "keyword" &&
+                tokens[i].value.toUpperCase() === "INNER" &&
+                i + 2 < tokens.length &&
+                tokens[i + 2].type === "keyword" &&
+                tokens[i + 2].value.toUpperCase() === "JOIN"
+              ) {
+                // Ensure INNER has the same color as other keywords
+                tokens[i].color = theme.colors.accent;
+              }
+
+              // Handle "ORDER BY"
+              if (
+                tokens[i].type === "keyword" &&
+                tokens[i].value.toUpperCase() === "ORDER" &&
+                i + 2 < tokens.length &&
+                tokens[i + 2].type === "keyword" &&
+                tokens[i + 2].value.toUpperCase() === "BY"
+              ) {
+                // Ensure ORDER has the same color as other keywords
+                tokens[i].color = theme.colors.accent;
+                tokens[i + 2].color = theme.colors.accent;
+              }
+            }
+          };
+
+          // Second pass - identify tables and mark qualified columns
+          for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+
+            // Track context
+            if (token.type === "keyword") {
+              const upperValue = token.value.toUpperCase();
+
+              if (upperValue === "FROM") {
+                inFrom = true;
+                afterFrom = true;
+                inOn = false;
+              } else if (upperValue === "JOIN") {
+                inFrom = true;
+                inOn = false;
+              } else if (upperValue === "ON") {
+                inFrom = false;
+                inOn = true;
+              } else if (
+                ["WHERE", "GROUP", "ORDER", "HAVING", "LIMIT"].includes(
+                  upperValue
+                )
+              ) {
+                inFrom = false;
+                inOn = false;
+              }
+
+              // Force all keywords to have the accent color
+              token.color = theme.colors.accent;
+            }
+
+            // Identify table references in FROM/JOIN
+            if (isTableReference(i)) {
+              if (inFrom) {
+                // This is a table name
+                tokens[i].color = theme.colors.warning;
+                tokens[i].type = "table";
+                lastTableName = tokens[i].value;
+              } else if (i + 2 < tokens.length && tokens[i + 1].value === ".") {
+                // This is a table name in a qualified column reference
+                tokens[i].color = theme.colors.warning;
+                tokens[i].type = "table";
+              }
+            }
+          }
+
+          // Handle compound keywords like INNER JOIN and ORDER BY
+          handleCompoundKeywords();
+
+          return tokens;
+        };
+
+        // Tokenize the SQL query
+        const lexedTokens = lexSQL(formattedQuery);
+        // Process tokens for contextual highlighting
+        const processedTokens = processTokens(lexedTokens);
+
+        // Generate HTML
         let html = "";
-        for (const token of tokens) {
+        for (const token of processedTokens) {
           if (token.color) {
             html += `<span style="color: ${token.color}">${token.value}</span>`;
           } else {
