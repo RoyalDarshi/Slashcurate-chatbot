@@ -21,6 +21,23 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check for mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Initial check
+    checkMobile();
+
+    // Listen for resize events
+    window.addEventListener("resize", checkMobile);
+
+    // Clean up
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const normalizedData = useMemo(() => {
     if (!data) return [];
@@ -201,7 +218,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     return pages;
   };
 
-  const maxVisiblePages = 5;
+  const maxVisiblePages = isMobile ? 3 : 5;
   const visiblePages = getVisiblePages(
     pagination.pageIndex + 1,
     table.getPageCount(),
@@ -216,22 +233,26 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         transition: "all 0.3s ease",
       }}
     >
-      {/* Header with search and info */}
+      {/* Header with search and info - Responsive layout */}
       <div
-        className="flex items-center justify-between px-2 py-2 border-b"
+        className={`flex ${
+          isMobile ? "flex-col space-y-2" : "items-center justify-between"
+        } px-2 py-2 border-b`}
         style={{ borderColor: `${theme.colors.text}10` }}
       >
         <div className="flex items-center">
           <motion.div
             className="flex items-center bg-opacity-10 rounded-full overflow-hidden"
-            animate={{ width: isSearchOpen ? "240px" : "40px" }}
+            animate={{
+              width: isSearchOpen ? (isMobile ? "100%" : "240px") : "40px",
+            }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
             style={{
               backgroundColor: `${theme.colors.accent}20`,
             }}
           >
             <button
-              className="p-2 rounded-full"
+              className="p-2 rounded-full flex-shrink-0"
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               style={{ color: theme.colors.accent }}
             >
@@ -259,7 +280,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                   placeholder="Search table..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 bg-transparent border-none outline-none px-2 py-1 text-sm"
+                  className="flex-1 bg-transparent border-none outline-none px-2 py-1 text-sm w-full"
                   style={{ color: theme.colors.text }}
                   autoFocus
                 />
@@ -268,7 +289,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           </motion.div>
 
           <div
-            className="ml-4 text-sm"
+            className={`${isMobile ? "mt-2" : "ml-4"} text-sm`}
             style={{ color: theme.colors.textSecondary }}
           >
             {filteredData.length}{" "}
@@ -277,17 +298,21 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div
+          className={`flex items-center ${
+            isMobile ? "mt-2 justify-end" : "space-x-2"
+          }`}
+        >
           <span
-            className="text-sm"
+            className="text-sm mr-2"
             style={{ color: theme.colors.textSecondary }}
           >
-            Rows per page:
+            Rows:
           </span>
           <select
             value={pagination.pageSize}
             onChange={(e) => table.setPageSize(Number(e.target.value))}
-            className="rounded-md text-sm px-3 py-1.5 focus:outline-none transition-all"
+            className="rounded-md text-sm px-2 py-1 focus:outline-none transition-all"
             style={{
               backgroundColor: theme.colors.surface,
               color: theme.colors.text,
@@ -426,14 +451,19 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         </table>
       </div>
 
+      {/* Pagination area - Responsive layout */}
       <div
-        className="flex items-center justify-between px-2 pt-2"
+        className={`${
+          isMobile
+            ? "flex flex-col space-y-2"
+            : "flex items-center justify-between"
+        } px-2 pt-2 pb-2`}
         style={{
           backgroundColor: theme.colors.surface,
         }}
       >
         <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
-          Showing
+          {isMobile ? "Page " : "Showing "}
           <span
             className="font-medium mx-1"
             style={{ color: theme.colors.text }}
@@ -443,17 +473,19 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               filteredData.length
             )}
           </span>
-          to
-          <span
-            className="font-medium mx-1"
-            style={{ color: theme.colors.text }}
-          >
-            {Math.min(
-              (pagination.pageIndex + 1) * pagination.pageSize,
-              filteredData.length
-            )}
-          </span>
-          of
+          {!isMobile && "to"}
+          {!isMobile && (
+            <span
+              className="font-medium mx-1"
+              style={{ color: theme.colors.text }}
+            >
+              {Math.min(
+                (pagination.pageIndex + 1) * pagination.pageSize,
+                filteredData.length
+              )}
+            </span>
+          )}
+          {isMobile ? " of " : " of "}
           <span
             className="font-medium ml-1"
             style={{ color: theme.colors.text }}
@@ -462,7 +494,11 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           </span>
         </div>
 
-        <div className="flex items-center">
+        <div
+          className={`flex ${
+            isMobile ? "justify-center w-full" : "items-center"
+          }`}
+        >
           <div className="flex items-center space-x-1">
             <CustomTooltip title="Go to first page">
               <button
@@ -527,7 +563,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     <motion.button
                       key={index}
                       title={`Go to page ${page}`}
-                      className="px-3 py-1 text-sm rounded-md transition-colors"
+                      className={`px-2 py-1 text-sm rounded-md transition-colors ${
+                        isMobile ? "text-xs" : ""
+                      }`}
                       whileHover={{
                         scale: page === pagination.pageIndex + 1 ? 1 : 1.05,
                       }}
@@ -551,7 +589,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 ) : (
                   <span
                     key={index}
-                    className="px-2 py-1 text-sm flex items-center"
+                    className={`px-1 py-1 text-sm flex items-center ${
+                      isMobile ? "text-xs" : ""
+                    }`}
                     style={{ color: theme.colors.textSecondary }}
                   >
                     <svg
