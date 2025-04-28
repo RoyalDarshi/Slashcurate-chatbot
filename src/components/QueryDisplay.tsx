@@ -104,7 +104,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
 
           while (i < escapedSql.length) {
             const char = escapedSql[i];
-            const nextChar = i < escapedSql.length - 1 ? escapedSql[i + 1] : "";
+            // const nextChar = i < escapedSql.length - 1 ? escapedSql[i + 1] : "";
 
             // Handle different states
             if (state === "normal") {
@@ -320,14 +320,14 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
         };
 
         // Process the lexed tokens for second-pass context analysis
-        const processTokens = (tokens) => {
+        const processTokens = (tokens: any[]) => {
           let inFrom = false;
           let inOn = false;
           let afterFrom = false;
           let lastTableName = null;
 
           // Function to identify a token sequence as a table reference
-          const isTableReference = (index) => {
+          const isTableReference = (index: number) => {
             // In the FROM clause, any identifier is a table
             if (inFrom) {
               return (
