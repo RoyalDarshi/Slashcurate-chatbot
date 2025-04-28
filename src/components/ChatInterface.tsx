@@ -1016,8 +1016,14 @@ const ChatInterface = memo(
             {/* New button to scroll to bottom when user has scrolled up */}
             {userHasScrolledUp && (
               <div
-                className=" flex justify-end"
-                style={{ marginBottom: "10px", marginRight: "10px" }}
+                className="flex justify-end"
+                style={{
+                  position: "absolute",
+                  bottom: "130px",
+                  right: "120px",
+                  zIndex: 1000,
+                  marginBottom: "10px",
+                }}
               >
                 <CustomTooltip title="Scroll to Bottom" position="top">
                   <button
