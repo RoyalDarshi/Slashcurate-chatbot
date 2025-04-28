@@ -9,6 +9,7 @@ import {
 import { DataTableProps } from "../types";
 import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
+import { motion, AnimatePresence } from "framer-motion";
 
 const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const { theme } = useTheme();
@@ -17,6 +18,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     pageIndex: 0,
     pageSize: 10,
   });
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const normalizedData = useMemo(() => {
     if (!data) return [];
@@ -42,12 +46,23 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       : normalizedData;
   }, [headers, normalizedData]);
 
+  // Filter data based on search term
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return processedData;
+
+    return processedData.filter((row) =>
+      Object.values(row).some((value) =>
+        String(value).toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [processedData, searchTerm]);
+
   // Compute paginated data
   const paginatedData = useMemo(() => {
     const start = pagination.pageIndex * pagination.pageSize;
     const end = start + pagination.pageSize;
-    return processedData.slice(start, end);
-  }, [processedData, pagination]);
+    return filteredData.slice(start, end);
+  }, [filteredData, pagination]);
 
   // Sort only the paginated data
   const sortedPaginatedData = useMemo(() => {
@@ -68,33 +83,80 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       headers.map((header) =>
         columnHelper.accessor(header, {
           id: header,
-          sortingFn: "alphanumeric", // Note: This is informational since sorting is manual
+          sortingFn: "alphanumeric",
           header: ({ column }) => (
             <div
-              className="flex items-center space-x-1 cursor-pointer select-none"
+              className="flex items-center space-x-1 cursor-pointer select-none group"
               onClick={() =>
                 column.toggleSorting(column.getIsSorted() !== "asc")
               }
             >
-              <span className="font-medium">{header}</span>
-              {column.getIsSorted() ? (
-                column.getIsSorted() === "asc" ? (
-                  <span style={{ color: theme.colors.accent }}> ▲</span>
-                ) : (
-                  <span style={{ color: theme.colors.accent }}> ▼</span>
-                )
-              ) : (
-                <span style={{ color: theme.colors.textSecondary }}> ⬍</span>
-              )}
+              <span className="font-medium transition-colors duration-200 group-hover:text-opacity-90">
+                {header}
+              </span>
+              <motion.span
+                animate={{
+                  rotate:
+                    column.getIsSorted() === "asc"
+                      ? 0
+                      : column.getIsSorted() === "desc"
+                      ? 180
+                      : 0,
+                  opacity: column.getIsSorted() ? 1 : 0.3,
+                }}
+                transition={{ duration: 0.2 }}
+                style={{ color: theme.colors.accent }}
+                className="flex items-center justify-center w-5 h-5"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M8 14l4-4 4 4" />
+                </svg>
+              </motion.span>
             </div>
           ),
           cell: (info) => {
             const cellValue = info.getValue();
-            return cellValue?.toString() || "N/A";
+            const valueString = cellValue?.toString() || "N/A";
+
+            // Highlight search term if present
+            if (searchTerm && valueString !== "N/A") {
+              const regex = new RegExp(`(${searchTerm})`, "gi");
+              const parts = valueString.split(regex);
+
+              return (
+                <div>
+                  {parts.map((part: string, i: number) =>
+                    regex.test(part) ? (
+                      <span
+                        key={i}
+                        style={{
+                          backgroundColor: `${theme.colors.accent}40`,
+                          padding: "0px 2px",
+                          borderRadius: "2px",
+                        }}
+                      >
+                        {part}
+                      </span>
+                    ) : (
+                      <span key={i}>{part}</span>
+                    )
+                  )}
+                </div>
+              );
+            }
+
+            return valueString;
           },
         })
       ),
-    [headers, theme]
+    [headers, theme, searchTerm]
   );
 
   const table = useReactTable({
@@ -105,7 +167,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
-    pageCount: Math.ceil(processedData.length / pagination.pageSize),
+    pageCount: Math.ceil(filteredData.length / pagination.pageSize),
   });
 
   const getVisiblePages = (
@@ -149,17 +211,115 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   return (
     <div
       className="rounded-lg overflow-hidden"
-      style={{ background: theme.colors.surface }}
+      style={{
+        background: theme.colors.surface,
+        transition: "all 0.3s ease",
+      }}
     >
+      {/* Header with search and info */}
+      <div
+        className="flex items-center justify-between px-2 py-2 border-b"
+        style={{ borderColor: `${theme.colors.text}10` }}
+      >
+        <div className="flex items-center">
+          <motion.div
+            className="flex items-center bg-opacity-10 rounded-full overflow-hidden"
+            animate={{ width: isSearchOpen ? "240px" : "40px" }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            style={{
+              backgroundColor: `${theme.colors.accent}20`,
+            }}
+          >
+            <button
+              className="p-2 rounded-full"
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              style={{ color: theme.colors.accent }}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </button>
+            <AnimatePresence>
+              {isSearchOpen && (
+                <motion.input
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  type="text"
+                  placeholder="Search table..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 bg-transparent border-none outline-none px-2 py-1 text-sm"
+                  style={{ color: theme.colors.text }}
+                  autoFocus
+                />
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          <div
+            className="ml-4 text-sm"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            {filteredData.length}{" "}
+            {filteredData.length === 1 ? "record" : "records"}
+            {searchTerm && ` • Filtering "${searchTerm}"`}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <span
+            className="text-sm"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            Rows per page:
+          </span>
+          <select
+            value={pagination.pageSize}
+            onChange={(e) => table.setPageSize(Number(e.target.value))}
+            className="rounded-md text-sm px-3 py-1.5 focus:outline-none transition-all"
+            style={{
+              backgroundColor: theme.colors.surface,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.accent}30`,
+            }}
+          >
+            {[10, 20, 50, 100].map((size) => (
+              <option
+                key={size}
+                value={size}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  color: theme.colors.text,
+                }}
+              >
+                {size}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div
         className="overflow-auto max-h-96 scrollbar-thin"
         style={{
           scrollbarColor: `${theme.colors.textSecondary} ${theme.colors.surface}`,
+          scrollbarWidth: "thin",
         }}
       >
         <table className="w-full">
           <thead
-            className="sticky top-0"
+            className="sticky top-0 z-10"
             style={{
               background: theme.colors.surface,
               boxShadow: `0 2px 8px ${theme.colors.text}10`,
@@ -190,80 +350,130 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             className="divide-y"
             style={{ borderColor: `${theme.colors.text}20` }}
           >
-            {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="hover:bg-opacity-5 transition-colors"
-                style={{ backgroundColor: theme.colors.surface }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className="px-6 py-4 text-sm whitespace-nowrap"
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+            {table.getRowModel().rows.length > 0 ? (
+              table.getRowModel().rows.map((row) => (
+                <motion.tr
+                  key={row.id}
+                  layoutId={row.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="transition-colors"
+                  onMouseEnter={() => setHoveredRow(row.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  style={{
+                    backgroundColor:
+                      hoveredRow === row.id
+                        ? `${theme.colors.accent}08`
+                        : theme.colors.surface,
+                  }}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className="px-6 py-4 text-sm"
+                      style={{
+                        color: theme.colors.textSecondary,
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </td>
+                  ))}
+                </motion.tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={headers.length}
+                  className="px-6 py-12 text-center text-sm"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <svg
+                      className="w-12 h-12 opacity-30"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span>No results found</span>
+                    {searchTerm && (
+                      <button
+                        className="text-sm px-3 py-1 rounded-full mt-2"
+                        style={{
+                          backgroundColor: `${theme.colors.accent}20`,
+                          color: theme.colors.accent,
+                        }}
+                        onClick={() => setSearchTerm("")}
+                      >
+                        Clear search
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
+
       <div
-        className="flex items-center justify-between pt-4 border-t"
+        className="flex items-center justify-between px-2 pt-2"
         style={{
-          borderColor: `${theme.colors.text}20`,
           backgroundColor: theme.colors.surface,
         }}
       >
-        <div className="flex items-center space-x-2">
+        <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
+          Showing
           <span
-            className="text-sm"
-            style={{ color: theme.colors.textSecondary }}
+            className="font-medium mx-1"
+            style={{ color: theme.colors.text }}
           >
-            Rows per page:
+            {Math.min(
+              pagination.pageIndex * pagination.pageSize + 1,
+              filteredData.length
+            )}
           </span>
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
-            className="rounded-md text-sm px-3 py-1 focus:outline-none"
-            style={{
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.textSecondary}30`,
-            }}
+          to
+          <span
+            className="font-medium mx-1"
+            style={{ color: theme.colors.text }}
           >
-            {[10, 20, 50, 100].map((size) => (
-              <option
-                key={size}
-                value={size}
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  color: theme.colors.text,
-                }}
-              >
-                {size}
-              </option>
-            ))}
-          </select>
+            {Math.min(
+              (pagination.pageIndex + 1) * pagination.pageSize,
+              filteredData.length
+            )}
+          </span>
+          of
+          <span
+            className="font-medium ml-1"
+            style={{ color: theme.colors.text }}
+          >
+            {filteredData.length}
+          </span>
         </div>
+
         <div className="flex items-center">
-          <span
-            className="text-sm px-2"
-            style={{ color: theme.colors.textSecondary }}
-          >
-            Page <strong>{pagination.pageIndex + 1}</strong> of{" "}
-            <strong>{table.getPageCount()}</strong>
-          </span>
           <div className="flex items-center space-x-1">
             <CustomTooltip title="Go to first page">
               <button
                 title="Go to first page"
-                className="p-1.5 rounded-md hover:bg-opacity-10 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
+                className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
                 style={{
                   color: theme.colors.text,
-                  backgroundColor: theme.colors.accent + "20",
+                  backgroundColor: table.getCanPreviousPage()
+                    ? `${theme.colors.accent}10`
+                    : "transparent",
                 }}
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
@@ -286,10 +496,12 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             <CustomTooltip title="Go to previous page">
               <button
                 title="Go to previous page"
-                className="p-1.5 rounded-md hover:bg-opacity-10 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
+                className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
                 style={{
                   color: theme.colors.text,
-                  backgroundColor: theme.colors.accent + "20",
+                  backgroundColor: table.getCanPreviousPage()
+                    ? `${theme.colors.accent}10`
+                    : "transparent",
                 }}
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
@@ -313,14 +525,13 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               {visiblePages.map((page, index) =>
                 typeof page === "number" ? (
                   <CustomTooltip key={index} title={`Go to page ${page}`}>
-                    <button
+                    <motion.button
                       key={index}
                       title={`Go to page ${page}`}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                        page === pagination.pageIndex + 1
-                          ? "font-semibold"
-                          : "hover:bg-opacity-10"
-                      }`}
+                      className="px-3 py-1 text-sm rounded-md transition-colors"
+                      whileHover={{
+                        scale: page === pagination.pageIndex + 1 ? 1 : 1.05,
+                      }}
                       style={{
                         color:
                           page === pagination.pageIndex + 1
@@ -328,21 +539,32 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                             : theme.colors.text,
                         backgroundColor:
                           page === pagination.pageIndex + 1
-                            ? theme.colors.accent + "20"
+                            ? `${theme.colors.accent}20`
                             : "transparent",
+                        fontWeight:
+                          page === pagination.pageIndex + 1 ? 600 : 400,
                       }}
                       onClick={() => table.setPageIndex(page - 1)}
                     >
                       {page}
-                    </button>
+                    </motion.button>
                   </CustomTooltip>
                 ) : (
                   <span
                     key={index}
-                    className="px-3 py-1 text-sm"
+                    className="px-2 py-1 text-sm flex items-center"
                     style={{ color: theme.colors.textSecondary }}
                   >
-                    {page}
+                    <svg
+                      width="16"
+                      height="4"
+                      viewBox="0 0 16 4"
+                      fill="currentColor"
+                    >
+                      <circle cx="2" cy="2" r="2" />
+                      <circle cx="8" cy="2" r="2" />
+                      <circle cx="14" cy="2" r="2" />
+                    </svg>
                   </span>
                 )
               )}
@@ -350,10 +572,12 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             <CustomTooltip title="Go to next page">
               <button
                 title="Go to next page"
-                className="p-1.5 rounded-md hover:bg-opacity-10 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
+                className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
                 style={{
                   color: theme.colors.text,
-                  backgroundColor: theme.colors.accent + "20",
+                  backgroundColor: table.getCanNextPage()
+                    ? `${theme.colors.accent}10`
+                    : "transparent",
                 }}
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
@@ -376,10 +600,12 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             <CustomTooltip title="Go to last page">
               <button
                 title="Go to last page"
-                className="p-1.5 rounded-md hover:bg-opacity-10 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
+                className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
                 style={{
                   color: theme.colors.text,
-                  backgroundColor: theme.colors.accent + "20",
+                  backgroundColor: table.getCanNextPage()
+                    ? `${theme.colors.accent}10`
+                    : "transparent",
                 }}
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}

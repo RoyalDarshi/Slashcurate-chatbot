@@ -192,9 +192,11 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
         case "yesterday":
           return diffInDays >= 1 && diffInDays < 2;
         case "last7days":
-          return diffInDays < 7;
+          // Show sessions from last 7 days EXCEPT today
+          return diffInDays >= 1 && diffInDays < 7;
         case "last1month":
-          return diffInDays < 30;
+          // Show sessions from last month EXCEPT last 7 days
+          return diffInDays >= 7 && diffInDays < 30;
         default:
           return true;
       }
