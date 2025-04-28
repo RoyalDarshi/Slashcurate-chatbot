@@ -354,7 +354,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               table.getRowModel().rows.map((row) => (
                 <motion.tr
                   key={row.id}
-                  layoutId={row.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}

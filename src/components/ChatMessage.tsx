@@ -707,7 +707,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               <Bot size={20} style={{ color: "white" }} />
             </div>
             <div
-              className="max-w-[80%] flex flex-col gap-2"
+              className="max-w-[75%] flex flex-col gap-2"
               style={{ position: "relative" }}
             >
               {renderContent()}

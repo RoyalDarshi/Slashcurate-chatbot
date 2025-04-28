@@ -982,7 +982,7 @@ const ChatInterface = memo(
                 }
                 return (
                   <div
-                    className="flex flex-col w-full"
+                    className="flex flex-col w-full max-w-full"
                     style={{ gap: theme.spacing.md }}
                     key={message.id}
                     ref={(el) => (messageRefs.current[message.id] = el)}
@@ -1038,6 +1038,7 @@ const ChatInterface = memo(
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      boxShadow: theme.shadow.md,
                     }}
                     title="Scroll Bottom"
                   >
