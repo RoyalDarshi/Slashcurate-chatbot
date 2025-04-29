@@ -20,6 +20,7 @@ import Favourites from "./components/Favourites";
 import UserTips from "./components/UserTips";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import HelpPage from "./components/HelpPage";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
@@ -241,6 +242,7 @@ const AppContent: React.FC<{
               />
             )}
             {activeMenu === "settings" && <Settings />}
+            {activeMenu === "help" && <HelpPage />}
           </main>
         </div>
       ) : (
