@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../ThemeContext";
-import { Heart, Search, X, ChevronRight, Loader2 } from "lucide-react";
+import {
+  Heart,
+  Search,
+  X,
+  ChevronRight,
+  Loader2,
+  Trash2,
+  BookmarkCheck,
+} from "lucide-react";
 import { API_URL } from "../config";
 import axios from "axios";
 
@@ -9,18 +17,22 @@ interface FavoriteMessage {
   text: string;
   query: string;
   isFavorited: boolean;
+  timestamp?: string;
 }
 
 interface FavoritesProps {
   onFavoriteSelected: (question: string, query?: string) => void;
 }
 
-const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
+const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [favorites, setFavorites] = useState<FavoriteMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [animateId, setAnimateId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const { theme } = useTheme();
   const token = sessionStorage.getItem("token") ?? "demo-token";
 
@@ -32,19 +44,17 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
           return;
         }
 
-        const response = await axios.post(`${API_URL}/favorites`, {
-          token,
-        });
-
+        const response = await axios.post(`${API_URL}/favorites`, { token });
         if (response.status === 200) {
-          const formattedData: FavoriteMessage[] = response.data.map(
-            (item: any) => ({
-              id: item.question_id,
-              text: item.question,
-              query: item.query || undefined,
-              isFavorited: true,
-            })
-          );
+          const formattedData = response.data.map((item: any) => ({
+            id: item.question_id,
+            text: item.question,
+            query: item.query || undefined,
+            isFavorited: true,
+            timestamp: new Date(
+              Date.now() - Math.floor(Math.random() * 30) * 86400000
+            ).toISOString(),
+          }));
           setFavorites(formattedData);
           setError(null);
         }
@@ -67,54 +77,181 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
       }
 
       setAnimateId(id);
-
-      // Delay actual removal to show animation
       setTimeout(async () => {
         await axios.post(`${API_URL}/favorite/delete`, {
           token,
           questionId: id,
         });
-
         setFavorites((prev) => prev.filter((msg) => msg.id !== id));
         setAnimateId(null);
+        setDeleteConfirmId(null);
       }, 300);
     } catch (err) {
       setError("Failed to remove favorite");
       console.error("API Error:", err);
       setAnimateId(null);
+      setDeleteConfirmId(null);
     }
   };
 
-  const clearSearch = () => {
-    setSearchQuery("");
+  const clearSearch = () => setSearchQuery("");
+
+  // const getCategories = () => {
+  //   const categories = new Set(["all"]);
+  //   favorites.forEach((fav) => {
+  //     const text = fav.text.toLowerCase();
+  //     if (text.includes("how") || text.includes("explain"))
+  //       categories.add("questions");
+  //     if (
+  //       text.includes("code") ||
+  //       text.includes("javascript") ||
+  //       text.includes("react")
+  //     )
+  //       categories.add("coding");
+  //     if (text.includes("help") || text.includes("advice"))
+  //       categories.add("help");
+  //   });
+  //   return Array.from(categories);
+  // };
+
+  const getRelativeTime = (timestamp?: string) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
   };
 
-  const filteredMessages = favorites.filter((message) =>
-    message.text.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMessages = favorites.filter((message) => {
+    const matchesSearch = message.text
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    if (selectedCategory === "all") return matchesSearch;
+
+    const text = message.text.toLowerCase();
+    if (
+      selectedCategory === "questions" &&
+      (text.includes("how") || text.includes("explain"))
+    )
+      return matchesSearch;
+    if (
+      selectedCategory === "coding" &&
+      (text.includes("code") ||
+        text.includes("javascript") ||
+        text.includes("react"))
+    )
+      return matchesSearch;
+    if (
+      selectedCategory === "help" &&
+      (text.includes("help") || text.includes("advice"))
+    )
+      return matchesSearch;
+
+    return false;
+  });
 
   return (
     <div
-      className="p-4 md:p-6 h-full min-h-screen transition-colors duration-300"
+      className="p-4 md:p-6 min-h-screen transition-colors duration-300"
       style={{ backgroundColor: theme.colors.background }}
     >
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1
-            className="text-3xl font-bold"
-            style={{ color: theme.colors.text }}
-          >
-            Favorites
-            <span
-              className="ml-2 px-3 py-1 text-sm rounded-full"
-              style={{
-                backgroundColor: theme.colors.accent,
-                color: "#ffffff",
-              }}
+      <div className="max-w-6xl mx-auto">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div className="flex items-center">
+            <BookmarkCheck
+              size={28}
+              className="mr-3"
+              style={{ color: theme.colors.accent }}
+            />
+            <h1
+              className="text-2xl md:text-3xl font-bold"
+              style={{ color: theme.colors.text }}
             >
-              {filteredMessages.length}
-            </span>
-          </h1>
+              Favorites
+              <span
+                className="ml-2 px-3 py-1 text-sm rounded-full"
+                style={{
+                  backgroundColor: theme.colors.accent,
+                  color: "#ffffff",
+                }}
+              >
+                {filteredMessages.length}
+              </span>
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div
+              className="flex p-1 rounded-lg gap-1"
+              style={{ backgroundColor: theme.colors.surface }}
+            >
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === "grid" ? "opacity-100" : "opacity-50"
+                }`}
+                style={{
+                  backgroundColor:
+                    viewMode === "grid" ? theme.colors.accent : "transparent",
+                  color: viewMode === "grid" ? "#ffffff" : theme.colors.text,
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === "list" ? "opacity-100" : "opacity-50"
+                }`}
+                style={{
+                  backgroundColor:
+                    viewMode === "list" ? theme.colors.accent : "transparent",
+                  color: viewMode === "list" ? "#ffffff" : theme.colors.text,
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -131,42 +268,74 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
           </div>
         )}
 
-        <div className="relative mb-6">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={18} style={{ color: theme.colors.textSecondary }} />
+        {/* Search and Filters */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="relative flex-grow">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={18} style={{ color: theme.colors.textSecondary }} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search your favorites..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-3 rounded-lg focus:outline-none transition-all duration-300"
+              style={{
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                fontSize: theme.typography.size.base,
+                boxShadow: searchQuery ? theme.shadow.md : theme.shadow.sm,
+              }}
+            />
+            {searchQuery && (
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                  onClick={clearSearch}
+                  className="focus:outline-none hover:opacity-75 p-1 rounded-full"
+                  style={{ backgroundColor: theme.colors.hover, opacity: 0.7 }}
+                >
+                  <X size={16} style={{ color: theme.colors.text }} />
+                </button>
+              </div>
+            )}
           </div>
 
-          <input
-            type="text"
-            placeholder="Search your favorites..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-3 rounded-lg focus:outline-none transition-all duration-300"
-            style={{
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              fontSize: theme.typography.size.base,
-              boxShadow: searchQuery ? theme.shadow.md : theme.shadow.sm,
-            }}
-          />
-
-          {searchQuery && (
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+          {/* <div className="flex overflow-x-auto pb-2 px-1 gap-2">
+            {getCategories().map((category) => (
               <button
-                onClick={clearSearch}
-                className="focus:outline-none hover:opacity-75 p-1 rounded-full"
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm`}
                 style={{
-                  backgroundColor: theme.colors.hover,
-                  opacity: 0.7,
+                  backgroundColor:
+                    selectedCategory === category
+                      ? theme.colors.accent
+                      : theme.colors.surface,
+                  color:
+                    selectedCategory === category
+                      ? "#ffffff"
+                      : theme.colors.text,
+                  border: `1px solid ${
+                    selectedCategory === category
+                      ? theme.colors.accent
+                      : theme.colors.border
+                  }`,
+                  boxShadow:
+                    selectedCategory === category
+                      ? theme.shadow.md
+                      : theme.shadow.sm,
+                  transform:
+                    selectedCategory === category ? "scale(1.05)" : "scale(1)",
                 }}
               >
-                <X size={16} style={{ color: theme.colors.text }} />
+                {category.charAt(0).toUpperCase() + category.slice(1)}
               </button>
-            </div>
-          )}
+            ))}
+          </div> */}
         </div>
 
+        {/* Loading State */}
         {loading && (
           <div
             className="text-center py-12 rounded-lg"
@@ -181,64 +350,218 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
           </div>
         )}
 
+        {/* Content */}
         {!loading && (
-          <div className="space-y-3">
-            {filteredMessages.map((message) => (
-              <div
-                key={message.id}
-                className="p-4 rounded-lg flex items-center justify-between transition-all cursor-pointer hover:scale-[1.01] group"
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  border: `1px solid ${theme.colors.border}`,
-                  boxShadow: theme.shadow.sm,
-                  opacity: animateId === message.id ? 0 : 1,
-                  transform:
-                    animateId === message.id
-                      ? "translateX(100%)"
-                      : "translateX(0)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                }}
-                onClick={() => {
-                  onFavoriteSelected(message.text, message.query);
-                }}
-              >
-                <div className="flex-1 mr-4 overflow-hidden">
-                  <span
-                    className="block truncate"
+          <>
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className="rounded-lg overflow-hidden transition-all hover:scale-[1.02] group"
                     style={{
-                      color: theme.colors.text,
-                      fontSize: theme.typography.size.base,
+                      backgroundColor: theme.colors.surface,
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: theme.shadow.sm,
+                      opacity: animateId === message.id ? 0 : 1,
+                      transform:
+                        animateId === message.id
+                          ? "translateY(100%)"
+                          : "translateY(0)",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   >
-                    {message.text}
-                  </span>
-                </div>
-
-                <div className="flex items-center">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveFavorite(message.id);
-                    }}
-                    className="p-2 rounded-full focus:outline-none hover:opacity-90 transition-all"
-                    aria-label="Remove favorite"
-                    style={{
-                      backgroundColor: "transparent",
-                      color: theme.colors.accent,
-                    }}
-                  >
-                    <Heart className="w-5 h-5 fill-current" />
-                  </button>
-
-                  <ChevronRight
-                    size={18}
-                    className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ color: theme.colors.textSecondary }}
-                  />
-                </div>
+                    <div
+                      className="p-5 cursor-pointer"
+                      onClick={() =>
+                        onFavoriteSelected(message.text, message.query)
+                      }
+                    >
+                      <div className="flex justify-between items-start mb-3 gap-2">
+                        <div
+                          className="text-xs py-1 px-2 rounded-full flex-shrink-0"
+                          style={{
+                            backgroundColor: theme.colors.accent + "20",
+                            color: theme.colors.accent,
+                          }}
+                        >
+                          {getRelativeTime(message.timestamp)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {deleteConfirmId === message.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveFavorite(message.id);
+                                }}
+                                className="p-1 rounded-full focus:outline-none hover:opacity-90 transition-all"
+                                style={{
+                                  backgroundColor: theme.colors.error + "20",
+                                  color: theme.colors.error,
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirmId(null);
+                                }}
+                                className="p-1 rounded-full focus:outline-none hover:opacity-90 transition-all"
+                                style={{
+                                  backgroundColor: theme.colors.border,
+                                  color: theme.colors.textSecondary,
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmId(message.id);
+                              }}
+                              className="p-1 rounded-full focus:outline-none hover:opacity-90 transition-all opacity-0 group-hover:opacity-100"
+                              style={{
+                                backgroundColor: theme.colors.hover,
+                                color: theme.colors.accent,
+                              }}
+                            >
+                              <Heart className="w-4 h-4 fill-current" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p
+                        className="line-clamp-3 mb-3 text-base min-h-[4.5rem]"
+                        style={{ color: theme.colors.text }}
+                      >
+                        {message.text}
+                      </p>
+                      <div className="flex justify-between items-center mt-2">
+                        <div
+                          className="text-xs opacity-70"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          {message.query
+                            ? "Custom query attached"
+                            : "Standard query"}
+                        </div>
+                        <ChevronRight
+                          size={18}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ color: theme.colors.accent }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="space-y-2">
+                {filteredMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className="p-4 rounded-lg flex items-center justify-between gap-4 transition-all cursor-pointer hover:scale-[1.01] group"
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: theme.shadow.sm,
+                      opacity: animateId === message.id ? 0 : 1,
+                      transform:
+                        animateId === message.id
+                          ? "translateX(100%)"
+                          : "translateX(0)",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                    onClick={() =>
+                      onFavoriteSelected(message.text, message.query)
+                    }
+                  >
+                    <div className="flex-1 mr-4 overflow-hidden flex items-center gap-4 min-w-0">
+                      <div
+                        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: theme.colors.accent }}
+                      >
+                        <Heart size={14} className="text-white" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span
+                          className="block truncate"
+                          style={{ color: theme.colors.text }}
+                        >
+                          {message.text}
+                        </span>
+                        <span
+                          className="text-xs truncate"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          {getRelativeTime(message.timestamp)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {deleteConfirmId === message.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFavorite(message.id);
+                            }}
+                            className="p-1 rounded-md focus:outline-none hover:opacity-90 transition-all text-xs whitespace-nowrap"
+                            style={{
+                              backgroundColor: theme.colors.error,
+                              color: "#ffffff",
+                            }}
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmId(null);
+                            }}
+                            className="p-1 rounded-md focus:outline-none hover:opacity-90 transition-all text-xs"
+                            style={{
+                              backgroundColor: theme.colors.hover,
+                              color: theme.colors.text,
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmId(message.id);
+                            }}
+                            className="p-2 rounded-full focus:outline-none hover:opacity-90 transition-all"
+                            aria-label="Remove favorite"
+                            style={{
+                              backgroundColor: "transparent",
+                              color: theme.colors.accent,
+                            }}
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                          <ChevronRight
+                            size={18}
+                            className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ color: theme.colors.textSecondary }}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
+            {/* Empty State */}
             {!loading && filteredMessages.length === 0 && (
               <div
                 className="text-center py-12 rounded-lg"
@@ -248,34 +571,36 @@ const Favorites: React.FC<FavoritesProps> = ({ onFavoriteSelected }) => {
                   border: `1px solid ${theme.colors.border}`,
                 }}
               >
-                {searchQuery ? (
-                  <>
-                    <Search size={32} className="mx-auto mb-4 opacity-50" />
-                    <p className="text-lg">
-                      No matches found for "{searchQuery}"
-                    </p>
-                    <button
-                      onClick={clearSearch}
-                      className="mt-3 px-4 py-2 rounded-md"
-                      style={{
-                        backgroundColor: theme.colors.accent,
-                        color: "#ffffff",
-                      }}
-                    >
-                      Clear search
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Heart size={32} className="mx-auto mb-4 opacity-50" />
-                    <p className="text-lg">
-                      You haven't added any favorites yet
-                    </p>
-                  </>
-                )}
+                <div className="flex flex-col items-center justify-center">
+                  {searchQuery ? (
+                    <>
+                      <Search size={32} className="mx-auto mb-4 opacity-50" />
+                      <p className="text-lg">
+                        No matches found for "{searchQuery}"
+                      </p>
+                      <button
+                        onClick={clearSearch}
+                        className="mt-3 px-4 py-2 rounded-md"
+                        style={{
+                          backgroundColor: theme.colors.accent,
+                          color: "#ffffff",
+                        }}
+                      >
+                        Clear search
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Heart size={32} className="mx-auto mb-4 opacity-50" />
+                      <p className="text-lg">
+                        You haven't added any favorites yet
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
