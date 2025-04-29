@@ -474,7 +474,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
               key={filter.id}
               onClick={() => handleFilterChange(filter.id)}
               variants={buttonVariants}
-              whileHover="hover"
               whileTap="tap"
               className="px-4 py-2 text-sm transition-all flex items-center gap-2"
               style={{
@@ -554,7 +553,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                       selectedSession === session.id ? "selected" : "visible"
                     }
                     exit="exit"
-                    whileHover="hover"
                     onClick={() => handleSessionClick(session)}
                     className="mb-4 p-4 rounded-lg overflow-hidden cursor-pointer"
                     style={{
@@ -603,34 +601,38 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                                 boxShadow: theme.shadow.sm,
                               }}
                             />
-                            <motion.button
-                              variants={buttonVariants}
-                              whileHover="hover"
-                              whileTap="tap"
-                              onClick={(e) => saveTitle(session.id, e)}
-                              className="p-2 rounded-full"
-                              style={{
-                                color: "white",
-                                background: theme.colors.success,
-                                boxShadow: theme.shadow.sm,
-                              }}
-                            >
-                              <Check className="h-4 w-4" />
-                            </motion.button>
-                            <motion.button
-                              variants={buttonVariants}
-                              whileHover="hover"
-                              whileTap="tap"
-                              onClick={(e) => cancelEditing(e)}
-                              className="p-2 rounded-full"
-                              style={{
-                                color: "white",
-                                background: theme.colors.textSecondary,
-                                boxShadow: theme.shadow.sm,
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </motion.button>
+                            <CustomTooltip title="Save title">
+                              <motion.button
+                                variants={buttonVariants}
+                                whileHover="hover"
+                                whileTap="tap"
+                                onClick={(e) => saveTitle(session.id, e)}
+                                className="p-2 rounded-full"
+                                style={{
+                                  color: "white",
+                                  background: theme.colors.success,
+                                  boxShadow: theme.shadow.sm,
+                                }}
+                              >
+                                <Check className="h-4 w-4" />
+                              </motion.button>
+                            </CustomTooltip>
+                            <CustomTooltip title="Cancel">
+                              <motion.button
+                                variants={buttonVariants}
+                                whileHover="hover"
+                                whileTap="tap"
+                                onClick={(e) => cancelEditing(e)}
+                                className="p-2 rounded-full"
+                                style={{
+                                  color: "white",
+                                  background: theme.colors.textSecondary,
+                                  boxShadow: theme.shadow.sm,
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </motion.button>
+                            </CustomTooltip>
                           </div>
                         ) : (
                           <>
@@ -719,7 +721,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                             </motion.button>
                           </CustomTooltip>
 
-                          <CustomTooltip title="Share chat">
+                          {/* <CustomTooltip title="Share chat">
                             <motion.button
                               variants={buttonVariants}
                               whileHover="hover"
@@ -747,7 +749,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                             >
                               <Share2 className="h-4 w-4" />
                             </motion.button>
-                          </CustomTooltip>
+                          </CustomTooltip> */}
 
                           <CustomTooltip title="Delete session">
                             <motion.button
