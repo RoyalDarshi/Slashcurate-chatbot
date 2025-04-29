@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import InputField from "./InputField";
-import PasswordField from "./PasswordField";
-import Loader from "./Loader";
-import { API_URL } from "../config";
-import { useTheme } from "../ThemeContext";
+import InputField from "./InputField"; // Assuming these are correctly implemented
+import PasswordField from "./PasswordField"; // Assuming these are correctly implemented
+import { API_URL } from "../config"; // Make sure this is correctly defined
+import { useTheme } from "../ThemeContext"; // Make sure this is correctly implemented
 
 interface LoginProps {
   onLoginSuccess: (token: string) => void;
@@ -19,7 +18,7 @@ const Login: React.FC<LoginProps> = ({
   onForgotPassword,
   onSwitchToSignup,
 }) => {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
@@ -35,11 +34,11 @@ const Login: React.FC<LoginProps> = ({
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const email = formData.email.trim();
+    const username = formData.username.trim();
     const password = formData.password.trim();
 
-    if (!email || !password) {
-      toast.error("Email and password cannot be empty.", { theme: mode });
+    if (!username || !password) {
+      toast.error("Username and password cannot be empty.", { theme: mode });
       return;
     }
 
@@ -47,7 +46,7 @@ const Login: React.FC<LoginProps> = ({
       setLoading(true);
       const response = await axios.post(
         `${API_URL}/login/user`,
-        { email, password },
+        {email: username, password },
         { headers: { "Content-Type": "application/json" } }
       );
       setLoading(false);
@@ -62,7 +61,7 @@ const Login: React.FC<LoginProps> = ({
         });
       }
       if (response.status === 401) {
-        toast.error("Invalid email or password.", { theme: mode });
+        toast.error("Invalid username or password.", { theme: mode });
       }
     } catch (error) {
       setLoading(false);
@@ -92,7 +91,7 @@ const Login: React.FC<LoginProps> = ({
       className="relative"
       style={{ fontFamily: theme.typography.fontFamily }}
     >
-      <form onSubmit={handleLogin} className="space-y-4">
+      <form onSubmit={handleLogin} className="space-y-4" id="login-form">
         <ToastContainer
           position="top-right"
           autoClose={3000}
@@ -107,10 +106,10 @@ const Login: React.FC<LoginProps> = ({
           }}
         />
 
-        {/* Email Field */}
+        {/* Username Field */}
         <div className="space-y-1">
           <label
-            htmlFor="email"
+            htmlFor="username"
             className="text-sm font-semibold tracking-wide"
             style={{ color: theme.colors.text }}
           >
@@ -118,9 +117,9 @@ const Login: React.FC<LoginProps> = ({
           </label>
           <InputField
             type="text"
-            name="email"
+            name="username"
             placeholder="Enter your username"
-            value={formData.email}
+            value={formData.username}
             onChange={handleChange}
             required
             disabled={loading}
@@ -131,6 +130,7 @@ const Login: React.FC<LoginProps> = ({
               borderRadius: theme.borderRadius.default,
               focusRingColor: theme.colors.accent,
             }}
+            autoComplete="username" // Added autocomplete
           />
         </div>
 
@@ -158,6 +158,8 @@ const Login: React.FC<LoginProps> = ({
               borderRadius: theme.borderRadius.default,
               focusRingColor: theme.colors.accent,
             }}
+            type="password" //redundant, but good to be explicit.
+            autoComplete="current-password" // Added autocomplete
           />
         </div>
 

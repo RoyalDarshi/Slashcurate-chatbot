@@ -65,7 +65,7 @@ const ChatInterface = memo(
       const [connectionError, setConnectionError] = useState<string | null>(
         null
       );
-      const [connectionsLoading, setConnectionsLoading] = useState(false);
+      const [connectionsLoading, setConnectionsLoading] = useState(true);
       const [editingMessageId, setEditingMessageId] = useState<string | null>(
         null
       );
@@ -194,6 +194,7 @@ const ChatInterface = memo(
       const fetchSession = useCallback(
         async (sessionId: string) => {
           try {
+            setConnectionsLoading(true);
             const response = await axios.get(
               `${API_URL}/api/sessions/${sessionId}`,
               {
@@ -214,9 +215,11 @@ const ChatInterface = memo(
             console.error("Error fetching session:", error);
             setMessages([]);
             localStorage.removeItem("currentSessionId");
+          } finally {
+            setConnectionsLoading(false);
           }
         },
-        [token, scrollToBottom, onSessionSelected]
+        [onSessionSelected]
       );
 
       useEffect(() => {
