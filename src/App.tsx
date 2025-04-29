@@ -65,6 +65,11 @@ function App() {
     }
   };
 
+  const handleNewChat = () => {
+    triggerChatFunction();
+    localStorage.removeItem("currentSessionId");
+    handleHomePage();
+  };
   const handleUserLogout = () => {
     handleLogout();
     setIsAuthenticated(false);
@@ -106,6 +111,7 @@ function App() {
                 chatRef={chatRef}
                 onCreateConSelected={handleCreateConSelected}
                 onHomePage={handleHomePage}
+                onNewChat={handleNewChat}
                 questionToAsk={questionToAsk}
                 setQuestionToAsk={setQuestionToAsk}
                 showTip={showTip}
@@ -147,6 +153,7 @@ const AppContent: React.FC<{
   setQuestionToAsk: (question: { text: string; query?: string } | null) => void;
   showTip: boolean;
   setShowTip: (show: boolean) => void;
+  onNewChat: () => void;
 }> = ({
   isAuthenticated,
   activeMenu,
@@ -160,6 +167,7 @@ const AppContent: React.FC<{
   setQuestionToAsk,
   showTip,
   setShowTip,
+  onNewChat,
 }) => {
   const { theme } = useTheme();
   const userToken = sessionStorage.getItem("token") || "";
@@ -242,7 +250,12 @@ const AppContent: React.FC<{
               />
             )}
             {activeMenu === "settings" && <Settings />}
-            {activeMenu === "help" && <HelpPage />}
+            {activeMenu === "help" && (
+              <HelpPage
+                onCreateConSelected={onCreateConSelected}
+                onNewChat={onNewChat}
+              />
+            )}
           </main>
         </div>
       ) : (

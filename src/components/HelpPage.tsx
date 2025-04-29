@@ -1,76 +1,194 @@
+import React, { useState } from "react";
 import { useTheme } from "../ThemeContext";
-import { useState } from "react";
 import {
-  ChevronDown,
-  Star,
+  Bell,
+  PlusCircle,
+  ArrowRightLeft,
+  FileText,
+  BarChart,
+  DownloadCloud,
+  Copy,
   History,
-  PieChart,
-  Lock,
-  Code,
-  Zap,
+  Heart,
+  Star,
+  Search,
+  Settings,
+  Trash2,
+  Edit2,
+  HelpCircle,
+  Menu,
 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
-const HelpPage = () => {
+interface HelpPageProps {
+  onCreateConSelected: () => void;
+  onNewChat: () => void;
+}
+
+const HelpPage: React.FC<HelpPageProps> = ({onCreateConSelected,onNewChat}) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const { theme } = useTheme();
 
-  const featureIcons = {
-    general: <Zap className="icon" />,
-    security: <Lock className="icon" />,
-    integration: <Code className="icon" />,
-    data: <PieChart className="icon" />,
+  const featureIcons: Record<string, React.ReactNode> = {
+    notification: <Bell className="icon" />,
+    connectionCreate: <PlusCircle className="icon" />,
+    connectionSwitch: <ArrowRightLeft className="icon" />,
+    query: <FileText className="icon" />,
+    results: <BarChart className="icon" />,
+    download: <DownloadCloud className="icon" />,
+    sql: <Copy className="icon" />,
+    sessionNew: <PlusCircle className="icon" />,
     history: <History className="icon" />,
+    favorite: <Heart className="icon" />,
+    recommendation: <Star className="icon" />,
+    tableSearch: <Search className="icon" />,
+    settings: <Settings className="icon" />,
+    connectionManage: <Trash2 className="icon" />,
+    renameSession: <Edit2 className="icon" />,
+    help: <HelpCircle className="icon" />,
+    closeSidebar: <Menu className="icon" />,
   };
 
   const faqs = [
     {
-      question: "🚀 Getting Started with Data Chat",
+      question: "🔔 Tips of the Day Notification",
       answer:
-        "Learn how to ask natural language questions, save favorite queries, and interpret results.",
-      category: "general",
-      tips: [
-        "Try questions like 'Show sales trends' or 'Compare regions'",
-        "Click the heart icon to save queries",
-      ],
-    },
-    {
-      question: "📊 When Graphs Don't Show Up",
-      answer:
-        "Graphs might not appear if the data format isn't compatible. Try simplifying your question or check your data structure.",
-      category: "data",
+        "After login, a 'Tip of the Day' pops up. You can disable or re-enable it anytime from Settings > Notifications.",
+      category: "notification",
       solution: [
-        "Use specific time ranges",
-        "Ask for aggregated data",
-        "Check data column names",
+        "Go to Settings > Notifications",
+        "Toggle 'Tip of the Day' on or off",
       ],
     },
     {
-      question: "⭐ Saving & Organizing Favorites",
+      question: "➕ Creating a Connection",
       answer:
-        "Mark important queries as favorites to access them quickly from your profile dashboard.",
+        "Navigate to the 'Create Connection' tab, enter your database details, test, and save to establish a new connection.",
+      category: "connectionCreate",
+      tips: [
+        "Provide a unique connection name",
+        "Test connection before saving",
+      ],
+      cta: "Create Connection",
+      fn: onCreateConSelected,
+    },
+    {
+      question: "🔄 Switching Between Connections",
+      answer:
+        "Use the connection dropdown on the Home page to switch the active connection before asking questions.",
+      category: "connectionSwitch",
+      tips: [
+        "Only one connection can be active at a time",
+        "Switch back any time to run queries on another DB",
+      ],
+    },
+    {
+      question: "🗣️ Asking Natural Language Questions",
+      answer:
+        "Type your question about the data in human language. Our AI generates SQL and fetches results from the selected database.",
+      category: "query",
+      tips: [
+        "Be specific: e.g., 'Show monthly sales by region'",
+        "Include filters like date ranges",
+      ],
+    },
+    {
+      question: "📊 Viewing Results",
+      answer:
+        "Results appear as interactive graphs by default. Switch to table view or SQL view to inspect raw data or the generated query.",
+      category: "results",
+      preview: ["Graph View", "Table View", "SQL Query"],
+    },
+    {
+      question: "📥 Downloading Results",
+      answer:
+        "Download graphs as PNG or tables as XLSX using the download icons in the result pane.",
+      category: "download",
+      tips: [
+        "Click the download icon in graph view to download draph as PNG",
+        "Click the download button in table view to download graph as XLSX",
+      ],
+    },
+    {
+      question: "💻 Viewing & Copying SQL Queries",
+      answer:
+        "Click on shoq Query button to see the exact query. Use the copy icon to copy it to your clipboard for advanced use.",
+      category: "sql",
+      solution: ["Goto Query view", "Click copy icon to copy query"],
+    },
+    {
+      question: "🆕 Starting a New Chat Session",
+      answer:
+        "Click 'New Chat' to begin a fresh session. Each session has its own chat history and favorites.",
+      category: "sessionNew",
+      cta: "New Chat",
+      fn: onNewChat,
+    },
+    {
+      question: "📜 Session History",
+      answer:
+        "View past sessions under History, organized by Today, Yesterday, Last 7 Days, and Last 1 Month.",
       category: "history",
-      icon: <Star />,
+      preview: ["Search history", "Rename/Delete sessions"],
     },
     {
-      question: "🛡️ Data Privacy & Security",
+      question: "❤️ Favoriting Questions",
       answer:
-        "All data interactions are encrypted end-to-end. We never store raw data beyond your session.",
-      category: "security",
-      badge: "GDPR Compliant",
+        "Click the heart icon on messages to save queries and SQL for quick access in Favorites.",
+      category: "favorite",
+      preview: ["Run in current session", "Run in new session"],
     },
     {
-      question: "🔌 API & Custom Integrations",
+      question: "⭐ Recommendations",
       answer:
-        "Connect TalkToData with your BI tools using our REST API or pre-built connectors.",
-      category: "integration",
-      cta: "View API Docs",
+        "Frequently favorited (5+ times) questions appear as Recommendations at login or when starting a new session.",
+      category: "recommendation",
     },
     {
-      question: "🕒 Understanding Query History",
+      question: "🔍 Searching Table Data",
       answer:
-        "Access your last 30 days of queries with auto-generated summaries and visual thumbnails.",
-      category: "history",
-      preview: ["Searchable history", "Export results", "Session tagging"],
+        "Use the search bar in table view to filter rows and find specific records quickly.",
+      category: "tableSearch",
+    },
+    {
+      question: "⚙️ Customizing Settings",
+      answer:
+        "In Settings, change text size, switch Light/Dark theme, and manage notifications",
+      category: "settings",
+      solution: [
+        "Toggle Light/Dark theme",
+        "Adjust text size",
+        "Enable/disable notifications",
+      ],
+    },
+    {
+      question: "🗂️ Managing Connections",
+      answer:
+        "View all created connections in Existing Connections. Delete non-admin connections here.",
+      category: "connectionManage",
+      tips: [
+        "Admin-created connections cannot be deleted",
+        "Delete stale connections to clean up",
+      ],
+    },
+    {
+      question: "🗄️ Closing Sidebar",
+      answer:
+        "Click the menu icon to collapse or expand the sidebar and increase chat area space.",
+      category: "closeSidebar",
+    },
+    {
+      question: "✏️ Renaming Sessions",
+      answer:
+        "In History, click the edit icon next to a session to rename it for easier retrieval.",
+      category: "renameSession",
+    },
+    {
+      question: "❔ Help & FAQs",
+      answer:
+        "Find all FAQs here under the Help tab. Contact support if you need further assistance.",
+      category: "help",
+      cta: "Contact Support",
     },
   ];
 
@@ -78,7 +196,6 @@ const HelpPage = () => {
     <div
       style={{
         backgroundColor: theme.colors.background,
-        minHeight: "100vh",
         padding: `${theme.spacing.xl} ${theme.spacing.md}`,
       }}
     >
@@ -89,7 +206,7 @@ const HelpPage = () => {
           position: "relative",
         }}
       >
-        {/* Header Section */}
+        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -103,7 +220,7 @@ const HelpPage = () => {
               background: theme.colors.accent,
               borderRadius: theme.borderRadius.pill,
               padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-              color: theme.colors.surface,
+              color: "white",
               fontWeight: theme.typography.weight.bold,
             }}
           >
@@ -129,9 +246,9 @@ const HelpPage = () => {
             gap: theme.spacing.md,
           }}
         >
-          {faqs.map((faq, index) => (
+          {faqs.map((faq, idx) => (
             <div
-              key={index}
+              key={idx}
               style={{
                 background: theme.colors.surface,
                 borderRadius: theme.borderRadius.large,
@@ -140,165 +257,244 @@ const HelpPage = () => {
                 transition: theme.transition.default,
                 border: `1px solid ${theme.colors.border}`,
                 cursor: "pointer",
-                ":hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: theme.shadow.lg,
-                },
+                height: openIndex === idx ? "auto" : "150px",
+                overflow: "hidden",
+                position: "relative",
               }}
+              onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
             >
               <div
-                onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: theme.spacing.sm,
+                  marginBottom: theme.spacing.sm,
+                }}
               >
-                {/* Category Header */}
-                <div
+                {featureIcons[faq.category]}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <h3
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: theme.spacing.sm,
-                    marginBottom: theme.spacing.sm,
+                    fontSize: theme.typography.size.base,
+                    fontWeight: theme.typography.weight.medium,
+                    color: theme.colors.text,
+                    margin: 0,
                   }}
                 >
-                  <span
-                    style={{
-                      color: theme.colors.accent,
-                    }}
-                  >
-                    {featureIcons[faq.category]}
-                  </span>
-                  {faq.badge && (
-                    <span
-                      style={{
-                        background: theme.colors.warning + "20",
-                        color: theme.colors.warning,
-                        padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                        borderRadius: theme.borderRadius.pill,
-                        fontSize: theme.typography.size.sm,
-                      }}
-                    >
-                      {faq.badge}
-                    </span>
-                  )}
-                </div>
-
-                {/* Question */}
-                <div
+                  {faq.question}
+                </h3>
+                <ChevronDown
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    transform: openIndex === idx ? "rotate(180deg)" : "none",
+                    transition: theme.transition.default,
+                    color: theme.colors.textSecondary,
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  marginTop: theme.spacing.md,
+                  paddingTop: theme.spacing.md,
+                  borderTop: `1px solid ${theme.colors.border}`,
+                  display: openIndex === idx ? "block" : "none",
+                }}
+              >
+                <p
+                  style={{
+                    color: theme.colors.textSecondary,
+                    lineHeight: 1.6,
                   }}
                 >
-                  <h3
-                    style={{
-                      fontSize: theme.typography.size.base,
-                      fontWeight: theme.typography.weight.medium,
-                      color: theme.colors.text,
-                      margin: 0,
-                    }}
-                  >
-                    {faq.question}
-                  </h3>
-                  <ChevronDown
-                    style={{
-                      transform:
-                        openIndex === index ? "rotate(180deg)" : "none",
-                      transition: theme.transition.default,
-                      color: theme.colors.textSecondary,
-                    }}
-                  />
-                </div>
-
-                {/* Expanded Content */}
-                {openIndex === index && (
+                  {faq.answer}
+                </p>
+                {faq.tips && (
                   <div
                     style={{
-                      marginTop: theme.spacing.md,
-                      paddingTop: theme.spacing.md,
-                      borderTop: `1px solid ${theme.colors.border}`,
+                      background: theme.colors.background,
+                      borderRadius: theme.borderRadius.default,
+                      padding: theme.spacing.sm,
+                      marginTop: theme.spacing.sm,
                     }}
                   >
-                    <p
+                    <div
                       style={{
-                        color: theme.colors.textSecondary,
-                        lineHeight: 1.6,
+                        color: theme.colors.accent,
+                        fontSize: theme.typography.size.sm,
+                        fontWeight: theme.typography.weight.medium,
+                        marginBottom: theme.spacing.xs,
                       }}
                     >
-                      {faq.answer}
-                    </p>
-
-                    {/* Additional Content Blocks */}
-                    {faq.tips && (
+                      Pro Tips
+                    </div>
+                    {faq.tips.map((t: string, i: number) => (
                       <div
+                        key={i}
                         style={{
-                          background: theme.colors.background,
-                          borderRadius: theme.borderRadius.default,
-                          padding: theme.spacing.sm,
-                          marginTop: theme.spacing.sm,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: theme.spacing.sm,
+                          padding: `${theme.spacing.xs} 0`,
                         }}
                       >
                         <div
                           style={{
-                            color: theme.colors.accent,
+                            width: "4px",
+                            height: "4px",
+                            background: theme.colors.textSecondary,
+                            borderRadius: "50%",
+                          }}
+                        />
+                        <span
+                          style={{
                             fontSize: theme.typography.size.sm,
-                            fontWeight: theme.typography.weight.medium,
-                            marginBottom: theme.spacing.xs,
+                            color: theme.colors.textSecondary,
                           }}
                         >
-                          Pro Tips
-                        </div>
-                        {faq.tips.map((tip, i) => (
-                          <div
-                            key={i}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: theme.spacing.sm,
-                              padding: `${theme.spacing.xs} 0`,
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: "4px",
-                                height: "4px",
-                                background: theme.colors.textSecondary,
-                                borderRadius: "50%",
-                              }}
-                            />
-                            <span
-                              style={{
-                                fontSize: theme.typography.size.sm,
-                                color: theme.colors.textSecondary,
-                              }}
-                            >
-                              {tip}
-                            </span>
-                          </div>
-                        ))}
+                          {t}
+                        </span>
                       </div>
-                    )}
-
-                    {faq.cta && (
-                      <button
-                        style={{
-                          background: theme.colors.accent,
-                          color: theme.colors.surface,
-                          border: "none",
-                          borderRadius: theme.borderRadius.default,
-                          padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-                          marginTop: theme.spacing.sm,
-                          cursor: "pointer",
-                          transition: theme.transition.default,
-                          ":hover": {
-                            background: theme.colors.accentHover,
-                          },
-                        }}
-                      >
-                        {faq.cta}
-                      </button>
-                    )}
+                    ))}
                   </div>
                 )}
+                {faq.solution && (
+                  <div
+                    style={{
+                      background: theme.colors.background,
+                      borderRadius: theme.borderRadius.default,
+                      padding: theme.spacing.sm,
+                      marginTop: theme.spacing.sm,
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: theme.colors.accent,
+                        fontSize: theme.typography.size.sm,
+                        fontWeight: theme.typography.weight.medium,
+                        marginBottom: theme.spacing.xs,
+                      }}
+                    >
+                      Solutions
+                    </div>
+                    {faq.solution.map((s: string, i: number) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: theme.spacing.sm,
+                          padding: `${theme.spacing.xs} 0`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "4px",
+                            height: "4px",
+                            background: theme.colors.textSecondary,
+                            borderRadius: "50%",
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: theme.typography.size.sm,
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
+                          {s}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {faq.preview && (
+                  <div
+                    style={{
+                      background: theme.colors.background,
+                      borderRadius: theme.borderRadius.default,
+                      padding: theme.spacing.sm,
+                      marginTop: theme.spacing.sm,
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: theme.colors.accent,
+                        fontSize: theme.typography.size.sm,
+                        fontWeight: theme.typography.weight.medium,
+                        marginBottom: theme.spacing.xs,
+                      }}
+                    >
+                      Features
+                    </div>
+                    {faq.preview.map((p: string, i: number) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: theme.spacing.sm,
+                          padding: `${theme.spacing.xs} 0`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "4px",
+                            height: "4px",
+                            background: theme.colors.textSecondary,
+                            borderRadius: "50%",
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: theme.typography.size.sm,
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
+                          {p}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {faq.cta && (
+                  <button
+                    style={{
+                      background: theme.colors.accent,
+                      color: "white",
+                      border: "none",
+                      borderRadius: theme.borderRadius.default,
+                      padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                      marginTop: theme.spacing.sm,
+                      cursor: "pointer",
+                      transition: theme.transition.default,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (faq.fn) faq.fn();
+                    }}
+                  >
+                    {faq.cta}
+                  </button>
+                )}
               </div>
+              {openIndex !== idx && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: "50px",
+                    background: `linear-gradient(to bottom, transparent, ${theme.colors.surface})`,
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
             </div>
           ))}
         </div>
