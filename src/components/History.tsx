@@ -229,26 +229,47 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
 
   const filterSessions = (sessions: Session[], filter: string) => {
     const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const twoDaysAgo = new Date(today);
+    twoDaysAgo.setDate(today.getDate() - 2);
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
+    const eightDaysAgo = new Date(today);
+    eightDaysAgo.setDate(today.getDate() - 8);
+
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+
     const filtered = sessions.filter((session) => {
       const sessionDate = new Date(session.timestamp);
-      const diffInMs = now.getTime() - sessionDate.getTime();
-      const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+      const sessionDay = new Date(
+        sessionDate.getFullYear(),
+        sessionDate.getMonth(),
+        sessionDate.getDate()
+      );
 
       switch (filter) {
         case "today":
-          return diffInDays < 1;
+          return sessionDay.getTime() === today.getTime();
         case "yesterday":
-          return diffInDays >= 1 && diffInDays < 2;
+          return sessionDay.getTime() === yesterday.getTime();
         case "last7days":
-          return diffInDays >= 1 && diffInDays < 7;
+          return sessionDay >= sevenDaysAgo && sessionDay <= twoDaysAgo;
         case "last1month":
-          return diffInDays >= 7 && diffInDays < 30;
+          return sessionDay >= thirtyDaysAgo && sessionDay <= eightDaysAgo;
         case "all":
           return true;
         default:
           return true;
       }
     });
+
     setFilteredSessions(filtered);
   };
 
@@ -460,6 +481,18 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
               className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
               style={{ color: theme.colors.textSecondary }}
             />
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  filterSessions(sessions, activeFilter);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+                style={{ color: theme.colors.textSecondary }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </motion.div>
         </div>
 
@@ -856,7 +889,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                 ))
               ) : (
                 <motion.div
-                  variants={itemVariants}
                   className="text-center p-8 rounded-lg"
                   style={{
                     background: theme.colors.surface,
@@ -877,8 +909,8 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                         style={{ color: theme.colors.text }}
                       >
                         {searchTerm
-                          ? "No matching conversations found"
-                          : "No conversations found for this period"}
+                          ? "No matching sessions found"
+                          : "No sessions found for this period"}
                       </h3>
                       <p
                         className="text-sm"
