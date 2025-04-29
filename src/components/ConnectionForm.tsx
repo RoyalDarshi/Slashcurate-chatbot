@@ -457,7 +457,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             placeholder={placeholder}
             className="pl-10 w-full p-3 rounded-md focus:outline-none focus:ring-2 transition-all duration-200"
             style={{
-              background: theme.colors.background,
+              background: theme.colors.surface,
               color: theme.colors.text,
               border: `1px solid ${
                 errors[name] ? theme.colors.error : `${theme.colors.text}20`
@@ -476,7 +476,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             placeholder={placeholder}
             className="pl-10 w-full p-3 rounded-md focus:outline-none focus:ring-2 transition-all duration-200"
             style={{
-              background: theme.colors.background,
+              background: theme.colors.surface,
               color: theme.colors.text,
               border: `1px solid ${
                 errors[name] ? theme.colors.error : `${theme.colors.text}20`
@@ -500,12 +500,12 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     <div
       className="p-6 rounded-lg shadow-md h-full overflow-y-auto"
       style={{
-        backgroundColor: theme.colors.surface,
+        backgroundColor: theme.colors.background,
       }}
     >
       <ToastContainer
         toastStyle={{
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.background,
           color: theme.colors.text,
           border: `1px solid ${theme.colors.text}20`,
         }}
@@ -533,7 +533,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             onClick={() => setIsSelectOpen(!isSelectOpen)}
             className="w-full p-3 rounded-md flex items-center justify-between focus:outline-none focus:ring-2 transition-all duration-200"
             style={{
-              backgroundColor: theme.colors.background,
+              backgroundColor: theme.colors.surface,
               border: `1px solid ${theme.colors.text}20`,
               borderRadius: theme.borderRadius.default,
               color: theme.colors.text,
@@ -562,7 +562,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             <div
               className="absolute z-10 mt-2 w-full rounded-md shadow-lg max-h-72 overflow-auto"
               style={{
-                backgroundColor: theme.colors.surface,
+                backgroundColor: theme.colors.background,
                 border: `1px solid ${theme.colors.text}20`,
                 borderRadius: theme.borderRadius.default,
               }}
