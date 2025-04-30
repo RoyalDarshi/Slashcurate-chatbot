@@ -456,124 +456,129 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       )}
 
       {/* Table content - Enhanced styling for better visibility */}
-      <div
-        className="overflow-auto max-h-96 scrollbar-thin"
-        style={{
-          scrollbarColor: `${theme.colors.textSecondary} ${theme.colors.surface}`,
-          scrollbarWidth: "thin",
-        }}
-      >
-        <table className="w-full">
-          <thead
-            className="sticky top-0 z-10"
-            style={{
-              background: theme.colors.surface,
-              boxShadow: `0 2px 8px ${theme.colors.text}10`,
-            }}
-          >
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="px-6 py-3 text-left text-sm font-medium transition-colors"
-                    style={{
-                      color: theme.colors.accent,
-                      backgroundColor: theme.colors.surface,
-                    }}
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody
-            className="divide-y"
-            style={{ borderColor: `${theme.colors.text}20` }}
-          >
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <motion.tr
-                  key={row.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="transition-colors"
-                  onMouseEnter={() => setHoveredRow(row.id)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  style={{
-                    backgroundColor:
-                      hoveredRow === row.id
-                        ? `${theme.colors.accent}08`
-                        : theme.colors.surface,
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className="px-6 py-5 text-md"
+      <div className="w-full flex justify-center">
+        <div
+          className="overflow-auto max-h-96 scrollbar-thin"
+          style={{
+            scrollbarColor: `${theme.colors.textSecondary} ${theme.colors.surface}`,
+            scrollbarWidth: "thin",
+          }}
+        >
+          <table className="w-full">
+            <thead
+              className="sticky top-0 z-10"
+              style={{
+                background: theme.colors.surface,
+                boxShadow: `0 2px 8px ${theme.colors.text}10`,
+              }}
+            >
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      className="px-6 py-3 text-left text-sm font-medium transition-colors"
                       style={{
-                        color: theme.colors.text,
-                        transition: "all 0.2s ease",
+                        color: theme.colors.accent,
+                        backgroundColor: theme.colors.surface,
                       }}
+                      onClick={header.column.getToggleSortingHandler()}
                     >
                       {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
+                        header.column.columnDef.header,
+                        header.getContext()
                       )}
-                    </td>
+                    </th>
                   ))}
-                </motion.tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={headers.length}
-                  className="px-6 py-12 text-center text-sm"
-                  style={{ color: theme.colors.textSecondary }}
-                >
-                  <div className="flex flex-col items-center justify-center space-y-2">
-                    <svg
-                      className="w-12 h-12 opacity-30"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span>No results found</span>
-                    {hasNoResults && (
-                      <button
-                        className="text-sm px-3 py-1 rounded-full mt-2 transition-colors"
+                </tr>
+              ))}
+            </thead>
+            <tbody
+              className="divide-y"
+              style={{ borderColor: `${theme.colors.text}20` }}
+            >
+              {table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map((row) => (
+                  <motion.tr
+                    key={row.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="transition-colors"
+                    onMouseEnter={() => setHoveredRow(row.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    style={{
+                      backgroundColor:
+                        hoveredRow === row.id
+                          ? `${theme.colors.accent}08`
+                          : theme.colors.surface,
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className="px-6 py-5 text-md"
                         style={{
-                          backgroundColor: `${theme.colors.accent}20`,
-                          color: theme.colors.accent,
-                        }}
-                        onClick={() => {
-                          setSearchTerm("");
-                          setDebouncedSearchTerm("");
-                          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                          color: theme.colors.text,
+                          transition: "all 0.2s ease",
                         }}
                       >
-                        Clear search
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </motion.tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={headers.length}
+                    className="px-6 py-12 text-center text-sm"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <svg
+                        className="w-12 h-12 opacity-30"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span>No results found</span>
+                      {hasNoResults && (
+                        <button
+                          className="text-sm px-3 py-1 rounded-full mt-2 transition-colors"
+                          style={{
+                            backgroundColor: `${theme.colors.accent}20`,
+                            color: theme.colors.accent,
+                          }}
+                          onClick={() => {
+                            setSearchTerm("");
+                            setDebouncedSearchTerm("");
+                            setPagination((prev) => ({
+                              ...prev,
+                              pageIndex: 0,
+                            }));
+                          }}
+                        >
+                          Clear search
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination area - Conditionally displayed and simplified */}
