@@ -225,6 +225,16 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     maxVisiblePages
   );
 
+  const rowsOptions = useMemo(() => {
+    const size = filteredData.length;
+
+    if (size <= 100) return [10, 20, 50, 100];
+    if (size <= 1000) return [50, 100, 200, 500];
+    if (size <= 5000) return [100, 500, 1000];
+    if (size <= 10000) return [100, 500, 1000, 2000];
+    return [100, 500, 1000, 2000, 5000];
+  }, [filteredData.length]);
+
   return (
     <div
       className="rounded-lg overflow-hidden"
@@ -319,7 +329,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               border: `1px solid ${theme.colors.accent}30`,
             }}
           >
-            {[10, 20, 50, 100].map((size) => (
+            {rowsOptions.map((size) => (
               <option
                 key={size}
                 value={size}

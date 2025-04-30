@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { API_URL } from "../config";
 import axios from "axios";
+import CustomTooltip from "./CustomTooltip";
 
 interface FavoriteMessage {
   id: string;
@@ -51,9 +52,7 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
             text: item.question,
             query: item.query || undefined,
             isFavorited: true,
-            timestamp: new Date(
-              Date.now() - Math.floor(Math.random() * 30) * 86400000
-            ).toISOString(),
+            timestamp: item.timestamp,
           }));
           setFavorites(formattedData);
           setError(null);
@@ -418,19 +417,23 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                               </button>
                             </div>
                           ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteConfirmId(message.id);
-                              }}
-                              className="p-1 rounded-full focus:outline-none hover:opacity-90 transition-all opacity-0 group-hover:opacity-100"
-                              style={{
-                                backgroundColor: theme.colors.hover,
-                                color: theme.colors.accent,
-                              }}
+                            <CustomTooltip
+                              title="Remove from favorites"
+                              position="top"
                             >
-                              <Heart className="w-4 h-4 fill-current" />
-                            </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirmId(message.id);
+                                }}
+                                className=" rounded-full focus:outline-none hover:opacity-90 transition-all opacity-0 group-hover:opacity-100"
+                                style={{
+                                  color: theme.colors.accent,
+                                }}
+                              >
+                                <Heart className="w-4 h-4 fill-current" />
+                              </button>
+                            </CustomTooltip>
                           )}
                         </div>
                       </div>
@@ -534,20 +537,25 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                         </div>
                       ) : (
                         <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmId(message.id);
-                            }}
-                            className="p-2 rounded-full focus:outline-none hover:opacity-90 transition-all"
-                            aria-label="Remove favorite"
-                            style={{
-                              backgroundColor: "transparent",
-                              color: theme.colors.accent,
-                            }}
+                          <CustomTooltip
+                            title="Remove from favorites"
+                            position="top"
                           >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmId(message.id);
+                              }}
+                              className="p-2 rounded-full focus:outline-none hover:opacity-90 transition-all"
+                              aria-label="Remove favorite"
+                              style={{
+                                backgroundColor: "transparent",
+                                color: theme.colors.accent,
+                              }}
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </CustomTooltip>
                           <ChevronRight
                             size={18}
                             className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"

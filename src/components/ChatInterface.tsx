@@ -207,7 +207,7 @@ const ChatInterface = memo(
             messagesRef.current = response.data.messages || [];
             setMessages(response.data.messages || []);
             setCurrentSessionId(sessionId);
-            setTimeout(() => scrollToBottom(), 200);
+            setTimeout(() => scrollToBottom(), 300);
             if (onSessionSelected) {
               onSessionSelected(response.data);
             }

@@ -288,6 +288,11 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
     }
   };
 
+  const hanleClearSearch = () => {
+    setSearchTerm("");
+    filterSessions(sessions, activeFilter);
+  };
+
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
     setSearchTerm("");
@@ -483,10 +488,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
             />
             {searchTerm && (
               <button
-                onClick={() => {
-                  setSearchTerm("");
-                  filterSessions(sessions, activeFilter);
-                }}
+                onClick={hanleClearSearch}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
                 style={{ color: theme.colors.textSecondary }}
               >
@@ -913,13 +915,26 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                           : "No sessions found for this period"}
                       </h3>
                       <p
-                        className="text-sm"
+                        className="text-sm mb-4"
                         style={{ color: theme.colors.textSecondary }}
                       >
                         {searchTerm
                           ? "Try a different search term or clear the search"
                           : "Start a new conversation or select a different time period"}
                       </p>
+
+                      {searchTerm && (
+                        <button
+                          onClick={hanleClearSearch}
+                          className="px-4 py-2 text-sm font-medium rounded-md transition duration-200"
+                          style={{
+                            backgroundColor: theme.colors.accent,
+                            color: "white",
+                          }}
+                        >
+                          Clear Search
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>
