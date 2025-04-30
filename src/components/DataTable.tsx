@@ -35,11 +35,10 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
 
   // Add debounce effect for search
   useEffect(() => {
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timer);
+    }, 200);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [searchTerm]);
 
   // Check for mobile viewport
@@ -383,7 +382,11 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               {isSearchOpen && searchTerm && (
                 <button
                   className="p-1 mr-2 rounded-full flex-shrink-0"
-                  onClick={() => setSearchTerm("")}
+                  onClick={() => {
+                    setSearchTerm("");
+                    setDebouncedSearchTerm("");
+                    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                  }}
                   style={{ color: theme.colors.accent }}
                   aria-label="Clear search"
                 >
@@ -556,7 +559,11 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                           backgroundColor: `${theme.colors.accent}20`,
                           color: theme.colors.accent,
                         }}
-                        onClick={() => setSearchTerm("")}
+                        onClick={() => {
+                          setSearchTerm("");
+                          setDebouncedSearchTerm("");
+                          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                        }}
                       >
                         Clear search
                       </button>
