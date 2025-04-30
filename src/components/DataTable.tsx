@@ -11,6 +11,14 @@ import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
 import { motion, AnimatePresence } from "framer-motion";
 
+// This function formats header text from snake_case to Title Case
+const formatHeaderText = (header: string): string => {
+  return header
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const { theme } = useTheme();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -21,8 +29,18 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [showControls, setShowControls] = useState(false);
+
+  // Add debounce effect for search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Check for mobile viewport
   useEffect(() => {
@@ -64,16 +82,29 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       : normalizedData;
   }, [headers, normalizedData]);
 
-  // Filter data based on search term
+  // Enhanced filtering logic with better type handling
   const filteredData = useMemo(() => {
-    if (!searchTerm) return processedData;
+    if (!debouncedSearchTerm.trim()) return processedData;
 
-    return processedData.filter((row) =>
-      Object.values(row).some((value) =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [processedData, searchTerm]);
+    return processedData.filter((row) => {
+      // Ensure we're only searching through actual values
+      return Object.entries(row).some(([key, value]) => {
+        // Skip null/undefined values
+        if (value === null || value === undefined) return false;
+
+        // Convert value to string safely
+        const stringValue = String(value).toLowerCase();
+        const searchTermLower = debouncedSearchTerm.toLowerCase().trim();
+
+        // Check if the string contains our search term
+        return stringValue.includes(searchTermLower);
+      });
+    });
+  }, [processedData, debouncedSearchTerm]);
+
+  // Add reset capability when search has no results
+  const hasNoResults =
+    debouncedSearchTerm.trim() !== "" && filteredData.length === 0;
 
   // Compute paginated data
   const paginatedData = useMemo(() => {
@@ -110,7 +141,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               }
             >
               <span className="font-medium transition-colors duration-200 group-hover:text-opacity-90">
-                {header}
+                {formatHeaderText(header)}
               </span>
               <motion.span
                 animate={{
@@ -144,30 +175,42 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             const valueString = cellValue?.toString() || "N/A";
 
             // Highlight search term if present
-            if (searchTerm && valueString !== "N/A") {
-              const regex = new RegExp(`(${searchTerm})`, "gi");
-              const parts = valueString.split(regex);
+            if (debouncedSearchTerm && valueString !== "N/A") {
+              try {
+                // Use a safer regex that escapes special characters
+                const escapedSearchTerm = debouncedSearchTerm.replace(
+                  /[.*+?^${}()|[\]\\]/g,
+                  "\\$&"
+                );
+                const regex = new RegExp(`(${escapedSearchTerm})`, "gi");
+                const parts = valueString.split(regex);
 
-              return (
-                <div className="text-base font-medium">
-                  {parts.map((part: string, i: number) =>
-                    regex.test(part) ? (
-                      <span
-                        key={i}
-                        style={{
-                          backgroundColor: `${theme.colors.accent}40`,
-                          padding: "0px 2px",
-                          borderRadius: "2px",
-                        }}
-                      >
-                        {part}
-                      </span>
-                    ) : (
-                      <span key={i}>{part}</span>
-                    )
-                  )}
-                </div>
-              );
+                return (
+                  <div className="text-base font-medium">
+                    {parts.map((part, i) =>
+                      regex.test(part) ? (
+                        <span
+                          key={i}
+                          style={{
+                            backgroundColor: `${theme.colors.accent}40`,
+                            padding: "0px 2px",
+                            borderRadius: "2px",
+                          }}
+                        >
+                          {part}
+                        </span>
+                      ) : (
+                        <span key={i}>{part}</span>
+                      )
+                    )}
+                  </div>
+                );
+              } catch (e) {
+                // Fallback if regex fails
+                return (
+                  <div className="text-base font-medium">{valueString}</div>
+                );
+              }
             }
 
             // Return the value with enhanced styling
@@ -175,7 +218,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           },
         })
       ),
-    [headers, theme, searchTerm]
+    [headers, theme, debouncedSearchTerm]
   );
 
   const table = useReactTable({
@@ -305,6 +348,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 className="p-2 rounded-full flex-shrink-0"
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
                 style={{ color: theme.colors.accent }}
+                aria-label={isSearchOpen ? "Close search" : "Open search"}
               >
                 <svg
                   className="w-5 h-5"
@@ -336,6 +380,28 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                   />
                 )}
               </AnimatePresence>
+              {isSearchOpen && searchTerm && (
+                <button
+                  className="p-1 mr-2 rounded-full flex-shrink-0"
+                  onClick={() => setSearchTerm("")}
+                  style={{ color: theme.colors.accent }}
+                  aria-label="Clear search"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
             </motion.div>
 
             <div
@@ -344,7 +410,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             >
               {filteredData.length}{" "}
               {filteredData.length === 1 ? "record" : "records"}
-              {searchTerm && ` • Filtering "${searchTerm}"`}
+              {debouncedSearchTerm && ` • Filtering "${debouncedSearchTerm}"`}
             </div>
           </div>
 
@@ -464,7 +530,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             ) : (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={headers.length}
                   className="px-6 py-12 text-center text-sm"
                   style={{ color: theme.colors.textSecondary }}
                 >
@@ -483,9 +549,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                       />
                     </svg>
                     <span>No results found</span>
-                    {searchTerm && (
+                    {hasNoResults && (
                       <button
-                        className="text-sm px-3 py-1 rounded-full mt-2"
+                        className="text-sm px-3 py-1 rounded-full mt-2 transition-colors"
                         style={{
                           backgroundColor: `${theme.colors.accent}20`,
                           color: theme.colors.accent,
