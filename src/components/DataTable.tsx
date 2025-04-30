@@ -175,10 +175,10 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             const valueString = cellValue?.toString() || "N/A";
 
             // Highlight search term if present
-            if (debouncedSearchTerm && valueString !== "N/A") {
+            const searchTermForHighlight = debouncedSearchTerm.trim();
+            if (searchTermForHighlight && valueString !== "N/A") {
               try {
-                // Use a safer regex that escapes special characters
-                const escapedSearchTerm = debouncedSearchTerm.replace(
+                const escapedSearchTerm = searchTermForHighlight.replace(
                   /[.*+?^${}()|[\]\\]/g,
                   "\\$&"
                 );
