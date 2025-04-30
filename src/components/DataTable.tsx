@@ -456,72 +456,93 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       )}
 
       {/* Table content - Enhanced styling for better visibility */}
-      <div className="w-full flex justify-center">
+      <div className="w-full flex justify-center py-2">
         <div
           className="overflow-auto max-h-96 scrollbar-thin"
           style={{
-            scrollbarColor: `${theme.colors.textSecondary} ${theme.colors.surface}`,
-            scrollbarWidth: "thin",
+            scrollbarColor: `${theme.colors.accent}40 ${theme.colors.surface}`,
           }}
         >
           <table className="w-full">
-            <thead
-              className="sticky top-0 z-10"
-              style={{
-                background: theme.colors.surface,
-                boxShadow: `0 2px 8px ${theme.colors.text}10`,
-              }}
-            >
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className="px-6 py-3 text-left text-sm font-medium transition-colors"
-                      style={{
-                        color: theme.colors.accent,
-                        backgroundColor: theme.colors.surface,
-                      }}
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody
-              className="divide-y"
-              style={{ borderColor: `${theme.colors.text}20` }}
-            >
+            {table.getRowModel().rows.length > 0 && (
+              <thead
+                className="sticky top-0"
+                style={{
+                  background: theme.colors.accent,
+                  color: theme.colors.surface,
+                }}
+              >
+                {table.getHeaderGroups().map((headerGroup) => {
+                  return (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => {
+                        const canSort = header.column.getCanSort();
+                        const sortState = header.column.getIsSorted();
+                        return (
+                          <th
+                            key={header.id}
+                            className="px-6 py-3 text-center text-sm font-medium"
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            {canSort && (
+                              <motion.span
+                                animate={{
+                                  opacity: sortState ? 1 : 0.3,
+                                  rotate: sortState === "desc" ? 180 : 0,
+                                }}
+                                transition={{ duration: 0.2 }}
+                                style={{ color: theme.colors.surface }}
+                                className="w-4 h-4"
+                              >
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M8 14l4-4 4 4" />
+                                </svg>
+                              </motion.span>
+                            )}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </thead>
+            )}
+            <tbody>
               {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map((row) => (
+                table.getRowModel().rows.map((row, idx) => (
                   <motion.tr
                     key={row.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="transition-colors"
                     onMouseEnter={() => setHoveredRow(row.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                     style={{
                       backgroundColor:
                         hoveredRow === row.id
-                          ? `${theme.colors.accent}08`
-                          : theme.colors.surface,
+                          ? `${theme.colors.accent}20`
+                          : idx % 2 === 0
+                          ? `${theme.colors.accent}10`
+                          : `${theme.colors.accent}10`,
+                      transition: "all 0.2s ease",
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="px-6 py-5 text-md"
-                        style={{
-                          color: theme.colors.text,
-                          transition: "all 0.2s ease",
-                        }}
+                        className="px-6 py-5 text-center text-md"
+                        style={{ color: theme.colors.text }}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
