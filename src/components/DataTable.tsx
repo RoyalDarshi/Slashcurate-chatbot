@@ -19,9 +19,10 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     pageSize: 10,
   });
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [showControls, setShowControls] = useState(false);
 
   // Check for mobile viewport
   useEffect(() => {
@@ -148,7 +149,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               const parts = valueString.split(regex);
 
               return (
-                <div>
+                <div className="text-base font-medium">
                   {parts.map((part: string, i: number) =>
                     regex.test(part) ? (
                       <span
@@ -169,7 +170,8 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               );
             }
 
-            return valueString;
+            // Return the value with enhanced styling
+            return <div className="text-base font-medium">{valueString}</div>;
           },
         })
       ),
@@ -235,6 +237,11 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     return [100, 500, 1000, 2000, 5000];
   }, [filteredData.length]);
 
+  // Toggle controls visibility
+  const toggleControls = () => {
+    setShowControls(!showControls);
+  };
+
   return (
     <div
       className="rounded-lg overflow-hidden"
@@ -243,108 +250,143 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         transition: "all 0.3s ease",
       }}
     >
-      {/* Header with search and info - Responsive layout */}
-      <div
-        className={`flex ${
-          isMobile ? "flex-col space-y-2" : "items-center justify-between"
-        } px-2 py-2 border-b`}
-        style={{ borderColor: `${theme.colors.text}10` }}
-      >
-        <div className="flex items-center">
-          <motion.div
-            className="flex items-center bg-opacity-10 rounded-full overflow-hidden"
-            animate={{
-              width: isSearchOpen ? (isMobile ? "100%" : "240px") : "40px",
-            }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+      {/* Controls toggle button for small datasets */}
+      {filteredData.length <= 20 && (
+        <div className="flex justify-end ">
+          <button
+            onClick={toggleControls}
+            className="text-xs flex items-center py-1 px-2 rounded-md transition-colors"
             style={{
-              backgroundColor: `${theme.colors.accent}20`,
+              backgroundColor: `${theme.colors.accent}15`,
+              color: theme.colors.accent,
             }}
           >
-            <button
-              className="p-2 rounded-full flex-shrink-0"
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              style={{ color: theme.colors.accent }}
+            {showControls ? "Hide Controls" : "Show Controls"}
+            <svg
+              className="w-3 h-3 ml-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d={showControls ? "M19 9l-7 7-7-7" : "M9 5l7 7-7 7"}
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Header with search and info - Conditionally displayed */}
+      {(filteredData.length > 20 || showControls) && (
+        <div
+          className={`flex ${
+            isMobile ? "flex-col space-y-2" : "items-center justify-between"
+          } px-3 py-2 border-b`}
+          style={{
+            borderColor: `${theme.colors.text}10`,
+            backgroundColor: `${theme.colors.surface}`,
+          }}
+        >
+          <div className="flex items-center">
+            <motion.div
+              className="flex items-center bg-opacity-10 rounded-full overflow-hidden"
+              animate={{
+                width: isSearchOpen ? (isMobile ? "100%" : "240px") : "40px",
+              }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              style={{
+                backgroundColor: `${theme.colors.accent}20`,
+              }}
+            >
+              <button
+                className="p-2 rounded-full flex-shrink-0"
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                style={{ color: theme.colors.accent }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </button>
-            <AnimatePresence>
-              {isSearchOpen && (
-                <motion.input
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  type="text"
-                  placeholder="Search table..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 bg-transparent border-none outline-none px-2 py-1 text-sm w-full"
-                  style={{ color: theme.colors.text }}
-                  autoFocus
-                />
-              )}
-            </AnimatePresence>
-          </motion.div>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </button>
+              <AnimatePresence>
+                {isSearchOpen && (
+                  <motion.input
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    type="text"
+                    placeholder="Search table..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1 bg-transparent border-none outline-none px-2 py-1 text-sm w-full"
+                    style={{ color: theme.colors.text }}
+                    autoFocus
+                  />
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            <div
+              className={`${isMobile ? "mt-2" : "ml-4"} text-sm`}
+              style={{ color: theme.colors.textSecondary }}
+            >
+              {filteredData.length}{" "}
+              {filteredData.length === 1 ? "record" : "records"}
+              {searchTerm && ` • Filtering "${searchTerm}"`}
+            </div>
+          </div>
 
           <div
-            className={`${isMobile ? "mt-2" : "ml-4"} text-sm`}
-            style={{ color: theme.colors.textSecondary }}
+            className={`flex items-center ${
+              isMobile ? "mt-2 justify-end" : "space-x-2"
+            }`}
           >
-            {filteredData.length}{" "}
-            {filteredData.length === 1 ? "record" : "records"}
-            {searchTerm && ` • Filtering "${searchTerm}"`}
+            <span
+              className="text-sm mx-2"
+              style={{ color: theme.colors.textSecondary }}
+            >
+              Rows:
+            </span>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => table.setPageSize(Number(e.target.value))}
+              className="rounded-md text-sm px-2 py-1 focus:outline-none transition-all"
+              style={{
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.accent}30`,
+              }}
+            >
+              {rowsOptions.map((size) => (
+                <option
+                  key={size}
+                  value={size}
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text,
+                  }}
+                >
+                  {size}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
+      )}
 
-        <div
-          className={`flex items-center ${
-            isMobile ? "mt-2 justify-end" : "space-x-2"
-          }`}
-        >
-          <span
-            className="text-sm mr-2"
-            style={{ color: theme.colors.textSecondary }}
-          >
-            Rows:
-          </span>
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
-            className="rounded-md text-sm px-2 py-1 focus:outline-none transition-all"
-            style={{
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.accent}30`,
-            }}
-          >
-            {rowsOptions.map((size) => (
-              <option
-                key={size}
-                value={size}
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  color: theme.colors.text,
-                }}
-              >
-                {size}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
+      {/* Table content - Enhanced styling for better visibility */}
       <div
         className="overflow-auto max-h-96 scrollbar-thin"
         style={{
@@ -365,9 +407,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-6 py-4 text-left text-sm font-medium transition-colors"
+                    className="px-6 py-3 text-left text-sm font-medium transition-colors"
                     style={{
-                      color: theme.colors.text,
+                      color: theme.colors.accent,
                       backgroundColor: theme.colors.surface,
                     }}
                     onClick={header.column.getToggleSortingHandler()}
@@ -405,9 +447,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-6 py-4 text-sm"
+                      className="px-6 py-5 text-md"
                       style={{
-                        color: theme.colors.textSecondary,
+                        color: theme.colors.text,
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -422,7 +464,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             ) : (
               <tr>
                 <td
-                  colSpan={headers.length}
+                  colSpan={4}
                   className="px-6 py-12 text-center text-sm"
                   style={{ color: theme.colors.textSecondary }}
                 >
@@ -461,222 +503,231 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         </table>
       </div>
 
-      {/* Pagination area - Responsive layout */}
-      <div
-        className={`${
-          isMobile
-            ? "flex flex-col space-y-2"
-            : "flex items-center justify-between"
-        } px-2 pt-2 pb-2`}
-        style={{
-          backgroundColor: theme.colors.surface,
-        }}
-      >
-        <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
-          {isMobile ? "Page " : "Showing "}
-          <span
-            className="font-medium mx-1"
-            style={{ color: theme.colors.text }}
+      {/* Pagination area - Conditionally displayed and simplified */}
+      {(filteredData.length > 10 || showControls) && (
+        <div
+          className={`${
+            isMobile
+              ? "flex flex-col space-y-2"
+              : "flex items-center justify-between"
+          } px-3 pt-2 pb-2`}
+          style={{
+            backgroundColor: theme.colors.surface,
+            borderTop: `1px solid ${theme.colors.text}10`,
+          }}
+        >
+          <div
+            className="text-sm"
+            style={{ color: theme.colors.textSecondary }}
           >
-            {Math.min(
-              pagination.pageIndex * pagination.pageSize + 1,
-              filteredData.length
-            )}
-          </span>
-          {!isMobile && "to"}
-          {!isMobile && (
+            {isMobile ? "Page " : "Showing "}
             <span
               className="font-medium mx-1"
               style={{ color: theme.colors.text }}
             >
               {Math.min(
-                (pagination.pageIndex + 1) * pagination.pageSize,
+                pagination.pageIndex * pagination.pageSize +
+                  (filteredData.length > 0 ? 1 : 0),
                 filteredData.length
               )}
             </span>
-          )}
-          {isMobile ? " of " : " of "}
-          <span
-            className="font-medium ml-1"
-            style={{ color: theme.colors.text }}
-          >
-            {filteredData.length}
-          </span>
-        </div>
+            {!isMobile && "to"}
+            {!isMobile && (
+              <span
+                className="font-medium mx-1"
+                style={{ color: theme.colors.text }}
+              >
+                {Math.min(
+                  (pagination.pageIndex + 1) * pagination.pageSize,
+                  filteredData.length
+                )}
+              </span>
+            )}
+            {isMobile ? " of " : " of "}
+            <span
+              className="font-medium ml-1"
+              style={{ color: theme.colors.text }}
+            >
+              {filteredData.length}
+            </span>
+          </div>
 
-        <div
-          className={`flex ${
-            isMobile ? "justify-center w-full" : "items-center"
-          }`}
-        >
-          <div className="flex items-center space-x-1">
-            <CustomTooltip title="Go to first page">
-              <button
-                title="Go to first page"
-                className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
-                style={{
-                  color: theme.colors.text,
-                  backgroundColor: table.getCanPreviousPage()
-                    ? `${theme.colors.accent}10`
-                    : "transparent",
-                }}
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-            </CustomTooltip>
-            <CustomTooltip title="Go to previous page">
-              <button
-                title="Go to previous page"
-                className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
-                style={{
-                  color: theme.colors.text,
-                  backgroundColor: table.getCanPreviousPage()
-                    ? `${theme.colors.accent}10`
-                    : "transparent",
-                }}
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-            </CustomTooltip>
-            <div className="flex">
-              {visiblePages.map((page, index) =>
-                typeof page === "number" ? (
-                  <CustomTooltip key={index} title={`Go to page ${page}`}>
-                    <motion.button
-                      key={index}
-                      title={`Go to page ${page}`}
-                      className={`px-2 py-1 text-sm rounded-md transition-colors ${
-                        isMobile ? "text-xs" : ""
-                      }`}
-                      whileHover={{
-                        scale: page === pagination.pageIndex + 1 ? 1 : 1.05,
-                      }}
-                      style={{
-                        color:
-                          page === pagination.pageIndex + 1
-                            ? theme.colors.accent
-                            : theme.colors.text,
-                        backgroundColor:
-                          page === pagination.pageIndex + 1
-                            ? `${theme.colors.accent}20`
-                            : "transparent",
-                        fontWeight:
-                          page === pagination.pageIndex + 1 ? 600 : 400,
-                      }}
-                      onClick={() => table.setPageIndex(page - 1)}
-                    >
-                      {page}
-                    </motion.button>
-                  </CustomTooltip>
-                ) : (
-                  <span
-                    key={index}
-                    className={`px-1 py-1 text-sm flex items-center ${
-                      isMobile ? "text-xs" : ""
-                    }`}
-                    style={{ color: theme.colors.textSecondary }}
+          {table.getPageCount() > 1 && (
+            <div
+              className={`flex ${
+                isMobile ? "justify-center w-full" : "items-center"
+              }`}
+            >
+              <div className="flex items-center space-x-1">
+                <CustomTooltip title="Go to first page">
+                  <button
+                    title="Go to first page"
+                    className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
+                    style={{
+                      color: theme.colors.text,
+                      backgroundColor: table.getCanPreviousPage()
+                        ? `${theme.colors.accent}10`
+                        : "transparent",
+                    }}
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={!table.getCanPreviousPage()}
                   >
                     <svg
-                      width="16"
-                      height="4"
-                      viewBox="0 0 16 4"
-                      fill="currentColor"
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <circle cx="2" cy="2" r="2" />
-                      <circle cx="8" cy="2" r="2" />
-                      <circle cx="14" cy="2" r="2" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                      />
                     </svg>
-                  </span>
-                )
-              )}
+                  </button>
+                </CustomTooltip>
+                <CustomTooltip title="Go to previous page">
+                  <button
+                    title="Go to previous page"
+                    className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
+                    style={{
+                      color: theme.colors.text,
+                      backgroundColor: table.getCanPreviousPage()
+                        ? `${theme.colors.accent}10`
+                        : "transparent",
+                    }}
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+                </CustomTooltip>
+                <div className="flex">
+                  {visiblePages.map((page, index) =>
+                    typeof page === "number" ? (
+                      <CustomTooltip key={index} title={`Go to page ${page}`}>
+                        <motion.button
+                          key={index}
+                          title={`Go to page ${page}`}
+                          className={`px-2 py-1 text-sm rounded-md transition-colors ${
+                            isMobile ? "text-xs" : ""
+                          }`}
+                          whileHover={{
+                            scale: page === pagination.pageIndex + 1 ? 1 : 1.05,
+                          }}
+                          style={{
+                            color:
+                              page === pagination.pageIndex + 1
+                                ? theme.colors.accent
+                                : theme.colors.text,
+                            backgroundColor:
+                              page === pagination.pageIndex + 1
+                                ? `${theme.colors.accent}20`
+                                : "transparent",
+                            fontWeight:
+                              page === pagination.pageIndex + 1 ? 600 : 400,
+                          }}
+                          onClick={() => table.setPageIndex(page - 1)}
+                        >
+                          {page}
+                        </motion.button>
+                      </CustomTooltip>
+                    ) : (
+                      <span
+                        key={index}
+                        className={`px-1 py-1 text-sm flex items-center ${
+                          isMobile ? "text-xs" : ""
+                        }`}
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        <svg
+                          width="16"
+                          height="4"
+                          viewBox="0 0 16 4"
+                          fill="currentColor"
+                        >
+                          <circle cx="2" cy="2" r="2" />
+                          <circle cx="8" cy="2" r="2" />
+                          <circle cx="14" cy="2" r="2" />
+                        </svg>
+                      </span>
+                    )
+                  )}
+                </div>
+                <CustomTooltip title="Go to next page">
+                  <button
+                    title="Go to next page"
+                    className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
+                    style={{
+                      color: theme.colors.text,
+                      backgroundColor: table.getCanNextPage()
+                        ? `${theme.colors.accent}10`
+                        : "transparent",
+                    }}
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </CustomTooltip>
+                <CustomTooltip title="Go to last page">
+                  <button
+                    title="Go to last page"
+                    className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
+                    style={{
+                      color: theme.colors.text,
+                      backgroundColor: table.getCanNextPage()
+                        ? `${theme.colors.accent}10`
+                        : "transparent",
+                    }}
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </CustomTooltip>
+              </div>
             </div>
-            <CustomTooltip title="Go to next page">
-              <button
-                title="Go to next page"
-                className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
-                style={{
-                  color: theme.colors.text,
-                  backgroundColor: table.getCanNextPage()
-                    ? `${theme.colors.accent}10`
-                    : "transparent",
-                }}
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </CustomTooltip>
-            <CustomTooltip title="Go to last page">
-              <button
-                title="Go to last page"
-                className="p-1.5 rounded-md hover:bg-opacity-20 disabled:opacity-30 disabled:hover:bg-opacity-0 disabled:cursor-not-allowed transition-all"
-                style={{
-                  color: theme.colors.text,
-                  backgroundColor: table.getCanNextPage()
-                    ? `${theme.colors.accent}10`
-                    : "transparent",
-                }}
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </CustomTooltip>
-          </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 });
