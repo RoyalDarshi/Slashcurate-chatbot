@@ -83,7 +83,7 @@ function App() {
     } else {
       setIsAuthenticated(true);
       setActiveMenu("home");
-      setShowTip(true);
+      setTimeout(() => setShowTip(true), 1500);
     }
   };
 

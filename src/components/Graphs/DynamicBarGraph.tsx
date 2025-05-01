@@ -112,7 +112,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
         <div
           style={{
             backgroundColor: theme.colors.surface,
-            borderRadius: theme.borderRadius.lg,
+            borderRadius: theme.borderRadius.large,
             border: `1px solid ${theme.colors.border}`,
             padding: theme.spacing.lg,
             width: "100%",
