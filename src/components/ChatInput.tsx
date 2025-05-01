@@ -5,8 +5,16 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { Send, Database, ChevronDown, PlusCircle } from "lucide-react";
-import { ChatInputProps, Connection } from "../types";
+import {
+  Send,
+  Database,
+  ChevronDown,
+  PlusCircle,
+  Layers,
+  Table2,
+  FileText,
+} from "lucide-react";
+import { ChatInputProps, Connection, DatabaseSchema } from "../types";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 import { FaFilePdf } from "react-icons/fa";
@@ -27,8 +35,42 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const isDisabled = isSubmitting;
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const dbExplorerRef = useRef<HTMLDivElement>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
+    const [activeSchema, setActiveSchema] = useState<string | null>(null);
+    const [activeTable, setActiveTable] = useState<string | null>(null);
     const MAX_CHARS = 500;
+
+    // Mock database schema data - in a real application, you would fetch this from your API
+    const [databaseSchemas, setDatabaseSchemas] = useState<DatabaseSchema[]>([
+      {
+        name: "public",
+        tables: [
+          {
+            name: "users",
+            columns: ["id", "username", "email", "created_at"],
+          },
+          {
+            name: "orders",
+            columns: ["id", "user_id", "product_id", "quantity", "order_date"],
+          },
+        ],
+      },
+      {
+        name: "sales",
+        tables: [
+          {
+            name: "products",
+            columns: ["id", "name", "price", "category", "stock_quantity"],
+          },
+          {
+            name: "transactions",
+            columns: ["id", "product_id", "amount", "transaction_date"],
+          },
+        ],
+      },
+    ]);
 
     // Memoized connection options
     const options = useMemo(
@@ -46,6 +88,14 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       [connections]
     );
 
+    // Function to fetch database schema when a connection is selected
+    // In a real app, you would implement this to fetch from your backend
+    const fetchDatabaseSchema = useCallback(async (connectionName: string) => {
+      // This would be replaced by an actual API call
+      console.log(`Fetching schema for connection: ${connectionName}`);
+      // The mock data is already set in state, so we don't need to do anything here
+    }, []);
+
     // Memoized event handlers
     const handleConnectionSelect = useCallback(
       (connection: string | null) => {
@@ -60,10 +110,15 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               ? { value: selectedConnectionObj }
               : { value: null }
           );
+
+          // Fetch database schema when a connection is selected
+          if (selectedConnectionObj) {
+            fetchDatabaseSchema(selectedConnectionObj.connectionName);
+          }
         }
         setIsDropdownOpen(false);
       },
-      [onSelect, connections]
+      [onSelect, connections, fetchDatabaseSchema]
     );
 
     const handlePdfClick = useCallback(
@@ -82,6 +137,38 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         }
       },
       []
+    );
+
+    const handleSchemaClick = useCallback(
+      (schemaName: string) => {
+        setActiveSchema(activeSchema === schemaName ? null : schemaName);
+        setActiveTable(null);
+      },
+      [activeSchema]
+    );
+
+    const handleTableClick = useCallback(
+      (tableName: string) => {
+        setActiveTable(activeTable === tableName ? null : tableName);
+      },
+      [activeTable]
+    );
+
+    const handleColumnClick = useCallback(
+      (columnName: string) => {
+        // Insert column name into textarea at cursor position
+        if (textareaRef.current) {
+          const cursorPos = textareaRef.current.selectionStart;
+          const textBefore = input.substring(0, cursorPos);
+          const textAfter = input.substring(cursorPos);
+          const newText = `${textBefore}${columnName}${textAfter}`;
+          onInputChange(newText);
+
+          // Close the explorer after selecting a column
+          setIsDbExplorerOpen(false);
+        }
+      },
+      [input, onInputChange]
     );
 
     // Textarea auto-resize effect
@@ -104,6 +191,13 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         ) {
           setIsDropdownOpen(false);
         }
+
+        if (
+          dbExplorerRef.current &&
+          !dbExplorerRef.current.contains(event.target as Node)
+        ) {
+          setIsDbExplorerOpen(false);
+        }
       };
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
@@ -116,6 +210,18 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         setIsDropdownOpen((prev) => !prev);
       }
     }, [isDisabled]);
+
+    // Toggle database explorer
+    const toggleDbExplorer = useCallback(() => {
+      if (!isDisabled) {
+        setIsDbExplorerOpen((prev) => !prev);
+        // Reset active selections when opening
+        if (!isDbExplorerOpen) {
+          setActiveSchema(null);
+          setActiveTable(null);
+        }
+      }
+    }, [isDisabled, isDbExplorerOpen]);
 
     return (
       <form
@@ -168,143 +274,354 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             }}
           />
 
-          <div className="flex items-center justify-between gap-3">
-            <div
-              className="flex items-center gap-2 max-w-[250px] relative"
-              ref={dropdownRef}
-            >
-              <Database
-                size={20}
-                style={{ color: theme.colors.accent, opacity: 0.9 }}
-                className="transition-transform duration-300 hover:scale-105 flex-shrink-0"
-              />
-              <CustomTooltip
-                title="Change or create a connection"
-                position="left"
+          <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {/* Connection Dropdown */}
+              <div
+                className="flex items-center gap-2 max-w-[250px] relative"
+                ref={dropdownRef}
               >
-                <button
-                  type="button"
-                  onClick={() =>
-                    !isDisabled && setIsDropdownOpen(!isDropdownOpen)
-                  }
-                  className="flex items-center justify-between w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
-                  style={{
-                    color: theme.colors.text,
-                    backgroundColor: "transparent",
-                    border: `1px solid ${theme.colors.accent}`,
-                    borderRadius: theme.borderRadius.pill,
-                    padding: "6px 10px",
-                  }}
-                  onMouseOver={(e) =>
-                    !isDisabled &&
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.accentHover + "20")
-                  }
-                  onMouseOut={(e) =>
-                    !isDisabled &&
-                    (e.currentTarget.style.backgroundColor = "transparent")
-                  }
-                  disabled={isDisabled}
+                <Database
+                  size={20}
+                  style={{ color: theme.colors.accent, opacity: 0.9 }}
+                  className="transition-transform duration-300 hover:scale-105 flex-shrink-0"
+                />
+                <CustomTooltip
+                  title="Change or create a connection"
+                  position="left"
                 >
-                  <span className="truncate max-w-[130px]">
-                    {selectedConnection || "Select Connection"}
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    style={{ color: theme.colors.accent }}
-                    className={`transition-transform duration-200 ${
-                      isDropdownOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-              </CustomTooltip>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      !isDisabled && setIsDropdownOpen(!isDropdownOpen)
+                    }
+                    className="flex items-center justify-between w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                    style={{
+                      color: theme.colors.text,
+                      backgroundColor: "transparent",
+                      border: `1px solid ${theme.colors.accent}`,
+                      borderRadius: theme.borderRadius.pill,
+                      padding: "6px 10px",
+                    }}
+                    onMouseOver={(e) =>
+                      !isDisabled &&
+                      (e.currentTarget.style.backgroundColor =
+                        theme.colors.accentHover + "20")
+                    }
+                    onMouseOut={(e) =>
+                      !isDisabled &&
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                    disabled={isDisabled}
+                  >
+                    <span className="truncate max-w-[130px]">
+                      {selectedConnection || "Select Connection"}
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      style={{ color: theme.colors.accent }}
+                      className={`transition-transform duration-200 ${
+                        isDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                </CustomTooltip>
 
-              {isDropdownOpen && (
-                <div
-                  className="absolute bottom-full left-0 rounded-md shadow-lg z-20 transition-all duration-300 mb-2"
-                  style={{
-                    background: theme.colors.surface,
-                    border: `1px solid ${theme.colors.border}`,
-                    boxShadow: `0 4px 12px ${theme.colors.text}20`,
-                    width: "min-content",
-                    maxWidth: "min-content",
-                  }}
-                >
-                  {options.map((option) => (
-                    <div
-                      key={option.value}
-                      className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
-                      style={{
-                        color: theme.colors.text,
-                        background:
-                          selectedConnection === option.value
-                            ? `${theme.colors.accent}10`
-                            : "transparent",
-                      }}
-                      onClick={() => handleConnectionSelect(option.value)}
-                    >
-                      <span
-                        className="truncate"
+                {isDropdownOpen && (
+                  <div
+                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2"
+                    style={{
+                      background: theme.colors.surface,
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                      width: "min-content",
+                      maxWidth: "min-content",
+                    }}
+                  >
+                    {options.map((option) => (
+                      <div
+                        key={option.value}
+                        className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
                         style={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          color: theme.colors.text,
+                          background:
+                            selectedConnection === option.value
+                              ? `${theme.colors.accent}10`
+                              : "transparent",
                         }}
+                        onClick={() => handleConnectionSelect(option.value)}
                       >
-                        {option.label}
-                      </span>
-                      {option.isAdmin && (
                         <span
+                          className="truncate"
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            backgroundColor: theme.colors.background,
-                            color: theme.colors.accent,
-                            fontSize: theme.typography.size.sm,
-                            fontWeight: theme.typography.weight.normal,
-                            padding: `0 ${theme.spacing.sm}`,
-                            borderRadius: theme.borderRadius.default,
-                            marginLeft: theme.spacing.sm,
-                            textTransform: "lowercase",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          Default
+                          {option.label}
                         </span>
-                      )}
-                      {option.value !== "create-con" && (
-                        <div className="relative group">
-                          <button
-                            type="button"
-                            onClick={(e) => handlePdfClick(option.value, e)}
-                            className="p-1"
-                          >
-                            <FaFilePdf
-                              size={16}
-                              style={{ color: theme.colors.error }}
-                              className="hover:scale-105 transition-transform duration-300"
-                            />
-                          </button>
+                        {option.isAdmin && (
                           <span
-                            className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
                             style={{
-                              background: theme.colors.accent,
-                              color: theme.colors.surface,
-                              boxShadow: `0 0 6px ${theme.colors.accent}40`,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              backgroundColor: theme.colors.background,
+                              color: theme.colors.accent,
+                              fontSize: theme.typography.size.sm,
+                              fontWeight: theme.typography.weight.normal,
+                              padding: `0 ${theme.spacing.sm}`,
+                              borderRadius: theme.borderRadius.default,
+                              marginLeft: theme.spacing.sm,
+                              textTransform: "lowercase",
                             }}
                           >
-                            View Data Atlas
+                            Default
                           </span>
-                        </div>
-                      )}
+                        )}
+                        {option.value !== "create-con" && (
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={(e) => handlePdfClick(option.value, e)}
+                              className="p-1"
+                            >
+                              <FaFilePdf
+                                size={16}
+                                style={{ color: theme.colors.error }}
+                                className="hover:scale-105 transition-transform duration-300"
+                              />
+                            </button>
+                            <span
+                              className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
+                              style={{
+                                background: theme.colors.accent,
+                                color: theme.colors.surface,
+                                boxShadow: `0 0 6px ${theme.colors.accent}40`,
+                              }}
+                            >
+                              View Data Atlas
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Database Explorer Button */}
+              <div className="relative" ref={dbExplorerRef}>
+                <CustomTooltip title="Explore Database Schema" position="top">
+                  <button
+                    type="button"
+                    onClick={toggleDbExplorer}
+                    className="flex items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      color: theme.colors.text,
+                      backgroundColor: isDbExplorerOpen
+                        ? `${theme.colors.accent}20`
+                        : "transparent",
+                      border: `1px solid ${theme.colors.accent}`,
+                      borderRadius: theme.borderRadius.pill,
+                    }}
+                    onMouseOver={(e) =>
+                      !isDisabled &&
+                      (e.currentTarget.style.backgroundColor =
+                        theme.colors.accentHover + "20")
+                    }
+                    onMouseOut={(e) =>
+                      !isDisabled &&
+                      (e.currentTarget.style.backgroundColor = isDbExplorerOpen
+                        ? `${theme.colors.accent}20`
+                        : "transparent")
+                    }
+                    disabled={isDisabled || !selectedConnection}
+                  >
+                    <Layers size={16} style={{ color: theme.colors.accent }} />
+                    <span className="hidden sm:inline">Check Database</span>
+                  </button>
+                </CustomTooltip>
+
+                {/* Database Explorer Panel */}
+                {isDbExplorerOpen && (
+                  <div
+                    className="absolute bottom-full left-0 mb-2 rounded-md shadow-lg z-20 overflow-hidden"
+                    style={{
+                      background: theme.colors.surface,
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: `0 8px 16px ${theme.colors.text}30`,
+                      width: "280px",
+                      maxHeight: "400px",
+                      overflow: "auto",
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "10px",
+                        borderBottom: `1px solid ${theme.colors.border}`,
+                        backgroundColor: `${theme.colors.accent}10`,
+                      }}
+                    >
+                      <h3
+                        style={{
+                          color: theme.colors.accent,
+                          fontSize: theme.typography.size.base,
+                          fontWeight: theme.typography.weight.bold,
+                        }}
+                      >
+                        Database Structure
+                      </h3>
                     </div>
-                  ))}
-                </div>
-              )}
+                    {databaseSchemas.length > 0 ? (
+                      <div>
+                        {databaseSchemas.map((schema) => (
+                          <div key={schema.name} className="schema-section">
+                            <div
+                              className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-opacity-10 hover:bg-accent"
+                              style={{
+                                borderBottom: `1px solid ${theme.colors.border}20`,
+                                backgroundColor:
+                                  activeSchema === schema.name
+                                    ? `${theme.colors.accent}10`
+                                    : "transparent",
+                              }}
+                              onClick={() => handleSchemaClick(schema.name)}
+                            >
+                              <Layers
+                                size={16}
+                                style={{ color: theme.colors.accent }}
+                              />
+                              <span
+                                style={{
+                                  color: theme.colors.text,
+                                  fontWeight: theme.typography.weight.medium,
+                                }}
+                              >
+                                {schema.name}
+                              </span>
+                              <ChevronDown
+                                size={16}
+                                style={{
+                                  color: theme.colors.text,
+                                  marginLeft: "auto",
+                                  transform:
+                                    activeSchema === schema.name
+                                      ? "rotate(180deg)"
+                                      : "rotate(0)",
+                                  transition: "transform 0.2s ease",
+                                }}
+                              />
+                            </div>
+
+                            {/* Tables */}
+                            {activeSchema === schema.name &&
+                              schema.tables.map((table) => (
+                                <div
+                                  key={table.name}
+                                  className="table-section ml-3"
+                                >
+                                  <div
+                                    className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-opacity-10 hover:bg-accent"
+                                    style={{
+                                      borderBottom: `1px solid ${theme.colors.border}10`,
+                                      backgroundColor:
+                                        activeTable === table.name
+                                          ? `${theme.colors.accent}05`
+                                          : "transparent",
+                                    }}
+                                    onClick={() => handleTableClick(table.name)}
+                                  >
+                                    <Table2
+                                      size={14}
+                                      style={{
+                                        color: theme.colors.text,
+                                        opacity: 0.7,
+                                      }}
+                                    />
+                                    <span
+                                      style={{
+                                        color: theme.colors.text,
+                                        fontSize: theme.typography.size.sm,
+                                      }}
+                                    >
+                                      {table.name}
+                                    </span>
+                                    <ChevronDown
+                                      size={14}
+                                      style={{
+                                        color: theme.colors.text,
+                                        opacity: 0.7,
+                                        marginLeft: "auto",
+                                        transform:
+                                          activeTable === table.name
+                                            ? "rotate(180deg)"
+                                            : "rotate(0)",
+                                        transition: "transform 0.2s ease",
+                                      }}
+                                    />
+                                  </div>
+
+                                  {/* Columns */}
+                                  {activeTable === table.name && (
+                                    <div className="columns-section ml-6">
+                                      {table.columns.map((column) => (
+                                        <div
+                                          key={column}
+                                          className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-opacity-10 hover:bg-accent"
+                                          style={{
+                                            borderBottom: `1px solid ${theme.colors.border}05`,
+                                          }}
+                                          onClick={() =>
+                                            handleColumnClick(column)
+                                          }
+                                        >
+                                          <FileText
+                                            size={12}
+                                            style={{
+                                              color: theme.colors.text,
+                                              opacity: 0.5,
+                                            }}
+                                          />
+                                          <span
+                                            style={{
+                                              color: theme.colors.text,
+                                              fontSize:
+                                                theme.typography.size.sm,
+                                            }}
+                                          >
+                                            {column}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        className="p-3 text-center"
+                        style={{
+                          color: theme.colors.text,
+                          opacity: 0.7,
+                        }}
+                      >
+                        No database schema available
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* New Chat Button */}
               <CustomTooltip title="Create a new session" position="bottom">
                 <button
                   type="button"
                   onClick={onNewChat}
-                  className="flex min-w-[120px] items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     color: theme.colors.text,
                     backgroundColor: "transparent",
@@ -326,7 +643,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                     size={16}
                     style={{ color: theme.colors.accent }}
                   />
-                  New Chat
+                  <span className="hidden sm:inline">New Chat</span>
                 </button>
               </CustomTooltip>
             </div>

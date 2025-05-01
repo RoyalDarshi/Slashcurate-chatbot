@@ -18,6 +18,16 @@ export interface Connection {
   isAdmin: boolean;
 }
 
+export interface DatabaseTable {
+  name: string;
+  columns: string[];
+}
+
+export interface DatabaseSchema {
+  name: string;
+  tables: DatabaseTable[];
+}
+
 export interface ChatInputProps {
   input: string;
   isSubmitting: boolean;
