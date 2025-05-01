@@ -412,11 +412,11 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
               {/* Database Explorer Button */}
               <div className="relative" ref={dbExplorerRef}>
-                <CustomTooltip title="Explore Database Schema" position="top">
+                <CustomTooltip title="Explore Database Schema" position="right">
                   <button
                     type="button"
                     onClick={toggleDbExplorer}
-                    className="flex items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                     style={{
                       color: theme.colors.text,
                       backgroundColor: isDbExplorerOpen
@@ -439,63 +439,110 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                     disabled={isDisabled || !selectedConnection}
                   >
                     <Layers size={16} style={{ color: theme.colors.accent }} />
-                    <span className="hidden sm:inline">Check Database</span>
+                    <span className="hidden sm:inline">Schema Explorer</span>
+                    {isDbExplorerOpen ? (
+                      <ChevronDown
+                        size={16}
+                        style={{ color: theme.colors.accent }}
+                        className="transition-transform duration-300 rotate-180 ml-1"
+                      />
+                    ) : (
+                      <ChevronDown
+                        size={16}
+                        style={{ color: theme.colors.accent }}
+                        className="transition-transform duration-300 ml-1"
+                      />
+                    )}
                   </button>
                 </CustomTooltip>
 
-                {/* Database Explorer Panel */}
+                {/* Database Explorer Panel - Updated panel styling */}
                 {isDbExplorerOpen && (
                   <div
                     className="absolute bottom-full left-0 mb-2 rounded-md shadow-lg z-20 overflow-hidden"
                     style={{
                       background: theme.colors.surface,
                       border: `1px solid ${theme.colors.border}`,
-                      boxShadow: `0 8px 16px ${theme.colors.text}30`,
-                      width: "280px",
-                      maxHeight: "400px",
+                      boxShadow: `0 8px 20px ${theme.colors.text}30`,
+                      width: "320px",
+                      maxHeight: "450px",
                       overflow: "auto",
+                      borderRadius: theme.borderRadius.default,
                     }}
                   >
                     <div
                       style={{
-                        padding: "10px",
+                        padding: "12px 16px",
                         borderBottom: `1px solid ${theme.colors.border}`,
-                        backgroundColor: `${theme.colors.accent}10`,
+                        backgroundColor: theme.colors.accent,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
                       }}
                     >
                       <h3
                         style={{
-                          color: theme.colors.accent,
+                          color: "white",
                           fontSize: theme.typography.size.base,
                           fontWeight: theme.typography.weight.bold,
                         }}
                       >
                         Database Structure
                       </h3>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="text-xs px-2 py-1 rounded-full"
+                          style={{
+                            backgroundColor: "white",
+                            color: theme.colors.accent,
+                            fontWeight: theme.typography.weight.medium,
+                          }}
+                        >
+                          {selectedConnection}
+                        </span>
+                      </div>
                     </div>
                     {databaseSchemas.length > 0 ? (
                       <div>
                         {databaseSchemas.map((schema) => (
                           <div key={schema.name} className="schema-section">
                             <div
-                              className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-opacity-10 hover:bg-accent"
+                              className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-opacity-10 hover:bg-accent transition-all duration-200"
                               style={{
                                 borderBottom: `1px solid ${theme.colors.border}20`,
                                 backgroundColor:
                                   activeSchema === schema.name
-                                    ? `${theme.colors.accent}10`
+                                    ? `${theme.colors.accent}15`
                                     : "transparent",
                               }}
                               onClick={() => handleSchemaClick(schema.name)}
                             >
-                              <Layers
-                                size={16}
-                                style={{ color: theme.colors.accent }}
-                              />
+                              <div
+                                className="flex items-center justify-center rounded-md p-1"
+                                style={{
+                                  backgroundColor:
+                                    activeSchema === schema.name
+                                      ? theme.colors.accent + "20"
+                                      : theme.colors.background,
+                                }}
+                              >
+                                <Layers
+                                  size={16}
+                                  style={{
+                                    color:
+                                      activeSchema === schema.name
+                                        ? theme.colors.accent
+                                        : theme.colors.text + "80",
+                                  }}
+                                />
+                              </div>
                               <span
                                 style={{
                                   color: theme.colors.text,
-                                  fontWeight: theme.typography.weight.medium,
+                                  fontWeight:
+                                    activeSchema === schema.name
+                                      ? theme.typography.weight.normal
+                                      : theme.typography.weight.medium,
                                 }}
                               >
                                 {schema.name}
@@ -509,44 +556,65 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                                     activeSchema === schema.name
                                       ? "rotate(180deg)"
                                       : "rotate(0)",
-                                  transition: "transform 0.2s ease",
+                                  transition: "transform 0.3s ease",
                                 }}
                               />
                             </div>
 
-                            {/* Tables */}
+                            {/* Tables - with updated styling */}
                             {activeSchema === schema.name &&
                               schema.tables.map((table) => (
                                 <div
                                   key={table.name}
-                                  className="table-section ml-3"
+                                  className="table-section ml-4"
                                 >
                                   <div
-                                    className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-opacity-10 hover:bg-accent"
+                                    className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-opacity-10 hover:bg-accent transition-all duration-200"
                                     style={{
                                       borderBottom: `1px solid ${theme.colors.border}10`,
                                       backgroundColor:
                                         activeTable === table.name
-                                          ? `${theme.colors.accent}05`
+                                          ? `${theme.colors.accent}08`
                                           : "transparent",
+                                      borderLeft: `2px solid ${
+                                        activeTable === table.name
+                                          ? theme.colors.accent
+                                          : theme.colors.border + "40"
+                                      }`,
                                     }}
                                     onClick={() => handleTableClick(table.name)}
                                   >
                                     <Table2
                                       size={14}
                                       style={{
-                                        color: theme.colors.text,
-                                        opacity: 0.7,
+                                        color:
+                                          activeTable === table.name
+                                            ? theme.colors.accent
+                                            : theme.colors.text + "70",
                                       }}
                                     />
                                     <span
                                       style={{
                                         color: theme.colors.text,
                                         fontSize: theme.typography.size.sm,
+                                        fontWeight:
+                                          activeTable === table.name
+                                            ? theme.typography.weight.medium
+                                            : theme.typography.weight.normal,
                                       }}
                                     >
                                       {table.name}
                                     </span>
+                                    <div
+                                      className="px-1.5 py-0.5 text-xs rounded-sm ml-1"
+                                      style={{
+                                        backgroundColor:
+                                          theme.colors.background,
+                                        color: theme.colors.text + "70",
+                                      }}
+                                    >
+                                      {table.columns.length}
+                                    </div>
                                     <ChevronDown
                                       size={14}
                                       style={{
@@ -557,18 +625,25 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                                           activeTable === table.name
                                             ? "rotate(180deg)"
                                             : "rotate(0)",
-                                        transition: "transform 0.2s ease",
+                                        transition: "transform 0.3s ease",
                                       }}
                                     />
                                   </div>
 
-                                  {/* Columns */}
+                                  {/* Columns - with updated styling */}
                                   {activeTable === table.name && (
-                                    <div className="columns-section ml-6">
+                                    <div
+                                      className="columns-section ml-4 py-1"
+                                      style={{
+                                        backgroundColor:
+                                          theme.colors.background + "40",
+                                        borderLeft: `2px solid ${theme.colors.accent}50`,
+                                      }}
+                                    >
                                       {table.columns.map((column) => (
                                         <div
                                           key={column}
-                                          className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-opacity-10 hover:bg-accent"
+                                          className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-opacity-15 hover:bg-accent transition-all duration-200"
                                           style={{
                                             borderBottom: `1px solid ${theme.colors.border}05`,
                                           }}
@@ -580,7 +655,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                                             size={12}
                                             style={{
                                               color: theme.colors.text,
-                                              opacity: 0.5,
+                                              opacity: 0.6,
                                             }}
                                           />
                                           <span
@@ -592,6 +667,16 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                                           >
                                             {column}
                                           </span>
+                                          <div
+                                            className="ml-auto px-1.5 py-0.5 text-xs rounded-sm opacity-0 hover:opacity-100 transition-opacity duration-200"
+                                            style={{
+                                              backgroundColor:
+                                                theme.colors.accent + "15",
+                                              color: theme.colors.accent,
+                                            }}
+                                          >
+                                            insert
+                                          </div>
                                         </div>
                                       ))}
                                     </div>
@@ -603,7 +688,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                       </div>
                     ) : (
                       <div
-                        className="p-3 text-center"
+                        className="p-4 text-center"
                         style={{
                           color: theme.colors.text,
                           opacity: 0.7,
