@@ -32,6 +32,25 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [showControls, setShowControls] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    // Only set searching to true when the search term changes but isn't debounced yet
+    if (searchTerm !== debouncedSearchTerm) {
+      setIsSearching(true);
+    } else {
+      // Once the debounced search term catches up, searching is done
+      setIsSearching(false);
+    }
+  }, [searchTerm, debouncedSearchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Add debounce effect for search
   useEffect(() => {
@@ -337,16 +356,20 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               className="flex items-center bg-opacity-10 rounded-full overflow-hidden"
               animate={{
                 width: isSearchOpen ? (isMobile ? "100%" : "240px") : "40px",
+                backgroundColor: debouncedSearchTerm
+                  ? `${theme.colors.accent}30`
+                  : `${theme.colors.accent}20`,
               }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              style={{
-                backgroundColor: `${theme.colors.accent}20`,
-              }}
             >
               <button
                 className="p-2 rounded-full flex-shrink-0"
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                style={{ color: theme.colors.accent }}
+                style={{
+                  color: debouncedSearchTerm
+                    ? theme.colors.accent
+                    : theme.colors.textSecondary,
+                }}
                 aria-label={isSearchOpen ? "Close search" : "Open search"}
               >
                 <svg
@@ -358,7 +381,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={debouncedSearchTerm ? 2.5 : 2}
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
@@ -370,7 +393,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     type="text"
-                    placeholder="Search table..."
+                    placeholder="Search all data..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 bg-transparent border-none outline-none px-2 py-1 text-sm w-full"
@@ -380,12 +403,13 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 )}
               </AnimatePresence>
               {isSearchOpen && searchTerm && (
-                <button
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   className="p-1 mr-2 rounded-full flex-shrink-0"
                   onClick={() => {
                     setSearchTerm("");
                     setDebouncedSearchTerm("");
-                    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                   }}
                   style={{ color: theme.colors.accent }}
                   aria-label="Clear search"
@@ -403,7 +427,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                       d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
-                </button>
+                </motion.button>
               )}
             </motion.div>
 
@@ -411,9 +435,43 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               className={`${isMobile ? "mt-2" : "ml-4"} text-sm`}
               style={{ color: theme.colors.textSecondary }}
             >
-              {filteredData.length}{" "}
-              {filteredData.length === 1 ? "record" : "records"}
-              {debouncedSearchTerm && ` • Filtering "${debouncedSearchTerm}"`}
+              <div
+                className={`${isMobile && "mt-2"} text-sm flex items-center`}
+                style={{ color: theme.colors.textSecondary }}
+              >
+                {isSearching ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                      className="mr-2"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 6v6" />
+                      </svg>
+                    </motion.div>
+                    <span>Searching...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      {filteredData.length}{" "}
+                      {filteredData.length === 1 ? "record" : "records"}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
