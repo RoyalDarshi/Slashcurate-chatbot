@@ -20,6 +20,13 @@ import MiniLoader from "./MiniLoader";
 import { FaFilePdf } from "react-icons/fa";
 import CustomTooltip from "./CustomTooltip";
 
+// Define the Table interface to include sampleData (if not already defined in ../types)
+interface Table {
+  name: string;
+  columns: string[];
+  sampleData?: { [key: string]: any }[]; // Array of rows, each row is an object
+}
+
 const ChatInput: React.FC<ChatInputProps> = React.memo(
   ({
     input,
@@ -42,7 +49,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const [activeTable, setActiveTable] = useState<string | null>(null);
     const MAX_CHARS = 500;
 
-    // Mock database schema data - in a real application, you would fetch this from your API
+    // Updated databaseSchemas state with sampleData
     const [databaseSchemas, setDatabaseSchemas] = useState<DatabaseSchema[]>([
       {
         name: "public",
@@ -50,10 +57,40 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           {
             name: "users",
             columns: ["id", "username", "email", "created_at"],
+            sampleData: [
+              {
+                id: 1,
+                username: "john_doe",
+                email: "john@example.com",
+                created_at: "2023-01-01",
+              },
+              {
+                id: 2,
+                username: "jane_doe",
+                email: "jane@example.com",
+                created_at: "2023-01-02",
+              },
+            ],
           },
           {
             name: "orders",
             columns: ["id", "user_id", "product_id", "quantity", "order_date"],
+            sampleData: [
+              {
+                id: 1,
+                user_id: 1,
+                product_id: 101,
+                quantity: 2,
+                order_date: "2023-01-03",
+              },
+              {
+                id: 2,
+                user_id: 2,
+                product_id: 102,
+                quantity: 1,
+                order_date: "2023-01-04",
+              },
+            ],
           },
         ],
       },
@@ -63,10 +100,40 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           {
             name: "products",
             columns: ["id", "name", "price", "category", "stock_quantity"],
+            sampleData: [
+              {
+                id: 1,
+                name: "Product A",
+                price: 10.99,
+                category: "Electronics",
+                stock_quantity: 100,
+              },
+              {
+                id: 2,
+                name: "Product B",
+                price: 15.49,
+                category: "Home",
+                stock_quantity: 50,
+              },
+            ],
           },
           {
             name: "transactions",
             columns: ["id", "product_id", "amount", "transaction_date"],
+            sampleData: [
+              {
+                id: 1,
+                product_id: 1,
+                amount: 21.98,
+                transaction_date: "2023-01-05",
+              },
+              {
+                id: 2,
+                product_id: 2,
+                amount: 15.49,
+                transaction_date: "2023-01-06",
+              },
+            ],
           },
         ],
       },
@@ -88,15 +155,11 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       [connections]
     );
 
-    // Function to fetch database schema when a connection is selected
-    // In a real app, you would implement this to fetch from your backend
     const fetchDatabaseSchema = useCallback(async (connectionName: string) => {
-      // This would be replaced by an actual API call
       console.log(`Fetching schema for connection: ${connectionName}`);
-      // The mock data is already set in state, so we don't need to do anything here
+      // In a real app, fetch schema and sample data from backend here
     }, []);
 
-    // Memoized event handlers
     const handleConnectionSelect = useCallback(
       (connection: string | null) => {
         if (connection === "create-con") {
@@ -110,8 +173,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               ? { value: selectedConnectionObj }
               : { value: null }
           );
-
-          // Fetch database schema when a connection is selected
           if (selectedConnectionObj) {
             fetchDatabaseSchema(selectedConnectionObj.connectionName);
           }
@@ -156,22 +217,18 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
     const handleColumnClick = useCallback(
       (columnName: string) => {
-        // Insert column name into textarea at cursor position
         if (textareaRef.current) {
           const cursorPos = textareaRef.current.selectionStart;
           const textBefore = input.substring(0, cursorPos);
           const textAfter = input.substring(cursorPos);
           const newText = `${textBefore}${columnName}${textAfter}`;
           onInputChange(newText);
-
-          // Close the explorer after selecting a column
           setIsDbExplorerOpen(false);
         }
       },
       [input, onInputChange]
     );
 
-    // Textarea auto-resize effect
     useEffect(() => {
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -182,7 +239,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       }
     }, [input]);
 
-    // Click outside dropdown handler
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -191,7 +247,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         ) {
           setIsDropdownOpen(false);
         }
-
         if (
           dbExplorerRef.current &&
           !dbExplorerRef.current.contains(event.target as Node)
@@ -204,18 +259,15 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Memoized dropdown toggle handler
     const toggleDropdown = useCallback(() => {
       if (!isDisabled) {
         setIsDropdownOpen((prev) => !prev);
       }
     }, [isDisabled]);
 
-    // Toggle database explorer
     const toggleDbExplorer = useCallback(() => {
       if (!isDisabled) {
         setIsDbExplorerOpen((prev) => !prev);
-        // Reset active selections when opening
         if (!isDbExplorerOpen) {
           setActiveSchema(null);
           setActiveTable(null);
@@ -292,9 +344,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                 >
                   <button
                     type="button"
-                    onClick={() =>
-                      !isDisabled && setIsDropdownOpen(!isDropdownOpen)
-                    }
+                    onClick={toggleDropdown}
                     className="flex items-center justify-between w-full max-w-[180px] py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                     style={{
                       color: theme.colors.text,
@@ -456,7 +506,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                   </button>
                 </CustomTooltip>
 
-                {/* Database Explorer Panel - Updated panel styling */}
+                {/* Database Explorer Panel with Sample Data */}
                 {isDbExplorerOpen && (
                   <div
                     className="absolute bottom-full left-0 mb-2 rounded-md shadow-lg z-20 overflow-hidden"
@@ -561,7 +611,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                               />
                             </div>
 
-                            {/* Tables - with updated styling */}
                             {activeSchema === schema.name &&
                               schema.tables.map((table) => (
                                 <div
@@ -630,7 +679,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                                     />
                                   </div>
 
-                                  {/* Columns - with updated styling */}
                                   {activeTable === table.name && (
                                     <div
                                       className="columns-section ml-4 py-1"
@@ -681,6 +729,79 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                                       ))}
                                     </div>
                                   )}
+
+                                  {/* Sample Data Section */}
+                                  {activeTable === table.name &&
+                                    table.sampleData && (
+                                      <div
+                                        className="sample-data-section ml-4 py-2"
+                                        style={{
+                                          backgroundColor:
+                                            theme.colors.background + "40",
+                                          borderLeft: `2px solid ${theme.colors.accent}50`,
+                                        }}
+                                      >
+                                        <h4
+                                          style={{
+                                            fontWeight: "bold",
+                                            marginBottom: "8px",
+                                            color: theme.colors.text,
+                                          }}
+                                        >
+                                          Sample Data
+                                        </h4>
+                                        <table
+                                          style={{
+                                            width: "100%",
+                                            borderCollapse: "collapse",
+                                            fontSize: theme.typography.size.sm,
+                                          }}
+                                        >
+                                          <thead>
+                                            <tr>
+                                              {table.columns.map((column) => (
+                                                <th
+                                                  key={column}
+                                                  style={{
+                                                    border: `1px solid ${theme.colors.border}`,
+                                                    padding: "4px",
+                                                    color: theme.colors.text,
+                                                    backgroundColor:
+                                                      theme.colors.surface,
+                                                    textAlign: "left",
+                                                  }}
+                                                >
+                                                  {column}
+                                                </th>
+                                              ))}
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {table.sampleData
+                                              .slice(0, 5)
+                                              .map((row, index) => (
+                                                <tr key={index}>
+                                                  {table.columns.map(
+                                                    (column) => (
+                                                      <td
+                                                        key={column}
+                                                        style={{
+                                                          border: `1px solid ${theme.colors.border}`,
+                                                          padding: "4px",
+                                                          color:
+                                                            theme.colors.text,
+                                                        }}
+                                                      >
+                                                        {row[column] ?? "-"}
+                                                      </td>
+                                                    )
+                                                  )}
+                                                </tr>
+                                              ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    )}
                                 </div>
                               ))}
                           </div>
@@ -766,7 +887,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
   }
 );
 
-// Custom comparison function for props
 const areEqual = (prevProps: ChatInputProps, nextProps: ChatInputProps) => {
   return (
     prevProps.input === nextProps.input &&
