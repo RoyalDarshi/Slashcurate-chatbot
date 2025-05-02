@@ -17,12 +17,17 @@ interface FavoriteMessage {
   id: string;
   text: string;
   query: string;
+  connection: string;
   isFavorited: boolean;
   timestamp?: string;
 }
 
 interface FavoritesProps {
-  onFavoriteSelected: (question: string, query?: string) => void;
+  onFavoriteSelected: (
+    question: string,
+    connection: string,
+    query?: string
+  ) => void;
 }
 
 const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
@@ -52,6 +57,7 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
             text: item.question,
             query: item.query || undefined,
             isFavorited: true,
+            connection: item.connection,
             timestamp: item.timestamp,
           }));
           setFavorites(formattedData);
@@ -76,10 +82,12 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
       }
 
       setAnimateId(id);
+      const connection = localStorage.getItem("selectedConnection");
       setTimeout(async () => {
         await axios.post(`${API_URL}/favorite/delete`, {
           token,
           questionId: id,
+          selectedConnection: connection,
         });
         setFavorites((prev) => prev.filter((msg) => msg.id !== id));
         setAnimateId(null);
@@ -373,7 +381,11 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                     <div
                       className="p-5 cursor-pointer"
                       onClick={() =>
-                        onFavoriteSelected(message.text, message.query)
+                        onFavoriteSelected(
+                          message.text,
+                          message.connection,
+                          message.query
+                        )
                       }
                     >
                       <div className="flex justify-between items-start mb-3 gap-2">
@@ -480,7 +492,11 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                       transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                     onClick={() =>
-                      onFavoriteSelected(message.text, message.query)
+                      onFavoriteSelected(
+                        message.text,
+                        message.connection,
+                        message.query
+                      )
                     }
                   >
                     <div className="flex-1 mr-4 overflow-hidden flex items-center gap-4 min-w-0">

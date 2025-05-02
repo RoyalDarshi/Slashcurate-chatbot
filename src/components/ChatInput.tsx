@@ -505,24 +505,23 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                     )}
                   </button>
                 </CustomTooltip>
-
                 {/* Database Explorer Panel with Sample Data */}
                 {isDbExplorerOpen && (
                   <div
-                    className="absolute bottom-full left-0 mb-2 rounded-md shadow-lg z-20 overflow-hidden"
+                    className="absolute bottom-full left-0 mb-2 rounded-lg shadow-lg z-20 overflow-hidden"
                     style={{
                       background: theme.colors.surface,
                       border: `1px solid ${theme.colors.border}`,
-                      boxShadow: `0 8px 20px ${theme.colors.text}30`,
-                      width: "320px",
-                      maxHeight: "450px",
-                      overflow: "auto",
-                      borderRadius: theme.borderRadius.default,
+                      boxShadow: `0 8px 32px ${theme.colors.text}20`,
+                      width: "380px",
+                      maxHeight: "500px",
+                      overflow: "hidden",
+                      borderRadius: theme.borderRadius.large,
                     }}
                   >
                     <div
                       style={{
-                        padding: "12px 16px",
+                        padding: "16px",
                         borderBottom: `1px solid ${theme.colors.border}`,
                         backgroundColor: theme.colors.accent,
                         display: "flex",
@@ -533,291 +532,306 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                       <h3
                         style={{
                           color: "white",
-                          fontSize: theme.typography.size.base,
+                          fontSize: theme.typography.size.lg,
+                          fontWeight: theme.typography.weight.bold,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <Layers size={20} />
+                        Database Explorer
+                      </h3>
+                      <span
+                        className="text-xs px-2 py-1 rounded-full"
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.accent,
                           fontWeight: theme.typography.weight.bold,
                         }}
                       >
-                        Database Structure
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="text-xs px-2 py-1 rounded-full"
-                          style={{
-                            backgroundColor: "white",
-                            color: theme.colors.accent,
-                            fontWeight: theme.typography.weight.medium,
-                          }}
-                        >
-                          {selectedConnection}
-                        </span>
-                      </div>
+                        {selectedConnection}
+                      </span>
                     </div>
-                    {databaseSchemas.length > 0 ? (
-                      <div>
-                        {databaseSchemas.map((schema) => (
+
+                    <div style={{ overflow: "auto", maxHeight: "420px" }}>
+                      {databaseSchemas.length > 0 ? (
+                        databaseSchemas.map((schema) => (
                           <div key={schema.name} className="schema-section">
+                            {/* Schema Header */}
                             <div
-                              className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-opacity-10 hover:bg-accent transition-all duration-200"
+                              className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-opacity-10 transition-all duration-200 group"
                               style={{
-                                borderBottom: `1px solid ${theme.colors.border}20`,
                                 backgroundColor:
                                   activeSchema === schema.name
                                     ? `${theme.colors.accent}15`
                                     : "transparent",
+                                borderBottom: `1px solid ${theme.colors.border}20`,
                               }}
                               onClick={() => handleSchemaClick(schema.name)}
                             >
                               <div
-                                className="flex items-center justify-center rounded-md p-1"
+                                className="p-1.5 rounded-lg"
                                 style={{
-                                  backgroundColor:
-                                    activeSchema === schema.name
-                                      ? theme.colors.accent + "20"
-                                      : theme.colors.background,
+                                  backgroundColor: `${theme.colors.accent}20`,
                                 }}
                               >
-                                <Layers
-                                  size={16}
+                                <Database
+                                  size={18}
                                   style={{
-                                    color:
-                                      activeSchema === schema.name
-                                        ? theme.colors.accent
-                                        : theme.colors.text + "80",
+                                    color: theme.colors.accent,
                                   }}
                                 />
                               </div>
                               <span
                                 style={{
                                   color: theme.colors.text,
-                                  fontWeight:
-                                    activeSchema === schema.name
-                                      ? theme.typography.weight.normal
-                                      : theme.typography.weight.medium,
+                                  fontWeight: theme.typography.weight.medium,
+                                  fontSize: theme.typography.size.base,
                                 }}
                               >
                                 {schema.name}
                               </span>
                               <ChevronDown
-                                size={16}
+                                size={18}
                                 style={{
                                   color: theme.colors.text,
                                   marginLeft: "auto",
-                                  transform:
-                                    activeSchema === schema.name
-                                      ? "rotate(180deg)"
-                                      : "rotate(0)",
+                                  transform: `rotate(${
+                                    activeSchema === schema.name ? 180 : 0
+                                  }deg)`,
                                   transition: "transform 0.3s ease",
                                 }}
                               />
                             </div>
 
-                            {activeSchema === schema.name &&
-                              schema.tables.map((table) => (
-                                <div
-                                  key={table.name}
-                                  className="table-section ml-4"
-                                >
+                            {/* Tables */}
+                            {activeSchema === schema.name && (
+                              <div className="pl-4">
+                                {schema.tables.map((table) => (
                                   <div
-                                    className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-opacity-10 hover:bg-accent transition-all duration-200"
-                                    style={{
-                                      borderBottom: `1px solid ${theme.colors.border}10`,
-                                      backgroundColor:
-                                        activeTable === table.name
-                                          ? `${theme.colors.accent}08`
-                                          : "transparent",
-                                      borderLeft: `2px solid ${
-                                        activeTable === table.name
-                                          ? theme.colors.accent
-                                          : theme.colors.border + "40"
-                                      }`,
-                                    }}
-                                    onClick={() => handleTableClick(table.name)}
+                                    key={table.name}
+                                    className="table-section"
                                   >
-                                    <Table2
-                                      size={14}
+                                    {/* Table Header */}
+                                    <div
+                                      className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-opacity-10 transition-all duration-200"
                                       style={{
-                                        color:
+                                        backgroundColor:
+                                          activeTable === table.name
+                                            ? `${theme.colors.accent}08`
+                                            : "transparent",
+                                        borderLeft: `2px solid ${
                                           activeTable === table.name
                                             ? theme.colors.accent
-                                            : theme.colors.text + "70",
+                                            : "transparent"
+                                        }`,
                                       }}
-                                    />
-                                    <span
-                                      style={{
-                                        color: theme.colors.text,
-                                        fontSize: theme.typography.size.sm,
-                                        fontWeight:
-                                          activeTable === table.name
-                                            ? theme.typography.weight.medium
-                                            : theme.typography.weight.normal,
-                                      }}
+                                      onClick={() =>
+                                        handleTableClick(table.name)
+                                      }
                                     >
-                                      {table.name}
-                                    </span>
-                                    <div
-                                      className="px-1.5 py-0.5 text-xs rounded-sm ml-1"
-                                      style={{
-                                        backgroundColor:
-                                          theme.colors.background,
-                                        color: theme.colors.text + "70",
-                                      }}
-                                    >
-                                      {table.columns.length}
-                                    </div>
-                                    <ChevronDown
-                                      size={14}
-                                      style={{
-                                        color: theme.colors.text,
-                                        opacity: 0.7,
-                                        marginLeft: "auto",
-                                        transform:
-                                          activeTable === table.name
-                                            ? "rotate(180deg)"
-                                            : "rotate(0)",
-                                        transition: "transform 0.3s ease",
-                                      }}
-                                    />
-                                  </div>
-
-                                  {activeTable === table.name && (
-                                    <div
-                                      className="columns-section ml-4 py-1"
-                                      style={{
-                                        backgroundColor:
-                                          theme.colors.background + "40",
-                                        borderLeft: `2px solid ${theme.colors.accent}50`,
-                                      }}
-                                    >
-                                      {table.columns.map((column) => (
-                                        <div
-                                          key={column}
-                                          className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-opacity-15 hover:bg-accent transition-all duration-200"
-                                          style={{
-                                            borderBottom: `1px solid ${theme.colors.border}05`,
-                                          }}
-                                          onClick={() =>
-                                            handleColumnClick(column)
-                                          }
-                                        >
-                                          <FileText
-                                            size={12}
-                                            style={{
-                                              color: theme.colors.text,
-                                              opacity: 0.6,
-                                            }}
-                                          />
-                                          <span
-                                            style={{
-                                              color: theme.colors.text,
-                                              fontSize:
-                                                theme.typography.size.sm,
-                                            }}
-                                          >
-                                            {column}
-                                          </span>
-                                          <div
-                                            className="ml-auto px-1.5 py-0.5 text-xs rounded-sm opacity-0 hover:opacity-100 transition-opacity duration-200"
-                                            style={{
-                                              backgroundColor:
-                                                theme.colors.accent + "15",
-                                              color: theme.colors.accent,
-                                            }}
-                                          >
-                                            insert
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* Sample Data Section */}
-                                  {activeTable === table.name &&
-                                    table.sampleData && (
-                                      <div
-                                        className="sample-data-section ml-4 py-2"
+                                      <Table2
+                                        size={16}
                                         style={{
-                                          backgroundColor:
-                                            theme.colors.background + "40",
-                                          borderLeft: `2px solid ${theme.colors.accent}50`,
+                                          color: theme.colors.accent,
+                                          opacity:
+                                            activeTable === table.name
+                                              ? 1
+                                              : 0.7,
+                                        }}
+                                      />
+                                      <span
+                                        style={{
+                                          color: theme.colors.text,
+                                          fontSize: theme.typography.size.sm,
+                                          fontWeight:
+                                            theme.typography.weight.medium,
                                         }}
                                       >
-                                        <h4
-                                          style={{
-                                            fontWeight: "bold",
-                                            marginBottom: "8px",
-                                            color: theme.colors.text,
-                                          }}
-                                        >
-                                          Sample Data
-                                        </h4>
-                                        <table
-                                          style={{
-                                            width: "100%",
-                                            borderCollapse: "collapse",
-                                            fontSize: theme.typography.size.sm,
-                                          }}
-                                        >
-                                          <thead>
-                                            <tr>
-                                              {table.columns.map((column) => (
-                                                <th
-                                                  key={column}
+                                        {table.name}
+                                      </span>
+                                      <div
+                                        className="ml-auto px-2 py-1 text-xs rounded-md"
+                                        style={{
+                                          backgroundColor: `${theme.colors.accent}15`,
+                                          color: theme.colors.accent,
+                                        }}
+                                      >
+                                        {table.columns.length} columns
+                                      </div>
+                                    </div>
+
+                                    {/* Columns & Sample Data */}
+                                    {activeTable === table.name && (
+                                      <div className="ml-6">
+                                        {/* Columns */}
+                                        <div className="space-y-1.5 py-2">
+                                          {table.columns.map((column) => (
+                                            <div
+                                              key={column}
+                                              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-opacity-10 rounded-lg transition-all duration-200"
+                                              style={{
+                                                backgroundColor: `${theme.colors.accent}05`,
+                                              }}
+                                              onClick={() =>
+                                                handleColumnClick(column)
+                                              }
+                                            >
+                                              <div className="w-4 h-4 rounded-md bg-accent/10 flex items-center justify-center">
+                                                <span
                                                   style={{
-                                                    border: `1px solid ${theme.colors.border}`,
-                                                    padding: "4px",
-                                                    color: theme.colors.text,
-                                                    backgroundColor:
-                                                      theme.colors.surface,
-                                                    textAlign: "left",
+                                                    color: theme.colors.accent,
+                                                    fontSize: "10px",
+                                                    fontWeight: "bold",
                                                   }}
                                                 >
-                                                  {column}
-                                                </th>
-                                              ))}
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {table.sampleData
-                                              .slice(0, 5)
-                                              .map((row, index) => (
-                                                <tr key={index}>
-                                                  {table.columns.map(
-                                                    (column) => (
-                                                      <td
-                                                        key={column}
+                                                  C
+                                                </span>
+                                              </div>
+                                              <code
+                                                style={{
+                                                  color: theme.colors.text,
+                                                  fontSize:
+                                                    theme.typography.size.sm,
+                                                  fontFamily:
+                                                    theme.typography.fontFamily,
+                                                }}
+                                              >
+                                                {column}
+                                              </code>
+                                            </div>
+                                          ))}
+                                        </div>
+
+                                        {/* Enhanced Sample Data Table */}
+                                        {table.sampleData && (
+                                          <div className="my-3 mx-2">
+                                            <div
+                                              className="text-xs font-medium mb-2 px-2"
+                                              style={{
+                                                color: theme.colors.text,
+                                                opacity: 0.8,
+                                              }}
+                                            >
+                                              Sample Data (
+                                              {table.sampleData.length} rows)
+                                            </div>
+                                            <div
+                                              className="rounded-lg overflow-hidden border"
+                                              style={{
+                                                borderColor:
+                                                  theme.colors.border,
+                                              }}
+                                            >
+                                              <table
+                                                className="w-full"
+                                                style={{
+                                                  borderCollapse: "collapse",
+                                                  backgroundColor:
+                                                    theme.colors.surface,
+                                                }}
+                                              >
+                                                <thead>
+                                                  <tr
+                                                    style={{
+                                                      backgroundColor:
+                                                        theme.colors.background,
+                                                      borderBottom: `2px solid ${theme.colors.border}`,
+                                                    }}
+                                                  >
+                                                    {table.columns.map(
+                                                      (column) => (
+                                                        <th
+                                                          key={column}
+                                                          className="px-3 py-2 text-left"
+                                                          style={{
+                                                            color:
+                                                              theme.colors.text,
+                                                            fontSize:
+                                                              theme.typography
+                                                                .size.base,
+                                                            fontWeight:
+                                                              theme.typography
+                                                                .weight.bold,
+                                                          }}
+                                                        >
+                                                          {column}
+                                                        </th>
+                                                      )
+                                                    )}
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {table.sampleData.map(
+                                                    (row, index) => (
+                                                      <tr
+                                                        key={index}
+                                                        className="hover:bg-opacity-10 transition-colors duration-200"
                                                         style={{
-                                                          border: `1px solid ${theme.colors.border}`,
-                                                          padding: "4px",
-                                                          color:
-                                                            theme.colors.text,
+                                                          backgroundColor:
+                                                            index % 2 === 0
+                                                              ? `${theme.colors.background}30`
+                                                              : "transparent",
+                                                          borderBottom: `1px solid ${theme.colors.border}20`,
                                                         }}
                                                       >
-                                                        {row[column] ?? "-"}
-                                                      </td>
+                                                        {table.columns.map(
+                                                          (column) => (
+                                                            <td
+                                                              key={column}
+                                                              className="px-3 py-1.5"
+                                                              style={{
+                                                                color:
+                                                                  theme.colors
+                                                                    .text,
+                                                                fontSize:
+                                                                  theme
+                                                                    .typography
+                                                                    .size.base,
+                                                                fontFamily:
+                                                                  theme
+                                                                    .typography
+                                                                    .fontFamily,
+                                                              }}
+                                                            >
+                                                              {row[column] ??
+                                                                "NULL"}
+                                                            </td>
+                                                          )
+                                                        )}
+                                                      </tr>
                                                     )
                                                   )}
-                                                </tr>
-                                              ))}
-                                          </tbody>
-                                        </table>
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
-                                </div>
-                              ))}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div
-                        className="p-4 text-center"
-                        style={{
-                          color: theme.colors.text,
-                          opacity: 0.7,
-                        }}
-                      >
-                        No database schema available
-                      </div>
-                    )}
+                        ))
+                      ) : (
+                        <div
+                          className="p-4 text-center flex flex-col items-center justify-center gap-2"
+                          style={{
+                            color: theme.colors.text,
+                            opacity: 0.7,
+                            minHeight: "120px",
+                          }}
+                        >
+                          <Database size={24} className="opacity-50" />
+                          <span className="text-sm">
+                            No database schema available
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

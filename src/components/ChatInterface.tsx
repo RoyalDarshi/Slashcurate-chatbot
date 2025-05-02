@@ -245,6 +245,7 @@ const ChatInterface = memo(
           }
           handleAskFavoriteQuestion(
             initialQuestion.text,
+            initialQuestion.connection,
             initialQuestion.query
           );
           if (onQuestionAsked) onQuestionAsked();
@@ -264,6 +265,7 @@ const ChatInterface = memo(
             setSelectedConnection(null);
             localStorage.removeItem("selectedConnection");
           } else if (option) {
+            handleNewChat();
             const selectedConnectionObj = connections.find(
               (conn) => conn.connectionName === option.value.connectionName
             );
@@ -293,7 +295,7 @@ const ChatInterface = memo(
       }, []);
 
       const handleAskFavoriteQuestion = useCallback(
-        async (question: string, query?: string) => {
+        async (question: string, connection: string, query?: string) => {
           if (!selectedConnection) {
             toast.error(
               "No connection selected. Please select a connection first.",
@@ -308,6 +310,15 @@ const ChatInterface = memo(
             );
             return;
           }
+
+          const prevConnection = localStorage.getItem("selectedConnection");
+          if (prevConnection !== connection) {
+            handleNewChat();
+          }
+
+          setSelectedConnection(connection || "");
+          console.log("Selected connection:", connection);
+          localStorage.setItem("selectedConnection", connection || "");
 
           if (!currentSessionId) {
             await handleNewChat();
@@ -335,7 +346,11 @@ const ChatInterface = memo(
             try {
               const response = await axios.post(
                 `${API_URL}/api/sessions`,
-                { token, title: question.substring(0, 50) + "..." },
+                {
+                  token,
+                  currentConnection: connection,
+                  title: question.substring(0, 50) + "...",
+                },
                 { headers: { "Content-Type": "application/json" } }
               );
               sessionId = response.data.id;
@@ -378,8 +393,10 @@ const ChatInterface = memo(
 
           try {
             const selectedConnectionObj = connections.find(
-              (conn) => conn.connectionName === selectedConnection
+              (conn) => conn.connectionName === connection
             );
+            console.log("Selected connection:", selectedConnection);
+            console.log("Connections:", connection);
             if (!selectedConnectionObj) {
               throw new Error("Selected connection not found");
             }
@@ -515,7 +532,11 @@ const ChatInterface = memo(
             try {
               const response = await axios.post(
                 `${API_URL}/api/sessions`,
-                { token, title: input.substring(0, 50) + "..." },
+                {
+                  token,
+                  currentConnection: selectedConnection,
+                  title: input.substring(0, 50) + "...",
+                },
                 { headers: { "Content-Type": "application/json" } }
               );
               sessionId = response.data.id;
@@ -662,6 +683,7 @@ const ChatInterface = memo(
                 token,
                 questionId: messageId,
                 questionContent: questionMessage.content,
+                currentConnection: selectedConnection,
                 responseQuery: responseMessage
                   ? JSON.parse(responseMessage.content).sql_query
                   : null,
@@ -696,7 +718,11 @@ const ChatInterface = memo(
           try {
             await axios.post(
               `${API_URL}/unfavorite`,
-              { token, questionId: messageId },
+              {
+                token,
+                currentConnection: selectedConnection,
+                questionId: messageId,
+              },
               { headers: { "Content-Type": "application/json" } }
             );
 

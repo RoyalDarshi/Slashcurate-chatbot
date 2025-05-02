@@ -29,6 +29,7 @@ function App() {
     useState<boolean>(false);
   const [questionToAsk, setQuestionToAsk] = useState<{
     text: string;
+    connection: string;
     query?: string;
   } | null>(null);
   const [showTip, setShowTip] = useState<boolean>(false);
@@ -149,8 +150,10 @@ const AppContent: React.FC<{
   onCreateConSelected: () => void;
   onHomePage: () => void;
   chatRef: React.RefObject<ChatInterfaceHandle>;
-  questionToAsk: { text: string; query?: string } | null;
-  setQuestionToAsk: (question: { text: string; query?: string } | null) => void;
+  questionToAsk: { text: string; connection: string; query?: string } | null;
+  setQuestionToAsk: (
+    question: { text: string; connection: string; query?: string } | null
+  ) => void;
   showTip: boolean;
   setShowTip: (show: boolean) => void;
   onNewChat: () => void;
@@ -243,8 +246,8 @@ const AppContent: React.FC<{
             )}
             {activeMenu === "favourite" && (
               <Favourites
-                onFavoriteSelected={(question, query) => {
-                  setQuestionToAsk({ text: question, query });
+                onFavoriteSelected={(question, connection, query) => {
+                  setQuestionToAsk({ text: question, connection, query });
                   setTimeout(() => setActiveMenu("home"), 0);
                 }}
               />

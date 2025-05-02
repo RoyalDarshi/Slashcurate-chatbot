@@ -23,6 +23,7 @@ interface Session {
   id: string;
   messages: Message[];
   timestamp: string;
+  connection: string;
   title: string;
 }
 
@@ -301,6 +302,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
 
   const handleSessionClick = async (session: Session) => {
     setSelectedSession(session.id);
+    localStorage.setItem("selectedConnection", session.connection);
     setTimeout(() => {
       localStorage.setItem("currentSessionId", session.id);
       onSessionClicked();
