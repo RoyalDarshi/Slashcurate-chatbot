@@ -59,7 +59,6 @@ const ChatInterface = memo(
       const [isSubmitting, setIsSubmitting] = useState(false);
       const messagesRef = useRef<Message[]>([]);
       const messagesEndRef = useRef<HTMLDivElement>(null);
-      // New ref for the chat container
       const chatContainerRef = useRef<HTMLDivElement>(null);
       const [messages, setMessages] = useState<Message[]>([]);
       const [connections, setConnections] = useState<Connection[]>([]);
@@ -79,13 +78,11 @@ const ChatInterface = memo(
       const [recommendedQuestions, setRecommendedQuestions] = useState<any[]>(
         []
       );
-      // New state to track if the user has scrolled up
       const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
 
       const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
       const token = sessionStorage.getItem("token") ?? "";
-
 
       const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -100,7 +97,6 @@ const ChatInterface = memo(
 
       const prevMessagesLength = useRef(messages.length);
 
-      // Modified useEffect to only scroll if user is at the bottom
       useEffect(() => {
         if (!messages) return;
         const isNewMessageAdded = messages.length > prevMessagesLength.current;
@@ -111,13 +107,11 @@ const ChatInterface = memo(
         }
       }, [messages, scrollToBottom, editingMessageId, userHasScrolledUp]);
 
-      // New useEffect to monitor scroll position
       useEffect(() => {
         const handleScroll = () => {
           if (!chatContainerRef.current) return;
           const { scrollTop, clientHeight, scrollHeight } =
             chatContainerRef.current;
-          // Consider the user at the bottom if within 10px of the end
           const atBottom = scrollTop + clientHeight >= scrollHeight - 10;
           setUserHasScrolledUp(!atBottom);
         };
@@ -127,7 +121,6 @@ const ChatInterface = memo(
           chatContainer.addEventListener("scroll", handleScroll);
         }
 
-        // Cleanup event listener on unmount
         return () => {
           if (chatContainer) {
             chatContainer.removeEventListener("scroll", handleScroll);
@@ -198,6 +191,13 @@ const ChatInterface = memo(
             messagesRef.current = response.data.messages || [];
             setMessages(response.data.messages || []);
             setCurrentSessionId(sessionId);
+            if (response.data.connection) {
+              setSelectedConnection(response.data.connection);
+              localStorage.setItem(
+                "selectedConnection",
+                response.data.connection
+              );
+            }
             setTimeout(() => scrollToBottom(), 300);
             if (onSessionSelected) {
               onSessionSelected(response.data);
@@ -210,7 +210,7 @@ const ChatInterface = memo(
             setConnectionsLoading(false);
           }
         },
-        [onSessionSelected]
+        [onSessionSelected, token]
       );
 
       useEffect(() => {
@@ -306,9 +306,17 @@ const ChatInterface = memo(
       const handleAskFavoriteQuestion = useCallback(
         async (question: string, connection: string, query?: string) => {
           console.log("Asking favorite question:", question);
-          console.log("Connection:", connection);
+          console.log("Favorite connection:", connection);
           console.log("Query:", query);
-          if (!selectedConnection) {
+
+          if (!selectedConnection && connections.length > 0) {
+            const defaultConnection = connections[0];
+            setSelectedConnection(defaultConnection.connectionName);
+            localStorage.setItem(
+              "selectedConnection",
+              defaultConnection.connectionName
+            );
+          } else if (!selectedConnection) {
             toast.error(
               "No connection selected. Please select a connection first.",
               {
@@ -323,20 +331,43 @@ const ChatInterface = memo(
             return;
           }
 
-          const prevConnection = localStorage.getItem("selectedConnection");
-          console.log("Previous connection:", prevConnection);
-          console.log("Current connection:", connection);
-          console.log("Selected connection:", selectedConnection);
-          if (prevConnection !== connection) {
-            handleNewChat();
+          // Determine if we can use the existing session
+          const shouldUseExistingSession =
+            currentSessionId && selectedConnection === connection;
+
+          if (!shouldUseExistingSession) {
+            console.log("Starting new session with connection:", connection);
+            await handleNewChat(); // Clear current session and messages
             setSelectedConnection(connection);
-            console.log("Selected connection:", selectedConnection);
             localStorage.setItem("selectedConnection", connection || "");
+          } else {
+            console.log("Using existing session:", currentSessionId);
           }
 
-          // if (!currentSessionId) {
-          //   await handleNewChat();
-          // }
+          let sessionId: string;
+
+          if (shouldUseExistingSession) {
+            sessionId = currentSessionId!;
+          } else {
+            try {
+              const response = await axios.post(
+                `${API_URL}/api/sessions`,
+                {
+                  token,
+                  currentConnection: connection,
+                  title: question.substring(0, 50) + "...",
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+              sessionId = response.data.id;
+              setCurrentSessionId(sessionId);
+              localStorage.setItem("currentSessionId", sessionId);
+            } catch (error) {
+              console.error("Error creating session:", error);
+              toast.error("Failed to create session.");
+              return;
+            }
+          }
 
           const userMessage: Message = {
             id: Date.now().toString(),
@@ -354,30 +385,6 @@ const ChatInterface = memo(
             isFavorited: false,
             parentId: userMessage.id,
           };
-
-          let sessionId = currentSessionId;
-          console.log("Current session ID:", currentSessionId);
-          console.log("Session ID:", sessionId);
-          if (!sessionId) {
-            try {
-              const response = await axios.post(
-                `${API_URL}/api/sessions`,
-                {
-                  token,
-                  currentConnection: connection,
-                  title: question.substring(0, 50) + "...",
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-              sessionId = response.data.id;
-              setCurrentSessionId(sessionId);
-              localStorage.setItem("currentSessionId", sessionId || "");
-            } catch (error) {
-              console.error("Error creating session:", error);
-              toast.error("Failed to create session.");
-              return;
-            }
-          }
 
           try {
             const userMessageResponse = await axios.post(
@@ -411,8 +418,6 @@ const ChatInterface = memo(
             const selectedConnectionObj = connections.find(
               (conn) => conn.connectionName === connection
             );
-            console.log("Selected connection:", selectedConnection);
-            console.log("Connections:", connection);
             if (!selectedConnectionObj) {
               throw new Error("Selected connection not found");
             }
@@ -951,7 +956,7 @@ const ChatInterface = memo(
           />
 
           <div
-            ref={chatContainerRef} // Attach ref to the chat container
+            ref={chatContainerRef}
             className="flex-1 overflow-y-auto"
             style={{
               padding: theme.spacing.lg,
@@ -1059,7 +1064,6 @@ const ChatInterface = memo(
               paddingTop: 0,
             }}
           >
-            {/* New button to scroll to bottom when user has scrolled up */}
             {userHasScrolledUp && (
               <div
                 className="flex justify-end"
