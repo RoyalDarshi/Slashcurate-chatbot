@@ -33,7 +33,11 @@ interface Session {
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
-  handleAskFavoriteQuestion: (question: string, query?: string) => void;
+  handleAskFavoriteQuestion: (
+    question: string,
+    connection: string,
+    query?: string
+  ) => void;
 };
 
 const ChatInterface = memo(
@@ -82,19 +86,6 @@ const ChatInterface = memo(
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
       const token = sessionStorage.getItem("token") ?? "";
 
-      useEffect(() => {
-        const fetchRecommendedQuestions = async () => {
-          if (token) {
-            try {
-              const data = await getRecommendedQuestions(token);
-              setRecommendedQuestions(data);
-            } catch (error) {
-              console.error("Failed to fetch recommended questions:", error);
-            }
-          }
-        };
-        fetchRecommendedQuestions();
-      }, [token]);
 
       const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -234,6 +225,22 @@ const ChatInterface = memo(
       }, [fetchConnections, fetchSession]);
 
       useEffect(() => {
+        const fetchRecommendedQuestions = async () => {
+          if (token) {
+            try {
+              const data = await getRecommendedQuestions(token);
+              setRecommendedQuestions(data);
+            } catch (error) {
+              console.error("Failed to fetch recommended questions:", error);
+            }
+          }
+        };
+        if (!currentSessionId) {
+          fetchRecommendedQuestions();
+        }
+      }, []);
+
+      useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
           if (!selectedConnection && connections.length > 0) {
             const defaultConnection = connections[0];
@@ -291,11 +298,16 @@ const ChatInterface = memo(
         setInput("");
         setEditingMessageId(null);
         setCurrentSessionId(null);
+        console.log("New chat started");
+        console.log("Current session ID:", currentSessionId);
         localStorage.removeItem("currentSessionId");
       }, []);
 
       const handleAskFavoriteQuestion = useCallback(
         async (question: string, connection: string, query?: string) => {
+          console.log("Asking favorite question:", question);
+          console.log("Connection:", connection);
+          console.log("Query:", query);
           if (!selectedConnection) {
             toast.error(
               "No connection selected. Please select a connection first.",
@@ -312,17 +324,19 @@ const ChatInterface = memo(
           }
 
           const prevConnection = localStorage.getItem("selectedConnection");
+          console.log("Previous connection:", prevConnection);
+          console.log("Current connection:", connection);
+          console.log("Selected connection:", selectedConnection);
           if (prevConnection !== connection) {
             handleNewChat();
+            setSelectedConnection(connection);
+            console.log("Selected connection:", selectedConnection);
+            localStorage.setItem("selectedConnection", connection || "");
           }
 
-          setSelectedConnection(connection || "");
-          console.log("Selected connection:", connection);
-          localStorage.setItem("selectedConnection", connection || "");
-
-          if (!currentSessionId) {
-            await handleNewChat();
-          }
+          // if (!currentSessionId) {
+          //   await handleNewChat();
+          // }
 
           const userMessage: Message = {
             id: Date.now().toString(),
@@ -342,6 +356,8 @@ const ChatInterface = memo(
           };
 
           let sessionId = currentSessionId;
+          console.log("Current session ID:", currentSessionId);
+          console.log("Session ID:", sessionId);
           if (!sessionId) {
             try {
               const response = await axios.post(
@@ -786,6 +802,7 @@ const ChatInterface = memo(
               const responseMessage = messagesRef.current.find(
                 (msg) => msg.parentId === id
               );
+              console.log("Response message:", responseMessage);
 
               const botLoadingMessage: Message = {
                 id: responseMessage
