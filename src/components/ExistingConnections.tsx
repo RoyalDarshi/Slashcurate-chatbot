@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Trash2 } from "react-feather";
+import { Trash2, AlertTriangle } from "react-feather";
 import { useTheme } from "../ThemeContext";
 import {
   deleteConnection,
@@ -44,6 +44,11 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
   const token = sessionStorage.getItem("token");
+
+  // State for deletion confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [connectionToDelete, setConnectionToDelete] =
+    useState<Connection | null>(null);
 
   const fetchConnections = useCallback(async () => {
     if (!token) {
@@ -87,47 +92,136 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
     }
   }, [isAdmin, mode]);
 
-  const handleDeleteConnection = useCallback(
-    async (connectionId: number) => {
-      if (!token) {
-        toast.error("Authentication token not found. Please log in again.", {
-          theme: mode,
-        });
-        return;
-      }
+  const confirmDeleteConnection = (connection: Connection) => {
+    setConnectionToDelete(connection);
+    setShowDeleteModal(true);
+  };
 
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await deleteConnection(token, connectionId);
+  const handleDeleteConnection = useCallback(async () => {
+    if (!connectionToDelete) return;
+    if (!token) {
+      toast.error("Authentication token not found. Please log in again.", {
+        theme: mode,
+      });
+      return;
+    }
 
-        if (response.status === 200) {
-          toast.success("Connection deleted successfully!", { theme: mode });
-          fetchConnections();
-        }
-      } catch (error) {
-        setLoading(false);
-        if (axios.isAxiosError(error)) {
-          const axiosError = error as AxiosError<{ message?: string }>;
-          const errorMsg =
-            axiosError.response?.data?.message ?? axiosError.message;
-          toast.error(`Error: ${errorMsg}`, { theme: mode });
-          setError(errorMsg);
-        } else {
-          const errorMsg = (error as Error).message;
-          toast.error(`Error: ${errorMsg}`, { theme: mode });
-          setError(errorMsg);
-        }
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await deleteConnection(token, connectionToDelete.id);
+
+      if (response.status === 200) {
+        toast.success("Connection deleted successfully!", { theme: mode });
+        setShowDeleteModal(false);
+        setConnectionToDelete(null);
+        fetchConnections();
       }
-    },
-    [isAdmin, mode, fetchConnections]
-  );
+    } catch (error) {
+      setLoading(false);
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<{ message?: string }>;
+        const errorMsg =
+          axiosError.response?.data?.message ?? axiosError.message;
+        toast.error(`Error: ${errorMsg}`, { theme: mode });
+        setError(errorMsg);
+      } else {
+        const errorMsg = (error as Error).message;
+        toast.error(`Error: ${errorMsg}`, { theme: mode });
+        setError(errorMsg);
+      }
+    }
+  }, [connectionToDelete, mode, fetchConnections]);
 
   useEffect(() => {
     if (fetched.current) return;
     fetched.current = true;
     fetchConnections();
   }, [fetchConnections]);
+
+  // Delete confirmation modal
+  const DeleteConfirmationModal = () => {
+    if (!showDeleteModal || !connectionToDelete) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+        <div
+          className="p-6 rounded-lg shadow-xl max-w-md w-full"
+          style={{
+            backgroundColor: theme.colors.surface,
+            border: `1px solid ${theme.colors.accent}40`,
+            boxShadow:
+              theme.colors.background === "#0F172A"
+                ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+                : "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+          }}
+        >
+          <div className="flex items-center mb-4">
+            <AlertTriangle size={24} className="text-yellow-500 mr-2" />
+            <h3
+              className="text-xl font-bold"
+              style={{ color: theme.colors.text }}
+            >
+              Confirm Deletion
+            </h3>
+          </div>
+
+          <p className="mb-6" style={{ color: theme.colors.text }}>
+            Are you sure you want to delete the connection{" "}
+            <strong>{connectionToDelete.connectionName}</strong>?
+            <br />
+            <br />
+            <span className="text-yellow-500 font-medium">
+              Note: You will not be able to access chat history from this
+              connection after deletion.
+            </span>
+          </p>
+
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="py-2 px-4 transition-all duration-200"
+              style={{
+                color: theme.colors.text,
+                backgroundColor: "transparent",
+                border: `1px solid ${theme.colors.text}40`,
+                borderRadius: theme.borderRadius.default,
+              }}
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteConnection}
+              className="py-2 px-4 transition-all duration-200 text-white"
+              style={{
+                backgroundColor: "#EF4444",
+                borderRadius: theme.borderRadius.default,
+                opacity: loading ? 0.7 : 1,
+                boxShadow:
+                  theme.colors.background === "#0F172A"
+                    ? "0 4px 6px -1px rgba(0, 0, 0, 0.2)"
+                    : "0 4px 6px -1px rgba(239, 68, 68, 0.2)",
+              }}
+              onMouseOver={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = "#DC2626";
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = "#EF4444";
+                }
+              }}
+              disabled={loading}
+            >
+              {loading ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -149,43 +243,106 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
       >
         Existing Connections
       </h2>
-      <div className="overflow-x-auto mb-40 relative">
-        <div ref={tableContainerRef} className="relative">
-          <table
-            className="min-w-full mb-6 rounded-lg overflow-hidden"
-            style={{
-              backgroundColor: theme.colors.surface,
-              // border: `1px solid ${theme.colors.text}20`,
-              borderRadius: theme.borderRadius.default,
-            }}
-          >
-            {connections.length > 0 ? (
-              <>
-                <thead style={{ backgroundColor: theme.colors.accent }}>
+
+      {connections.length > 0 ? (
+        <div
+          className="rounded-lg shadow-lg mb-40 relative overflow-hidden"
+          style={{
+            backgroundColor: theme.colors.surface,
+            border: `1px solid ${theme.colors.text}30`,
+            boxShadow:
+              theme.colors.background === "#0F172A"
+                ? "0 4px 12px rgba(0, 0, 0, 0.3)"
+                : "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+          }}
+        >
+          {/* Table with sticky header and scrollable content */}
+          <div className="max-h-[70vh] overflow-y-auto rounded-lg">
+            <div className="overflow-x-auto" style={{ minWidth: "100%" }}>
+              <table
+                className="min-w-full"
+                style={{
+                  tableLayout: "fixed",
+                  width: "100%",
+                  borderCollapse: "separate",
+                  borderSpacing: 0,
+                  borderColor: theme.colors.text + "20",
+                }}
+              >
+                <thead
+                  className="sticky top-0 z-10"
+                  style={{ backgroundColor: theme.colors.accent }}
+                >
                   <tr>
-                    <th className="py-2 px-3 text-left text-white">
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "150px" }}
+                    >
                       Connection Name
                     </th>
-                    <th className="py-2 px-3 text-left text-white">
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "200px" }}
+                    >
                       Description
                     </th>
-                    <th className="py-2 px-3 text-left text-white">Hostname</th>
-                    <th className="py-2 px-3 text-left text-white">Port</th>
-                    <th className="py-2 px-3 text-left text-white">Database</th>
-                    <th className="py-2 px-3 text-left text-white">Username</th>
-                    <th className="py-2 px-3 text-left text-white">
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "150px" }}
+                    >
+                      Hostname
+                    </th>
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "80px" }}
+                    >
+                      Port
+                    </th>
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "150px" }}
+                    >
+                      Database
+                    </th>
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "120px" }}
+                    >
+                      Username
+                    </th>
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "140px" }}
+                    >
                       Command Timeout
                     </th>
-                    <th className="py-2 px-3 text-left text-white">
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "170px" }}
+                    >
                       Max Transport Objects
                     </th>
-                    <th className="py-2 px-3 text-left text-white">
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "120px" }}
+                    >
                       Selected DB
                     </th>
-                    <th className="py-2 px-3 text-left text-white">Actions</th>
+                    <th
+                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
+                      style={{ width: "100px" }}
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody
+                  className="divide-y divide-gray-200"
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                  }}
+                  ref={tableContainerRef}
+                >
                   {connections.map((connection, index) => (
                     <tr
                       key={connection.id}
@@ -193,65 +350,79 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                       style={{
                         backgroundColor:
                           index % 2 === 0
-                            ? `${theme.colors.background}80`
+                            ? `${theme.colors.background}90`
                             : theme.colors.surface,
+                        "&:hover": {
+                          backgroundColor: `${theme.colors.accent}15`,
+                        },
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = `${theme.colors.accent}15`;
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          index % 2 === 0
+                            ? `${theme.colors.background}90`
+                            : theme.colors.surface;
                       }}
                     >
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
-                        {connection.connectionName}
+                        <div className="font-medium">
+                          {connection.connectionName}
+                        </div>
                       </td>
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.description}
                       </td>
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.hostname}
                       </td>
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.port}
                       </td>
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.database}
                       </td>
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.username}
                       </td>
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.commandTimeout}
                       </td>
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.maxTransportObjects}
                       </td>
                       <td
-                        className="py-2 px-3"
+                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{ color: theme.colors.text }}
                       >
                         {connection.selectedDB}
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-3 px-4 whitespace-nowrap text-center">
                         <CustomTooltip
                           title={
                             connection.isAdmin
@@ -262,19 +433,35 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                           variant="dark"
                         >
                           <button
-                            onClick={() =>
-                              handleDeleteConnection(connection.id)
-                            }
-                            className="text-red-500 hover:text-red-700 disabled:cursor-not-allowed focus:outline-none"
+                            onClick={() => confirmDeleteConnection(connection)}
+                            className="p-1.5 rounded-full focus:outline-none disabled:cursor-not-allowed transition-colors duration-200"
                             aria-label="Delete connection"
                             disabled={connection.isAdmin}
+                            style={{
+                              color: connection.isAdmin
+                                ? theme.colors.disabled
+                                : "#EF4444",
+                              backgroundColor: "transparent",
+                            }}
+                            onMouseOver={(e) => {
+                              if (!connection.isAdmin) {
+                                e.currentTarget.style.backgroundColor =
+                                  theme.colors.background === "#0F172A"
+                                    ? "rgba(239, 68, 68, 0.2)"
+                                    : "rgba(254, 226, 226, 1)";
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
+                            }}
                           >
                             <Trash2
                               size={18}
                               style={{
                                 color: connection.isAdmin
                                   ? theme.colors.disabled
-                                  : "",
+                                  : "#EF4444",
                               }}
                             />
                           </button>
@@ -283,45 +470,49 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                     </tr>
                   ))}
                 </tbody>
-              </>
-            ) : (
-              <tbody
-                style={{
-                  backgroundColor: theme.colors.background,
-                }}
-              >
-                <tr>
-                  <td colSpan={10} className="text-center py-4 text-gray-500">
-                    <p className="mb-2">
-                      Oops! No connections here. Time to create one?
-                    </p>
-                    <button
-                      onClick={createConnection}
-                      className="w-40 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        color: theme.colors.text,
-                        backgroundColor: "transparent",
-                        border: `1px solid ${theme.colors.accent}`,
-                        borderRadius: theme.borderRadius.pill,
-                      }}
-                      onMouseOver={(e) =>
-                        !loading &&
-                        (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-                      }
-                      onMouseOut={(e) =>
-                        !loading &&
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      }
-                    >
-                      Create Connection
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            )}
-          </table>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div
+          className="rounded-lg text-center py-12 px-4 mb-40"
+          style={{
+            backgroundColor: theme.colors.surface,
+            border: `1px solid ${theme.colors.text}10`,
+            boxShadow:
+              "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+          }}
+        >
+          <div className="max-w-md mx-auto">
+            <p className="text-lg mb-4" style={{ color: theme.colors.text }}>
+              No connections found. Time to create one?
+            </p>
+            <button
+              onClick={createConnection}
+              className="px-6 py-2.5 font-medium tracking-wide transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                color: "#fff",
+                backgroundColor: theme.colors.accent,
+                borderRadius: theme.borderRadius.default,
+              }}
+              onMouseOver={(e) =>
+                !loading &&
+                (e.currentTarget.style.backgroundColor = `${theme.colors.accent}dd`)
+              }
+              onMouseOut={(e) =>
+                !loading &&
+                (e.currentTarget.style.backgroundColor = theme.colors.accent)
+              }
+            >
+              Create Connection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Render confirmation modal */}
+      <DeleteConfirmationModal />
     </div>
   );
 };
