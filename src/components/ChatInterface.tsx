@@ -976,7 +976,7 @@ const ChatInterface = memo(
                   onClick={onCreateConSelected}
                   className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide transition-all duration-200"
                   style={{
-                    color: theme.colors.text,
+                    color: "white",
                     backgroundColor: theme.colors.accent,
                     borderRadius: theme.borderRadius.pill,
                     padding: "8px 16px",
