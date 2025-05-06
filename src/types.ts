@@ -36,6 +36,7 @@ export interface ChatInputProps {
   connections: Connection[];
   selectedConnection: string | null;
   onSelect: (option: any) => void;
+  disabled: boolean;
   onNewChat: () => void;
 }
 
@@ -48,6 +49,7 @@ export interface ChatMessageProps {
   onUnfavorite: (messageId: string) => void;
   favoriteCount?: number;
   isFavorited: boolean;
+  disabled: boolean;
   responseStatus: "loading" | "success" | "error" | null;
 }
 

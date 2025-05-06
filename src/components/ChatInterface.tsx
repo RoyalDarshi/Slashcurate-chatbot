@@ -79,7 +79,9 @@ const ChatInterface = memo(
         []
       );
       const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
-
+      const [sessionConnectionError, setSessionConnectionError] = useState<
+        string | null
+      >(null);
       const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
       const token = sessionStorage.getItem("token") ?? "";
@@ -173,7 +175,7 @@ const ChatInterface = memo(
         } finally {
           setConnectionsLoading(false);
         }
-      }, [theme, mode, token]);
+      }, [token]);
 
       const fetchSession = useCallback(
         async (sessionId: string) => {
@@ -197,20 +199,23 @@ const ChatInterface = memo(
                 "selectedConnection",
                 response.data.connection
               );
+            } else {
+              setSelectedConnection(null);
+              setSessionConnectionError(
+                "This session does not have a connection."
+              );
+              localStorage.removeItem("selectedConnection");
             }
             setTimeout(() => scrollToBottom(), 300);
-            if (onSessionSelected) {
-              onSessionSelected(response.data);
-            }
           } catch (error) {
             console.error("Error fetching session:", error);
             setMessages([]);
-            localStorage.removeItem("currentSessionId");
+            setSessionConnectionError("Failed to load session.");
           } finally {
             setConnectionsLoading(false);
           }
         },
-        [onSessionSelected, token]
+        [token]
       );
 
       useEffect(() => {
@@ -298,8 +303,7 @@ const ChatInterface = memo(
         setInput("");
         setEditingMessageId(null);
         setCurrentSessionId(null);
-        console.log("New chat started");
-        console.log("Current session ID:", currentSessionId);
+        setSessionConnectionError(null); // Reset connection error
         localStorage.removeItem("currentSessionId");
       }, []);
 
@@ -685,6 +689,21 @@ const ChatInterface = memo(
             return;
           }
 
+          if (!selectedConnection) {
+            toast.error(
+              "No connection selected. Please select a connection first.",
+              {
+                style: {
+                  background: theme.colors.surface,
+                  color: theme.colors.error,
+                  border: `1px solid ${theme.colors.error}20`,
+                },
+                theme: mode,
+              }
+            );
+            return;
+          }
+
           try {
             const questionMessage = messages.find(
               (msg) => msg.id === messageId
@@ -724,7 +743,7 @@ const ChatInterface = memo(
             toast.error("Failed to favorite message.");
           }
         },
-        [token, messages]
+        [token, messages, selectedConnection, theme, mode]
       );
 
       const handleUnfavoriteMessage = useCallback(
@@ -1012,45 +1031,62 @@ const ChatInterface = memo(
                 />
               </div>
             ) : (
-              messages.map((message) => {
-                let responseStatus: "loading" | "success" | "error" | null =
-                  null;
-                if (!message.isBot) {
-                  const botResponse = messages.find(
-                    (msg) => msg.isBot && msg.parentId === message.id
-                  );
-                  if (botResponse) {
-                    if (botResponse.content === "loading...") {
-                      responseStatus = "loading";
-                    } else if (
-                      botResponse.content.includes("Sorry, an error occurred.")
-                    ) {
-                      responseStatus = "error";
-                    } else {
-                      responseStatus = "success";
+              <div>
+                {sessionConnectionError && (
+                  <div
+                    className="text-center"
+                    style={{
+                      padding: theme.spacing.md,
+                      color: theme.colors.error,
+                    }}
+                  >
+                    {sessionConnectionError} You can view the chat history but
+                    cannot ask new questions, favorite, or edit messages.
+                  </div>
+                )}
+                {messages.map((message) => {
+                  let responseStatus: "loading" | "success" | "error" | null =
+                    null;
+                  if (!message.isBot) {
+                    const botResponse = messages.find(
+                      (msg) => msg.isBot && msg.parentId === message.id
+                    );
+                    if (botResponse) {
+                      if (botResponse.content === "loading...") {
+                        responseStatus = "loading";
+                      } else if (
+                        botResponse.content.includes(
+                          "Sorry, an error occurred."
+                        )
+                      ) {
+                        responseStatus = "error";
+                      } else {
+                        responseStatus = "success";
+                      }
                     }
                   }
-                }
-                return (
-                  <div
-                    className="flex flex-col w-full max-w-full"
-                    style={{ gap: theme.spacing.md }}
-                    key={message.id}
-                    ref={(el) => (messageRefs.current[message.id] = el)}
-                  >
-                    <ChatMessage
-                      message={message}
-                      loading={message.id === loadingMessageId}
-                      onEditMessage={handleEditMessage}
-                      selectedConnection={selectedConnection}
-                      onFavorite={handleFavoriteMessage}
-                      onUnfavorite={handleUnfavoriteMessage}
-                      isFavorited={message.isFavorited || false}
-                      responseStatus={responseStatus}
-                    />
-                  </div>
-                );
-              })
+                  return (
+                    <div
+                      className="flex flex-col w-full max-w-full"
+                      style={{ gap: theme.spacing.md }}
+                      key={message.id}
+                      ref={(el) => (messageRefs.current[message.id] = el)}
+                    >
+                      <ChatMessage
+                        message={message}
+                        loading={message.id === loadingMessageId}
+                        onEditMessage={handleEditMessage}
+                        selectedConnection={selectedConnection}
+                        onFavorite={handleFavoriteMessage}
+                        onUnfavorite={handleUnfavoriteMessage}
+                        isFavorited={message.isFavorited || false}
+                        responseStatus={responseStatus}
+                        disabled={!!sessionConnectionError}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -1106,6 +1142,7 @@ const ChatInterface = memo(
               selectedConnection={selectedConnection}
               onSelect={handleSelect}
               onNewChat={handleNewChat}
+              disabled={sessionConnectionError}
             />
           </div>
 

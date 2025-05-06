@@ -44,6 +44,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     onUnfavorite,
     isFavorited: initialIsFavorited,
     responseStatus,
+    disabled,
   }) => {
     const { theme } = useTheme();
     const [csvData, setCsvData] = useState<any[]>([]);
@@ -875,67 +876,70 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   boxShadow: `0 2px 6px ${theme.colors.text}20`,
                 }}
               >
-                <div className="absolute top-2 left-1 flex items-center gap-1">
-                  <CustomTooltip
-                    title={
-                      responseStatus === "loading" || responseStatus === "error"
-                        ? "Cannot favorite while response is loading or failed"
-                        : isFavorited
-                        ? "Remove from favorites"
-                        : "Add to favorites"
-                    }
-                    position="top"
-                  >
-                    <motion.button
-                      whileHover={{
-                        scale:
-                          loading ||
-                          responseStatus === "loading" ||
-                          responseStatus === "error"
-                            ? 1
-                            : 1.1,
-                      }}
-                      whileTap={{
-                        scale:
-                          loading ||
-                          responseStatus === "loading" ||
-                          responseStatus === "error"
-                            ? 1
-                            : 0.95,
-                      }}
-                      onClick={handleFavorite}
-                      className="p-1 rounded-full transition-colors"
-                      style={{
-                        color: isFavorited
-                          ? "#FF4D4D"
-                          : "rgba(255,255,255,0.8)",
-                        cursor:
-                          loading ||
-                          responseStatus === "loading" ||
-                          responseStatus === "error"
-                            ? "not-allowed"
-                            : "pointer",
-                        opacity:
-                          loading ||
-                          responseStatus === "loading" ||
-                          responseStatus === "error"
-                            ? 0.5
-                            : 1,
-                      }}
-                      disabled={
-                        loading ||
+                {!disabled && (
+                  <div className="absolute top-2 left-1 flex items-center gap-1">
+                    <CustomTooltip
+                      title={
                         responseStatus === "loading" ||
                         responseStatus === "error"
+                          ? "Cannot favorite while response is loading or failed"
+                          : isFavorited
+                          ? "Remove from favorites"
+                          : "Add to favorites"
                       }
+                      position="top"
                     >
-                      <Heart
-                        size={16}
-                        fill={isFavorited ? "currentColor" : "none"}
-                        strokeWidth={isFavorited ? 1.5 : 2}
-                      />
-                    </motion.button>
-                  </CustomTooltip>
-                </div>
+                      <motion.button
+                        whileHover={{
+                          scale:
+                            loading ||
+                            responseStatus === "loading" ||
+                            responseStatus === "error"
+                              ? 1
+                              : 1.1,
+                        }}
+                        whileTap={{
+                          scale:
+                            loading ||
+                            responseStatus === "loading" ||
+                            responseStatus === "error"
+                              ? 1
+                              : 0.95,
+                        }}
+                        onClick={handleFavorite}
+                        className="p-1 rounded-full transition-colors"
+                        style={{
+                          color: isFavorited
+                            ? "#FF4D4D"
+                            : "rgba(255,255,255,0.8)",
+                          cursor:
+                            loading ||
+                            responseStatus === "loading" ||
+                            responseStatus === "error"
+                              ? "not-allowed"
+                              : "pointer",
+                          opacity:
+                            loading ||
+                            responseStatus === "loading" ||
+                            responseStatus === "error"
+                              ? 0.5
+                              : 1,
+                        }}
+                        disabled={
+                          loading ||
+                          responseStatus === "loading" ||
+                          responseStatus === "error"
+                        }
+                      >
+                        <Heart
+                          size={16}
+                          fill={isFavorited ? "currentColor" : "none"}
+                          strokeWidth={isFavorited ? 1.5 : 2}
+                        />
+                      </motion.button>
+                    </CustomTooltip>
+                  </div>
+                )}
                 <p
                   className="ml-3 whitespace-pre-wrap break-words"
                   style={{ color: "white", fontSize: chatFontSizeValue }}
@@ -952,15 +956,17 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       minute: "2-digit",
                     })}
                   </span>
-                  <CustomTooltip title="Edit message" position="bottom">
-                    <button
-                      onClick={handleEdit}
-                      className="p-2 transition-colors duration-200 hover:opacity-80"
-                      style={{ color: "white" }}
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                  </CustomTooltip>
+                  {!disabled && (
+                    <CustomTooltip title="Edit message" position="bottom">
+                      <button
+                        onClick={handleEdit}
+                        className="p-2 transition-colors duration-200 hover:opacity-80"
+                        style={{ color: "white" }}
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                    </CustomTooltip>
+                  )}
                 </div>
               </div>
             ) : (

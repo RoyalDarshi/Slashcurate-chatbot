@@ -12,7 +12,6 @@ import {
   PlusCircle,
   Layers,
   Table2,
-  FileText,
 } from "lucide-react";
 import { ChatInputProps, Connection, DatabaseSchema } from "../types";
 import { useTheme } from "../ThemeContext";
@@ -37,9 +36,10 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     selectedConnection,
     onSelect,
     onNewChat,
+    disabled,
   }) => {
     const { theme } = useTheme();
-    const isDisabled = isSubmitting;
+    const isDisabled = isSubmitting || disabled;
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const dbExplorerRef = useRef<HTMLDivElement>(null);
@@ -849,15 +849,15 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                     borderRadius: theme.borderRadius.pill,
                   }}
                   onMouseOver={(e) =>
-                    !isDisabled &&
+                    !isSubmitting &&
                     (e.currentTarget.style.backgroundColor =
                       theme.colors.accentHover + "20")
                   }
                   onMouseOut={(e) =>
-                    !isDisabled &&
+                    !isSubmitting &&
                     (e.currentTarget.style.backgroundColor = "transparent")
                   }
-                  disabled={isDisabled}
+                  disabled={isSubmitting}
                 >
                   <PlusCircle
                     size={16}
