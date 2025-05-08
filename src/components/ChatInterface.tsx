@@ -6,6 +6,7 @@ import {
   memo,
   forwardRef,
   useImperativeHandle,
+  useReducer,
 } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -40,6 +41,30 @@ export type ChatInterfaceHandle = {
   ) => void;
 };
 
+// Reducer for managing messages
+type MessagesAction =
+  | { type: "SET_MESSAGES"; messages: Message[] }
+  | { type: "ADD_MESSAGE"; message: Message }
+  | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> };
+
+const messagesReducer = (
+  state: Message[],
+  action: MessagesAction
+): Message[] => {
+  switch (action.type) {
+    case "SET_MESSAGES":
+      return action.messages;
+    case "ADD_MESSAGE":
+      return [...state, action.message];
+    case "UPDATE_MESSAGE":
+      return state.map((msg) =>
+        msg.id === action.id ? { ...msg, ...action.message } : msg
+      );
+    default:
+      return state;
+  }
+};
+
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
     (
@@ -57,10 +82,7 @@ const ChatInterface = memo(
       );
       const [input, setInput] = useState("");
       const [isSubmitting, setIsSubmitting] = useState(false);
-      const messagesRef = useRef<Message[]>([]);
-      const messagesEndRef = useRef<HTMLDivElement>(null);
-      const chatContainerRef = useRef<HTMLDivElement>(null);
-      const [messages, setMessages] = useState<Message[]>([]);
+      const [messages, dispatchMessages] = useReducer(messagesReducer, []);
       const [connections, setConnections] = useState<Connection[]>([]);
       const [selectedConnection, setSelectedConnection] = useState<
         string | null
@@ -83,6 +105,8 @@ const ChatInterface = memo(
         string | null
       >(null);
       const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+      const messagesEndRef = useRef<HTMLDivElement>(null);
+      const chatContainerRef = useRef<HTMLDivElement>(null);
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
       const token = sessionStorage.getItem("token") ?? "";
 
@@ -92,44 +116,29 @@ const ChatInterface = memo(
 
       const scrollToMessage = useCallback((messageId: string) => {
         const messageRef = messageRefs.current[messageId];
-        if (messageRef) {
+        if (messageRef)
           messageRef.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
       }, []);
 
-      const prevMessagesLength = useRef(messages.length);
-
-      useEffect(() => {
-        if (!messages) return;
-        const isNewMessageAdded = messages.length > prevMessagesLength.current;
-        prevMessagesLength.current = messages.length;
-
-        if (isNewMessageAdded && !editingMessageId && !userHasScrolledUp) {
-          scrollToBottom();
-        }
-      }, [messages, scrollToBottom, editingMessageId, userHasScrolledUp]);
-
+      // Scroll behavior
       useEffect(() => {
         const handleScroll = () => {
           if (!chatContainerRef.current) return;
           const { scrollTop, clientHeight, scrollHeight } =
             chatContainerRef.current;
-          const atBottom = scrollTop + clientHeight >= scrollHeight - 10;
-          setUserHasScrolledUp(!atBottom);
+          setUserHasScrolledUp(scrollTop + clientHeight < scrollHeight - 10);
         };
-
         const chatContainer = chatContainerRef.current;
-        if (chatContainer) {
+        if (chatContainer)
           chatContainer.addEventListener("scroll", handleScroll);
-        }
-
-        return () => {
-          if (chatContainer) {
-            chatContainer.removeEventListener("scroll", handleScroll);
-          }
-        };
+        return () => chatContainer?.removeEventListener("scroll", handleScroll);
       }, []);
 
+      useEffect(() => {
+        if (!userHasScrolledUp && !editingMessageId) scrollToBottom();
+      }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
+
+      // Fetch connections
       const fetchConnections = useCallback(async () => {
         setConnectionsLoading(true);
         if (!token) {
@@ -146,21 +155,15 @@ const ChatInterface = memo(
         try {
           const response = await getUserConnections(token);
           setConnections(response.data.connections);
-
           if (response.data.connections.length === 0) {
             setSelectedConnection(null);
             localStorage.removeItem("selectedConnection");
           } else {
-            const storedConnectionName =
-              localStorage.getItem("selectedConnection");
+            const storedConnection = localStorage.getItem("selectedConnection");
             const defaultConnection =
               response.data.connections.find(
-                (conn: Connection) =>
-                  conn.connectionName === storedConnectionName
-              ) ||
-              response.data.connections[0] ||
-              null;
-
+                (conn: Connection) => conn.connectionName === storedConnection
+              ) || response.data.connections[0];
             setSelectedConnection(defaultConnection?.connectionName || null);
             localStorage.setItem(
               "selectedConnection",
@@ -169,18 +172,19 @@ const ChatInterface = memo(
           }
           setConnectionError(null);
         } catch (error) {
-          setSelectedConnection(null);
           console.error("Error fetching connections:", error);
           setConnectionError("Failed to make connection. Please try again.");
+          setSelectedConnection(null);
         } finally {
           setConnectionsLoading(false);
         }
-      }, [token]);
+      }, [token, theme, mode]);
 
+      // Fetch session
       const fetchSession = useCallback(
         async (sessionId: string) => {
+          setConnectionsLoading(true);
           try {
-            setConnectionsLoading(true);
             const response = await axios.get(
               `${API_URL}/api/sessions/${sessionId}`,
               {
@@ -190,8 +194,10 @@ const ChatInterface = memo(
                 },
               }
             );
-            messagesRef.current = response.data.messages || [];
-            setMessages(response.data.messages || []);
+            dispatchMessages({
+              type: "SET_MESSAGES",
+              messages: response.data.messages || [],
+            });
             setCurrentSessionId(sessionId);
             if (response.data.connection) {
               setSelectedConnection(response.data.connection);
@@ -206,32 +212,32 @@ const ChatInterface = memo(
               );
               localStorage.removeItem("selectedConnection");
             }
-            setTimeout(() => scrollToBottom(), 300);
+            setTimeout(scrollToBottom, 300);
           } catch (error) {
             console.error("Error fetching session:", error);
-            setMessages([]);
             setSessionConnectionError("Failed to load session.");
+            dispatchMessages({ type: "SET_MESSAGES", messages: [] });
           } finally {
             setConnectionsLoading(false);
           }
         },
-        [token]
+        [token, scrollToBottom]
       );
 
+      // Initial load
       useEffect(() => {
-        const loadInitialMessages = async () => {
+        const loadInitialData = async () => {
           const storedSessionId = localStorage.getItem("currentSessionId");
-          if (storedSessionId) {
-            await fetchSession(storedSessionId);
-          }
+          if (storedSessionId) await fetchSession(storedSessionId);
           await fetchConnections();
         };
-        loadInitialMessages();
+        loadInitialData();
       }, [fetchConnections, fetchSession]);
 
+      // Fetch recommended questions
       useEffect(() => {
-        const fetchRecommendedQuestions = async () => {
-          if (token) {
+        const fetchRecQuestions = async () => {
+          if (token && !currentSessionId) {
             try {
               const data = await getRecommendedQuestions(token);
               setRecommendedQuestions(data);
@@ -240,14 +246,13 @@ const ChatInterface = memo(
             }
           }
         };
-        if (!currentSessionId) {
-          fetchRecommendedQuestions();
-        }
-      }, []);
+        fetchRecQuestions();
+      }, [token, currentSessionId]);
 
+      // Handle initial question
       useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
-          if (!selectedConnection && connections.length > 0) {
+          if (!selectedConnection) {
             const defaultConnection = connections[0];
             setSelectedConnection(defaultConnection.connectionName);
             localStorage.setItem(
@@ -269,6 +274,211 @@ const ChatInterface = memo(
         selectedConnection,
         onQuestionAsked,
       ]);
+
+      // Centralized question-asking logic
+      const askQuestion = useCallback(
+        async (
+          question: string,
+          connection: string,
+          isFavorited: boolean,
+          query?: string
+        ) => {
+          if (!connection) {
+            toast.error("No connection provided.");
+            return;
+          }
+
+          let sessionId = currentSessionId;
+          const useExistingSession =
+            sessionId && selectedConnection === connection;
+
+          if (!useExistingSession) {
+            try {
+              const response = await axios.post(
+                `${API_URL}/api/sessions`,
+                {
+                  token,
+                  currentConnection: connection,
+                  title: question.substring(0, 50) + "...",
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+              sessionId = response.data.id;
+              setCurrentSessionId(sessionId);
+              localStorage.setItem("currentSessionId", sessionId??"");
+              setSelectedConnection(connection);
+              localStorage.setItem("selectedConnection", connection);
+              dispatchMessages({ type: "SET_MESSAGES", messages: [] });
+            } catch (error) {
+              console.error("Error creating session:", error);
+              toast.error("Failed to create session.");
+              return;
+            }
+          }
+
+          const userMessage: Message = {
+            id: Date.now().toString(),
+            content: question,
+            isBot: false,
+            timestamp: new Date().toISOString(),
+            isFavorited,
+            parentId: null,
+          };
+          const botLoadingMessage: Message = {
+            id: `loading-${Date.now()}`,
+            isBot: true,
+            content: "loading...",
+            timestamp: new Date().toISOString(),
+            isFavorited: false,
+            parentId: userMessage.id,
+          };
+
+          try {
+            const userResponse = await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: question,
+                isBot: false,
+                isFavorited,
+                parentId: null,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            userMessage.id = userResponse.data.id;
+          } catch (error) {
+            console.error("Error saving user message:", error);
+            toast.error("Failed to save message.");
+            return;
+          }
+
+          setLoadingMessageId(botLoadingMessage.id);
+          dispatchMessages({ type: "ADD_MESSAGE", message: userMessage });
+          dispatchMessages({ type: "ADD_MESSAGE", message: botLoadingMessage });
+
+          try {
+            const connectionObj = connections.find(
+              (conn) => conn.connectionName === connection
+            );
+            if (!connectionObj) throw new Error("Connection not found");
+
+            const payload = query
+              ? { question, sql_query: query, connection: connectionObj }
+              : { question, connection: connectionObj };
+            const response = await axios.post(
+              `${CHATBOT_API_URL}/ask`,
+              payload
+            );
+
+            const botResponse: Message = {
+              id: Date.now().toString(),
+              content: JSON.stringify(response.data, null, 2),
+              isBot: true,
+              timestamp: new Date().toISOString(),
+              isFavorited,
+              parentId: userMessage.id,
+            };
+
+            const botResponseData = await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: botResponse.content,
+                isBot: true,
+                isFavorited,
+                parentId: userMessage.id,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            botResponse.id = botResponseData.data.id;
+
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botLoadingMessage.id,
+              message: botResponse,
+            });
+            setTimeout(() => scrollToMessage(botResponse.id), 100);
+          } catch (error) {
+            console.error("Error getting bot response:", error);
+            const errorMessage: Message = {
+              id: botLoadingMessage.id,
+              content: "Sorry, an error occurred. Please try again.",
+              isBot: true,
+              timestamp: new Date().toISOString(),
+              isFavorited: false,
+              parentId: userMessage.id,
+            };
+            await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: errorMessage.content,
+                isBot: true,
+                parentId: userMessage.id,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botLoadingMessage.id,
+              message: errorMessage,
+            });
+            setTimeout(() => scrollToMessage(errorMessage.id), 100);
+          } finally {
+            setLoadingMessageId(null);
+          }
+        },
+        [
+          currentSessionId,
+          selectedConnection,
+          connections,
+          token,
+          scrollToMessage,
+          theme,
+          mode,
+        ]
+      );
+
+      const handleSubmit = useCallback(
+        async (e: React.FormEvent) => {
+          e.preventDefault();
+          if (!input.trim() || isSubmitting) return;
+          if (!selectedConnection) {
+            toast.error("No connection selected.", {
+              style: {
+                background: theme.colors.surface,
+                color: theme.colors.error,
+              },
+              theme: mode,
+            });
+            return;
+          }
+          setIsSubmitting(true);
+          await askQuestion(input, selectedConnection, false);
+          setInput("");
+          setIsSubmitting(false);
+        },
+        [input, isSubmitting, selectedConnection, askQuestion, theme, mode]
+      );
+
+      const handleAskFavoriteQuestion = useCallback(
+        async (question: string, connection: string, query?: string) => {
+          await askQuestion(question, connection, true, query);
+        },
+        [askQuestion]
+      );
+
+      const handleNewChat = useCallback(() => {
+        dispatchMessages({ type: "SET_MESSAGES", messages: [] });
+        setInput("");
+        setEditingMessageId(null);
+        setCurrentSessionId(null);
+        setSessionConnectionError(null);
+        localStorage.removeItem("currentSessionId");
+      }, []);
 
       const handleSelect = useCallback(
         async (option: any) => {
@@ -294,429 +504,33 @@ const ChatInterface = memo(
             localStorage.removeItem("selectedConnection");
           }
         },
-        [onCreateConSelected, connections]
-      );
-
-      const handleNewChat = useCallback(async () => {
-        messagesRef.current = [];
-        setMessages([]);
-        setInput("");
-        setEditingMessageId(null);
-        setCurrentSessionId(null);
-        setSessionConnectionError(null); // Reset connection error
-        localStorage.removeItem("currentSessionId");
-      }, []);
-
-      const handleAskFavoriteQuestion = useCallback(
-        async (question: string, connection: string, query?: string) => {
-          console.log("Asking favorite question:", question);
-          console.log("Favorite connection:", connection);
-          console.log("Query:", query);
-
-          if (!selectedConnection && connections.length > 0) {
-            const defaultConnection = connections[0];
-            setSelectedConnection(defaultConnection.connectionName);
-            localStorage.setItem(
-              "selectedConnection",
-              defaultConnection.connectionName
-            );
-          } else if (!selectedConnection) {
-            toast.error(
-              "No connection selected. Please select a connection first.",
-              {
-                style: {
-                  background: theme.colors.surface,
-                  color: theme.colors.error,
-                  border: `1px solid ${theme.colors.error}20`,
-                },
-                theme: mode,
-              }
-            );
-            return;
-          }
-
-          // Determine if we can use the existing session
-          const shouldUseExistingSession =
-            currentSessionId && selectedConnection === connection;
-
-          if (!shouldUseExistingSession) {
-            console.log("Starting new session with connection:", connection);
-            await handleNewChat(); // Clear current session and messages
-            setSelectedConnection(connection);
-            localStorage.setItem("selectedConnection", connection || "");
-          } else {
-            console.log("Using existing session:", currentSessionId);
-          }
-
-          let sessionId: string;
-
-          if (shouldUseExistingSession) {
-            sessionId = currentSessionId!;
-          } else {
-            try {
-              const response = await axios.post(
-                `${API_URL}/api/sessions`,
-                {
-                  token,
-                  currentConnection: connection,
-                  title: question.substring(0, 50) + "...",
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-              sessionId = response.data.id;
-              setCurrentSessionId(sessionId);
-              localStorage.setItem("currentSessionId", sessionId);
-            } catch (error) {
-              console.error("Error creating session:", error);
-              toast.error("Failed to create session.");
-              return;
-            }
-          }
-
-          const userMessage: Message = {
-            id: Date.now().toString(),
-            content: question,
-            isBot: false,
-            timestamp: new Date().toISOString(),
-            isFavorited: true,
-            parentId: null,
-          };
-          const botLoadingMessage: Message = {
-            id: `loading-${Date.now()}`,
-            isBot: true,
-            content: "loading...",
-            timestamp: new Date().toISOString(),
-            isFavorited: false,
-            parentId: userMessage.id,
-          };
-
-          try {
-            const userMessageResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: sessionId,
-                content: question,
-                isBot: false,
-                isFavorited: true,
-                parentId: null,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            userMessage.id = userMessageResponse.data.id;
-          } catch (error) {
-            console.error("Error saving user message:", error);
-            toast.error("Failed to save message.");
-            return;
-          }
-
-          setLoadingMessageId(botLoadingMessage.id);
-          messagesRef.current = [
-            ...messagesRef.current,
-            userMessage,
-            botLoadingMessage,
-          ];
-          setMessages([...messagesRef.current]);
-
-          try {
-            const selectedConnectionObj = connections.find(
-              (conn) => conn.connectionName === connection
-            );
-            if (!selectedConnectionObj) {
-              throw new Error("Selected connection not found");
-            }
-
-            const payload = query
-              ? {
-                  question,
-                  sql_query: query,
-                  connection: selectedConnectionObj,
-                }
-              : { question, connection: selectedConnectionObj };
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              payload
-            );
-
-            const botResponseMessage: Message = {
-              id: Date.now().toString(),
-              content: JSON.stringify(response.data, null, 2),
-              isBot: true,
-              timestamp: new Date().toISOString(),
-              isFavorited: true,
-              parentId: userMessage.id,
-            };
-
-            const botMessageResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: sessionId,
-                content: botResponseMessage.content,
-                isBot: true,
-                isFavorited: true,
-                parentId: userMessage.id,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            botResponseMessage.id = botMessageResponse.data.id;
-            messagesRef.current = messagesRef.current.map((msg) =>
-              msg.id === botLoadingMessage.id ? botResponseMessage : msg
-            );
-            setMessages([...messagesRef.current]);
-            setTimeout(() => scrollToMessage(botResponseMessage.id), 100);
-          } catch (error) {
-            console.error("Error getting bot response:", error);
-            const errorMessage: Message = {
-              id: Date.now().toString(),
-              content: "Sorry, an error occurred. Please try again.",
-              isBot: true,
-              timestamp: new Date().toISOString(),
-              isFavorited: false,
-              parentId: userMessage.id,
-            };
-
-            await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: sessionId,
-                content: errorMessage.content,
-                isBot: true,
-                parentId: userMessage.id,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-
-            messagesRef.current = messagesRef.current.map((msg) =>
-              msg.id === botLoadingMessage.id ? errorMessage : msg
-            );
-            setMessages([...messagesRef.current]);
-            setTimeout(() => scrollToMessage(errorMessage.id), 100);
-          } finally {
-            setLoadingMessageId(null);
-          }
-        },
-        [
-          selectedConnection,
-          connections,
-          currentSessionId,
-          scrollToMessage,
-          theme,
-          mode,
-          token,
-          handleNewChat,
-        ]
-      );
-
-      useImperativeHandle(ref, () => ({
-        handleNewChat,
-        handleAskFavoriteQuestion,
-      }));
-
-      const handleSubmit = useCallback(
-        async (e: React.FormEvent) => {
-          e.preventDefault();
-          if (!input.trim() || isSubmitting) return;
-          if (!selectedConnection) {
-            toast.error(
-              "No connection selected. Please create or select a connection first.",
-              {
-                style: {
-                  background: theme.colors.surface,
-                  color: theme.colors.error,
-                  border: `1px solid ${theme.colors.error}20`,
-                },
-                theme: mode,
-              }
-            );
-            return;
-          }
-
-          setIsSubmitting(true);
-
-          const userMessage: Message = {
-            id: Date.now().toString(),
-            content: input,
-            isBot: false,
-            timestamp: new Date().toISOString(),
-            isFavorited: false,
-            parentId: null,
-          };
-          const botLoadingMessage: Message = {
-            id: `loading-${Date.now()}`,
-            isBot: true,
-            content: "loading...",
-            timestamp: new Date().toISOString(),
-            isFavorited: false,
-            parentId: userMessage.id,
-          };
-
-          let sessionId = currentSessionId;
-          if (!sessionId) {
-            try {
-              const response = await axios.post(
-                `${API_URL}/api/sessions`,
-                {
-                  token,
-                  currentConnection: selectedConnection,
-                  title: input.substring(0, 50) + "...",
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-              sessionId = response.data.id;
-              setCurrentSessionId(sessionId);
-              localStorage.setItem("currentSessionId", sessionId || "");
-            } catch (error) {
-              console.error("Error creating session:", error);
-              toast.error("Failed to create session.");
-              setIsSubmitting(false);
-              return;
-            }
-          }
-
-          try {
-            const userMessageResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: sessionId,
-                content: input,
-                isBot: false,
-                parentId: null,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            userMessage.id = userMessageResponse.data.id;
-
-            setLoadingMessageId(botLoadingMessage.id);
-            messagesRef.current = [
-              ...messagesRef.current,
-              userMessage,
-              botLoadingMessage,
-            ];
-            setMessages([...messagesRef.current]);
-            setInput("");
-            setEditingMessageId(null);
-
-            const selectedConnectionObj = connections.find(
-              (conn) => conn.connectionName === selectedConnection
-            );
-            if (!selectedConnectionObj)
-              throw new Error("Selected connection not found");
-
-            const response = await askChatbot(input, selectedConnectionObj);
-
-            const botResponseMessage: Message = {
-              id: botLoadingMessage.id,
-              content: JSON.stringify(response.data, null, 2),
-              isBot: true,
-              timestamp: new Date().toISOString(),
-              isFavorited: false,
-              parentId: userMessage.id,
-            };
-
-            const botResponseResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: sessionId,
-                content: botResponseMessage.content,
-                isBot: true,
-                parentId: userMessage.id,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            const serverBotId = botResponseResponse.data.id;
-            botResponseMessage.id = serverBotId;
-
-            messagesRef.current = messagesRef.current.map((msg) =>
-              msg.id === botLoadingMessage.id ? botResponseMessage : msg
-            );
-            setMessages([...messagesRef.current]);
-            setTimeout(() => scrollToMessage(serverBotId), 100);
-          } catch (error) {
-            console.error("Error in handleSubmit:", error);
-            const errorMessage: Message = {
-              id: botLoadingMessage.id,
-              content: "Sorry, an error occurred. Please try again.",
-              isBot: true,
-              timestamp: new Date().toISOString(),
-              isFavorited: false,
-              parentId: userMessage.id,
-            };
-
-            const errorResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: sessionId,
-                content: errorMessage.content,
-                isBot: true,
-                parentId: userMessage.id,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            errorMessage.id = errorResponse.data.id;
-
-            messagesRef.current = messagesRef.current.map((msg) =>
-              msg.id === botLoadingMessage.id ? errorMessage : msg
-            );
-            setMessages([...messagesRef.current]);
-            setTimeout(() => scrollToMessage(errorMessage.id), 100);
-          } finally {
-            setLoadingMessageId(null);
-            setIsSubmitting(false);
-          }
-        },
-        [
-          input,
-          isSubmitting,
-          selectedConnection,
-          connections,
-          currentSessionId,
-          scrollToMessage,
-          theme,
-          mode,
-          token,
-        ]
+        [onCreateConSelected, connections, handleNewChat]
       );
 
       const handleFavoriteMessage = useCallback(
         async (messageId: string) => {
-          if (!messages || !token) {
-            toast.error("Cannot favorite message: Messages or token missing.");
-            return;
-          }
-
-          if (!selectedConnection) {
+          if (!token || !selectedConnection) {
             toast.error(
-              "No connection selected. Please select a connection first.",
+              "Cannot favorite message: Missing token or connection.",
               {
                 style: {
                   background: theme.colors.surface,
                   color: theme.colors.error,
-                  border: `1px solid ${theme.colors.error}20`,
                 },
                 theme: mode,
               }
             );
             return;
           }
-
+          const questionMessage = messages.find((msg) => msg.id === messageId);
+          if (!questionMessage || questionMessage.isBot) {
+            toast.error("Invalid question message.");
+            return;
+          }
           try {
-            const questionMessage = messages.find(
-              (msg) => msg.id === messageId
-            );
-            if (!questionMessage || questionMessage.isBot) {
-              toast.error("Invalid question message.");
-              return;
-            }
-
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId
             );
-
             await axios.post(
               `${API_URL}/favorite`,
               {
@@ -730,14 +544,18 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-
-            messagesRef.current = messagesRef.current.map((msg) => {
-              if (msg.id === messageId) return { ...msg, isFavorited: true };
-              if (msg.id === responseMessage?.id)
-                return { ...msg, isFavorited: true };
-              return msg;
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: messageId,
+              message: { isFavorited: true },
             });
-            setMessages([...messagesRef.current]);
+            if (responseMessage) {
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: responseMessage.id,
+                message: { isFavorited: true },
+              });
+            }
           } catch (error) {
             console.error("Error favoriting message:", error);
             toast.error("Failed to favorite message.");
@@ -748,13 +566,10 @@ const ChatInterface = memo(
 
       const handleUnfavoriteMessage = useCallback(
         async (messageId: string) => {
-          if (!messages || !token) {
-            toast.error(
-              "Cannot unfavorite message: Messages or token missing."
-            );
+          if (!token) {
+            toast.error("Cannot unfavorite message: Token missing.");
             return;
           }
-
           try {
             await axios.post(
               `${API_URL}/unfavorite`,
@@ -765,69 +580,59 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId
             );
-
-            messagesRef.current = messagesRef.current.map((msg) => {
-              if (msg.id === messageId || msg.id === responseMessage?.id) {
-                return { ...msg, isFavorited: false };
-              }
-              return msg;
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: messageId,
+              message: { isFavorited: false },
             });
-            setMessages([...messagesRef.current]);
+            if (responseMessage) {
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: responseMessage.id,
+                message: { isFavorited: false },
+              });
+            }
           } catch (error) {
             console.error("Error unfavoriting message:", error);
             toast.error("Failed to unfavorite message.");
           }
         },
-        [token, messages]
+        [token, messages, selectedConnection]
       );
 
       const handleEditMessage = useCallback(
         async (id: string, newContent: string) => {
           if (!selectedConnection) {
-            toast.error(
-              "No connection selected. Please create or select a connection first.",
-              {
-                style: {
-                  background: theme.colors.surface,
-                  color: theme.colors.error,
-                  border: `1px solid ${theme.colors.error}20`,
-                },
-                theme: mode,
-              }
-            );
+            toast.error("No connection selected.", {
+              style: {
+                background: theme.colors.surface,
+                color: theme.colors.error,
+              },
+              theme: mode,
+            });
             return;
           }
-
-          const messageIndex = messagesRef.current.findIndex(
-            (msg) => msg.id === id
-          );
-          if (messageIndex === -1) return;
-
           try {
             await axios.put(
               `${API_URL}/api/messages/${id}`,
               { token, content: newContent },
               { headers: { "Content-Type": "application/json" } }
             );
-            messagesRef.current = messagesRef.current.map((msg) =>
-              msg.id === id
-                ? { ...msg, content: newContent, isFavorited: false }
-                : msg
-            );
-            setMessages([...messagesRef.current]);
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id,
+              message: { content: newContent, isFavorited: false },
+            });
             setEditingMessageId(id);
 
-            const editedMessage = messagesRef.current[messageIndex];
-            if (!editedMessage.isBot && selectedConnection) {
-              const responseMessage = messagesRef.current.find(
+            const editedMessage = messages.find((msg) => msg.id === id);
+            if (!editedMessage?.isBot) {
+              const responseMessage = messages.find(
                 (msg) => msg.parentId === id
               );
-              console.log("Response message:", responseMessage);
-
               const botLoadingMessage: Message = {
                 id: responseMessage
                   ? responseMessage.id
@@ -840,30 +645,27 @@ const ChatInterface = memo(
               };
 
               setLoadingMessageId(botLoadingMessage.id);
-
               if (responseMessage) {
-                messagesRef.current = messagesRef.current.map((msg) =>
-                  msg.id === responseMessage.id ? botLoadingMessage : msg
-                );
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: responseMessage.id,
+                  message: botLoadingMessage,
+                });
               } else {
-                messagesRef.current.splice(
-                  messageIndex + 1,
-                  0,
-                  botLoadingMessage
-                );
+                dispatchMessages({
+                  type: "ADD_MESSAGE",
+                  message: botLoadingMessage,
+                });
               }
-              setMessages([...messagesRef.current]);
 
               try {
-                const selectedConnectionObj = connections.find(
+                const connectionObj = connections.find(
                   (conn) => conn.connectionName === selectedConnection
                 );
-                if (!selectedConnectionObj)
-                  throw new Error("Selected connection not found");
-
+                if (!connectionObj) throw new Error("Connection not found");
                 const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
                   question: newContent,
-                  connection: selectedConnectionObj,
+                  connection: connectionObj,
                 });
 
                 const botResponse: Message = {
@@ -895,11 +697,11 @@ const ChatInterface = memo(
                     { headers: { "Content-Type": "application/json" } }
                   );
                 }
-
-                messagesRef.current = messagesRef.current.map((msg) =>
-                  msg.id === botLoadingMessage.id ? botResponse : msg
-                );
-                setMessages([...messagesRef.current]);
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botLoadingMessage.id,
+                  message: botResponse,
+                });
                 setTimeout(() => scrollToMessage(botResponse.id), 100);
               } catch (error) {
                 console.error("Error updating bot response:", error);
@@ -911,7 +713,6 @@ const ChatInterface = memo(
                   isFavorited: false,
                   parentId: id,
                 };
-
                 if (responseMessage) {
                   await axios.put(
                     `${API_URL}/api/messages/${responseMessage.id}`,
@@ -927,16 +728,15 @@ const ChatInterface = memo(
                       content: errorMessage.content,
                       isBot: true,
                       parentId: id,
-                      isFavorited: false,
                     },
                     { headers: { "Content-Type": "application/json" } }
                   );
                 }
-
-                messagesRef.current = messagesRef.current.map((msg) =>
-                  msg.id === botLoadingMessage.id ? errorMessage : msg
-                );
-                setMessages([...messagesRef.current]);
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botLoadingMessage.id,
+                  message: errorMessage,
+                });
                 setTimeout(() => scrollToMessage(errorMessage.id), 100);
               } finally {
                 setLoadingMessageId(null);
@@ -952,12 +752,17 @@ const ChatInterface = memo(
           selectedConnection,
           connections,
           currentSessionId,
+          token,
           scrollToMessage,
           theme,
           mode,
-          token,
         ]
       );
+
+      useImperativeHandle(ref, () => ({
+        handleNewChat,
+        handleAskFavoriteQuestion,
+      }));
 
       return (
         <div
@@ -973,7 +778,6 @@ const ChatInterface = memo(
               padding: theme.spacing.sm,
             }}
           />
-
           <div
             ref={chatContainerRef}
             className="flex-1 overflow-y-auto"
@@ -1052,17 +856,15 @@ const ChatInterface = memo(
                       (msg) => msg.isBot && msg.parentId === message.id
                     );
                     if (botResponse) {
-                      if (botResponse.content === "loading...") {
+                      if (botResponse.content === "loading...")
                         responseStatus = "loading";
-                      } else if (
+                      else if (
                         botResponse.content.includes(
                           "Sorry, an error occurred."
                         )
-                      ) {
+                      )
                         responseStatus = "error";
-                      } else {
-                        responseStatus = "success";
-                      }
+                      else responseStatus = "success";
                     }
                   }
                   return (
@@ -1090,7 +892,6 @@ const ChatInterface = memo(
             )}
             <div ref={messagesEndRef} />
           </div>
-
           <div
             style={{
               position: "sticky",
@@ -1126,7 +927,6 @@ const ChatInterface = memo(
                       justifyContent: "center",
                       boxShadow: theme.shadow.md,
                     }}
-                    title="Scroll Bottom"
                   >
                     <ArrowDown size={20} />
                   </button>
@@ -1142,10 +942,9 @@ const ChatInterface = memo(
               selectedConnection={selectedConnection}
               onSelect={handleSelect}
               onNewChat={handleNewChat}
-              disabled={sessionConnectionError}
+              disabled={!!sessionConnectionError}
             />
           </div>
-
           {connectionError && (
             <div
               className="text-center"

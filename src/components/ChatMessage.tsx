@@ -712,7 +712,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               style={{ position: "relative" }}
             >
               {renderContent()}
-              {!loading && (
+              {!loading && !disabled && (
                 <div className="flex justify-end items-center gap-2">
                   <CustomTooltip
                     title={isLiked ? "Remove like" : "Like this response"}
