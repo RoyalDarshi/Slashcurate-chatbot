@@ -8,6 +8,7 @@ import {
   Loader2,
   Trash2,
   BookmarkCheck,
+  AlertCircle,
 } from "lucide-react";
 import { API_URL } from "../config";
 import axios from "axios";
@@ -102,24 +103,6 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
   };
 
   const clearSearch = () => setSearchQuery("");
-
-  // const getCategories = () => {
-  //   const categories = new Set(["all"]);
-  //   favorites.forEach((fav) => {
-  //     const text = fav.text.toLowerCase();
-  //     if (text.includes("how") || text.includes("explain"))
-  //       categories.add("questions");
-  //     if (
-  //       text.includes("code") ||
-  //       text.includes("javascript") ||
-  //       text.includes("react")
-  //     )
-  //       categories.add("coding");
-  //     if (text.includes("help") || text.includes("advice"))
-  //       categories.add("help");
-  //   });
-  //   return Array.from(categories);
-  // };
 
   const getRelativeTime = (timestamp?: string) => {
     if (!timestamp) return "";
@@ -307,39 +290,6 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
               </div>
             )}
           </div>
-
-          {/* <div className="flex overflow-x-auto pb-2 px-1 gap-2">
-            {getCategories().map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm`}
-                style={{
-                  backgroundColor:
-                    selectedCategory === category
-                      ? theme.colors.accent
-                      : theme.colors.surface,
-                  color:
-                    selectedCategory === category
-                      ? "#ffffff"
-                      : theme.colors.text,
-                  border: `1px solid ${
-                    selectedCategory === category
-                      ? theme.colors.accent
-                      : theme.colors.border
-                  }`,
-                  boxShadow:
-                    selectedCategory === category
-                      ? theme.shadow.md
-                      : theme.shadow.sm,
-                  transform:
-                    selectedCategory === category ? "scale(1.05)" : "scale(1)",
-                }}
-              >
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </button>
-            ))}
-          </div> */}
         </div>
 
         {/* Loading State */}
@@ -362,73 +312,279 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
           <>
             {viewMode === "grid" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className="rounded-lg overflow-hidden transition-all hover:scale-[1.02] group"
-                    style={{
-                      backgroundColor: theme.colors.surface,
-                      border: `1px solid ${theme.colors.border}`,
-                      boxShadow: theme.shadow.sm,
-                      opacity: animateId === message.id ? 0 : 1,
-                      transform:
-                        animateId === message.id
-                          ? "translateY(100%)"
-                          : "translateY(0)",
-                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                    }}
-                  >
+                {filteredMessages.map((message) => {
+                  // Check if favorite has a connection
+                  const hasConnection = Boolean(message.connection !== "");
+
+                  return (
                     <div
-                      className="p-5 cursor-pointer"
-                      onClick={() =>
-                        onFavoriteSelected(
-                          message.text,
-                          message.connection,
-                          message.query
-                        )
-                      }
+                      key={message.id}
+                      className={`rounded-lg overflow-hidden transition-all group relative ${
+                        hasConnection ? "hover:scale-[1.02]" : "opacity-75"
+                      }`}
+                      style={{
+                        backgroundColor: theme.colors.surface,
+                        border: `1px solid ${theme.colors.border}`,
+                        boxShadow: theme.shadow.sm,
+                        opacity: animateId === message.id ? 0 : 1,
+                        transform:
+                          animateId === message.id
+                            ? "translateY(100%)"
+                            : "translateY(0)",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
                     >
-                      <div className="flex justify-between items-start mb-3 gap-2">
-                        <div
-                          className="text-xs py-1 px-2 rounded-full flex-shrink-0"
+                      <div
+                        className={`p-5 ${
+                          hasConnection
+                            ? "cursor-pointer"
+                            : "cursor-not-allowed"
+                        }`}
+                        onClick={
+                          hasConnection
+                            ? () =>
+                                onFavoriteSelected(
+                                  message.text,
+                                  message.connection,
+                                  message.query
+                                )
+                            : undefined
+                        }
+                        role="button"
+                        aria-disabled={!hasConnection}
+                        tabIndex={hasConnection ? 0 : -1}
+                      >
+                        <div className="flex justify-between items-start mb-3 gap-2">
+                          <div
+                            className="text-xs py-1 px-2 rounded-full flex-shrink-0"
+                            style={{
+                              backgroundColor: theme.colors.accent + "20",
+                              color: theme.colors.accent,
+                            }}
+                          >
+                            {getRelativeTime(message.timestamp)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {deleteConfirmId === message.id ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveFavorite(message.id);
+                                  }}
+                                  className="p-1 rounded-full focus:outline-none hover:opacity-90 transition-all"
+                                  style={{
+                                    backgroundColor: theme.colors.error + "20",
+                                    color: theme.colors.error,
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirmId(null);
+                                  }}
+                                  className="p-1 rounded-full focus:outline-none hover:opacity-90 transition-all"
+                                  style={{
+                                    backgroundColor: theme.colors.border,
+                                    color: theme.colors.textSecondary,
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <CustomTooltip
+                                title="Remove from favorites"
+                                position="top"
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirmId(message.id);
+                                  }}
+                                  className="rounded-full focus:outline-none hover:opacity-90 transition-all opacity-0 group-hover:opacity-100"
+                                  style={{
+                                    color: theme.colors.accent,
+                                  }}
+                                >
+                                  <Heart className="w-4 h-4 fill-current" />
+                                </button>
+                              </CustomTooltip>
+                            )}
+                          </div>
+                        </div>
+                        <p
+                          className="line-clamp-3 mb-3 text-base min-h-[4.5rem]"
                           style={{
-                            backgroundColor: theme.colors.accent + "20",
-                            color: theme.colors.accent,
+                            color: hasConnection
+                              ? theme.colors.text
+                              : theme.colors.textSecondary,
                           }}
                         >
-                          {getRelativeTime(message.timestamp)}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {deleteConfirmId === message.id ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveFavorite(message.id);
-                                }}
-                                className="p-1 rounded-full focus:outline-none hover:opacity-90 transition-all"
-                                style={{
-                                  backgroundColor: theme.colors.error + "20",
-                                  color: theme.colors.error,
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteConfirmId(null);
-                                }}
-                                className="p-1 rounded-full focus:outline-none hover:opacity-90 transition-all"
-                                style={{
-                                  backgroundColor: theme.colors.border,
-                                  color: theme.colors.textSecondary,
-                                }}
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
+                          {message.text}
+                        </p>
+                        <div className="flex justify-between items-center mt-2">
+                          {!hasConnection ? (
+                            <div
+                              className="flex items-center text-xs"
+                              style={{ color: theme.colors.error }}
+                            >
+                              <AlertCircle size={12} className="mr-1" />
+                              <span>Connection required</span>
                             </div>
                           ) : (
+                            <div
+                              className="text-xs opacity-70"
+                              style={{ color: theme.colors.textSecondary }}
+                            >
+                              {message.query
+                                ? "Custom query attached"
+                                : "Standard query"}
+                            </div>
+                          )}
+                          {hasConnection && (
+                            <ChevronRight
+                              size={18}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ color: theme.colors.accent }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      {/* Add disabled overlay for items without connection */}
+                      {!hasConnection && (
+                        <div
+                          className="absolute top-0 right-0 px-2 py-1 rounded-bl-md text-xs font-medium"
+                          style={{
+                            backgroundColor: theme.colors.error + "20",
+                            color: theme.colors.error,
+                          }}
+                        >
+                          Disabled
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredMessages.map((message) => {
+                  // Check if favorite has a connection
+                  const hasConnection = Boolean(message.connection);
+
+                  return (
+                    <div
+                      key={message.id}
+                      className={`p-4 rounded-lg flex items-center justify-between gap-4 transition-all group relative ${
+                        hasConnection
+                          ? "cursor-pointer hover:scale-[1.01]"
+                          : "cursor-not-allowed opacity-75"
+                      }`}
+                      style={{
+                        backgroundColor: theme.colors.surface,
+                        border: `1px solid ${theme.colors.border}`,
+                        boxShadow: theme.shadow.sm,
+                        opacity: animateId === message.id ? 0 : 1,
+                        transform:
+                          animateId === message.id
+                            ? "translateX(100%)"
+                            : "translateX(0)",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                      onClick={
+                        hasConnection
+                          ? () =>
+                              onFavoriteSelected(
+                                message.text,
+                                message.connection,
+                                message.query
+                              )
+                          : undefined
+                      }
+                      role="button"
+                      aria-disabled={!hasConnection}
+                      tabIndex={hasConnection ? 0 : -1}
+                    >
+                      <div className="flex-1 mr-4 overflow-hidden flex items-center gap-4 min-w-0">
+                        <div
+                          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                          style={{
+                            backgroundColor: hasConnection
+                              ? theme.colors.accent
+                              : theme.colors.textSecondary + "50",
+                          }}
+                        >
+                          {hasConnection ? (
+                            <Heart size={14} className="text-white" />
+                          ) : (
+                            <AlertCircle size={14} className="text-white" />
+                          )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span
+                            className="block truncate"
+                            style={{
+                              color: hasConnection
+                                ? theme.colors.text
+                                : theme.colors.textSecondary,
+                            }}
+                          >
+                            {message.text}
+                          </span>
+                          <span
+                            className="text-xs truncate flex items-center"
+                            style={{
+                              color: !hasConnection
+                                ? theme.colors.error
+                                : theme.colors.textSecondary,
+                            }}
+                          >
+                            {!hasConnection ? (
+                              <>
+                                <AlertCircle size={10} className="mr-1" />
+                                Connection required
+                              </>
+                            ) : (
+                              getRelativeTime(message.timestamp)
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {deleteConfirmId === message.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFavorite(message.id);
+                              }}
+                              className="p-1 rounded-md focus:outline-none hover:opacity-90 transition-all text-xs whitespace-nowrap"
+                              style={{
+                                backgroundColor: theme.colors.error,
+                                color: "#ffffff",
+                              }}
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmId(null);
+                              }}
+                              className="p-1 rounded-md focus:outline-none hover:opacity-90 transition-all text-xs"
+                              style={{
+                                backgroundColor: theme.colors.hover,
+                                color: theme.colors.text,
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <>
                             <CustomTooltip
                               title="Remove from favorites"
                               position="top"
@@ -438,150 +594,41 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                                   e.stopPropagation();
                                   setDeleteConfirmId(message.id);
                                 }}
-                                className=" rounded-full focus:outline-none hover:opacity-90 transition-all opacity-0 group-hover:opacity-100"
+                                className="p-2 rounded-full focus:outline-none hover:opacity-90 transition-all"
+                                aria-label="Remove favorite"
                                 style={{
+                                  backgroundColor: "transparent",
                                   color: theme.colors.accent,
                                 }}
                               >
-                                <Heart className="w-4 h-4 fill-current" />
+                                <Trash2 className="w-5 h-5" />
                               </button>
                             </CustomTooltip>
-                          )}
-                        </div>
+                            {hasConnection && (
+                              <ChevronRight
+                                size={18}
+                                className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                style={{ color: theme.colors.textSecondary }}
+                              />
+                            )}
+                          </>
+                        )}
                       </div>
-                      <p
-                        className="line-clamp-3 mb-3 text-base min-h-[4.5rem]"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {message.text}
-                      </p>
-                      <div className="flex justify-between items-center mt-2">
+                      {/* Add disabled badge for list view */}
+                      {!hasConnection && (
                         <div
-                          className="text-xs opacity-70"
-                          style={{ color: theme.colors.textSecondary }}
+                          className="absolute top-0 right-0 px-2 py-1 text-xs font-medium rounded-bl-md"
+                          style={{
+                            backgroundColor: theme.colors.error + "20",
+                            color: theme.colors.error,
+                          }}
                         >
-                          {message.query
-                            ? "Custom query attached"
-                            : "Standard query"}
+                          Disabled
                         </div>
-                        <ChevronRight
-                          size={18}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ color: theme.colors.accent }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className="p-4 rounded-lg flex items-center justify-between gap-4 transition-all cursor-pointer hover:scale-[1.01] group"
-                    style={{
-                      backgroundColor: theme.colors.surface,
-                      border: `1px solid ${theme.colors.border}`,
-                      boxShadow: theme.shadow.sm,
-                      opacity: animateId === message.id ? 0 : 1,
-                      transform:
-                        animateId === message.id
-                          ? "translateX(100%)"
-                          : "translateX(0)",
-                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                    }}
-                    onClick={() =>
-                      onFavoriteSelected(
-                        message.text,
-                        message.connection,
-                        message.query
-                      )
-                    }
-                  >
-                    <div className="flex-1 mr-4 overflow-hidden flex items-center gap-4 min-w-0">
-                      <div
-                        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: theme.colors.accent }}
-                      >
-                        <Heart size={14} className="text-white" />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span
-                          className="block truncate"
-                          style={{ color: theme.colors.text }}
-                        >
-                          {message.text}
-                        </span>
-                        <span
-                          className="text-xs truncate"
-                          style={{ color: theme.colors.textSecondary }}
-                        >
-                          {getRelativeTime(message.timestamp)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {deleteConfirmId === message.id ? (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveFavorite(message.id);
-                            }}
-                            className="p-1 rounded-md focus:outline-none hover:opacity-90 transition-all text-xs whitespace-nowrap"
-                            style={{
-                              backgroundColor: theme.colors.error,
-                              color: "#ffffff",
-                            }}
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmId(null);
-                            }}
-                            className="p-1 rounded-md focus:outline-none hover:opacity-90 transition-all text-xs"
-                            style={{
-                              backgroundColor: theme.colors.hover,
-                              color: theme.colors.text,
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <CustomTooltip
-                            title="Remove from favorites"
-                            position="top"
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteConfirmId(message.id);
-                              }}
-                              className="p-2 rounded-full focus:outline-none hover:opacity-90 transition-all"
-                              aria-label="Remove favorite"
-                              style={{
-                                backgroundColor: "transparent",
-                                color: theme.colors.accent,
-                              }}
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </CustomTooltip>
-                          <ChevronRight
-                            size={18}
-                            className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ color: theme.colors.textSecondary }}
-                          />
-                        </>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

@@ -18,12 +18,13 @@ import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 import { FaFilePdf } from "react-icons/fa";
 import CustomTooltip from "./CustomTooltip";
+import SchemaExplorer from "./SchemaExplorer";
+import schemaSampleData from "../data/sampleSchemaData";
 
-// Define the Table interface to include sampleData (if not already defined in ../types)
 interface Table {
   name: string;
   columns: string[];
-  sampleData?: { [key: string]: any }[]; // Array of rows, each row is an object
+  sampleData?: { [key: string]: any }[];
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
@@ -49,97 +50,9 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const [activeTable, setActiveTable] = useState<string | null>(null);
     const MAX_CHARS = 500;
 
-    // Updated databaseSchemas state with sampleData
-    const [databaseSchemas, setDatabaseSchemas] = useState<DatabaseSchema[]>([
-      {
-        name: "public",
-        tables: [
-          {
-            name: "users",
-            columns: ["id", "username", "email", "created_at"],
-            sampleData: [
-              {
-                id: 1,
-                username: "john_doe",
-                email: "john@example.com",
-                created_at: "2023-01-01",
-              },
-              {
-                id: 2,
-                username: "jane_doe",
-                email: "jane@example.com",
-                created_at: "2023-01-02",
-              },
-            ],
-          },
-          {
-            name: "orders",
-            columns: ["id", "user_id", "product_id", "quantity", "order_date"],
-            sampleData: [
-              {
-                id: 1,
-                user_id: 1,
-                product_id: 101,
-                quantity: 2,
-                order_date: "2023-01-03",
-              },
-              {
-                id: 2,
-                user_id: 2,
-                product_id: 102,
-                quantity: 1,
-                order_date: "2023-01-04",
-              },
-            ],
-          },
-        ],
-      },
-      {
-        name: "sales",
-        tables: [
-          {
-            name: "products",
-            columns: ["id", "name", "price", "category", "stock_quantity"],
-            sampleData: [
-              {
-                id: 1,
-                name: "Product A",
-                price: 10.99,
-                category: "Electronics",
-                stock_quantity: 100,
-              },
-              {
-                id: 2,
-                name: "Product B",
-                price: 15.49,
-                category: "Home",
-                stock_quantity: 50,
-              },
-            ],
-          },
-          {
-            name: "transactions",
-            columns: ["id", "product_id", "amount", "transaction_date"],
-            sampleData: [
-              {
-                id: 1,
-                product_id: 1,
-                amount: 21.98,
-                transaction_date: "2023-01-05",
-              },
-              {
-                id: 2,
-                product_id: 2,
-                amount: 15.49,
-                transaction_date: "2023-01-06",
-              },
-            ],
-          },
-        ],
-      },
-    ]);
+    const [databaseSchemas, setDatabaseSchemas] =
+      useState<DatabaseSchema[]>(schemaSampleData);
 
-    // Memoized connection options
     const options = useMemo(
       () =>
         connections.length === 0
@@ -157,7 +70,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
     const fetchDatabaseSchema = useCallback(async (connectionName: string) => {
       console.log(`Fetching schema for connection: ${connectionName}`);
-      // In a real app, fetch schema and sample data from backend here
     }, []);
 
     const handleConnectionSelect = useCallback(
@@ -200,21 +112,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       []
     );
 
-    const handleSchemaClick = useCallback(
-      (schemaName: string) => {
-        setActiveSchema(activeSchema === schemaName ? null : schemaName);
-        setActiveTable(null);
-      },
-      [activeSchema]
-    );
-
-    const handleTableClick = useCallback(
-      (tableName: string) => {
-        setActiveTable(activeTable === tableName ? null : tableName);
-      },
-      [activeTable]
-    );
-
     const handleColumnClick = useCallback(
       (columnName: string) => {
         if (textareaRef.current) {
@@ -223,7 +120,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           const textAfter = input.substring(cursorPos);
           const newText = `${textBefore}${columnName}${textAfter}`;
           onInputChange(newText);
-          setIsDbExplorerOpen(false);
+          // Keep schema explorer open to allow for multiple column selections
         }
       },
       [input, onInputChange]
@@ -246,12 +143,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           !dropdownRef.current.contains(event.target as Node)
         ) {
           setIsDropdownOpen(false);
-        }
-        if (
-          dbExplorerRef.current &&
-          !dbExplorerRef.current.contains(event.target as Node)
-        ) {
-          setIsDbExplorerOpen(false);
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -290,6 +181,27 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             padding: "10px",
           }}
         >
+          {/* Schema Explorer - Shown when open */}
+          {isDbExplorerOpen && (
+            <div
+              ref={dbExplorerRef}
+              className="schema-explorer-container"
+              style={{
+                marginBottom: theme.spacing.md,
+                position: "relative",
+                zIndex: 5,
+              }}
+            >
+              <SchemaExplorer
+                schemas={databaseSchemas}
+                onClose={() => setIsDbExplorerOpen(false)}
+                theme={theme}
+                onColumnClick={handleColumnClick}
+                selectedConnection={selectedConnection}
+              />
+            </div>
+          )}
+
           <textarea
             ref={textareaRef}
             value={input}
@@ -461,380 +373,58 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               </div>
 
               {/* Database Explorer Button */}
-              <div className="relative" ref={dbExplorerRef}>
-                <CustomTooltip title="Explore Database Schema" position="right">
-                  <button
-                    type="button"
-                    onClick={toggleDbExplorer}
-                    className="flex items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+              <CustomTooltip title="Explore Database Schema" position="right">
+                <button
+                  type="button"
+                  onClick={toggleDbExplorer}
+                  className={`flex items-center gap-1 py-1.5 px-3 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group ${
+                    isDbExplorerOpen ? "schema-active" : ""
+                  }`}
+                  style={{
+                    color: theme.colors.text,
+                    backgroundColor: isDbExplorerOpen
+                      ? `${theme.colors.accent}20`
+                      : "transparent",
+                    border: `1px solid ${theme.colors.accent}`,
+                    borderRadius: theme.borderRadius.pill,
+                  }}
+                  onMouseOver={(e) =>
+                    !isDisabled &&
+                    (e.currentTarget.style.backgroundColor =
+                      theme.colors.accentHover + "20")
+                  }
+                  onMouseOut={(e) =>
+                    !isDisabled &&
+                    (e.currentTarget.style.backgroundColor = isDbExplorerOpen
+                      ? `${theme.colors.accent}20`
+                      : "transparent")
+                  }
+                  disabled={isDisabled || !selectedConnection}
+                >
+                  <Layers
+                    size={16}
                     style={{
-                      color: theme.colors.text,
-                      backgroundColor: isDbExplorerOpen
-                        ? `${theme.colors.accent}20`
-                        : "transparent",
-                      border: `1px solid ${theme.colors.accent}`,
-                      borderRadius: theme.borderRadius.pill,
+                      color: theme.colors.accent,
+                      transform: isDbExplorerOpen
+                        ? "rotate(180deg)"
+                        : "rotate(0deg)",
+                      transition: "transform 0.3s ease",
                     }}
-                    onMouseOver={(e) =>
-                      !isDisabled &&
-                      (e.currentTarget.style.backgroundColor =
-                        theme.colors.accentHover + "20")
-                    }
-                    onMouseOut={(e) =>
-                      !isDisabled &&
-                      (e.currentTarget.style.backgroundColor = isDbExplorerOpen
-                        ? `${theme.colors.accent}20`
-                        : "transparent")
-                    }
-                    disabled={isDisabled || !selectedConnection}
-                  >
-                    <Layers size={16} style={{ color: theme.colors.accent }} />
-                    <span className="hidden sm:inline">Schema Explorer</span>
-                    {isDbExplorerOpen ? (
-                      <ChevronDown
-                        size={16}
-                        style={{ color: theme.colors.accent }}
-                        className="transition-transform duration-300 rotate-180 ml-1"
-                      />
-                    ) : (
-                      <ChevronDown
-                        size={16}
-                        style={{ color: theme.colors.accent }}
-                        className="transition-transform duration-300 ml-1"
-                      />
-                    )}
-                  </button>
-                </CustomTooltip>
-                {/* Database Explorer Panel with Sample Data */}
-                {isDbExplorerOpen && (
-                  <div
-                    className="absolute bottom-full left-0 mb-2 rounded-lg shadow-lg z-20 overflow-hidden"
+                  />
+                  <span className="hidden sm:inline">Schema Explorer</span>
+                  <ChevronDown
+                    size={16}
                     style={{
-                      background: theme.colors.surface,
-                      border: `1px solid ${theme.colors.border}`,
-                      boxShadow: `0 8px 32px ${theme.colors.text}20`,
-                      width: "380px",
-                      maxHeight: "500px",
-                      overflow: "hidden",
-                      borderRadius: theme.borderRadius.large,
+                      color: theme.colors.accent,
+                      transform: isDbExplorerOpen
+                        ? "rotate(180deg)"
+                        : "rotate(0deg)",
+                      transition: "transform 0.3s ease",
                     }}
-                  >
-                    <div
-                      style={{
-                        padding: "16px",
-                        borderBottom: `1px solid ${theme.colors.border}`,
-                        backgroundColor: theme.colors.accent,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <h3
-                        style={{
-                          color: "white",
-                          fontSize: theme.typography.size.lg,
-                          fontWeight: theme.typography.weight.bold,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <Layers size={20} />
-                        Database Explorer
-                      </h3>
-                      <span
-                        className="text-xs px-2 py-1 rounded-full"
-                        style={{
-                          backgroundColor: theme.colors.surface,
-                          color: theme.colors.accent,
-                          fontWeight: theme.typography.weight.bold,
-                        }}
-                      >
-                        {selectedConnection}
-                      </span>
-                    </div>
-
-                    <div style={{ overflow: "auto", maxHeight: "420px" }}>
-                      {databaseSchemas.length > 0 ? (
-                        databaseSchemas.map((schema) => (
-                          <div key={schema.name} className="schema-section">
-                            {/* Schema Header */}
-                            <div
-                              className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-opacity-10 transition-all duration-200 group"
-                              style={{
-                                backgroundColor:
-                                  activeSchema === schema.name
-                                    ? `${theme.colors.accent}15`
-                                    : "transparent",
-                                borderBottom: `1px solid ${theme.colors.border}20`,
-                              }}
-                              onClick={() => handleSchemaClick(schema.name)}
-                            >
-                              <div
-                                className="p-1.5 rounded-lg"
-                                style={{
-                                  backgroundColor: `${theme.colors.accent}20`,
-                                }}
-                              >
-                                <Database
-                                  size={18}
-                                  style={{
-                                    color: theme.colors.accent,
-                                  }}
-                                />
-                              </div>
-                              <span
-                                style={{
-                                  color: theme.colors.text,
-                                  fontWeight: theme.typography.weight.medium,
-                                  fontSize: theme.typography.size.base,
-                                }}
-                              >
-                                {schema.name}
-                              </span>
-                              <ChevronDown
-                                size={18}
-                                style={{
-                                  color: theme.colors.text,
-                                  marginLeft: "auto",
-                                  transform: `rotate(${
-                                    activeSchema === schema.name ? 180 : 0
-                                  }deg)`,
-                                  transition: "transform 0.3s ease",
-                                }}
-                              />
-                            </div>
-
-                            {/* Tables */}
-                            {activeSchema === schema.name && (
-                              <div className="pl-4">
-                                {schema.tables.map((table) => (
-                                  <div
-                                    key={table.name}
-                                    className="table-section"
-                                  >
-                                    {/* Table Header */}
-                                    <div
-                                      className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-opacity-10 transition-all duration-200"
-                                      style={{
-                                        backgroundColor:
-                                          activeTable === table.name
-                                            ? `${theme.colors.accent}08`
-                                            : "transparent",
-                                        borderLeft: `2px solid ${
-                                          activeTable === table.name
-                                            ? theme.colors.accent
-                                            : "transparent"
-                                        }`,
-                                      }}
-                                      onClick={() =>
-                                        handleTableClick(table.name)
-                                      }
-                                    >
-                                      <Table2
-                                        size={16}
-                                        style={{
-                                          color: theme.colors.accent,
-                                          opacity:
-                                            activeTable === table.name
-                                              ? 1
-                                              : 0.7,
-                                        }}
-                                      />
-                                      <span
-                                        style={{
-                                          color: theme.colors.text,
-                                          fontSize: theme.typography.size.sm,
-                                          fontWeight:
-                                            theme.typography.weight.medium,
-                                        }}
-                                      >
-                                        {table.name}
-                                      </span>
-                                      <div
-                                        className="ml-auto px-2 py-1 text-xs rounded-md"
-                                        style={{
-                                          backgroundColor: `${theme.colors.accent}15`,
-                                          color: theme.colors.accent,
-                                        }}
-                                      >
-                                        {table.columns.length} columns
-                                      </div>
-                                    </div>
-
-                                    {/* Columns & Sample Data */}
-                                    {activeTable === table.name && (
-                                      <div className="ml-6">
-                                        {/* Columns */}
-                                        <div className="space-y-1.5 py-2">
-                                          {table.columns.map((column) => (
-                                            <div
-                                              key={column}
-                                              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-opacity-10 rounded-lg transition-all duration-200"
-                                              style={{
-                                                backgroundColor: `${theme.colors.accent}05`,
-                                              }}
-                                              onClick={() =>
-                                                handleColumnClick(column)
-                                              }
-                                            >
-                                              <div className="w-4 h-4 rounded-md bg-accent/10 flex items-center justify-center">
-                                                <span
-                                                  style={{
-                                                    color: theme.colors.accent,
-                                                    fontSize: "10px",
-                                                    fontWeight: "bold",
-                                                  }}
-                                                >
-                                                  C
-                                                </span>
-                                              </div>
-                                              <code
-                                                style={{
-                                                  color: theme.colors.text,
-                                                  fontSize:
-                                                    theme.typography.size.sm,
-                                                  fontFamily:
-                                                    theme.typography.fontFamily,
-                                                }}
-                                              >
-                                                {column}
-                                              </code>
-                                            </div>
-                                          ))}
-                                        </div>
-
-                                        {/* Enhanced Sample Data Table */}
-                                        {table.sampleData && (
-                                          <div className="my-3 mx-2">
-                                            <div
-                                              className="text-xs font-medium mb-2 px-2"
-                                              style={{
-                                                color: theme.colors.text,
-                                                opacity: 0.8,
-                                              }}
-                                            >
-                                              Sample Data (
-                                              {table.sampleData.length} rows)
-                                            </div>
-                                            <div
-                                              className="rounded-lg overflow-hidden border"
-                                              style={{
-                                                borderColor:
-                                                  theme.colors.border,
-                                              }}
-                                            >
-                                              <table
-                                                className="w-full"
-                                                style={{
-                                                  borderCollapse: "collapse",
-                                                  backgroundColor:
-                                                    theme.colors.surface,
-                                                }}
-                                              >
-                                                <thead>
-                                                  <tr
-                                                    style={{
-                                                      backgroundColor:
-                                                        theme.colors.background,
-                                                      borderBottom: `2px solid ${theme.colors.border}`,
-                                                    }}
-                                                  >
-                                                    {table.columns.map(
-                                                      (column) => (
-                                                        <th
-                                                          key={column}
-                                                          className="px-3 py-2 text-left"
-                                                          style={{
-                                                            color:
-                                                              theme.colors.text,
-                                                            fontSize:
-                                                              theme.typography
-                                                                .size.base,
-                                                            fontWeight:
-                                                              theme.typography
-                                                                .weight.bold,
-                                                          }}
-                                                        >
-                                                          {column}
-                                                        </th>
-                                                      )
-                                                    )}
-                                                  </tr>
-                                                </thead>
-                                                <tbody>
-                                                  {table.sampleData.map(
-                                                    (row, index) => (
-                                                      <tr
-                                                        key={index}
-                                                        className="hover:bg-opacity-10 transition-colors duration-200"
-                                                        style={{
-                                                          backgroundColor:
-                                                            index % 2 === 0
-                                                              ? `${theme.colors.background}30`
-                                                              : "transparent",
-                                                          borderBottom: `1px solid ${theme.colors.border}20`,
-                                                        }}
-                                                      >
-                                                        {table.columns.map(
-                                                          (column) => (
-                                                            <td
-                                                              key={column}
-                                                              className="px-3 py-1.5"
-                                                              style={{
-                                                                color:
-                                                                  theme.colors
-                                                                    .text,
-                                                                fontSize:
-                                                                  theme
-                                                                    .typography
-                                                                    .size.base,
-                                                                fontFamily:
-                                                                  theme
-                                                                    .typography
-                                                                    .fontFamily,
-                                                              }}
-                                                            >
-                                                              {row[column] ??
-                                                                "NULL"}
-                                                            </td>
-                                                          )
-                                                        )}
-                                                      </tr>
-                                                    )
-                                                  )}
-                                                </tbody>
-                                              </table>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <div
-                          className="p-4 text-center flex flex-col items-center justify-center gap-2"
-                          style={{
-                            color: theme.colors.text,
-                            opacity: 0.7,
-                            minHeight: "120px",
-                          }}
-                        >
-                          <Database size={24} className="opacity-50" />
-                          <span className="text-sm">
-                            No database schema available
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+                    className="ml-1"
+                  />
+                </button>
+              </CustomTooltip>
 
               {/* New Chat Button */}
               <CustomTooltip title="Create a new session" position="bottom">
@@ -896,6 +486,33 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             </CustomTooltip>
           </div>
         </div>
+
+        <style jsx>{`
+          .schema-active {
+            position: relative;
+          }
+
+          @keyframes pulse {
+            0% {
+              box-shadow: 0 0 0 0 ${theme.colors.accent}40;
+            }
+            70% {
+              box-shadow: 0 0 0 6px ${theme.colors.accent}00;
+            }
+            100% {
+              box-shadow: 0 0 0 0 ${theme.colors.accent}00;
+            }
+          }
+
+          .schema-active::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 9999px;
+            animation: pulse 2s infinite;
+          }
+        `}</style>
       </form>
     );
   }

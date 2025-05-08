@@ -290,7 +290,12 @@ const ChatInterface = memo(
 
           let sessionId = currentSessionId;
           const useExistingSession =
-            sessionId && selectedConnection === connection;
+            sessionId &&
+            !sessionConnectionError &&
+            selectedConnection === connection;
+          if (sessionConnectionError) {
+            setSessionConnectionError(null);
+          }
 
           if (!useExistingSession) {
             try {
