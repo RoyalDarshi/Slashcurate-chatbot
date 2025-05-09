@@ -8,7 +8,7 @@ const Loader = ({ text }: { text: string }) => {
     <div
       className="fixed inset-0 flex flex-col items-center justify-center bg-opacity-60 backdrop-blur-md z-50"
       style={{
-        backgroundColor: `${theme.colors.text}40`, // Reduced opacity to 25% for subtler overlay
+        backgroundColor: `${theme.colors.text}40`,
       }}
     >
       <div className="relative w-20 h-20 flex items-center justify-center">
@@ -16,16 +16,16 @@ const Loader = ({ text }: { text: string }) => {
         <div
           className="absolute w-16 h-16 rounded-full animate-[spin_1.2s_linear_infinite]"
           style={{
-            border: `3px solid ${theme.colors.textSecondary}30`, // Softer secondary color for subtlety
-            borderTop: `3px solid ${theme.colors.accent}`, // Vibrant accent
+            border: `3px solid ${theme.colors.textSecondary}30`,
+            borderTop: `3px solid ${theme.colors.accent}`,
           }}
         ></div>
         {/* Inner Ring */}
         <div
           className="absolute w-10 h-10 rounded-full animate-[spin_0.8s_linear_infinite_reverse]"
           style={{
-            border: `2px solid ${theme.colors.accent}80`, // Lighter accent
-            borderBottom: `2px solid ${theme.colors.textSecondary}30`, // Matching subtlety
+            border: `2px solid ${theme.colors.accent}80`,
+            borderBottom: `2px solid ${theme.colors.textSecondary}30`,
           }}
         ></div>
         {/* Center Pulse */}
@@ -37,12 +37,14 @@ const Loader = ({ text }: { text: string }) => {
           }}
         ></div>
       </div>
-      <p
-        className="mt-6 text-base font-medium tracking-wide"
-        style={{ color: theme.colors.text }}
-      >
-        {text}
-      </p>
+      {text && (
+        <p
+          className="mt-6 text-base font-medium tracking-wide animate-pulse"
+          style={{ color: theme.colors.text }}
+        >
+          {text}
+        </p>
+      )}
     </div>
   );
 };
