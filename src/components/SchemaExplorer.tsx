@@ -44,14 +44,13 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   const tableListRef = useRef<HTMLDivElement>(null);
   const columnListRef = useRef<HTMLDivElement>(null);
   const schemaTabsRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Reset active table when schema changes
     setActiveTable(null);
   }, [activeSchema]);
 
   useEffect(() => {
-    // Simulate data loading
     if (activeTable) {
       setIsLoading(true);
       setTimeout(() => {
@@ -59,6 +58,20 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
       }, 300);
     }
   }, [activeTable]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        filterRef.current &&
+        !filterRef.current.contains(event.target as Node)
+      ) {
+        setShowFilterOptions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [filterRef]);
 
   const handleTableClick = (tableName: string) => {
     setActiveTable(activeTable === tableName ? null : tableName);
@@ -82,9 +95,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
       const columnElement = columnListRef.current.querySelector(
         `[data-column="${columnName}"]`
       );
-      if (columnElement) {
-        columnElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
+      columnElement?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   };
 
@@ -113,7 +124,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
           ? a.name.localeCompare(b.name)
           : b.name.localeCompare(a.name);
       } else {
-        // Sort by column count
         return sortDirection === "asc"
           ? a.columns.length - b.columns.length
           : b.columns.length - a.columns.length;
@@ -229,90 +239,33 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
             transform: rotate(90deg);
           }
 
-          .schema-tabs {
-            scrollbar-width: thin;
-            scrollbar-color: ${theme.colors.accent}40 transparent;
-            overflow-y: auto !important;
-            max-height: 100%;
-            flex-shrink: 0;
-          }
-          
-          .schema-tabs::-webkit-scrollbar {
-            width: 6px;
-          }
-          
-          .schema-tabs::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          
-          .schema-tabs::-webkit-scrollbar-thumb {
-            background-color: ${theme.colors.accent}40;
-            border-radius: 20px;
-          }
-
-          .table-list {
-            scrollbar-width: thin;
-            scrollbar-color: ${theme.colors.accent}40 transparent;
-            overflow-y: auto !important;
-          }
-          
-          .table-list::-webkit-scrollbar {
-            width: 6px;
-          }
-          
-          .table-list::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          
-          .table-list::-webkit-scrollbar-thumb {
-            background-color: ${theme.colors.accent}40;
-            border-radius: 20px;
-          }
-
+          .schema-tabs,
+          .table-list,
           .column-list {
             scrollbar-width: thin;
             scrollbar-color: ${theme.colors.accent}40 transparent;
-            max-height: 250px;
-            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
           }
           
-          .column-list::-webkit-scrollbar {
-            width: 6px;
-          }
-          
-          .column-list::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          
-          .column-list::-webkit-scrollbar-thumb {
-            background-color: ${theme.colors.accent}40;
-            border-radius: 20px;
-          }
-          
-          /* Make all scrollable areas consistent */
           .schema-tabs::-webkit-scrollbar,
           .table-list::-webkit-scrollbar,
-          .sample-data-container::-webkit-scrollbar {
+          .column-list::-webkit-scrollbar {
             width: 6px;
             height: 6px;
           }
           
           .schema-tabs::-webkit-scrollbar-track,
           .table-list::-webkit-scrollbar-track,
-          .sample-data-container::-webkit-scrollbar-track {
+          .column-list::-webkit-scrollbar-track {
             background: transparent;
           }
           
           .schema-tabs::-webkit-scrollbar-thumb,
           .table-list::-webkit-scrollbar-thumb,
-          .sample-data-container::-webkit-scrollbar-thumb {
+          .column-list::-webkit-scrollbar-thumb {
             background-color: ${theme.colors.accent}40;
             border-radius: 20px;
-          }
-          
-          /* For horizontal scrolling */
-          *::-webkit-scrollbar-corner {
-            background: transparent;
           }
 
           .filter-dropdown {
@@ -412,27 +365,34 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
 
           @media (max-width: 768px) {
             .schema-explorer {
-              max-height: calc(100vh - 160px);
+              max-height: calc(100vh - 160px) !important;
               border-radius: 12px 12px 0 0;
+              width: 100vw !important;
+              margin-left: -16px;
             }
 
-            .content-grid {
-              grid-template-columns: 1fr !important;
+            .content-row {
+              flex-direction: column;
             }
 
             .schema-tabs {
-              flex-wrap: nowrap;
+              flex-direction: row !important;
+              max-width: 100% !important;
+              border-right: none !important;
+              border-bottom: 1px solid ${theme.colors.border};
               overflow-x: auto;
               overflow-y: hidden !important;
-              padding-bottom: 8px;
-              -webkit-overflow-scrolling: touch;
-              height: auto !important;
             }
 
-            .schema-tab {
-              flex: 0 0 auto;
+            .table-list {
+              width: 100% !important;
+              height: 40vh !important;
             }
-            
+
+            .details-container {
+              height: 50vh !important;
+            }
+
             .column-grid {
               grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             }
@@ -526,25 +486,22 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
       {/* Content area */}
       <div className="content-container">
         <div className="content-row">
-          {/* Schema tabs - scrollable horizontally on mobile, vertically on desktop */}
+          {/* Schema tabs */}
           <div
-            className="schema-tabs flex-none sm:flex-col overflow-x-auto sm:overflow-y-auto border-b sm:border-b-0 sm:border-r"
+            className="schema-tabs flex-none sm:flex-col border-b sm:border-b-0 sm:border-r"
             style={{
               borderColor: theme.colors.border,
               minWidth: "120px",
               maxWidth: "200px",
-              height: "100%",
-              scrollbarWidth: "thin",
-              scrollbarColor: `${theme.colors.accent}40 transparent`,
+              height: "300px",
               display: "flex",
               flexDirection: "column",
+              overflowY: "auto",
+              overflowX: "hidden",
             }}
             ref={schemaTabsRef}
           >
-            <div
-              className="schema-tabs-container"
-              style={{ overflowY: "auto" }}
-            >
+            <div className="schema-tabs-container">
               {filteredSchemas.map((schema, index) => (
                 <button
                   key={schema.name}
@@ -585,7 +542,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
             </div>
           </div>
 
-          {/* Tables and details - restructured for better scrolling */}
+          {/* Tables and details */}
           <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
             {/* Table list */}
             {activeSchema && (
@@ -616,7 +573,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                     )}
                   </h3>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2" ref={filterRef}>
                     <div className="relative">
                       <button
                         onClick={() => setShowFilterOptions(!showFilterOptions)}

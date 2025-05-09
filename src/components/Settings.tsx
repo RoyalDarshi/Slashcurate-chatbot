@@ -201,7 +201,7 @@ const Settings = () => {
           >
             Change Password
           </button>
-          <button
+          {/* <button
             className="w-full p-2 rounded-md hover:opacity-90 transition-all font-medium shadow-md"
             style={{
               backgroundColor: `${theme.colors.text}20`,
@@ -212,7 +212,7 @@ const Settings = () => {
             onClick={() => alert("Delete Account functionality coming soon!")}
           >
             Delete Account
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

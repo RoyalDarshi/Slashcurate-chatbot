@@ -492,25 +492,12 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             position: relative;
           }
 
-          @keyframes pulse {
-            0% {
-              box-shadow: 0 0 0 0 ${theme.colors.accent}40;
-            }
-            70% {
-              box-shadow: 0 0 0 6px ${theme.colors.accent}00;
-            }
-            100% {
-              box-shadow: 0 0 0 0 ${theme.colors.accent}00;
-            }
-          }
-
           .schema-active::before {
             content: "";
             position: absolute;
             width: 100%;
             height: 100%;
             border-radius: 9999px;
-            animation: pulse 2s infinite;
           }
         `}</style>
       </form>

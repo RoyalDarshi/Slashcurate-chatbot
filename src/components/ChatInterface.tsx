@@ -783,6 +783,19 @@ const ChatInterface = memo(
               padding: theme.spacing.sm,
             }}
           />
+          {sessionConnectionError && (
+            <div
+              className="text-center sticky top-0 z-20"
+              style={{
+                paddingTop: theme.spacing.md,
+                color: theme.colors.error,
+                background: theme.colors.background,
+              }}
+            >
+              {sessionConnectionError} You can view the chat history but cannot
+              ask new questions.
+            </div>
+          )}
           <div
             ref={chatContainerRef}
             className="flex-1 overflow-y-auto"
@@ -841,18 +854,6 @@ const ChatInterface = memo(
               </div>
             ) : (
               <div>
-                {sessionConnectionError && (
-                  <div
-                    className="text-center"
-                    style={{
-                      padding: theme.spacing.md,
-                      color: theme.colors.error,
-                    }}
-                  >
-                    {sessionConnectionError} You can view the chat history but
-                    cannot ask new questions, favorite, or edit messages.
-                  </div>
-                )}
                 {messages.map((message) => {
                   let responseStatus: "loading" | "success" | "error" | null =
                     null;
