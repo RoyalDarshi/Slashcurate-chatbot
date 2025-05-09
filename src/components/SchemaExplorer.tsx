@@ -547,36 +547,39 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                             {activeTableData.name}
                           </h3>
                           {activeTableData.sampleData && (
-                            <div className="flex space-x-2">
+                            <div className="relative inline-flex rounded-full bg-gray-200 p-1">
+                              {/* Sliding background */}
+                              <div
+                                className="absolute top-1 left-1 h-8 w-[130px] rounded-full transition-transform duration-300"
+                                style={{
+                                  backgroundColor: theme.colors.accent,
+                                  transform:
+                                    activeView === "columns"
+                                      ? "translateX(0)"
+                                      : "translateX(134px)",
+                                }}
+                              ></div>
+
+                              {/* Columns Button */}
                               <button
                                 onClick={() => setActiveView("columns")}
-                                className="px-3 py-1 rounded"
-                                style={{
-                                  backgroundColor:
-                                    activeView === "columns"
-                                      ? theme.colors.accent
-                                      : theme.colors.background,
-                                  color:
-                                    activeView === "columns"
-                                      ? theme.colors.surface
-                                      : theme.colors.text,
-                                }}
+                                className={`relative z-10 w-[130px] py-1.5 text-center rounded-full text-sm font-medium transition-all duration-300 ${
+                                  activeView === "columns"
+                                    ? "text-white"
+                                    : "text-gray-700"
+                                }`}
                               >
                                 Columns
                               </button>
+
+                              {/* Sample Data Button */}
                               <button
                                 onClick={() => setActiveView("sampleData")}
-                                className="px-3 py-1 rounded"
-                                style={{
-                                  backgroundColor:
-                                    activeView === "sampleData"
-                                      ? theme.colors.accent
-                                      : theme.colors.background,
-                                  color:
-                                    activeView === "sampleData"
-                                      ? theme.colors.surface
-                                      : theme.colors.text,
-                                }}
+                                className={`relative z-10 w-[135px] py-1.5 text-center rounded-full text-sm font-medium transition-all duration-300 ${
+                                  activeView === "sampleData"
+                                    ? "text-white"
+                                    : "text-gray-700"
+                                }`}
                               >
                                 Sample Data
                               </button>
