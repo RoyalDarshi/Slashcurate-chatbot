@@ -13,114 +13,95 @@
   100% { transform: rotate(360deg); }
 }
 
-
 @keyframes pulse {
   0% { transform: scale(1); opacity: 0.8; }
   50% { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(1); opacity: 0.8; }
 }
 
-/* Mobile-first adjustments */
-@media (max-width: 767px) {
-  body {
-    overflow-x: hidden;
-  }
-  
-  .main-content {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* Smooth transitions */
-.sidebar-transition {
-  transition: transform 0.3s ease-in-out;
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
-/* Mobile header spacing */
-.mobile-header-spacer {
-  height: 4rem;
+/* Enhanced scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Prevent content shift */
-html {
-  scroll-behavior: smooth;
-}
-
-/* styles.css */
-/* :root {
-  --background-color: #F9F9FB;
-  --text-color: #2D3748;
-  --cursor-color: #000000;
-}
-
-[data-theme='dark'] {
-  --background-color: #0F172A;
-  --text-color: #F8FAFC;
-  --cursor-color: #ffffff;
-}*/
-
-/* Autofill styles with dynamic theme support */
-/*
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active,
-input:autofill,
-input:autofill:hover,
-input:autofill:focus,
-input:autofill:active {
-  -webkit-box-shadow: 0 0 0 100vw var(--background-color) inset !important;
-  box-shadow: 0 0 0 100vw var(--background-color) inset !important;
-  -webkit-text-fill-color: var(--text-color) !important;
-  color: var(--text-color) !important;
-  caret-color: var(--cursor-color) !important;
-} */
-
-/* Ensure custom input styles take precedence */
-input,
-textarea {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-/* index.css */
-textarea::placeholder {
-  color: inherit;
-  opacity: 0.7;
-}
-
-select option {
-  color: inherit;
-  background: inherit;
-}
-
-/* index.css */
-.send-button:not(:disabled):hover {
-  opacity: 0.9;
-}
-
-/* width */
-/* ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-} */
-
-/* Track */
-/* ::-webkit-scrollbar-track {
-  @apply bg-zinc-300;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
   border-radius: 8px;
-} */
+}
 
-/* Handle */
-/* ::-webkit-scrollbar-thumb {
-  @apply bg-gray-500 rounded-full transition-all duration-300;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
   border-radius: 8px;
-} */
+  transition: background-color 0.2s ease;
+}
 
-/* Handle on hover */
-/* ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
-  cursor: default;
-} */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.8);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .mobile-friendly {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+/* Improved focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Smooth animations */
+.fade-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+.fade-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 150ms ease-in, transform 150ms ease-in;
+}
+
+/* Prevent content shift during loading */
+.content-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
