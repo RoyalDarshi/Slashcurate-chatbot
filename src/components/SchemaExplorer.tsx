@@ -40,6 +40,9 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showFilterOptions, setShowFilterOptions] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [activeView, setActiveView] = useState<"columns" | "sampleData">(
+    "columns"
+  );
 
   const tableListRef = useRef<HTMLDivElement>(null);
   const columnListRef = useRef<HTMLDivElement>(null);
@@ -53,10 +56,12 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   useEffect(() => {
     if (activeTable) {
       setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
+      setTimeout(() => setIsLoading(false), 300);
     }
+  }, [activeTable]);
+
+  useEffect(() => {
+    setActiveView("columns");
   }, [activeTable]);
 
   useEffect(() => {
@@ -68,7 +73,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
         setShowFilterOptions(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [filterRef]);
@@ -100,24 +104,43 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   };
 
   const filteredSchemas = schemas
-    .map((schema) => {
-      if (!searchTerm) return schema;
-
-      const filteredTables = schema.tables.filter(
+    .filter((schema) => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      const schemaNameMatch = schema.name.toLowerCase().includes(searchLower);
+      const hasMatchingTable = schema.tables.some(
         (table) =>
-          table.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          table.columns.some((col) =>
-            col.toLowerCase().includes(searchTerm.toLowerCase())
+          table.name.toLowerCase().includes(searchLower) ||
+          table.columns.some(
+            (col) =>
+              col.name.toLowerCase().includes(searchLower) ||
+              col.type.toLowerCase().includes(searchLower)
           )
       );
-
-      return { ...schema, tables: filteredTables };
+      return schemaNameMatch || hasMatchingTable;
     })
-    .filter((schema) => schema.tables.length > 0);
+    .map((schema) => {
+      if (!searchTerm) return schema;
+      const searchLower = searchTerm.toLowerCase();
+      const schemaNameMatch = schema.name.toLowerCase().includes(searchLower);
+      if (schemaNameMatch) {
+        return schema;
+      } else {
+        const filteredTables = schema.tables.filter(
+          (table) =>
+            table.name.toLowerCase().includes(searchLower) ||
+            table.columns.some(
+              (col) =>
+                col.name.toLowerCase().includes(searchLower) ||
+                col.type.toLowerCase().includes(searchLower)
+            )
+        );
+        return { ...schema, tables: filteredTables };
+      }
+    });
 
   const sortedTables = (schema: DatabaseSchema) => {
     if (!schema) return [];
-
     return [...schema.tables].sort((a, b) => {
       if (sortBy === "name") {
         return sortDirection === "asc"
@@ -149,253 +172,47 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
     >
       <style>
         {`
-          .schema-explorer {
-            animation: slideIn 0.3s ease-out forwards;
-          }
-          
-          @keyframes slideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-          }
-          
-          .schema-item, .table-item, .column-item {
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.2s ease-out;
-            animation: fadeInItem 0.3s forwards;
-            animation-delay: calc(var(--item-index) * 0.05s);
-          }
-          
-          @keyframes fadeInItem {
-            to { opacity: 1; transform: translateY(0); }
-          }
-          
-          .appear {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          
-          .table-row:hover {
-            background-color: ${theme.colors.accent}10;
-          }
-          
-          .schema-tab {
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-          }
-          
-          .schema-tab::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background-color: ${theme.colors.accent};
-            transition: width 0.3s ease;
-          }
-          
-          .schema-tab.active::after {
-            width: 100%;
-          }
-          
-          .column-item {
-            transition: all 0.2s ease;
-          }
-          
-          .column-item:hover {
-            background-color: ${theme.colors.accent}15;
-            transform: translateX(5px);
-          }
-
-          .sample-data-container {
-            animation: fadeIn 0.3s ease-out forwards;
-            max-height: 350px;
-            overflow-y: auto;
-          }
-          
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-
-          .search-input {
-            transition: all 0.2s ease;
-            border: 1px solid ${theme.colors.border};
-          }
-          
-          .search-input:focus {
-            border-color: ${theme.colors.accent};
-            box-shadow: 0 0 0 2px ${theme.colors.accent}20;
-          }
-
-          .schema-close-btn {
-            transition: all 0.2s ease;
-          }
-          
-          .schema-close-btn:hover {
-            background-color: ${theme.colors.error}20;
-            transform: rotate(90deg);
-          }
-
-          .schema-tabs,
-          .table-list,
-          .column-list {
-            scrollbar-width: thin;
-            scrollbar-color: ${theme.colors.accent}40 transparent;
-            -webkit-overflow-scrolling: touch;
-            scroll-behavior: smooth;
-          }
-          
-          .schema-tabs::-webkit-scrollbar,
-          .table-list::-webkit-scrollbar,
-          .column-list::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-          }
-          
-          .schema-tabs::-webkit-scrollbar-track,
-          .table-list::-webkit-scrollbar-track,
-          .column-list::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          
-          .schema-tabs::-webkit-scrollbar-thumb,
-          .table-list::-webkit-scrollbar-thumb,
-          .column-list::-webkit-scrollbar-thumb {
-            background-color: ${theme.colors.accent}40;
-            border-radius: 20px;
-          }
-
-          .filter-dropdown {
-            position: absolute;
-            right: 0;
-            top: 100%;
-            z-index: 20;
-            background: ${theme.colors.surface};
-            border: 1px solid ${theme.colors.border};
-            border-radius: ${theme.borderRadius.default};
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            width: 180px;
-            animation: dropdownFadeIn 0.2s ease-out;
-          }
-          
-          @keyframes dropdownFadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-
-          .sort-button {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 8px;
-            border-radius: ${theme.borderRadius.default};
-            font-size: ${theme.typography.size.sm};
-            transition: all 0.2s ease;
-          }
-          
-          .sort-button:hover {
-            background-color: ${theme.colors.accent}10;
-          }
-          
-          .sort-button.active {
-            background-color: ${theme.colors.accent}15;
-            font-weight: 500;
-          }
-
-          .no-results {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 32px 16px;
-            color: ${theme.colors.textSecondary};
-          }
-
-          .skeleton-loader {
-            background: linear-gradient(90deg, 
-              ${theme.colors.border}20, 
-              ${theme.colors.border}30, 
-              ${theme.colors.border}20);
-            background-size: 200% 100%;
-            animation: loadingGradient 1.5s ease-in-out infinite;
-            border-radius: ${theme.borderRadius.default};
-          }
-          
-          @keyframes loadingGradient {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-          }
-
-          .column-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 8px;
-          }
-
-          .database-count-badge {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 12px;
-            background-color: ${theme.colors.accent}20;
-            color: ${theme.colors.accent};
-            font-weight: 500;
-          }
-
-          .content-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            overflow: hidden;
-          }
-
-          .content-row {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-          }
-
-          .details-container {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-          }
-
+          .schema-explorer { animation: slideIn 0.3s ease-out forwards; }
+          @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+          .schema-item, .table-item, .column-item { opacity: 0; transform: translateY(10px); transition: all 0.2s ease-out; animation: fadeInItem 0.3s forwards; animation-delay: calc(var(--item-index) * 0.05s); }
+          @keyframes fadeInItem { to { opacity: 1; transform: translateY(0); } }
+          .appear { opacity: 1; transform: translateY(0); }
+          .table-row:hover { background-color: ${theme.colors.accent}10; }
+          .schema-tab { transition: all 0.2s ease; position: relative; overflow: hidden; }
+          .schema-tab::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background-color: ${theme.colors.accent}; transition: width 0.3s ease; }
+          .schema-tab.active::after { width: 100%; }
+          .column-item { transition: all 0.2s ease; }
+          .column-item:hover { background-color: ${theme.colors.accent}15; transform: translateX(5px); }
+          .sample-data-container { animation: fadeIn 0.3s ease-out forwards; max-height: 350px; overflow-y: auto; }
+          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+          .search-input { transition: all 0.2s ease; border: 1px solid ${theme.colors.border}; }
+          .search-input:focus { border-color: ${theme.colors.accent}; box-shadow: 0 0 0 2px ${theme.colors.accent}20; }
+          .schema-close-btn { transition: all 0.2s ease; }
+          .schema-close-btn:hover { background-color: ${theme.colors.error}20; transform: rotate(90deg); }
+          .schema-tabs, .table-list, .column-list { scrollbar-width: thin; scrollbar-color: ${theme.colors.accent}40 transparent; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+          .schema-tabs::-webkit-scrollbar, .table-list::-webkit-scrollbar, .column-list::-webkit-scrollbar { width: 6px; height: 6px; }
+          .schema-tabs::-webkit-scrollbar-track, .table-list::-webkit-scrollbar-track, .column-list::-webkit-scrollbar-track { background: transparent; }
+          .schema-tabs::-webkit-scrollbar-thumb, .table-list::-webkit-scrollbar-thumb, .column-list::-webkit-scrollbar-thumb { background-color: ${theme.colors.accent}40; border-radius: 20px; }
+          .filter-dropdown { position: absolute; right: 0; top: 100%; z-index: 20; background: ${theme.colors.surface}; border: 1px solid ${theme.colors.border}; border-radius: ${theme.borderRadius.default}; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 180px; animation: dropdownFadeIn 0.2s ease-out; }
+          @keyframes dropdownFadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+          .sort-button { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: ${theme.borderRadius.default}; font-size: ${theme.typography.size.sm}; transition: all 0.2s ease; }
+          .sort-button:hover { background-color: ${theme.colors.accent}10; }
+          .sort-button.active { background-color: ${theme.colors.accent}15; font-weight: 500; }
+          .no-results { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 16px; color: ${theme.colors.textSecondary}; }
+          .skeleton-loader { background: linear-gradient(90deg, ${theme.colors.border}20, ${theme.colors.border}30, ${theme.colors.border}20); background-size: 200% 100%; animation: loadingGradient 1.5s ease-in-out infinite; border-radius: ${theme.borderRadius.default}; }
+          @keyframes loadingGradient { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+          .column-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+          .database-count-badge { font-size: 10px; padding: 2px 6px; border-radius: 12px; background-color: ${theme.colors.accent}20; color: ${theme.colors.accent}; font-weight: 500; }
+          .content-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+          .content-row { display: flex; flex: 1; overflow: hidden; }
+          .details-container { flex: 1; overflow-y: auto; overflow-x: hidden; }
           @media (max-width: 768px) {
-            .schema-explorer {
-              max-height: calc(100vh - 160px) !important;
-              border-radius: 12px 12px 0 0;
-              width: 100vw !important;
-              margin-left: -16px;
-            }
-
-            .content-row {
-              flex-direction: column;
-            }
-
-            .schema-tabs {
-              flex-direction: row !important;
-              max-width: 100% !important;
-              border-right: none !important;
-              border-bottom: 1px solid ${theme.colors.border};
-              overflow-x: auto;
-              overflow-y: hidden !important;
-            }
-
-            .table-list {
-              width: 100% !important;
-              height: 40vh !important;
-            }
-
-            .details-container {
-              height: 50vh !important;
-            }
-
-            .column-grid {
-              grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            }
+            .schema-explorer { max-height: calc(100vh - 160px) !important; border-radius: 12px 12px 0 0; width: 100vw !important; margin-left: -16px; }
+            .content-row { flex-direction: column; }
+            .schema-tabs { flex-direction: row !important; max-width: 100% !important; border-right: none !important; border-bottom: 1px solid ${theme.colors.border}; overflow-x: auto; overflow-y: hidden !important; }
+            .table-list { width: 100% !important; height: 40vh !important; }
+            .details-container { height: 50vh !important; }
+            .column-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
           }
         `}
       </style>
@@ -425,7 +242,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
             </span>
           )}
         </div>
-
         <div className="flex items-center space-x-3">
           <div className="relative hidden sm:block">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -448,7 +264,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
               }}
             />
           </div>
-
           <button
             onClick={onClose}
             className="schema-close-btn p-2 rounded-full hover:bg-gray-100"
@@ -530,7 +345,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                   </span>
                 </button>
               ))}
-
               {filteredSchemas.length === 0 && (
                 <div
                   className="p-4 text-sm text-center"
@@ -548,10 +362,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
             {activeSchema && (
               <div
                 className="table-list h-full flex-none sm:w-1/3 border-b sm:border-b-0 sm:border-r"
-                style={{
-                  borderColor: theme.colors.border,
-                  overflow: "auto",
-                }}
+                style={{ borderColor: theme.colors.border, overflow: "auto" }}
                 ref={tableListRef}
               >
                 <div
@@ -572,7 +383,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                       </span>
                     )}
                   </h3>
-
                   <div className="flex items-center space-x-2" ref={filterRef}>
                     <div className="relative">
                       <button
@@ -582,7 +392,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                       >
                         <Filter size={14} />
                       </button>
-
                       {showFilterOptions && (
                         <div className="filter-dropdown">
                           <div className="py-2">
@@ -635,7 +444,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                     </button>
                   </div>
                 </div>
-
                 <div className="space-y-0.5 p-2">
                   {activeSchemaData &&
                     sortedTables(activeSchemaData).map((table, index) => (
@@ -690,7 +498,6 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                         </div>
                       </div>
                     ))}
-
                   {activeSchemaData && activeSchemaData.tables.length === 0 && (
                     <div className="no-results">
                       <Search
@@ -731,120 +538,181 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div>
-                        <h3
-                          className="text-sm font-medium mb-3 flex items-center space-x-2"
-                          style={{ color: theme.colors.textSecondary }}
-                        >
-                          <Columns size={16} />
-                          <span>Columns</span>
-                          {activeTableData && (
-                            <span className="text-xs">
-                              ({activeTableData.columns.length})
-                            </span>
-                          )}
-                        </h3>
-                        <div
-                          className="column-list column-grid"
-                          ref={columnListRef}
-                        >
-                          {activeTableData?.columns.map((column, index) => (
-                            <div
-                              key={column}
-                              data-column={column}
-                              onClick={() => {
-                                onColumnClick(column);
-                                scrollToColumnIfNeeded(column);
-                              }}
-                              className="column-item p-2 rounded cursor-pointer flex items-center space-x-2"
-                              style={{
-                                backgroundColor: theme.colors.background,
-                                border: `1px solid ${theme.colors.border}`,
-                                "--item-index": index,
-                              }}
-                            >
-                              <Code
-                                size={14}
-                                style={{ color: theme.colors.accent }}
-                              />
-                              <span
-                                className="truncate text-sm"
-                                style={{ color: theme.colors.text }}
-                              >
-                                {column}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Sample data */}
-                      {activeTableData?.sampleData && (
-                        <div className="sample-data-container mt-6">
+                      {activeTableData && (
+                        <div className="mb-4 flex justify-between items-center">
                           <h3
-                            className="text-sm font-medium mb-3 sticky top-0 z-10"
-                            style={{
-                              color: theme.colors.textSecondary,
-                              backgroundColor: theme.colors.surface,
-                            }}
+                            className="text-lg font-semibold"
+                            style={{ color: theme.colors.text }}
                           >
-                            Sample Data
+                            {activeTableData.name}
+                          </h3>
+                          {activeTableData.sampleData && (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => setActiveView("columns")}
+                                className="px-3 py-1 rounded"
+                                style={{
+                                  backgroundColor:
+                                    activeView === "columns"
+                                      ? theme.colors.accent
+                                      : theme.colors.background,
+                                  color:
+                                    activeView === "columns"
+                                      ? theme.colors.surface
+                                      : theme.colors.text,
+                                }}
+                              >
+                                Columns
+                              </button>
+                              <button
+                                onClick={() => setActiveView("sampleData")}
+                                className="px-3 py-1 rounded"
+                                style={{
+                                  backgroundColor:
+                                    activeView === "sampleData"
+                                      ? theme.colors.accent
+                                      : theme.colors.background,
+                                  color:
+                                    activeView === "sampleData"
+                                      ? theme.colors.surface
+                                      : theme.colors.text,
+                                }}
+                              >
+                                Sample Data
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {activeView === "columns" ? (
+                        <div>
+                          <h3
+                            className="text-sm font-medium mb-3 flex items-center space-x-2"
+                            style={{ color: theme.colors.textSecondary }}
+                          >
+                            <Columns size={16} />
+                            <span>Columns</span>
+                            {activeTableData && (
+                              <span className="text-xs">
+                                ({activeTableData.columns.length})
+                              </span>
+                            )}
                           </h3>
                           <div
-                            className="overflow-x-auto"
-                            style={{
-                              border: `1px solid ${theme.colors.border}`,
-                              borderRadius: theme.borderRadius.default,
-                            }}
+                            className="column-list column-grid"
+                            ref={columnListRef}
                           >
-                            <table
-                              className="w-full"
-                              style={{ borderCollapse: "collapse" }}
-                            >
-                              <thead>
-                                <tr>
-                                  {activeTableData.columns.map((col) => (
-                                    <th
-                                      key={col}
-                                      className="text-left text-sm p-2"
+                            {activeTableData?.columns.map((column, index) => (
+                              <div
+                                key={column.name}
+                                data-column={column.name}
+                                onClick={() => {
+                                  onColumnClick(column.name);
+                                  scrollToColumnIfNeeded(column.name);
+                                }}
+                                className="column-item p-2 rounded cursor-pointer"
+                                style={{
+                                  backgroundColor: theme.colors.background,
+                                  border: `1px solid ${theme.colors.border}`,
+                                  "--item-index": index,
+                                }}
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <Code
+                                    size={14}
+                                    style={{ color: theme.colors.accent }}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span
+                                      className="text-sm font-medium"
+                                      style={{ color: theme.colors.text }}
+                                    >
+                                      {column.name}
+                                    </span>
+                                    <span
+                                      className="text-xs"
                                       style={{
-                                        backgroundColor:
-                                          theme.colors.background,
-                                        color: theme.colors.text,
-                                        borderBottom: `1px solid ${theme.colors.border}`,
-                                        position: "sticky",
-                                        top: 0,
-                                        zIndex: 10,
+                                        color: theme.colors.textSecondary,
                                       }}
                                     >
-                                      {col}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {activeTableData.sampleData?.map((row, idx) => (
-                                  <tr key={idx} className="table-row">
-                                    {activeTableData.columns.map((col) => (
-                                      <td
-                                        key={col}
-                                        className="text-sm p-2"
-                                        style={{
-                                          color: theme.colors.textSecondary,
-                                          borderBottom: `1px solid ${theme.colors.border}`,
-                                        }}
-                                      >
-                                        {row[col] != null
-                                          ? String(row[col])
-                                          : "NULL"}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                      {column.type}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
+                      ) : (
+                        activeTableData?.sampleData && (
+                          <div className="sample-data-container">
+                            <h3
+                              className="text-sm font-medium mb-3 sticky top-0 z-10"
+                              style={{
+                                color: theme.colors.textSecondary,
+                                backgroundColor: theme.colors.surface,
+                              }}
+                            >
+                              Sample Data
+                            </h3>
+                            <div
+                              className="overflow-x-auto"
+                              style={{
+                                border: `1px solid ${theme.colors.border}`,
+                                borderRadius: theme.borderRadius.default,
+                              }}
+                            >
+                              <table
+                                className="w-full"
+                                style={{ borderCollapse: "collapse" }}
+                              >
+                                <thead>
+                                  <tr>
+                                    {activeTableData.columns.map((col) => (
+                                      <th
+                                        key={col.name}
+                                        className="text-left text-sm p-2"
+                                        style={{
+                                          backgroundColor:
+                                            theme.colors.background,
+                                          color: theme.colors.text,
+                                          borderBottom: `1px solid ${theme.colors.border}`,
+                                          position: "sticky",
+                                          top: 0,
+                                          zIndex: 10,
+                                        }}
+                                      >
+                                        {col.name}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {activeTableData.sampleData?.map(
+                                    (row, idx) => (
+                                      <tr key={idx} className="table-row">
+                                        {activeTableData.columns.map((col) => (
+                                          <td
+                                            key={col.name}
+                                            className="text-sm p-2"
+                                            style={{
+                                              color: theme.colors.textSecondary,
+                                              borderBottom: `1px solid ${theme.colors.border}`,
+                                            }}
+                                          >
+                                            {row[col.name] != null
+                                              ? String(row[col.name])
+                                              : "NULL"}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    )
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
                       )}
                     </div>
                   )}

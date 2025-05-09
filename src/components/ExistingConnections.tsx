@@ -476,38 +476,58 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
         </div>
       ) : (
         <div
-          className="rounded-lg text-center py-12 px-4 mb-40"
-          style={{
-            backgroundColor: theme.colors.surface,
-            border: `1px solid ${theme.colors.text}10`,
-            boxShadow:
-              "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-          }}
+          className="max-w-md mx-auto p-6 rounded-lg shadow-md text-center"
+          style={{ backgroundColor: theme.colors.surface }}
         >
-          <div className="max-w-md mx-auto">
-            <p className="text-lg mb-4" style={{ color: theme.colors.text }}>
-              No connections found. Time to create one?
-            </p>
-            <button
-              onClick={createConnection}
-              className="px-6 py-2.5 font-medium tracking-wide transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                color: "#fff",
-                backgroundColor: theme.colors.accent,
-                borderRadius: theme.borderRadius.default,
-              }}
-              onMouseOver={(e) =>
-                !loading &&
-                (e.currentTarget.style.backgroundColor = `${theme.colors.accent}dd`)
-              }
-              onMouseOut={(e) =>
-                !loading &&
-                (e.currentTarget.style.backgroundColor = theme.colors.accent)
-              }
+          <div className="mb-4">
+            {/* Optional placeholder icon with theme color */}
+            <svg
+              className="mx-auto h-12 w-12"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              style={{ color: theme.colors.accent }}
             >
-              Create Connection
-            </button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 7v4h18V7M3 11v8h18v-8"
+              />
+            </svg>
           </div>
+          <h2
+            className="text-xl font-semibold mb-2"
+            style={{ color: theme.colors.text }}
+          >
+            No Connections Found
+          </h2>
+          <p className="mb-4" style={{ color: theme.colors.text }}>
+            It looks like you haven’t set up any connections yet. Let’s get
+            started!
+          </p>
+          <button
+            onClick={createConnection}
+            disabled={loading}
+            className="w-full px-4 py-2 font-medium rounded-md transition duration-200 shadow-sm text-white"
+            style={{
+              backgroundColor: loading
+                ? theme.colors.accentHover
+                : theme.colors.accent,
+            }}
+            onMouseOver={(e) => {
+              if (!loading)
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.accentHover;
+            }}
+            onMouseOut={(e) => {
+              if (!loading)
+                e.currentTarget.style.backgroundColor = theme.colors.accent;
+            }}
+          >
+            {"Create Connection"}
+          </button>
         </div>
       )}
 

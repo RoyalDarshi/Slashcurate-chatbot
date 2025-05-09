@@ -66,6 +66,10 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    validateUser();
+  }, []);
+
   const handleNewChat = () => {
     triggerChatFunction();
     localStorage.removeItem("currentSessionId");
@@ -74,7 +78,6 @@ function App() {
   const handleUserLogout = () => {
     handleLogout();
     setIsAuthenticated(false);
-    triggerChatFunction();
   };
 
   const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
@@ -83,6 +86,7 @@ function App() {
       setIsAdminAuthenticated(true);
     } else {
       setIsAuthenticated(true);
+      handleNewChat();
       setActiveMenu("home");
       setTimeout(() => setShowTip(true), 1500);
     }
