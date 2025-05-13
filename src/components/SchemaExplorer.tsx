@@ -42,9 +42,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   maxHeight = "calc(90vh - 180px)",
   theme: propTheme,
 }) => {
-  const { theme: contextTheme } = useTheme();
-  const theme = propTheme || contextTheme;
-
+  const { theme } = useTheme();
   const [activeSchema, setActiveSchema] = useState<string | null>(
     schemas && schemas.length > 0 ? schemas[0].name : null
   );
@@ -881,41 +879,50 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                           </h3>
                           {activeTableData.sampleData && (
                             <div className="relative inline-flex rounded-full bg-gray-200 p-1 max-w-xs">
-  <button
-    onClick={() => setActiveView("columns")}
-    className={`
-      relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
-      transition-colors ease-in-out duration-300 whitespace-nowrap
-      ${activeView === "columns" ? "text-white" : "text-gray-700"}
-    `}
-    style={{
-      backgroundColor: activeView === "columns"
-        ? theme.colors.accent
-        : "transparent",
-    }}
-    aria-label="View columns"
-  >
-    Columns
-  </button>
+                              <button
+                                onClick={() => setActiveView("columns")}
+                                className={`
+                               relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
+                               transition-all duration-300 ease-in-out whitespace-nowrap
+                               ${
+                                 activeView === "columns"
+                                   ? "text-white"
+                                   : "text-gray-700"
+                               }
+                             `}
+                                style={{
+                                  backgroundColor:
+                                    activeView === "columns"
+                                      ? theme.colors.accent
+                                      : "transparent",
+                                }}
+                                aria-label="View columns"
+                              >
+                                Columns
+                              </button>
 
-  <button
-    onClick={() => setActiveView("sampleData")}
-    className={`
-      relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
-      transition-colors ease-in-out duration-300 whitespace-nowrap
-      ${activeView === "sampleData" ? "text-white" : "text-gray-700"}
-    `}
-    style={{
-      backgroundColor: activeView === "sampleData"
-        ? theme.colors.accent
-        : "transparent",
-    }}
-    aria-label="View sample data"
-  >
-    Sample Data
-  </button>
-</div>
-
+                              <button
+                                onClick={() => setActiveView("sampleData")}
+                                className={`
+                               relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
+                               transition-all duration-300 ease-in-out whitespace-nowrap
+                               ${
+                                 activeView === "sampleData"
+                                   ? "text-white"
+                                   : "text-gray-700"
+                               }
+                             `}
+                                style={{
+                                  backgroundColor:
+                                    activeView === "sampleData"
+                                      ? theme.colors.accent
+                                      : "transparent",
+                                }}
+                                aria-label="View sample data"
+                              >
+                                Sample Data
+                              </button>
+                            </div>
                           )}
                         </div>
                         {activeView === "columns" && (
