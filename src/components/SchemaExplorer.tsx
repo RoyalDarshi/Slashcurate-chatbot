@@ -878,45 +878,68 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                             {activeTableData.name}
                           </h3>
                           {activeTableData.sampleData && (
-                            <div className="relative inline-flex rounded-full bg-gray-200 p-1 max-w-xs">
+                            <div className="relative inline-flex rounded-full bg-gray-200 p-1 max-w-xs w-full">
+                              {/* Sliding Background */}
+                              <div
+                                className={`
+                                absolute top-1 bottom-1 rounded-full bg-accent
+                                transition-transform duration-400 ease-in-out
+                                ${
+                                  activeView === "columns"
+                                    ? "translate-x-0"
+                                    : "translate-x-full"
+                                }
+                              `}
+                                style={{
+                                  width: "48.5%", // Exactly half the container width
+                                  backgroundColor: theme.colors.accent,
+                                }}
+                              />
+
+                              {/* Columns Button */}
                               <button
                                 onClick={() => setActiveView("columns")}
                                 className={`
-                               relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
-                               transition-all duration-300 ease-in-out whitespace-nowrap
-                               ${
-                                 activeView === "columns"
-                                   ? "text-white"
-                                   : "text-gray-700"
-                               }
-                             `}
+                                relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
+                                transition-all duration-400 ease-in-out whitespace-nowrap
+                                ${
+                                  activeView === "columns"
+                                    ? "text-white"
+                                    : "text-gray-700"
+                                }
+                              `}
                                 style={{
-                                  backgroundColor:
+                                  flex: "1 1 0", // Ensure equal widths
+                                  willChange: "color, transform",
+                                  transform:
                                     activeView === "columns"
-                                      ? theme.colors.accent
-                                      : "transparent",
+                                      ? "scale(1.02)"
+                                      : "scale(1)",
                                 }}
                                 aria-label="View columns"
                               >
                                 Columns
                               </button>
 
+                              {/* Sample Data Button */}
                               <button
                                 onClick={() => setActiveView("sampleData")}
                                 className={`
-                               relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
-                               transition-all duration-300 ease-in-out whitespace-nowrap
-                               ${
-                                 activeView === "sampleData"
-                                   ? "text-white"
-                                   : "text-gray-700"
-                               }
-                             `}
+                                relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
+                                transition-all duration-400 ease-in-out whitespace-nowrap
+                                ${
+                                  activeView === "sampleData"
+                                    ? "text-white"
+                                    : "text-gray-700"
+                                }
+                              `}
                                 style={{
-                                  backgroundColor:
+                                  flex: "1 1 0", // Ensure equal widths
+                                  willChange: "color, transform",
+                                  transform:
                                     activeView === "sampleData"
-                                      ? theme.colors.accent
-                                      : "transparent",
+                                      ? "scale(1.02)"
+                                      : "scale(1)",
                                 }}
                                 aria-label="View sample data"
                               >
