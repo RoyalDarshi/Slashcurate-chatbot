@@ -22,28 +22,31 @@ import {
   Mail,
   Key,
 } from "lucide-react";
-import { DatabaseSchema } from "../types";
-import { Theme } from "../ThemeContext";
+import { DatabaseSchema, Theme } from "../types";
+import { useTheme } from "../ThemeContext";
 
 interface SchemaExplorerProps {
-  schemas: DatabaseSchema[];
+  schemas: DatabaseSchema[] | null;
   onClose: () => void;
-  theme: Theme;
   onColumnClick: (columnName: string) => void;
   selectedConnection?: string;
   maxHeight?: string;
+  theme?: Theme;
 }
 
 const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   schemas,
   onClose,
-  theme,
   onColumnClick,
   selectedConnection,
   maxHeight = "calc(90vh - 180px)",
+  theme: propTheme,
 }) => {
+  const { theme: contextTheme } = useTheme();
+  const theme = propTheme || contextTheme;
+
   const [activeSchema, setActiveSchema] = useState<string | null>(
-    schemas[0]?.name || null
+    schemas && schemas.length > 0 ? schemas[0].name : null
   );
   const [activeTable, setActiveTable] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -54,22 +57,47 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   const [activeView, setActiveView] = useState<"columns" | "sampleData">(
     "columns"
   );
+  const [isMobileView, setIsMobileView] = useState<boolean>(
+    window.innerWidth < 768
+  );
+  const [mobileNavView, setMobileNavView] = useState<
+    "schemas" | "tables" | "details"
+  >("schemas");
 
   const tableListRef = useRef<HTMLDivElement>(null);
   const columnListRef = useRef<HTMLDivElement>(null);
   const schemaTabsRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
+  // Handle responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   useEffect(() => {
     setActiveTable(null);
-  }, [activeSchema]);
+    if (isMobileView) {
+      setMobileNavView("tables");
+    }
+  }, [activeSchema, isMobileView]);
 
   useEffect(() => {
     if (activeTable) {
       setIsLoading(true);
       setTimeout(() => setIsLoading(false), 300);
+
+      if (isMobileView) {
+        setMobileNavView("details");
+      }
     }
-  }, [activeTable]);
+  }, [activeTable, isMobileView]);
 
   useEffect(() => {
     setActiveView("columns");
@@ -105,7 +133,12 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
     }
   };
 
-  const scrollToColumnIfNeeded = (columnName: string) => {
+  const handleMobileNavigation = (view: "schemas" | "tables" | "details") => {
+    setMobileNavView(view);
+  };
+
+  const handleColumnClick = (columnName: string) => {
+    onColumnClick(columnName);
     if (columnListRef.current) {
       const columnElement = columnListRef.current.querySelector(
         `[data-column="${columnName}"]`
@@ -113,6 +146,14 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
       columnElement?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   };
+
+  if (!schemas || schemas.length === 0) {
+    return (
+      <div className="p-4 text-center" style={{ color: theme.colors.text }}>
+        Loading schemas or no schemas available...
+      </div>
+    );
+  }
 
   const filteredSchemas = schemas
     .filter((schema) => {
@@ -170,8 +211,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
     (t) => t.name === activeTable
   );
 
-  // Map data types to their corresponding icons
-  const getTypeIcon = (type) => {
+  const getTypeIcon = (type: string) => {
     if (!type || typeof type !== "string") return <Database size={16} />;
 
     switch (type.trim().toLowerCase()) {
@@ -202,8 +242,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
     }
   };
 
-  // Map column names to their corresponding icons
-  const getColumnIcon = (name) => {
+  const getColumnIcon = (name: string) => {
     if (name.includes("user") || name.includes("name"))
       return <Users size={16} />;
     if (name.includes("email")) return <Mail size={16} />;
@@ -212,8 +251,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
     return <AlignJustify size={16} />;
   };
 
-  // Color mapping for different data types
-  const getTypeColor = (type) => {
+  const getTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
       case "integer":
         return "bg-amber-100 text-amber-800";
@@ -236,13 +274,73 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
     }
   };
 
+  // Rendering the mobile breadcrumb navigation
+  const renderMobileBreadcrumb = () => {
+    return (
+      <div className="flex items-center text-sm space-x-1.5 mb-2 md:hidden overflow-x-auto py-1.5">
+        <button
+          onClick={() => handleMobileNavigation("schemas")}
+          className="flex items-center px-2 py-1 rounded hover:bg-gray-100"
+          style={{ color: theme.colors.accent }}
+        >
+          <Database size={14} />
+          <span className="ml-1.5">Schemas</span>
+        </button>
+
+        {activeSchema && (
+          <>
+            <ChevronRight
+              size={14}
+              style={{ color: theme.colors.textSecondary }}
+            />
+            <button
+              onClick={() => handleMobileNavigation("tables")}
+              className="flex items-center px-2 py-1 rounded hover:bg-gray-100"
+              style={{
+                color:
+                  mobileNavView === "tables"
+                    ? theme.colors.accent
+                    : theme.colors.text,
+                fontWeight: mobileNavView === "tables" ? 500 : 400,
+              }}
+            >
+              {activeSchema}
+            </button>
+          </>
+        )}
+
+        {activeTable && (
+          <>
+            <ChevronRight
+              size={14}
+              style={{ color: theme.colors.textSecondary }}
+            />
+            <button
+              onClick={() => handleMobileNavigation("details")}
+              className="flex items-center px-2 py-1 rounded hover:bg-gray-100"
+              style={{
+                color:
+                  mobileNavView === "details"
+                    ? theme.colors.accent
+                    : theme.colors.text,
+                fontWeight: mobileNavView === "details" ? 500 : 400,
+              }}
+            >
+              {activeTable}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       className="schema-explorer w-full max-w-full rounded-lg flex flex-col"
       style={{
         background: theme.colors.surface,
         boxShadow: `0 8px 32px ${theme.colors.text}15`,
-        maxHeight: maxHeight,
+        maxHeight: isMobileView ? "calc(100vh - 80px)" : maxHeight,
         height: "100%",
         overflow: "hidden",
       }}
@@ -265,7 +363,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
           .search-input { transition: all 0.2s ease; border: 1px solid ${theme.colors.border}; }
           .search-input:focus { border-color: ${theme.colors.accent}; box-shadow: 0 0 0 2px ${theme.colors.accent}20; }
           .schema-close-btn { transition: all 0.2s ease; }
-          .schema-close-btn:hover { background-color: ${theme.colors.error}20; transform: rotate(90deg); }
+          .schema-close-btn:hover { background-color: ${theme.colors.error}20; }
           .schema-tabs, .table-list, .column-list { scrollbar-width: thin; scrollbar-color: ${theme.colors.accent}40 transparent; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
           .schema-tabs::-webkit-scrollbar, .table-list::-webkit-scrollbar, .column-list::-webkit-scrollbar { width: 6px; height: 6px; }
           .schema-tabs::-webkit-scrollbar-track, .table-list::-webkit-scrollbar-track, .column-list::-webkit-scrollbar-track { background: transparent; }
@@ -283,13 +381,83 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
           .content-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
           .content-row { display: flex; flex: 1; overflow: hidden; }
           .details-container { flex: 1; overflow-y: auto; overflow-x: hidden; }
+          .mobile-nav-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+          }
+          .mobile-nav-button.active {
+            background-color: ${theme.colors.accent};
+            color: white;
+          }
+          .mobile-nav-button:not(.active) {
+            background-color: ${theme.colors.accent}10;
+            color: ${theme.colors.accent};
+          }
+          .responsive-tab-switcher {
+            display: flex;
+            border-radius: 9999px;
+            background-color: ${theme.colors.background};
+            padding: 0.25rem;
+            margin-bottom: 1rem;
+          }
+          .tab-button {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+          }
+          .tab-button.active {
+            background-color: ${theme.colors.accent};
+            color: white;
+          }
+          .tab-button:not(.active) {
+            color: ${theme.colors.text};
+          }
+          
           @media (max-width: 768px) {
-            .schema-explorer { max-height: calc(100vh - 160px) !important; border-radius: 12px 12px 0 0; width: 100vw !important; margin-left: -16px; }
-            .content-row { flex-direction: column; }
-            .schema-tabs { flex-direction: row !important; max-width: 100% !important; border-right: none !important; border-bottom: 1px solid ${theme.colors.border}; overflow-x: auto; overflow-y: hidden !important; }
-            .table-list { width: 100% !important; height: 40vh !important; }
-            .details-container { height: 50vh !important; }
-            .column-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+            .schema-explorer { 
+              max-height: calc(100vh - 80px) !important; 
+              border-radius: 12px; 
+              width: 100% !important; 
+            }
+            .schema-tabs-horizontal {
+              display: flex;
+              overflow-x: auto;
+              overflow-y: hidden;
+              white-space: nowrap;
+              padding: 0.5rem;
+              border-bottom: 1px solid ${theme.colors.border};
+              gap: 0.5rem;
+              scroll-snap-type: x mandatory;
+            }
+            .schema-tab-horizontal {
+              display: inline-flex;
+              padding: 0.5rem 0.75rem;
+              border-radius: 9999px;
+              scroll-snap-align: start;
+              flex-shrink: 0;
+            }
+            .search-input { padding: 8px 12px; font-size: 14px; }
+            .column-item-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+              gap: 0.5rem;
+              margin-top: 1rem;
+            }
+            .table-data-scroll {
+              max-width: 100%;
+              overflow-x: auto;
+              -webkit-overflow-scrolling: touch;
+            }
           }
         `}
       </style>
@@ -303,14 +471,18 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
         }}
       >
         <div className="flex items-center space-x-2">
-          <Database size={20} style={{ color: theme.colors.accent }} />
+          <Database
+            size={20}
+            style={{ color: theme.colors.accent }}
+            aria-hidden="true"
+          />
           <h2
             className="text-lg font-semibold"
             style={{ color: theme.colors.text }}
           >
             Schema Explorer
           </h2>
-          {selectedConnection && (
+          {selectedConnection && !isMobileView && (
             <span
               className="text-sm ml-2 opacity-75"
               style={{ color: theme.colors.textSecondary }}
@@ -322,7 +494,11 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
         <div className="flex items-center space-x-3">
           <div className="relative hidden sm:block">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={14} style={{ color: theme.colors.textSecondary }} />
+              <Search
+                size={14}
+                style={{ color: theme.colors.textSecondary }}
+                aria-hidden="true"
+              />
             </div>
             <input
               type="text"
@@ -339,12 +515,14 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                 fontSize: theme.typography.size.sm,
                 width: "220px",
               }}
+              aria-label="Search tables and columns"
             />
           </div>
           <button
             onClick={onClose}
             className="schema-close-btn p-2 rounded-full hover:bg-gray-100"
             style={{ color: theme.colors.text }}
+            aria-label="Close schema explorer"
           >
             <X size={20} />
           </button>
@@ -355,7 +533,11 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
       <div className="px-4 py-2 sm:hidden">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={14} style={{ color: theme.colors.textSecondary }} />
+            <Search
+              size={14}
+              style={{ color: theme.colors.textSecondary }}
+              aria-hidden="true"
+            />
           </div>
           <input
             type="text"
@@ -371,162 +553,227 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
               color: theme.colors.text,
               fontSize: theme.typography.size.sm,
             }}
+            aria-label="Search tables and columns"
           />
         </div>
       </div>
 
+      {/* Mobile Breadcrumb Navigation */}
+      {isMobileView && renderMobileBreadcrumb()}
+
+      {/* Mobile Navigation Tabs */}
+      {isMobileView && (
+        <div className="px-4 py-2 md:hidden">
+          <div className="responsive-tab-switcher">
+            <button
+              className={`tab-button ${
+                mobileNavView === "schemas" ? "active" : ""
+              }`}
+              onClick={() => handleMobileNavigation("schemas")}
+            >
+              Schemas
+            </button>
+            <button
+              className={`tab-button ${
+                mobileNavView === "tables" ? "active" : ""
+              }`}
+              onClick={() => handleMobileNavigation("tables")}
+              disabled={!activeSchema}
+            >
+              Tables
+            </button>
+            <button
+              className={`tab-button ${
+                mobileNavView === "details" ? "active" : ""
+              }`}
+              onClick={() => handleMobileNavigation("details")}
+              disabled={!activeTable}
+            >
+              Details
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Content area */}
       <div className="content-container">
-        <div className="content-row">
+        <div className={`content-row ${isMobileView ? "flex-col" : ""}`}>
           {/* Schema tabs */}
-          <div
-            className="schema-tabs flex-none sm:flex-col border-b sm:border-b-0 sm:border-r"
-            style={{
-              borderColor: theme.colors.border,
-              minWidth: "120px",
-              maxWidth: "200px",
-              height: "300px",
-              display: "flex",
-              flexDirection: "column",
-              overflowY: "auto",
-              overflowX: "hidden",
-            }}
-            ref={schemaTabsRef}
-          >
-            <div className="schema-tabs-container">
-              {filteredSchemas.map((schema, index) => (
-                <button
-                  key={schema.name}
-                  className={`schema-tab schema-item flex items-center justify-between p-3 min-w-[120px] sm:min-w-[160px] ${
-                    activeSchema === schema.name ? "active bg-opacity-10" : ""
-                  }`}
-                  onClick={() => setActiveSchema(schema.name)}
-                  style={{
-                    backgroundColor:
-                      activeSchema === schema.name
-                        ? `${theme.colors.accent}10`
-                        : "transparent",
-                    color: theme.colors.text,
-                    "--item-index": index,
-                  }}
-                >
-                  <div className="flex items-center space-x-2 overflow-hidden">
-                    <Database
-                      size={16}
-                      style={{ color: theme.colors.accent }}
-                    />
-                    <span className="truncate">{schema.name}</span>
-                  </div>
-                  <span className="database-count-badge ml-2 flex-shrink-0">
-                    {schema.tables.length}
-                  </span>
-                </button>
-              ))}
-              {filteredSchemas.length === 0 && (
-                <div
-                  className="p-4 text-sm text-center"
-                  style={{ color: theme.colors.textSecondary }}
-                >
-                  No schemas found
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Tables and details */}
-          <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
-            {/* Table list */}
-            {activeSchema && (
-              <div
-                className="table-list h-full flex-none sm:w-1/3 border-b sm:border-b-0 sm:border-r"
-                style={{ borderColor: theme.colors.border, overflow: "auto" }}
-                ref={tableListRef}
-              >
-                <div
-                  className="p-3 sticky top-0 z-10 border-b flex items-center justify-between"
-                  style={{
-                    background: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                  }}
-                >
-                  <h3
-                    className="text-sm font-medium"
+          {(!isMobileView || (isMobileView && mobileNavView === "schemas")) && (
+            <div
+              className={
+                isMobileView
+                  ? "schema-tabs-horizontal"
+                  : "schema-tabs flex-none sm:flex-col border-b sm:border-b-0 sm:border-r"
+              }
+              style={{
+                borderColor: theme.colors.border,
+                minWidth: isMobileView ? "auto" : "120px",
+                maxWidth: isMobileView ? "100%" : "200px",
+                height: isMobileView ? "auto" : "300px",
+                display: "flex",
+                flexDirection: isMobileView ? "row" : "column",
+                overflowY: isMobileView ? "hidden" : "auto",
+                overflowX: isMobileView ? "auto" : "hidden",
+              }}
+              ref={schemaTabsRef}
+            >
+              <div className={isMobileView ? "flex" : "schema-tabs-container"}>
+                {filteredSchemas.map((schema, index) => (
+                  <button
+                    key={schema.name}
+                    className={`${
+                      isMobileView ? "schema-tab-horizontal" : "schema-tab"
+                    } schema-item flex items-center justify-between p-3 ${
+                      activeSchema === schema.name ? "active bg-opacity-10" : ""
+                    }`}
+                    onClick={() => setActiveSchema(schema.name)}
+                    style={{
+                      backgroundColor:
+                        activeSchema === schema.name
+                          ? `${theme.colors.accent}10`
+                          : "transparent",
+                      color: theme.colors.text,
+                      "--item-index": index,
+                    }}
+                    aria-label={`Select schema ${schema.name}`}
+                  >
+                    <div className="flex items-center space-x-2 overflow-hidden">
+                      <Database
+                        size={16}
+                        style={{ color: theme.colors.accent }}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{schema.name}</span>
+                    </div>
+                    <span className="database-count-badge ml-2 flex-shrink-0">
+                      {schema.tables.length}
+                    </span>
+                  </button>
+                ))}
+                {filteredSchemas.length === 0 && (
+                  <div
+                    className="p-4 text-sm text-center"
                     style={{ color: theme.colors.textSecondary }}
                   >
-                    Tables
-                    {activeSchemaData && (
+                    No schemas found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Tables and details */}
+          <div
+            className={`flex-1 ${
+              isMobileView ? "" : "flex flex-col sm:flex-row"
+            } overflow-hidden`}
+          >
+            {/* Table list */}
+            {activeSchema &&
+              activeSchemaData &&
+              (!isMobileView ||
+                (isMobileView && mobileNavView === "tables")) && (
+                <div
+                  className={`table-list h-full flex-none ${
+                    isMobileView ? "w-full" : "sm:w-1/3"
+                  } border-b sm:border-b-0 sm:border-r`}
+                  style={{
+                    borderColor: theme.colors.border,
+                    overflow: "auto",
+                    height: isMobileView ? "calc(100vh - 230px)" : "auto",
+                  }}
+                  ref={tableListRef}
+                >
+                  <div
+                    className="p-3 sticky top-0 z-10 border-b flex items-center justify-between"
+                    style={{
+                      background: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                    }}
+                  >
+                    <h3
+                      className="text-sm font-medium"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
+                      Tables
                       <span className="ml-2 text-xs opacity-75">
                         ({activeSchemaData.tables.length})
                       </span>
-                    )}
-                  </h3>
-                  <div className="flex items-center space-x-2" ref={filterRef}>
-                    <div className="relative">
+                    </h3>
+                    <div
+                      className="flex items-center space-x-2"
+                      ref={filterRef}
+                    >
+                      <div className="relative">
+                        <button
+                          onClick={() =>
+                            setShowFilterOptions(!showFilterOptions)
+                          }
+                          className="p-1.5 rounded-md hover:bg-gray-100"
+                          style={{ color: theme.colors.text }}
+                          aria-label="Filter options"
+                        >
+                          <Filter size={14} />
+                        </button>
+                        {showFilterOptions && (
+                          <div className="filter-dropdown">
+                            <div className="py-2">
+                              <div
+                                className="px-3 py-1 text-xs font-medium"
+                                style={{ color: theme.colors.textSecondary }}
+                              >
+                                Sort by
+                              </div>
+                              <button
+                                className={`sort-button w-full text-left ${
+                                  sortBy === "name" ? "active" : ""
+                                }`}
+                                onClick={() => handleSortByChange("name")}
+                                style={{ color: theme.colors.text }}
+                              >
+                                <ArrowUpDown size={12} />
+                                Name
+                                {sortBy === "name" && (
+                                  <span className="ml-auto">
+                                    {sortDirection === "asc" ? "↑" : "↓"}
+                                  </span>
+                                )}
+                              </button>
+                              <button
+                                className={`sort-button w-full text-left ${
+                                  sortBy === "columns" ? "active" : ""
+                                }`}
+                                onClick={() => handleSortByChange("columns")}
+                                style={{ color: theme.colors.text }}
+                              >
+                                <ArrowUpDown size={12} />
+                                Column Count
+                                {sortBy === "columns" && (
+                                  <span className="ml-auto">
+                                    {sortDirection === "asc" ? "↑" : "↓"}
+                                  </span>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <button
-                        onClick={() => setShowFilterOptions(!showFilterOptions)}
+                        onClick={() => setSearchTerm("")}
                         className="p-1.5 rounded-md hover:bg-gray-100"
                         style={{ color: theme.colors.text }}
+                        aria-label="Clear search"
                       >
-                        <Filter size={14} />
+                        <RefreshCw size={14} />
                       </button>
-                      {showFilterOptions && (
-                        <div className="filter-dropdown">
-                          <div className="py-2">
-                            <div
-                              className="px-3 py-1 text-xs font-medium"
-                              style={{ color: theme.colors.textSecondary }}
-                            >
-                              Sort by
-                            </div>
-                            <button
-                              className={`sort-button w-full text-left ${
-                                sortBy === "name" ? "active" : ""
-                              }`}
-                              onClick={() => handleSortByChange("name")}
-                              style={{ color: theme.colors.text }}
-                            >
-                              <ArrowUpDown size={12} />
-                              Name
-                              {sortBy === "name" && (
-                                <span className="ml-auto">
-                                  {sortDirection === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
-                            <button
-                              className={`sort-button w-full text-left ${
-                                sortBy === "columns" ? "active" : ""
-                              }`}
-                              onClick={() => handleSortByChange("columns")}
-                              style={{ color: theme.colors.text }}
-                            >
-                              <ArrowUpDown size={12} />
-                              Column Count
-                              {sortBy === "columns" && (
-                                <span className="ml-auto">
-                                  {sortDirection === "asc" ? "↑" : "↓"}
-                                </span>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      className="p-1.5 rounded-md hover:bg-gray-100"
-                      style={{ color: theme.colors.text }}
-                    >
-                      <RefreshCw size={14} />
-                    </button>
                   </div>
-                </div>
-                <div className="space-y-0.5 p-2">
-                  {activeSchemaData &&
-                    sortedTables(activeSchemaData).map((table, index) => (
-                      <div
+                  <div className="space-y-0.5 p-2">
+                    {sortedTables(activeSchemaData).map((table, index) => (
+                      <button
                         key={table.name}
-                        className="table-item rounded-lg cursor-pointer"
+                        className="table-item rounded-lg cursor-pointer w-full text-left"
                         onClick={() => handleTableClick(table.name)}
                         style={{
                           backgroundColor:
@@ -536,12 +783,14 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                           transition: "background-color 0.2s ease",
                           "--item-index": index,
                         }}
+                        aria-label={`Select table ${table.name}`}
                       >
                         <div className="flex items-center justify-between p-3">
                           <div className="flex items-center space-x-2 overflow-hidden">
                             <Table2
                               size={16}
                               style={{ color: theme.colors.accent }}
+                              aria-hidden="true"
                             />
                             <span
                               style={{ color: theme.colors.text }}
@@ -570,237 +819,269 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                                     : "rotate(0deg)",
                                 transition: "transform 0.2s ease",
                               }}
+                              aria-hidden="true"
                             />
                           </div>
                         </div>
-                      </div>
+                      </button>
                     ))}
-                  {activeSchemaData && activeSchemaData.tables.length === 0 && (
-                    <div className="no-results">
-                      <Search
-                        size={24}
-                        style={{
-                          color: theme.colors.textSecondary,
-                          opacity: 0.7,
-                        }}
-                      />
-                      <p className="mt-2">No tables found</p>
-                      {searchTerm && (
-                        <button
-                          onClick={() => setSearchTerm("")}
-                          className="mt-2 text-sm"
-                          style={{ color: theme.colors.accent }}
-                        >
-                          Clear search
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    {activeSchemaData.tables.length === 0 && (
+                      <div className="no-results">
+                        <Search
+                          size={24}
+                          style={{
+                            color: theme.colors.textSecondary,
+                            opacity: 0.7,
+                          }}
+                        />
+                        <p className="mt-2">No tables found</p>
+                        {searchTerm && (
+                          <button
+                            onClick={() => setSearchTerm("")}
+                            className="mt-2 text-sm"
+                            style={{ color: theme.colors.accent }}
+                          >
+                            Clear search
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Table details */}
-            <div className="details-container flex-1">
-              {activeTable ? (
-                <div className="p-4">
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      <div className="skeleton-loader h-6 w-32"></div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {[...Array(9)].map((_, i) => (
-                          <div key={i} className="skeleton-loader h-10"></div>
-                        ))}
+            {(!isMobileView ||
+              (isMobileView && mobileNavView === "details")) && (
+              <div
+                className="details-container flex-1"
+                style={{
+                  height: isMobileView ? "calc(100vh - 230px)" : "auto",
+                }}
+              >
+                {activeTable && activeTableData ? (
+                  <div className="p-4">
+                    {isLoading ? (
+                      <div className="space-y-4">
+                        <div className="skeleton-loader h-6 w-32"></div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {[...Array(9)].map((_, i) => (
+                            <div key={i} className="skeleton-loader h-10"></div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {activeTableData && (
-                        <div className="mb-4 flex justify-between items-center">
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
                           <h3
-                            className="text-lg font-semibold"
+                            className="text-lg font-semibold mb-3 sm:mb-0"
                             style={{ color: theme.colors.text }}
                           >
                             {activeTableData.name}
                           </h3>
                           {activeTableData.sampleData && (
-                            <div className="relative inline-flex rounded-full bg-gray-200 p-1">
-                              {/* Sliding background */}
-                              <div
-                                className="absolute top-1 left-1 h-8 w-[130px] rounded-full transition-transform duration-300"
-                                style={{
-                                  backgroundColor: theme.colors.accent,
-                                  transform:
-                                    activeView === "columns"
-                                      ? "translateX(0)"
-                                      : "translateX(134px)",
-                                }}
-                              ></div>
+                            <div className="relative inline-flex rounded-full bg-gray-200 p-1 max-w-xs">
+  <button
+    onClick={() => setActiveView("columns")}
+    className={`
+      relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
+      transition-colors ease-in-out duration-300 whitespace-nowrap
+      ${activeView === "columns" ? "text-white" : "text-gray-700"}
+    `}
+    style={{
+      backgroundColor: activeView === "columns"
+        ? theme.colors.accent
+        : "transparent",
+    }}
+    aria-label="View columns"
+  >
+    Columns
+  </button>
 
-                              {/* Columns Button */}
-                              <button
-                                onClick={() => setActiveView("columns")}
-                                className={`relative z-10 w-[130px] py-1.5 text-center rounded-full text-sm font-medium transition-all duration-300 ${
-                                  activeView === "columns"
-                                    ? "text-white"
-                                    : "text-gray-700"
-                                }`}
-                              >
-                                Columns
-                              </button>
+  <button
+    onClick={() => setActiveView("sampleData")}
+    className={`
+      relative z-10 flex-1 py-1.5 px-3 text-center rounded-full text-sm font-medium
+      transition-colors ease-in-out duration-300 whitespace-nowrap
+      ${activeView === "sampleData" ? "text-white" : "text-gray-700"}
+    `}
+    style={{
+      backgroundColor: activeView === "sampleData"
+        ? theme.colors.accent
+        : "transparent",
+    }}
+    aria-label="View sample data"
+  >
+    Sample Data
+  </button>
+</div>
 
-                              {/* Sample Data Button */}
-                              <button
-                                onClick={() => setActiveView("sampleData")}
-                                className={`relative z-10 w-[135px] py-1.5 text-center rounded-full text-sm font-medium transition-all duration-300 ${
-                                  activeView === "sampleData"
-                                    ? "text-white"
-                                    : "text-gray-700"
-                                }`}
-                              >
-                                Sample Data
-                              </button>
-                            </div>
                           )}
                         </div>
-                      )}
-                      {activeView === "columns" ? (
-                        <div className="grid gap-3">
-                          {activeTableData?.columns.map((column, index) => (
-                            <div
-                              key={column.name}
-                              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-gray-200"
-                            >
-                              <div className="grid grid-cols-2">
-                                {/* Column name side */}
-                                <div className="p-4 flex items-center border-r border-gray-200">
-                                  <div className="mr-3 flex-shrink-0 p-2 rounded-full bg-gray-100">
-                                    {getColumnIcon(column.name)}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium text-gray-900">
-                                      {column.name}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Data type side */}
-                                <div className="p-4 flex items-center">
-                                  <div
-                                    className={`flex items-center space-x-2 px-3 py-1 rounded-full ${getTypeColor(
-                                      column.type
-                                    )}`}
-                                  >
-                                    {getTypeIcon(column.type)}
-                                    <span className="text-sm font-medium">
-                                      {column.type}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        activeTableData?.sampleData && (
-                          <div className="sample-data-container">
-                            <div
-                              style={{
-                                maxHeight: "400px",
-                                backgroundColor: theme.colors.surface,
-                                borderRadius: theme.borderRadius.default,
-                                boxShadow: theme.shadow.sm,
-                                border: `1px solid ${theme.colors.border}`,
-                              }}
-                            >
-                              <div
-                                className="overflow-x-auto overflow-y-auto"
-                                style={{ maxHeight: "400px" }}
+                        {activeView === "columns" && (
+                          <div className="column-item-grid">
+                            {activeTableData.columns.map((column, index) => (
+                              <button
+                                key={column.name}
+                                className="column-item bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-gray-200 text-left w-full"
+                                style={{ "--item-index": index }}
+                                onClick={() => handleColumnClick(column.name)}
+                                data-column={column.name}
                               >
-                                <table
-                                  className="w-full"
-                                  style={{ borderCollapse: "collapse" }}
+                                <div
+                                  className={`p-3 ${
+                                    isMobileView ? "" : "grid grid-cols-2"
+                                  }`}
                                 >
-                                  <thead>
-                                    <tr>
-                                      {activeTableData.columns.map((column) => (
-                                        <th
-                                          key={column.name}
-                                          className="text-left p-4 sticky top-0"
-                                          style={{
-                                            backgroundColor:
-                                              theme.colors.accent,
-                                            color: "white",
-                                            borderBottom: `1px solid ${theme.colors.border}`,
-                                            fontWeight: "500",
-                                          }}
-                                        >
-                                          {column.name}
-                                        </th>
-                                      ))}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {activeTableData.sampleData.map(
-                                      (row, idx) => (
-                                        <tr
-                                          key={idx}
-                                          style={{
-                                            backgroundColor:
-                                              idx % 2 === 0
-                                                ? theme.colors.surface
-                                                : theme.colors.background,
-                                            borderBottom: `1px solid ${theme.colors.border}`,
-                                          }}
-                                        >
+                                  <div className="flex items-center mb-2 sm:mb-0">
+                                    <div className="mr-2 flex-shrink-0 p-1.5 rounded-full bg-gray-100">
+                                      {getColumnIcon(column.name)}
+                                    </div>
+                                    <div className="truncate">
+                                      <p className="font-medium text-gray-900 text-sm">
+                                        {column.name}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <div
+                                      className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs ${getTypeColor(
+                                        column.type
+                                      )}`}
+                                    >
+                                      {getTypeIcon(column.type)}
+                                      <span className="font-medium truncate max-w-[80px]">
+                                        {column.type}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {activeView === "sampleData" &&
+                          activeTableData.sampleData && (
+                            <div className="sample-data-container">
+                              <div className="table-data-scroll">
+                                <div
+                                  style={{
+                                    backgroundColor: theme.colors.surface,
+                                    borderRadius: theme.borderRadius.default,
+                                    boxShadow: theme.shadow.sm,
+                                    border: `1px solid ${theme.colors.border}`,
+                                  }}
+                                >
+                                  <div
+                                    className="overflow-x-auto"
+                                    style={{
+                                      maxHeight: isMobileView
+                                        ? "calc(100vh - 300px)"
+                                        : "400px",
+                                    }}
+                                  >
+                                    <table
+                                      className="w-full"
+                                      style={{ borderCollapse: "collapse" }}
+                                    >
+                                      <thead>
+                                        <tr>
                                           {activeTableData.columns.map(
                                             (column) => (
-                                              <td
+                                              <th
                                                 key={column.name}
-                                                className="p-4"
+                                                className="text-left p-3 sticky top-0"
                                                 style={{
-                                                  color: theme.colors.text,
-                                                  fontWeight: "normal",
+                                                  backgroundColor:
+                                                    theme.colors.accent,
+                                                  color: "white",
+                                                  borderBottom: `1px solid ${theme.colors.border}`,
+                                                  fontWeight: "500",
+                                                  fontSize: isMobileView
+                                                    ? "12px"
+                                                    : "14px",
+                                                  whiteSpace: "nowrap",
                                                 }}
+                                                scope="col"
                                               >
-                                                {row[column.name] != null
-                                                  ? String(row[column.name])
-                                                  : "NULL"}
-                                              </td>
+                                                {column.name}
+                                              </th>
                                             )
                                           )}
                                         </tr>
-                                      )
-                                    )}
-                                  </tbody>
-                                </table>
+                                      </thead>
+                                      <tbody>
+                                        {activeTableData.sampleData?.map(
+                                          (row, idx) => (
+                                            <tr
+                                              key={idx}
+                                              style={{
+                                                backgroundColor:
+                                                  idx % 2 === 0
+                                                    ? theme.colors.surface
+                                                    : theme.colors.background,
+                                                borderBottom: `1px solid ${theme.colors.border}`,
+                                              }}
+                                            >
+                                              {activeTableData.columns.map(
+                                                (column) => (
+                                                  <td
+                                                    key={column.name}
+                                                    className="p-2 sm:p-3"
+                                                    style={{
+                                                      color: theme.colors.text,
+                                                      fontWeight: "normal",
+                                                      fontSize: isMobileView
+                                                        ? "12px"
+                                                        : "14px",
+                                                      whiteSpace: "nowrap",
+                                                      maxWidth: "200px",
+                                                      overflow: "hidden",
+                                                      textOverflow: "ellipsis",
+                                                    }}
+                                                  >
+                                                    {row[column.name] != null
+                                                      ? String(row[column.name])
+                                                      : "NULL"}
+                                                  </td>
+                                                )
+                                              )}
+                                            </tr>
+                                          )
+                                        )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <Table2
-                      size={32}
-                      style={{
-                        color: theme.colors.textSecondary,
-                        opacity: 0.5,
-                        margin: "0 auto",
-                        marginBottom: "12px",
-                      }}
-                    />
-                    <p style={{ color: theme.colors.textSecondary }}>
-                      Select a table to view details
-                    </p>
+                          )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center p-8">
+                      <Table2
+                        size={32}
+                        style={{
+                          color: theme.colors.textSecondary,
+                          opacity: 0.5,
+                          margin: "0 auto",
+                          marginBottom: "12px",
+                        }}
+                        aria-hidden="true"
+                      />
+                      <p style={{ color: theme.colors.textSecondary }}>
+                        {isMobileView
+                          ? "Select a schema and table to view details"
+                          : "Select a table to view details"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

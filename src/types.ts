@@ -195,3 +195,19 @@ export interface Theme {
     default: string; // Default transition timing (e.g., hover effects)
   };
 }
+
+export interface ColumnInfo {
+  name: string;
+  type: string;
+}
+
+export interface TableInfo {
+  name: string;
+  columns: ColumnInfo[];
+  sampleData?: Record<string, any>[];
+}
+
+export interface DatabaseSchema {
+  name: string;
+  tables: TableInfo[];
+}
