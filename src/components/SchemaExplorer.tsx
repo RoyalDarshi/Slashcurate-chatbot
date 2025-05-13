@@ -2,14 +2,25 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Database,
   Table2,
-  Columns,
   ChevronRight,
-  Code,
   X,
   Search,
   Filter,
   ArrowUpDown,
   RefreshCw,
+  Hash,
+  Calendar,
+  Check,
+  List,
+  Package,
+  Clock,
+  AlignJustify,
+  Type,
+  LineChart,
+  Globe,
+  Users,
+  Mail,
+  Key,
 } from "lucide-react";
 import { DatabaseSchema } from "../types";
 import { Theme } from "../ThemeContext";
@@ -158,6 +169,72 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   const activeTableData = activeSchemaData?.tables.find(
     (t) => t.name === activeTable
   );
+
+  // Map data types to their corresponding icons
+  const getTypeIcon = (type) => {
+    if (!type || typeof type !== "string") return <Database size={16} />;
+
+    switch (type.trim().toLowerCase()) {
+      case "integer":
+      case "int":
+        return <Hash size={16} />;
+      case "string":
+      case "text":
+      case "varchar":
+        return <Type size={16} />;
+      case "timestamp":
+      case "datetime":
+        return <Clock size={16} />;
+      case "boolean":
+      case "bool":
+        return <Check size={16} />;
+      case "json":
+        return <Package size={16} />;
+      case "array":
+        return <List size={16} />;
+      case "geography":
+      case "geometry":
+        return <Globe size={16} />;
+      case "date":
+        return <Calendar size={16} />;
+      default:
+        return <Database size={16} />;
+    }
+  };
+
+  // Map column names to their corresponding icons
+  const getColumnIcon = (name) => {
+    if (name.includes("user") || name.includes("name"))
+      return <Users size={16} />;
+    if (name.includes("email")) return <Mail size={16} />;
+    if (name.includes("id")) return <Key size={16} />;
+    if (name.includes("count")) return <LineChart size={16} />;
+    return <AlignJustify size={16} />;
+  };
+
+  // Color mapping for different data types
+  const getTypeColor = (type) => {
+    switch (type.toLowerCase()) {
+      case "integer":
+        return "bg-amber-100 text-amber-800";
+      case "string":
+        return "bg-emerald-100 text-emerald-800";
+      case "timestamp":
+        return "bg-purple-100 text-purple-800";
+      case "boolean":
+        return "bg-blue-100 text-blue-800";
+      case "json":
+        return "bg-rose-100 text-rose-800";
+      case "array":
+        return "bg-indigo-100 text-indigo-800";
+      case "geography":
+        return "bg-teal-100 text-teal-800";
+      case "date":
+        return "bg-violet-100 text-violet-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   return (
     <div
@@ -588,131 +665,116 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                         </div>
                       )}
                       {activeView === "columns" ? (
-                        <div>
-                          <h3
-                            className="text-sm font-medium mb-3 flex items-center space-x-2"
-                            style={{ color: theme.colors.textSecondary }}
-                          >
-                            <Columns size={16} />
-                            <span>Columns</span>
-                            {activeTableData && (
-                              <span className="text-xs">
-                                ({activeTableData.columns.length})
-                              </span>
-                            )}
-                          </h3>
-                          <div
-                            className="column-list column-grid"
-                            ref={columnListRef}
-                          >
-                            {activeTableData?.columns.map((column, index) => (
-                              <div
-                                key={column.name}
-                                data-column={column.name}
-                                onClick={() => {
-                                  onColumnClick(column.name);
-                                  scrollToColumnIfNeeded(column.name);
-                                }}
-                                className="column-item p-2 rounded cursor-pointer"
-                                style={{
-                                  backgroundColor: theme.colors.background,
-                                  border: `1px solid ${theme.colors.border}`,
-                                  "--item-index": index,
-                                }}
-                              >
-                                <div className="flex items-center space-x-2">
-                                  <Code
-                                    size={14}
-                                    style={{ color: theme.colors.accent }}
-                                  />
-                                  <div className="flex flex-col">
-                                    <span
-                                      className="text-sm font-medium"
-                                      style={{ color: theme.colors.text }}
-                                    >
+                        <div className="grid gap-3">
+                          {activeTableData?.columns.map((column, index) => (
+                            <div
+                              key={column.name}
+                              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-gray-200"
+                            >
+                              <div className="grid grid-cols-2">
+                                {/* Column name side */}
+                                <div className="p-4 flex items-center border-r border-gray-200">
+                                  <div className="mr-3 flex-shrink-0 p-2 rounded-full bg-gray-100">
+                                    {getColumnIcon(column.name)}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-900">
                                       {column.name}
-                                    </span>
-                                    <span
-                                      className="text-xs"
-                                      style={{
-                                        color: theme.colors.textSecondary,
-                                      }}
-                                    >
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Data type side */}
+                                <div className="p-4 flex items-center">
+                                  <div
+                                    className={`flex items-center space-x-2 px-3 py-1 rounded-full ${getTypeColor(
+                                      column.type
+                                    )}`}
+                                  >
+                                    {getTypeIcon(column.type)}
+                                    <span className="text-sm font-medium">
                                       {column.type}
                                     </span>
                                   </div>
                                 </div>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         activeTableData?.sampleData && (
                           <div className="sample-data-container">
-                            <h3
-                              className="text-sm font-medium mb-3 sticky top-0 z-10"
-                              style={{
-                                color: theme.colors.textSecondary,
-                                backgroundColor: theme.colors.surface,
-                              }}
-                            >
-                              Sample Data
-                            </h3>
                             <div
-                              className="overflow-x-auto"
                               style={{
-                                border: `1px solid ${theme.colors.border}`,
+                                maxHeight: "400px",
+                                backgroundColor: theme.colors.surface,
                                 borderRadius: theme.borderRadius.default,
+                                boxShadow: theme.shadow.sm,
+                                border: `1px solid ${theme.colors.border}`,
                               }}
                             >
-                              <table
-                                className="w-full"
-                                style={{ borderCollapse: "collapse" }}
+                              <div
+                                className="overflow-x-auto overflow-y-auto"
+                                style={{ maxHeight: "400px" }}
                               >
-                                <thead>
-                                  <tr>
-                                    {activeTableData.columns.map((col) => (
-                                      <th
-                                        key={col.name}
-                                        className="text-left text-sm p-2"
-                                        style={{
-                                          backgroundColor:
-                                            theme.colors.background,
-                                          color: theme.colors.text,
-                                          borderBottom: `1px solid ${theme.colors.border}`,
-                                          position: "sticky",
-                                          top: 0,
-                                          zIndex: 10,
-                                        }}
-                                      >
-                                        {col.name}
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {activeTableData.sampleData?.map(
-                                    (row, idx) => (
-                                      <tr key={idx} className="table-row">
-                                        {activeTableData.columns.map((col) => (
-                                          <td
-                                            key={col.name}
-                                            className="text-sm p-2"
-                                            style={{
-                                              color: theme.colors.textSecondary,
-                                              borderBottom: `1px solid ${theme.colors.border}`,
-                                            }}
-                                          >
-                                            {row[col.name] != null
-                                              ? String(row[col.name])
-                                              : "NULL"}
-                                          </td>
-                                        ))}
-                                      </tr>
-                                    )
-                                  )}
-                                </tbody>
-                              </table>
+                                <table
+                                  className="w-full"
+                                  style={{ borderCollapse: "collapse" }}
+                                >
+                                  <thead>
+                                    <tr>
+                                      {activeTableData.columns.map((column) => (
+                                        <th
+                                          key={column.name}
+                                          className="text-left p-4 sticky top-0"
+                                          style={{
+                                            backgroundColor:
+                                              theme.colors.accent,
+                                            color: "white",
+                                            borderBottom: `1px solid ${theme.colors.border}`,
+                                            fontWeight: "500",
+                                          }}
+                                        >
+                                          {column.name}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {activeTableData.sampleData.map(
+                                      (row, idx) => (
+                                        <tr
+                                          key={idx}
+                                          style={{
+                                            backgroundColor:
+                                              idx % 2 === 0
+                                                ? theme.colors.surface
+                                                : theme.colors.background,
+                                            borderBottom: `1px solid ${theme.colors.border}`,
+                                          }}
+                                        >
+                                          {activeTableData.columns.map(
+                                            (column) => (
+                                              <td
+                                                key={column.name}
+                                                className="p-4"
+                                                style={{
+                                                  color: theme.colors.text,
+                                                  fontWeight: "normal",
+                                                }}
+                                              >
+                                                {row[column.name] != null
+                                                  ? String(row[column.name])
+                                                  : "NULL"}
+                                              </td>
+                                            )
+                                          )}
+                                        </tr>
+                                      )
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
                           </div>
                         )

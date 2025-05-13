@@ -785,15 +785,69 @@ const ChatInterface = memo(
           />
           {sessionConnectionError && (
             <div
-              className="text-center sticky top-0 z-20"
+              className="flex items-center justify-between sticky top-0 z-20 mx-auto my-2 max-w-3xl animate-fade-in"
               style={{
-                paddingTop: theme.spacing.md,
+                background: theme.colors.surface,
                 color: theme.colors.error,
-                background: theme.colors.background,
+                borderLeft: `4px solid ${theme.colors.error}`,
+                borderRadius: theme.borderRadius.default,
+                boxShadow: theme.shadow.md,
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                marginBottom: theme.spacing.md,
+                transition: "all 0.3s ease",
               }}
             >
-              {sessionConnectionError} You can view the chat history but cannot
-              ask new questions.
+              <div className="flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ marginRight: theme.spacing.sm }}
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <div>
+                  <div className="font-medium">{sessionConnectionError}</div>
+                  <div className="text-sm opacity-75">
+                    You can view the chat history but cannot ask new questions.
+                  </div>
+                </div>
+              </div>
+              {/* <button
+                onClick={() => setSessionConnectionError(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: theme.colors.text,
+                  opacity: 0.6,
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.opacity = "1")}
+                onMouseOut={(e) => (e.currentTarget.style.opacity = "0.6")}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button> */}
             </div>
           )}
           <div
