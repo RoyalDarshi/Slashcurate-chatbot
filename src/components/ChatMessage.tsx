@@ -200,29 +200,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     };
 
     const handleDislike = async () => {
-      if (isDisliked) {
-        try {
-          await axios.post(
-            `${API_URL}/api/messages/${message.id}/reaction`,
-            {
-              token: sessionStorage.getItem("token"),
-              reaction: null,
-              dislike_reason: null,
-            },
-            { headers: { "Content-Type": "application/json" } }
-          );
-          setIsDisliked(false);
-          setDislikeReason(null);
-          setShowDislikeOptions(false);
-          setShowCustomInput(false);
-        } catch (error) {
-          console.error("Error unsetting dislike reaction:", error);
-          toast.error("Failed to unset dislike reaction.");
-        }
-      } else {
-        setShowDislikeOptions(true);
-        setIsLiked(false);
-      }
+      setShowDislikeOptions(true);
     };
 
     const handleDislikeOption = async (reason: string) => {
@@ -240,6 +218,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         setIsDisliked(true);
         setShowDislikeOptions(false);
         setShowCustomInput(false);
+        setIsLiked(false);
       } catch (error) {
         console.error("Error setting dislike reaction:", error);
         toast.error("Failed to set dislike reaction.");
