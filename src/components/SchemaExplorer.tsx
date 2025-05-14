@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { DatabaseSchema, Theme } from "../types";
 import { useTheme } from "../ThemeContext";
+import { backgroundClip } from "html2canvas/dist/types/css/property-descriptors/background-clip";
 
 interface SchemaExplorerProps {
   schemas: DatabaseSchema[] | null;
@@ -250,25 +251,27 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   };
 
   const getTypeColor = (type: string) => {
+    const colors = theme.colors;
+
     switch (type.toLowerCase()) {
       case "integer":
-        return "bg-amber-100 text-amber-800";
+        return { background: colors.warning, color: "white" };
       case "string":
-        return "bg-emerald-100 text-emerald-800";
+        return { background: colors.success, color: "white" };
       case "timestamp":
-        return "bg-purple-100 text-purple-800";
+        return { background: colors.accent, color: "white" };
       case "boolean":
-        return "bg-blue-100 text-blue-800";
+        return { background: colors.bubbleUser, color: colors.bubbleUserText };
       case "json":
-        return "bg-rose-100 text-rose-800";
+        return { background: colors.error, color: "white" };
       case "array":
-        return "bg-indigo-100 text-indigo-800";
+        return { background: colors.bubbleBot, color: colors.bubbleBotText };
       case "geography":
-        return "bg-teal-100 text-teal-800";
+        return { background: colors.success, color: colors.textSecondary };
       case "date":
-        return "bg-violet-100 text-violet-800";
+        return { background: colors.accentHover, color: "white" };
       default:
-        return "bg-gray-100 text-gray-800";
+        return { background: colors.disabled, color: colors.disabledText };
     }
   };
 
@@ -708,7 +711,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                           onClick={() =>
                             setShowFilterOptions(!showFilterOptions)
                           }
-                          className="p-1.5 rounded-md hover:bg-gray-100"
+                          className="p-1.5 rounded-m"
                           style={{ color: theme.colors.text }}
                           aria-label="Filter options"
                         >
@@ -759,7 +762,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                       </div>
                       <button
                         onClick={() => setSearchTerm("")}
-                        className="p-1.5 rounded-md hover:bg-gray-100"
+                        className="p-1.5 rounded-md"
                         style={{ color: theme.colors.text }}
                         aria-label="Clear search"
                       >
@@ -862,7 +865,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                     {isLoading ? (
                       <div className="space-y-4">
                         <div className="skeleton-loader h-6 w-32"></div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-1 gap-2">
                           {[...Array(9)].map((_, i) => (
                             <div key={i} className="skeleton-loader h-10"></div>
                           ))}
@@ -878,7 +881,12 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                             {activeTableData.name}
                           </h3>
                           {activeTableData.sampleData && (
-                            <div className="relative inline-flex rounded-full bg-gray-200 p-1 max-w-xs w-full">
+                            <div
+                              className="relative inline-flex rounded-full p-1 max-w-xs w-full"
+                              style={{
+                                backgroundColor: theme.colors.hover,
+                              }}
+                            >
                               {/* Sliding Background */}
                               <div
                                 className={`
@@ -905,7 +913,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                                 ${
                                   activeView === "columns"
                                     ? "text-white"
-                                    : "text-gray-700"
+                                    : "text-gray-400"
                                 }
                               `}
                                 style={{
@@ -930,7 +938,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                                 ${
                                   activeView === "sampleData"
                                     ? "text-white"
-                                    : "text-gray-700"
+                                    : "text-gray-400"
                                 }
                               `}
                                 style={{
@@ -953,8 +961,11 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                             {activeTableData.columns.map((column, index) => (
                               <button
                                 key={column.name}
-                                className="column-item bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-gray-200 text-left w-full"
-                                style={{ "--item-index": index }}
+                                className="column-item rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden my-1 text-left w-full"
+                                style={{
+                                  "--item-index": index,
+                                  backgroundColor: `${theme.colors.accent}10`,
+                                }}
                                 onClick={() => handleColumnClick(column.name)}
                                 data-column={column.name}
                               >
@@ -964,20 +975,28 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                                   }`}
                                 >
                                   <div className="flex items-center mb-2 sm:mb-0">
-                                    <div className="mr-2 flex-shrink-0 p-1.5 rounded-full bg-gray-100">
+                                    <div
+                                      className="mr-2 flex-shrink-0 p-1.5 rounded-full"
+                                      style={{
+                                        backgroundColor:
+                                          theme.colors.bubbleUser,
+                                      }}
+                                    >
                                       {getColumnIcon(column.name)}
                                     </div>
                                     <div className="truncate">
-                                      <p className="font-medium text-gray-900 text-sm">
+                                      <p
+                                        className="font-medium text-sm"
+                                        style={{ color: theme.colors.text }}
+                                      >
                                         {column.name}
                                       </p>
                                     </div>
                                   </div>
                                   <div className="flex items-center">
                                     <div
-                                      className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs ${getTypeColor(
-                                        column.type
-                                      )}`}
+                                      className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs`}
+                                      style={getTypeColor(column.type)}
                                     >
                                       {getTypeIcon(column.type)}
                                       <span className="font-medium truncate max-w-[80px]">
