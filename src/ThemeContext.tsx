@@ -42,15 +42,27 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   // Theme state
+  // Updated theme state initialization
   const [currentTheme, setCurrentTheme] = useState<"light" | "dark">(() => {
     try {
-      return localStorage.getItem("theme") === "dark" ? "dark" : "light";
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme === "dark" || storedTheme === "light") {
+        return storedTheme;
+      }
+      // If no stored theme, check system preference
+      const systemDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      return systemDark ? "dark" : "light";
     } catch (e) {
       console.warn(
-        "Failed to access local storage for theme, defaulting to light",
+        "Failed to access storage or match media, defaulting to system preference",
         e
       );
-      return "light";
+      const systemDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      return systemDark ? "dark" : "light";
     }
   });
 

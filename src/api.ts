@@ -171,4 +171,9 @@ export const getRecommendedQuestions = async (token: string) => {
   }
 };
 
+export const getUserSettings = async (
+  token: string
+): Promise<AxiosResponse<ApiResponse>> =>
+  api.post(`${API_URL}/api/user/settings`, { token });
+
 export default api;
