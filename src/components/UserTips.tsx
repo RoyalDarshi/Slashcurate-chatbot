@@ -57,7 +57,6 @@ const UserTips: React.FC<UserTipsProps> = ({ show, onClose }) => {
         handleClose();
       }, 7000);
     }
-
     return () => {
       clearTimeout(timer);
       setIsMounted(false);

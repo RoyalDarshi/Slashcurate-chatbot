@@ -11,6 +11,7 @@ import Settings from "./components/Settings";
 import AdminLogin from "./components/AdminLogin";
 import AdminDashboard from "./components/AdminDashboard";
 import { ThemeProvider, useTheme } from "./ThemeContext";
+import { SettingsProvider, useSettings } from "./SettingsContext";
 import { handleLogout } from "./utils";
 import "@fontsource/inter";
 import "./index.css";
@@ -102,45 +103,48 @@ function App() {
 
   return (
     <ThemeProvider>
-      <Router>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <AppContent
-                isAuthenticated={isAuthenticated}
-                activeMenu={activeMenu}
-                setActiveMenu={setActiveMenu}
-                onLoginSuccess={handleLoginSuccess}
-                onLogout={handleUserLogout}
-                chatRef={chatRef}
-                onCreateConSelected={handleCreateConSelected}
-                onHomePage={handleHomePage}
-                onNewChat={handleNewChat}
-                questionToAsk={questionToAsk}
-                setQuestionToAsk={setQuestionToAsk}
-                showTip={showTip}
-                setShowTip={setShowTip}
-              />
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              isAdminAuthenticated ? (
-                <AdminDashboard
-                  onLogout={() => setIsAdminAuthenticated(false)}
+      <SettingsProvider>
+        <Router>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <AppContent
+                  isAuthenticated={isAuthenticated}
+                  activeMenu={activeMenu}
+                  setActiveMenu={setActiveMenu}
+                  onLoginSuccess={handleLoginSuccess}
+                  onLogout={handleUserLogout}
+                  chatRef={chatRef}
+                  onCreateConSelected={handleCreateConSelected}
+                  onHomePage={handleHomePage}
+                  onNewChat={handleNewChat}
+                  questionToAsk={questionToAsk}
+                  setQuestionToAsk={setQuestionToAsk}
+                  showTip={showTip}
+                  setShowTip={setShowTip}
                 />
-              ) : (
-                <AdminLogin
-                  onLoginSuccess={(token) => handleLoginSuccess(token, true)}
-                />
-              )
-            }
-          />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-        </Routes>
-      </Router>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                isAdminAuthenticated ? (
+                  <AdminDashboard
+                    onLogout={() => setIsAdminAuthenticated(false)}
+                  />
+                ) : (
+                  <AdminLogin
+                    onLoginSuccess={(token) => handleLoginSuccess(token, true)}
+                  />
+                )
+              }
+            />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
+          </Routes>
+        </Router>
+      </SettingsProvider>
     </ThemeProvider>
   );
 }
@@ -177,11 +181,18 @@ const AppContent: React.FC<{
   onNewChat,
 }) => {
   const { theme } = useTheme();
+  const { notificationsEnabled } = useSettings();
   const userToken = sessionStorage.getItem("token") || "";
 
   const handleSessionClicked = () => {
     onHomePage();
   };
+
+  useEffect(() => {
+    if (!notificationsEnabled && showTip) {
+      setShowTip(false);
+    }
+  }, [notificationsEnabled, showTip, setShowTip]);
 
   return (
     <div
@@ -223,7 +234,12 @@ const AppContent: React.FC<{
               minHeight: "calc(100vh - 64px)",
             }}
           >
-            <UserTips show={showTip} onClose={() => setShowTip(false)} />
+            <UserTips
+              show={showTip}
+              onClose={() => {
+                setShowTip(false);
+              }}
+            />
             {activeMenu === "home" && (
               <ChatInterface
                 ref={chatRef}

@@ -1,20 +1,19 @@
 import React, { useState } from "react";
 import { useTheme } from "../ThemeContext";
+import { useSettings } from "../SettingsContext";
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
-  const { chatFontSize, setChatFontSize } = useTheme();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(
-    JSON.parse(localStorage.getItem("notificationsEnabled") || "true")
-  );
+  const {
+    chatFontSize,
+    setChatFontSize,
+    notificationsEnabled,
+    setNotificationsEnabled,
+  } = useSettings();
   const [autoSaveChats, setAutoSaveChats] = useState(true);
 
   const handleSetNotification = () => {
     setNotificationsEnabled(!notificationsEnabled);
-    localStorage.setItem(
-      "notificationsEnabled",
-      JSON.stringify(!notificationsEnabled)
-    );
   };
 
   const handleFontSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

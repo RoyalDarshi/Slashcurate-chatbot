@@ -56,7 +56,7 @@ export interface ChatMessageProps {
 export interface ChatInterfaceProps {
   onCreateConSelected: () => void;
   onSessionSelected?: (session: any) => void;
-  initialQuestion?: { text: string; connection: string; query?: string };
+  initialQuestion?: { text: string; connection: string; query?: string } | null;
   onQuestionAsked?: () => void;
 }
 

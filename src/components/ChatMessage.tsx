@@ -33,6 +33,7 @@ import QueryDisplay from "./QueryDisplay";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { API_URL } from "../config";
+import { useSettings } from "../SettingsContext";
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({
@@ -73,7 +74,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const dislikeRef = useRef<HTMLDivElement>(null);
     const resolutionRef = useRef<HTMLDivElement>(null);
     const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
-    const { chatFontSizeValue } = useTheme();
+    // const { chatFontSizeValue } = useTheme();
+    const { chatFontSize } = useSettings();
 
     const parsedData = React.useMemo(() => {
       try {
@@ -302,7 +304,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               className="ml-2"
               style={{
                 color: theme.colors.textSecondary,
-                fontSize: chatFontSizeValue,
+                fontSize: chatFontSize,
               }}
             >
               Thinking...
@@ -330,7 +332,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     className="whitespace-pre-wrap break-words leading-relaxed"
                     style={{
                       color: theme.colors.text,
-                      fontSize: chatFontSizeValue,
+                      fontSize: chatFontSize,
                     }}
                     {...props}
                   />
@@ -593,7 +595,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 <p
                   style={{
                     color: theme.colors.text,
-                    fontSize: chatFontSizeValue,
+                    fontSize: chatFontSize,
                   }}
                 >
                   {parsedData?.content || "No records found."}
@@ -645,13 +647,13 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 {parsedData?.sql_query ? (
                   <QueryDisplay
                     query={parsedData.sql_query.toUpperCase()}
-                    fontSize={chatFontSizeValue}
+                    fontSize={chatFontSize}
                   />
                 ) : (
                   <p
                     style={{
                       color: theme.colors.text,
-                      fontSize: chatFontSizeValue,
+                      fontSize: chatFontSize,
                     }}
                   >
                     No query available.
@@ -921,7 +923,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 )}
                 <p
                   className="ml-3 whitespace-pre-wrap break-words"
-                  style={{ color: "white", fontSize: chatFontSizeValue }}
+                  style={{ color: "white", fontSize: chatFontSize }}
                 >
                   {message.content}
                 </p>
@@ -954,7 +956,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 onSave={handleSave}
                 onCancel={handleCancel}
                 onContentChange={handleContentChange}
-                fontSize={chatFontSizeValue}
+                fontSize={chatFontSize}
               />
             )}
             <div
