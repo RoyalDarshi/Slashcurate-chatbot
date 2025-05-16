@@ -34,6 +34,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { API_URL } from "../config";
 import { useSettings } from "../SettingsContext";
+import { RefreshCw } from "lucide-react";
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(
   ({
@@ -46,6 +47,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     isFavorited: initialIsFavorited,
     responseStatus,
     disabled,
+    onRetry,
   }) => {
     const { theme } = useTheme();
     const [csvData, setCsvData] = useState<any[]>([]);
@@ -288,6 +290,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     };
 
     const renderContent = () => {
+      const isError =
+        message.isBot && message.content.includes("Sorry, an error occurred.");
       if (loading) {
         return (
           <div
@@ -320,7 +324,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             style={{
               background: theme.colors.surface,
               borderRadius: theme.borderRadius.large,
-              borderTopLeftRadius: message.isBot ? "0" : undefined,
+              borderTopLeftRadius: 0,
               boxShadow: `0 2px 6px ${theme.colors.text}20`,
             }}
           >
@@ -331,7 +335,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   <p
                     className="whitespace-pre-wrap break-words leading-relaxed"
                     style={{
-                      color: theme.colors.text,
+                      color: isError ? theme.colors.error : theme.colors.text,
                       fontSize: chatFontSize,
                     }}
                     {...props}
@@ -937,17 +941,33 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       minute: "2-digit",
                     })}
                   </span>
-                  {!disabled && (
-                    <CustomTooltip title="Edit message" position="bottom">
-                      <button
-                        onClick={handleEdit}
-                        className="p-2 transition-colors duration-200 hover:opacity-80"
-                        style={{ color: "white" }}
+                  <div className="flex items-center gap-2">
+                    {!disabled && responseStatus === "error" && (
+                      <CustomTooltip
+                        title="Retry sending message"
+                        position="bottom"
                       >
-                        <Edit3 size={16} />
-                      </button>
-                    </CustomTooltip>
-                  )}
+                        <button
+                          onClick={() => onRetry?.(message.id)}
+                          className="p-2 transition-colors duration-200 hover:opacity-80"
+                          style={{ color: "white" }}
+                        >
+                          <RefreshCw size={16} />
+                        </button>
+                      </CustomTooltip>
+                    )}
+                    {!disabled && (
+                      <CustomTooltip title="Edit message" position="bottom">
+                        <button
+                          onClick={handleEdit}
+                          className="p-2 transition-colors duration-200 hover:opacity-80"
+                          style={{ color: "white" }}
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                      </CustomTooltip>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (

@@ -47,10 +47,10 @@ export interface ChatMessageProps {
   selectedConnection: string | null;
   onFavorite: (messageId: string) => void;
   onUnfavorite: (messageId: string) => void;
-  favoriteCount?: number;
   isFavorited: boolean;
-  disabled: boolean;
   responseStatus: "loading" | "success" | "error" | null;
+  disabled: boolean;
+  onRetry?: (userMessageId: string) => void;
 }
 
 export interface ChatInterfaceProps {

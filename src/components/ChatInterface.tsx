@@ -608,6 +608,77 @@ const ChatInterface = memo(
         [token, messages, selectedConnection]
       );
 
+      const handleRetry = async (userMessageId: string) => {
+        const userMessage = messages.find((msg) => msg.id === userMessageId);
+        if (!userMessage) return;
+        const botMessage = messages.find(
+          (msg) => msg.parentId === userMessageId
+        );
+        if (!botMessage) return;
+
+        // Update bot message to loading state
+        dispatchMessages({
+          type: "UPDATE_MESSAGE",
+          id: botMessage.id,
+          message: { content: "loading..." },
+        });
+        setLoadingMessageId(botMessage.id);
+
+        try {
+          const connectionObj = connections.find(
+            (conn) => conn.connectionName === selectedConnection
+          );
+          if (!connectionObj) throw new Error("Connection not found");
+          const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
+            question: userMessage.content,
+            connection: connectionObj,
+          });
+          const newBotResponse: Message = {
+            ...botMessage,
+            content: JSON.stringify(response.data, null, 2),
+            timestamp: new Date().toISOString(),
+          };
+          // Update the bot message in the database
+          await axios.put(
+            `${API_URL}/api/messages/${botMessage.id}`,
+            {
+              token,
+              content: newBotResponse.content,
+              timestamp: newBotResponse.timestamp,
+            },
+            { headers: { "Content-Type": "application/json" } }
+          );
+          dispatchMessages({
+            type: "UPDATE_MESSAGE",
+            id: botMessage.id,
+            message: newBotResponse,
+          });
+        } catch (error) {
+          console.error("Error retrying message:", error);
+          const errorMessage: Message = {
+            ...botMessage,
+            content: "Sorry, an error occurred. Please try again.",
+            timestamp: new Date().toISOString(),
+          };
+          await axios.put(
+            `${API_URL}/api/messages/${botMessage.id}`,
+            {
+              token,
+              content: errorMessage.content,
+              timestamp: errorMessage.timestamp,
+            },
+            { headers: { "Content-Type": "application/json" } }
+          );
+          dispatchMessages({
+            type: "UPDATE_MESSAGE",
+            id: botMessage.id,
+            message: errorMessage,
+          });
+        } finally {
+          setLoadingMessageId(null);
+        }
+      };
+
       const handleEditMessage = useCallback(
         async (id: string, newContent: string) => {
           if (!selectedConnection) {
@@ -944,6 +1015,7 @@ const ChatInterface = memo(
                         isFavorited={message.isFavorited || false}
                         responseStatus={responseStatus}
                         disabled={!!sessionConnectionError}
+                        onRetry={handleRetry}
                       />
                     </div>
                   );
