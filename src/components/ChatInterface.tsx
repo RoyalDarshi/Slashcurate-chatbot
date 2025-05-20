@@ -126,12 +126,28 @@ const ChatInterface = memo(
         return () => clearInterval(interval);
       }, [messages, token, dispatchMessages]);
 
-      // Refresh session on tab visibility change
+      // Refresh session on tab visibility change with validation
       useEffect(() => {
-        const handleVisibilityChange = () => {
-          if (document.visibilityState === "visible" && sessionId) {
-            console.log("Tab visible, reloading session:", sessionId);
-            loadSession(sessionId);
+        const handleVisibilityChange = async () => {
+          if (document.visibilityState === "visible") {
+            const storedSessionId = localStorage.getItem("currentSessionId");
+            if (storedSessionId) {
+              console.log("Tab visible, validating session:", storedSessionId);
+              try {
+                // Validate session existence
+                await axios.get(`${API_URL}/api/sessions/${storedSessionId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                console.log("Session valid, loading:", storedSessionId);
+                loadSession(storedSessionId);
+              } catch (error) {
+                console.error("Session validation failed:", error);
+                localStorage.removeItem("currentSessionId");
+                clearSession();
+              }
+            } else {
+              console.log("No stored session ID found on visibility change");
+            }
           }
         };
         document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -140,7 +156,7 @@ const ChatInterface = memo(
             "visibilitychange",
             handleVisibilityChange
           );
-      }, [sessionId, loadSession]);
+      }, [token, loadSession, clearSession]);
 
       const askQuestion = useCallback(
         async (
@@ -162,8 +178,24 @@ const ChatInterface = memo(
           }
 
           let currentSessionId = sessionId;
-          if (!sessionId) {
+          if (!currentSessionId) {
+            // Check localStorage for existing session
+            const storedSessionId = localStorage.getItem("currentSessionId");
+            if (storedSessionId) {
+              console.log("Using stored session ID:", storedSessionId);
+              currentSessionId = storedSessionId;
+              try {
+                await loadSession(storedSessionId);
+              } catch (error) {
+                console.error("Failed to load stored session:", error);
+                localStorage.removeItem("currentSessionId");
+              }
+            }
+          }
+
+          if (!currentSessionId) {
             try {
+              console.log("Creating new session for question:", question);
               const response = await axios.post(
                 `${API_URL}/api/sessions`,
                 {
@@ -175,6 +207,7 @@ const ChatInterface = memo(
               );
               currentSessionId = response.data.id;
               localStorage.setItem("currentSessionId", currentSessionId);
+              console.log("New session created:", currentSessionId);
             } catch (error) {
               console.error("Error creating session:", error);
               toast.error("Failed to create session.");
@@ -344,10 +377,24 @@ const ChatInterface = memo(
       useEffect(() => {
         const storedSessionId = localStorage.getItem("currentSessionId");
         if (storedSessionId) {
-          console.log("Loading stored session:", storedSessionId);
-          loadSession(storedSessionId);
+          console.log("Initial load, validating session:", storedSessionId);
+          axios
+            .get(`${API_URL}/api/sessions/${storedSessionId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            .then(() => {
+              console.log("Stored session valid, loading:", storedSessionId);
+              loadSession(storedSessionId);
+            })
+            .catch((error) => {
+              console.error("Stored session invalid:", error);
+              localStorage.removeItem("currentSessionId");
+              clearSession();
+            });
+        } else {
+          console.log("No stored session ID found on initial load");
         }
-      }, [loadSession]);
+      }, [loadSession, token, clearSession]);
 
       useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
@@ -381,6 +428,7 @@ const ChatInterface = memo(
       }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
 
       const handleNewChat = useCallback(() => {
+        console.log("Starting new chat, clearing session");
         clearSession();
         setInput("");
         setEditingMessageId(null);
