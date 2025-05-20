@@ -9,21 +9,47 @@ import { getUserConnections, getRecommendedQuestions } from "./api";
 type MessagesAction =
   | { type: "SET_MESSAGES"; messages: Message[] }
   | { type: "ADD_MESSAGE"; message: Message }
-  | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> };
+  | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> }
+  | { type: "REMOVE_MESSAGE"; id: string }
+  | { type: "REPLACE_MESSAGE_ID"; oldId: string; newId: string };
 
 export const messagesReducer = (
   state: Message[],
   action: MessagesAction
 ): Message[] => {
+  const { oldId, newId } = action as {
+    oldId: string;
+    newId: string;
+  };
   switch (action.type) {
     case "SET_MESSAGES":
       return action.messages;
+
     case "ADD_MESSAGE":
       return [...state, action.message];
+
     case "UPDATE_MESSAGE":
       return state.map((msg) =>
         msg.id === action.id ? { ...msg, ...action.message } : msg
       );
+
+    case "REMOVE_MESSAGE":
+      // Remove a placeholder or message by ID
+      return state.filter((msg) => msg.id !== action.id);
+
+    case "REPLACE_MESSAGE_ID":
+      return state.map((msg) => {
+        if (msg.id === oldId) {
+          // Rename the message itself
+          return { ...msg, id: newId };
+        }
+        if (msg.parentId === oldId) {
+          // Fix any parent-child reference
+          return { ...msg, parentId: newId };
+        }
+        return msg;
+      });
+
     default:
       return state;
   }

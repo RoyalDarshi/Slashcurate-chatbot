@@ -120,8 +120,6 @@ const ChatInterface = memo(
                 { headers: { "Content-Type": "application/json" } }
               );
               currentSessionId = response.data.id;
-              // setSessionId(currentSessionId);
-              // setSessionConnection(connection);
               localStorage.setItem("currentSessionId", currentSessionId);
             } catch (error) {
               console.error("Error creating session:", error);
@@ -131,23 +129,16 @@ const ChatInterface = memo(
           }
 
           const userMessage: Message = {
-            id: Date.now().toString(),
+            id: Date.now().toString(), // Temporary ID, will be updated
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
             isFavorited,
             parentId: null,
           };
-          const botLoadingMessage: Message = {
-            id: `loading-${Date.now()}`,
-            isBot: true,
-            content: "loading...",
-            timestamp: new Date().toISOString(),
-            isFavorited: false,
-            parentId: userMessage.id,
-          };
 
           try {
+            // Step 1: Create user message on the server
             const userResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -161,91 +152,109 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
             userMessage.id = userResponse.data.id;
-          } catch (error) {
-            console.error("Error saving user message:", error);
-            toast.error("Failed to save message.");
-            return;
-          }
 
-          setLoadingMessageId(botLoadingMessage.id);
-          dispatchMessages({ type: "ADD_MESSAGE", message: userMessage });
-          dispatchMessages({
-            type: "ADD_MESSAGE",
-            message: botLoadingMessage,
-          });
-
-          try {
-            const connectionObj = connections.find(
-              (conn) => conn.connectionName === connection
-            );
-            if (!connectionObj) throw new Error("Connection not found");
-
-            const payload = query
-              ? { question, sql_query: query, connection: connectionObj }
-              : { question, connection: connectionObj };
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              payload
-            );
-
-            const botResponse: Message = {
-              id: Date.now().toString(),
-              content: JSON.stringify(response.data, null, 2),
-              isBot: true,
-              timestamp: new Date().toISOString(),
-              isFavorited,
-              parentId: userMessage.id,
-            };
-
-            const botResponseData = await axios.post(
+            // Step 2: Create bot loading message on the server
+            const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
                 token,
                 session_id: currentSessionId,
-                content: botResponse.content,
+                content: "loading...",
                 isBot: true,
-                isFavorited,
+                isFavorited: false,
                 parentId: userMessage.id,
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            botResponse.id = botResponseData.data.id;
-
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botLoadingMessage.id,
-              message: botResponse,
-            });
-            setTimeout(() => scrollToMessage(botResponse.id), 100);
-          } catch (error) {
-            console.error("Error getting bot response:", error);
-            const errorMessage: Message = {
-              id: botLoadingMessage.id,
-              content: "Sorry, an error occurred. Please try again.",
+            const botMessageId = botLoadingResponse.data.id;
+            const botMessage: Message = {
+              id: botMessageId,
               isBot: true,
+              content: "loading...",
               timestamp: new Date().toISOString(),
               isFavorited: false,
               parentId: userMessage.id,
             };
-            await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: currentSessionId,
-                content: errorMessage.content,
-                isBot: true,
-                parentId: userMessage.id,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botLoadingMessage.id,
-              message: errorMessage,
-            });
-            setTimeout(() => scrollToMessage(errorMessage.id), 100);
-          } finally {
-            setLoadingMessageId(null);
+
+            // Step 3: Add both messages to local state
+            dispatchMessages({ type: "ADD_MESSAGE", message: userMessage });
+            dispatchMessages({ type: "ADD_MESSAGE", message: botMessage });
+            setLoadingMessageId(botMessageId);
+
+            try {
+              // Fetch bot response from chatbot API
+              const connectionObj = connections.find(
+                (conn) => conn.connectionName === connection
+              );
+              if (!connectionObj) throw new Error("Connection not found");
+
+              const payload = query
+                ? { question, sql_query: query, connection: connectionObj }
+                : { question, connection: connectionObj };
+              const response = await axios.post(
+                `${CHATBOT_API_URL}/ask`,
+                payload
+              );
+
+              const botResponseContent = JSON.stringify(response.data, null, 2);
+
+              // Step 4: Update the bot message on the server
+              await axios.put(
+                `${API_URL}/api/messages/${botMessageId}`,
+                {
+                  token,
+                  content: botResponseContent,
+                  timestamp: new Date().toISOString(),
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+
+              // Update local state with the actual response
+              const updatedBotMessage: Message = {
+                ...botMessage,
+                content: botResponseContent,
+                timestamp: new Date().toISOString(),
+              };
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessageId,
+                message: updatedBotMessage,
+              });
+              setTimeout(() => scrollToMessage(botMessageId), 100);
+            } catch (error) {
+              console.error("Error getting bot response:", error);
+              const errorContent =
+                "Sorry, an error occurred. Please try again.";
+
+              // Step 5: Update bot message with error content on the server
+              await axios.put(
+                `${API_URL}/api/messages/${botMessageId}`,
+                {
+                  token,
+                  content: errorContent,
+                  timestamp: new Date().toISOString(),
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+
+              // Update local state with error message
+              const errorMessage: Message = {
+                ...botMessage,
+                content: errorContent,
+                timestamp: new Date().toISOString(),
+              };
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessageId,
+                message: errorMessage,
+              });
+              setTimeout(() => scrollToMessage(botMessageId), 100);
+            } finally {
+              setLoadingMessageId(null);
+            }
+          } catch (error) {
+            console.error("Error saving user message:", error);
+            toast.error("Failed to save message.");
           }
         },
         [
@@ -459,225 +468,296 @@ const ChatInterface = memo(
 
       const handleRetry = useCallback(
         async (userMessageId: string) => {
-          const userMessage = messages.find((msg) => msg.id === userMessageId);
-          if (!userMessage) return;
-          const botMessage = messages.find(
-            (msg) => msg.parentId === userMessageId
+          const userMessage = messages.find(
+            (msg) => msg.id === userMessageId && !msg.isBot
           );
-          if (!botMessage) return;
-
-          dispatchMessages({
-            type: "UPDATE_MESSAGE",
-            id: botMessage.id,
-            message: { content: "loading..." },
-          });
-          setLoadingMessageId(botMessage.id);
-
-          try {
-            const connectionObj = connections.find(
-              (conn) => conn.connectionName === selectedConnection
-            );
-            if (!connectionObj) throw new Error("Connection not found");
-            const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-              question: userMessage.content,
-              connection: connectionObj,
-            });
-            const newBotResponse: Message = {
-              ...botMessage,
-              content: JSON.stringify(response.data, null, 2),
-              timestamp: new Date().toISOString(),
-            };
-            await axios.put(
-              `${API_URL}/api/messages/${botMessage.id}`,
-              {
-                token,
-                content: newBotResponse.content,
-                timestamp: newBotResponse.timestamp,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessage.id,
-              message: newBotResponse,
-            });
-          } catch (error) {
-            console.error("Error retrying message:", error);
-            const errorMessage: Message = {
-              ...botMessage,
-              content: "Sorry, an error occurred. Please try again.",
-              timestamp: new Date().toISOString(),
-            };
-            await axios.put(
-              `${API_URL}/api/messages/${botMessage.id}`,
-              {
-                token,
-                content: errorMessage.content,
-                timestamp: errorMessage.timestamp,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessage.id,
-              message: errorMessage,
-            });
-          } finally {
-            setLoadingMessageId(null);
-          }
-        },
-        [messages, selectedConnection, connections, token, dispatchMessages]
-      );
-
-      const handleEditMessage = useCallback(
-        async (id: string, newContent: string) => {
-          if (!selectedConnection) {
-            toast.error("No connection selected.");
+          if (!userMessage) {
+            toast.error("User message not found.");
             return;
           }
+
+          const botMessage = messages.find(
+            (msg) => msg.parentId === userMessageId && msg.isBot
+          );
+          if (!botMessage) {
+            toast.error("Bot response not found.");
+            return;
+          }
+
+          if (!sessionConnection) {
+            toast.error("No connection available for this session.");
+            return;
+          }
+
+          const connectionObj = connections.find(
+            (conn) => conn.connectionName === sessionConnection
+          );
+          if (!connectionObj) {
+            toast.error("Connection not found.");
+            return;
+          }
+
           try {
+            // Update bot message to "loading..." on server
             await axios.put(
-              `${API_URL}/api/messages/${id}`,
-              { token, content: newContent },
+              `${API_URL}/api/messages/${botMessage.id}`,
+              {
+                token,
+                content: "loading...",
+                timestamp: new Date().toISOString(),
+              },
               { headers: { "Content-Type": "application/json" } }
             );
+
+            // Update local state to "loading..."
+            const loadingBotMessage: Message = {
+              ...botMessage,
+              content: "loading...",
+              timestamp: new Date().toISOString(),
+            };
             dispatchMessages({
               type: "UPDATE_MESSAGE",
-              id,
-              message: { content: newContent, isFavorited: false },
+              id: botMessage.id,
+              message: loadingBotMessage,
             });
-            setEditingMessageId(id);
+            setLoadingMessageId(botMessage.id);
 
-            const editedMessage = messages.find((msg) => msg.id === id);
-            if (!editedMessage?.isBot) {
-              const responseMessage = messages.find(
-                (msg) => msg.parentId === id
-              );
-              const botLoadingMessage: Message = {
-                id: responseMessage
-                  ? responseMessage.id
-                  : `loading-${Date.now()}`,
-                content: "loading...",
-                isBot: true,
-                timestamp: new Date().toISOString(),
-                isFavorited: false,
-                parentId: id,
+            try {
+              // Fetch new bot response
+              const payload = {
+                question: userMessage.content,
+                connection: connectionObj,
               };
+              const response = await axios.post(
+                `${CHATBOT_API_URL}/ask`,
+                payload
+              );
 
-              setLoadingMessageId(botLoadingMessage.id);
-              if (responseMessage) {
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: responseMessage.id,
-                  message: botLoadingMessage,
-                });
-              } else {
-                dispatchMessages({
-                  type: "ADD_MESSAGE",
-                  message: botLoadingMessage,
-                });
-              }
+              const botResponseContent = JSON.stringify(response.data, null, 2);
 
-              try {
-                const connectionObj = connections.find(
-                  (conn) => conn.connectionName === selectedConnection
-                );
-                if (!connectionObj) throw new Error("Connection not found");
-                const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-                  question: newContent,
-                  connection: connectionObj,
-                });
-                const botResponse: Message = {
-                  id: botLoadingMessage.id,
-                  content: JSON.stringify(response.data, null, 2),
-                  isBot: true,
+              // Update bot message on server with new response
+              await axios.put(
+                `${API_URL}/api/messages/${botMessage.id}`,
+                {
+                  token,
+                  content: botResponseContent,
                   timestamp: new Date().toISOString(),
-                  isFavorited: false,
-                  parentId: id,
-                };
-                if (responseMessage) {
-                  await axios.put(
-                    `${API_URL}/api/messages/${responseMessage.id}`,
-                    { token, content: botResponse.content },
-                    { headers: { "Content-Type": "application/json" } }
-                  );
-                } else {
-                  // Capture the server response to get the new ID
-                  const botResponseData = await axios.post(
-                    `${API_URL}/api/messages`,
-                    {
-                      token,
-                      session_id: sessionId,
-                      content: botResponse.content,
-                      isBot: true,
-                      parentId: id,
-                      isFavorited: false,
-                    },
-                    { headers: { "Content-Type": "application/json" } }
-                  );
-                  botResponse.id = botResponseData.data.id; // Update to server-assigned ID
-                }
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botLoadingMessage.id,
-                  message: botResponse,
-                });
-                setTimeout(() => scrollToMessage(botResponse.id), 100);
-              } catch (error) {
-                console.error("Error updating bot response:", error);
-                const errorMessage: Message = {
-                  id: botLoadingMessage.id,
-                  content: "Sorry, an error occurred. Please try again.",
-                  isBot: true,
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+
+              // Update local state
+              const updatedBotMessage: Message = {
+                ...botMessage,
+                content: botResponseContent,
+                timestamp: new Date().toISOString(),
+              };
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessage.id,
+                message: updatedBotMessage,
+              });
+              setTimeout(() => scrollToMessage(botMessage.id), 100);
+            } catch (error) {
+              console.error("Error retrying message:", error);
+              const errorContent =
+                "Sorry, an error occurred. Please try again.";
+
+              // Update bot message with error content on server
+              await axios.put(
+                `${API_URL}/api/messages/${botMessage.id}`,
+                {
+                  token,
+                  content: errorContent,
                   timestamp: new Date().toISOString(),
-                  isFavorited: false,
-                  parentId: id,
-                };
-                if (responseMessage) {
-                  await axios.put(
-                    `${API_URL}/api/messages/${responseMessage.id}`,
-                    { token, content: errorMessage.content },
-                    { headers: { "Content-Type": "application/json" } }
-                  );
-                } else {
-                  await axios.post(
-                    `${API_URL}/api/messages`,
-                    {
-                      token,
-                      session_id: sessionId,
-                      content: errorMessage.content,
-                      isBot: true,
-                      parentId: id,
-                    },
-                    { headers: { "Content-Type": "application/json" } }
-                  );
-                }
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botLoadingMessage.id,
-                  message: errorMessage,
-                });
-                setTimeout(() => scrollToMessage(errorMessage.id), 100);
-              } finally {
-                setLoadingMessageId(null);
-                setEditingMessageId(null);
-              }
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+
+              // Update local state
+              const errorMessage: Message = {
+                ...botMessage,
+                content: errorContent,
+                timestamp: new Date().toISOString(),
+              };
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessage.id,
+                message: errorMessage,
+              });
+              setTimeout(() => scrollToMessage(botMessage.id), 100);
+            } finally {
+              setLoadingMessageId(null);
             }
           } catch (error) {
-            console.error("Error updating message:", error);
-            toast.error("Failed to update message.");
+            console.error("Error updating bot message to loading:", error);
+            toast.error("Failed to retry message.");
           }
         },
         [
           messages,
-          selectedConnection,
+          sessionConnection,
           connections,
-          sessionId,
           token,
-          scrollToMessage,
           dispatchMessages,
+          scrollToMessage,
         ]
       );
+
+      async function handleEditMessage(id: string) {
+        try {
+          const userMessage = messages.find(
+            (msg) => msg.id === id && !msg.isBot
+          );
+          if (!userMessage) {
+            toast.error("User message not found.");
+            return;
+          }
+
+          if (!sessionConnection) {
+            toast.error("No connection available for this session.");
+            return;
+          }
+
+          const connectionObj = connections.find(
+            (conn) => conn.connectionName === sessionConnection
+          );
+          if (!connectionObj) {
+            toast.error("Connection not found.");
+            return;
+          }
+
+          // Check if there's an existing bot response
+          const responseMessage = messages.find(
+            (msg) => msg.parentId === id && msg.isBot
+          );
+
+          let botMessageId: string;
+          let botMessage: Message;
+
+          if (responseMessage) {
+            // Update existing bot response to "loading..."
+            botMessageId = responseMessage.id;
+            botMessage = {
+              ...responseMessage,
+              content: "loading...",
+              timestamp: new Date().toISOString(),
+            };
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessageId,
+              message: botMessage,
+            });
+            setLoadingMessageId(botMessageId);
+
+            // Update on server
+            await axios.put(
+              `${API_URL}/api/messages/${botMessageId}`,
+              {
+                token,
+                content: "loading...",
+                timestamp: botMessage.timestamp,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+          } else {
+            // Create new bot message with "loading..."
+            const botLoadingResponse = await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: sessionId,
+                content: "loading...",
+                isBot: true,
+                isFavorited: false,
+                parentId: id,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            botMessageId = botLoadingResponse.data.id;
+            botMessage = {
+              id: botMessageId,
+              content: "loading...",
+              isBot: true,
+              timestamp: new Date().toISOString(),
+              isFavorited: false,
+              parentId: id,
+            };
+            dispatchMessages({ type: "ADD_MESSAGE", message: botMessage });
+            setLoadingMessageId(botMessageId);
+          }
+
+          try {
+            // Fetch bot response from chatbot API
+            const payload = {
+              question: userMessage.content,
+              connection: connectionObj,
+            };
+            const response = await axios.post(
+              `${CHATBOT_API_URL}/ask`,
+              payload
+            );
+
+            const botResponseContent = JSON.stringify(response.data, null, 2);
+
+            // Update the bot message on the server
+            await axios.put(
+              `${API_URL}/api/messages/${botMessageId}`,
+              {
+                token,
+                content: botResponseContent,
+                timestamp: new Date().toISOString(),
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
+            // Update local state
+            const updatedBotMessage: Message = {
+              ...botMessage,
+              content: botResponseContent,
+              timestamp: new Date().toISOString(),
+            };
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessageId,
+              message: updatedBotMessage,
+            });
+            setTimeout(() => scrollToMessage(botMessageId), 100);
+          } catch (error) {
+            console.error("Error getting bot response:", error);
+            const errorContent = "Sorry, an error occurred. Please try again.";
+
+            // Update bot message with error content on the server
+            await axios.put(
+              `${API_URL}/api/messages/${botMessageId}`,
+              {
+                token,
+                content: errorContent,
+                timestamp: new Date().toISOString(),
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
+            // Update local state
+            const errorMessage: Message = {
+              ...botMessage,
+              content: errorContent,
+              timestamp: new Date().toISOString(),
+            };
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessageId,
+              message: errorMessage,
+            });
+            setTimeout(() => scrollToMessage(botMessageId), 100);
+          } finally {
+            setLoadingMessageId(null);
+          }
+        } catch (error) {
+          console.error("Error handling edit message:", error);
+          toast.error("Failed to handle edit message.");
+        }
+      }
 
       useImperativeHandle(ref, () => ({
         handleNewChat,

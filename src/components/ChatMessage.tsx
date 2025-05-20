@@ -209,7 +209,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     };
 
     const handleDislike = async () => {
-      setShowDislikeOptions(true);
+      if (isDisliked) {
+        setIsDisliked(false);
+      } else {
+        setShowDislikeOptions(true);
+      }
     };
 
     const handleDislikeOption = async (reason: string) => {
