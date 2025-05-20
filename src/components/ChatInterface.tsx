@@ -15,7 +15,6 @@ import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import { ArrowDown } from "lucide-react";
-import { askChatbot } from "../api";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
 import {
@@ -24,7 +23,6 @@ import {
   useRecommendedQuestions,
   useChatScroll,
 } from "../hooks";
-import { m } from "framer-motion";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -50,7 +48,6 @@ const ChatInterface = memo(
       const token = sessionStorage.getItem("token") ?? "";
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
-      // Use custom hooks
       const {
         connections,
         selectedConnection,
@@ -76,9 +73,6 @@ const ChatInterface = memo(
         userHasScrolledUp,
       } = useChatScroll();
 
-      const [loadingMessageId, setLoadingMessageId] = useState<string | null>(
-        null
-      );
       const [input, setInput] = useState("");
       const [isSubmitting, setIsSubmitting] = useState(false);
       const [editingMessageId, setEditingMessageId] = useState<string | null>(
@@ -87,6 +81,66 @@ const ChatInterface = memo(
       const [sessionConnectionError, setSessionConnectionError] = useState<
         string | null
       >(null);
+
+      // Poll for loading messages
+      useEffect(() => {
+        const loadingMessages = messages.filter(
+          (msg) => msg.isBot && msg.content === "loading..."
+        );
+        if (loadingMessages.length === 0) return;
+
+        const interval = setInterval(async () => {
+          console.log(
+            "Polling for updates on loading messages:",
+            loadingMessages.map((msg) => msg.id)
+          );
+          try {
+            for (const msg of loadingMessages) {
+              const response = await axios.post(
+                `${API_URL}/api/getmessages/${msg.id}`,
+                { token },
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                }
+              );
+              if (response.data.content !== "loading...") {
+                console.log(
+                  `Updating message ${msg.id} with content:`,
+                  response.data.content
+                );
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: msg.id,
+                  message: {
+                    content: response.data.content,
+                    timestamp: response.data.timestamp,
+                  },
+                });
+              }
+            }
+          } catch (error) {
+            console.error("Error polling message updates:", error);
+          }
+        }, 2000);
+
+        return () => clearInterval(interval);
+      }, [messages, token, dispatchMessages]);
+
+      // Refresh session on tab visibility change
+      useEffect(() => {
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === "visible" && sessionId) {
+            console.log("Tab visible, reloading session:", sessionId);
+            loadSession(sessionId);
+          }
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () =>
+          document.removeEventListener(
+            "visibilitychange",
+            handleVisibilityChange
+          );
+      }, [sessionId, loadSession]);
 
       const askQuestion = useCallback(
         async (
@@ -100,7 +154,6 @@ const ChatInterface = memo(
             return;
           }
 
-          // Check if we can ask questions in the current session
           if (sessionId && !sessionConnection) {
             toast.error(
               "This session does not have a connection. Cannot ask new questions."
@@ -130,7 +183,7 @@ const ChatInterface = memo(
           }
 
           const userMessage: Message = {
-            id: Date.now().toString(), // Temporary ID, will be updated
+            id: Date.now().toString(),
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
@@ -139,7 +192,7 @@ const ChatInterface = memo(
           };
 
           try {
-            // Step 1: Create user message on the server
+            console.log("Saving user message:", userMessage);
             const userResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -153,8 +206,12 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
             userMessage.id = userResponse.data.id;
+            dispatchMessages({ type: "ADD_MESSAGE", message: userMessage });
 
-            // Step 2: Create bot loading message on the server
+            console.log(
+              "Creating bot loading message for user message:",
+              userMessage.id
+            );
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -176,19 +233,16 @@ const ChatInterface = memo(
               isFavorited: false,
               parentId: userMessage.id,
             };
-
-            // Step 3: Add both messages to local state
-            dispatchMessages({ type: "ADD_MESSAGE", message: userMessage });
             dispatchMessages({ type: "ADD_MESSAGE", message: botMessage });
-            setLoadingMessageId(botMessageId);
             setTimeout(() => scrollToMessage(botMessageId), 100);
+
             try {
-              // Fetch bot response from chatbot API
               const connectionObj = connections.find(
                 (conn) => conn.connectionName === connection
               );
               if (!connectionObj) throw new Error("Connection not found");
 
+              console.log("Sending question to chatbot API:", question);
               const payload = query
                 ? { question, sql_query: query, connection: connectionObj }
                 : { question, connection: connectionObj };
@@ -196,10 +250,10 @@ const ChatInterface = memo(
                 `${CHATBOT_API_URL}/ask`,
                 payload
               );
-
               const botResponseContent = JSON.stringify(response.data, null, 2);
+              console.log("Received bot response:", botResponseContent);
 
-              // Step 4: Update the bot message on the server
+              console.log("Updating bot message:", botMessageId);
               await axios.put(
                 `${API_URL}/api/messages/${botMessageId}`,
                 {
@@ -210,12 +264,15 @@ const ChatInterface = memo(
                 { headers: { "Content-Type": "application/json" } }
               );
 
-              // Update local state with the actual response
               const updatedBotMessage: Message = {
                 ...botMessage,
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
               };
+              console.log(
+                "Dispatching updated bot message:",
+                updatedBotMessage
+              );
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
                 id: botMessageId,
@@ -227,7 +284,7 @@ const ChatInterface = memo(
               const errorContent =
                 "Sorry, an error occurred. Please try again.";
 
-              // Step 5: Update bot message with error content on the server
+              console.log("Updating bot message to error:", botMessageId);
               await axios.put(
                 `${API_URL}/api/messages/${botMessageId}`,
                 {
@@ -238,7 +295,6 @@ const ChatInterface = memo(
                 { headers: { "Content-Type": "application/json" } }
               );
 
-              // Update local state with error message
               const errorMessage: Message = {
                 ...botMessage,
                 content: errorContent,
@@ -250,8 +306,6 @@ const ChatInterface = memo(
                 message: errorMessage,
               });
               setTimeout(() => scrollToMessage(botMessageId), 100);
-            } finally {
-              setLoadingMessageId(null);
             }
           } catch (error) {
             console.error("Error saving user message:", error);
@@ -275,7 +329,6 @@ const ChatInterface = memo(
         [askQuestion]
       );
 
-      // Sync selectedConnection with sessionConnection
       useEffect(() => {
         if (sessionConnection) {
           setSelectedConnection(sessionConnection);
@@ -288,13 +341,14 @@ const ChatInterface = memo(
         }
       }, [sessionConnection, sessionId, setSelectedConnection]);
 
-      // Initial load
       useEffect(() => {
         const storedSessionId = localStorage.getItem("currentSessionId");
-        if (storedSessionId) loadSession(storedSessionId);
+        if (storedSessionId) {
+          console.log("Loading stored session:", storedSessionId);
+          loadSession(storedSessionId);
+        }
       }, [loadSession]);
 
-      // Handle initial question
       useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
           if (!selectedConnection) {
@@ -322,7 +376,6 @@ const ChatInterface = memo(
         setSelectedConnection,
       ]);
 
-      // Auto-scroll when appropriate
       useEffect(() => {
         if (!userHasScrolledUp && !editingMessageId) scrollToBottom();
       }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
@@ -500,7 +553,7 @@ const ChatInterface = memo(
           }
 
           try {
-            // Update bot message to "loading..." on server
+            console.log("Retrying message, setting to loading:", botMessage.id);
             await axios.put(
               `${API_URL}/api/messages/${botMessage.id}`,
               {
@@ -511,7 +564,6 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
 
-            // Update local state to "loading..."
             const loadingBotMessage: Message = {
               ...botMessage,
               content: "loading...",
@@ -522,78 +574,72 @@ const ChatInterface = memo(
               id: botMessage.id,
               message: loadingBotMessage,
             });
-            setLoadingMessageId(botMessage.id);
 
-            try {
-              // Fetch new bot response
-              const payload = {
-                question: userMessage.content,
-                connection: connectionObj,
-              };
-              const response = await axios.post(
-                `${CHATBOT_API_URL}/ask`,
-                payload
-              );
+            console.log(
+              "Sending retry request for question:",
+              userMessage.content
+            );
+            const payload = {
+              question: userMessage.content,
+              connection: connectionObj,
+            };
+            const response = await axios.post(
+              `${CHATBOT_API_URL}/ask`,
+              payload
+            );
+            const botResponseContent = JSON.stringify(response.data, null, 2);
+            console.log("Retry response received:", botResponseContent);
 
-              const botResponseContent = JSON.stringify(response.data, null, 2);
-
-              // Update bot message on server with new response
-              await axios.put(
-                `${API_URL}/api/messages/${botMessage.id}`,
-                {
-                  token,
-                  content: botResponseContent,
-                  timestamp: new Date().toISOString(),
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-
-              // Update local state
-              const updatedBotMessage: Message = {
-                ...botMessage,
+            console.log(
+              "Updating bot message with retry response:",
+              botMessage.id
+            );
+            await axios.put(
+              `${API_URL}/api/messages/${botMessage.id}`,
+              {
+                token,
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
-              };
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: botMessage.id,
-                message: updatedBotMessage,
-              });
-              setTimeout(() => scrollToMessage(botMessage.id), 100);
-            } catch (error) {
-              console.error("Error retrying message:", error);
-              const errorContent =
-                "Sorry, an error occurred. Please try again.";
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
 
-              // Update bot message with error content on server
-              await axios.put(
-                `${API_URL}/api/messages/${botMessage.id}`,
-                {
-                  token,
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
+            const updatedBotMessage: Message = {
+              ...botMessage,
+              content: botResponseContent,
+              timestamp: new Date().toISOString(),
+            };
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessage.id,
+              message: updatedBotMessage,
+            });
+            setTimeout(() => scrollToMessage(botMessage.id), 100);
+          } catch (error) {
+            console.error("Error retrying message:", error);
+            const errorContent = "Sorry, an error occurred. Please try again.";
 
-              // Update local state
-              const errorMessage: Message = {
-                ...botMessage,
+            await axios.put(
+              `${API_URL}/api/messages/${botMessage.id}`,
+              {
+                token,
                 content: errorContent,
                 timestamp: new Date().toISOString(),
-              };
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: botMessage.id,
-                message: errorMessage,
-              });
-              setTimeout(() => scrollToMessage(botMessage.id), 100);
-            } finally {
-              setLoadingMessageId(null);
-            }
-          } catch (error) {
-            console.error("Error updating bot message to loading:", error);
-            toast.error("Failed to retry message.");
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
+            const errorMessage: Message = {
+              ...botMessage,
+              content: errorContent,
+              timestamp: new Date().toISOString(),
+            };
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessage.id,
+              message: errorMessage,
+            });
+            setTimeout(() => scrollToMessage(botMessage.id), 100);
           }
         },
         [
@@ -606,7 +652,7 @@ const ChatInterface = memo(
         ]
       );
 
-      async function handleEditMessage(id: string) {
+      async function handleEditMessage(id: string, content: string) {
         try {
           const userMessage = messages.find(
             (msg) => msg.id === id && !msg.isBot
@@ -629,30 +675,50 @@ const ChatInterface = memo(
             return;
           }
 
-          // Check if there's an existing bot response
+          console.log("Updating user message:", id, content);
+          await axios.put(
+            `${API_URL}/api/messages/${id}`,
+            {
+              token,
+              content,
+              timestamp: new Date().toISOString(),
+            },
+            { headers: { "Content-Type": "application/json" } }
+          );
+
+          dispatchMessages({
+            type: "UPDATE_MESSAGE",
+            id,
+            message: {
+              ...userMessage,
+              content,
+              timestamp: new Date().toISOString(),
+            },
+          });
+
           const responseMessage = messages.find(
             (msg) => msg.parentId === id && msg.isBot
           );
-
           let botMessageId: string;
           let botMessage: Message;
 
           if (responseMessage) {
-            // Update existing bot response to "loading..."
             botMessageId = responseMessage.id;
             botMessage = {
               ...responseMessage,
               content: "loading...",
               timestamp: new Date().toISOString(),
             };
+            console.log(
+              "Updating existing bot message to loading:",
+              botMessageId
+            );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: botMessageId,
               message: botMessage,
             });
-            setLoadingMessageId(botMessageId);
 
-            // Update on server
             await axios.put(
               `${API_URL}/api/messages/${botMessageId}`,
               {
@@ -663,7 +729,10 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
           } else {
-            // Create new bot message with "loading..."
+            console.log(
+              "Creating new bot loading message for edited user message:",
+              id
+            );
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -686,23 +755,28 @@ const ChatInterface = memo(
               parentId: id,
             };
             dispatchMessages({ type: "ADD_MESSAGE", message: botMessage });
-            setLoadingMessageId(botMessageId);
           }
 
           try {
-            // Fetch bot response from chatbot API
+            console.log("Sending edited question to chatbot API:", content);
             const payload = {
-              question: userMessage.content,
+              question: content,
               connection: connectionObj,
             };
             const response = await axios.post(
               `${CHATBOT_API_URL}/ask`,
               payload
             );
-
             const botResponseContent = JSON.stringify(response.data, null, 2);
+            console.log(
+              "Received bot response for edited message:",
+              botResponseContent
+            );
 
-            // Update the bot message on the server
+            console.log(
+              "Updating bot message with new response:",
+              botMessageId
+            );
             await axios.put(
               `${API_URL}/api/messages/${botMessageId}`,
               {
@@ -713,7 +787,6 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
 
-            // Update local state
             const updatedBotMessage: Message = {
               ...botMessage,
               content: botResponseContent,
@@ -726,10 +799,12 @@ const ChatInterface = memo(
             });
             setTimeout(() => scrollToMessage(botMessageId), 100);
           } catch (error) {
-            console.error("Error getting bot response:", error);
+            console.error(
+              "Error getting bot response for edited message:",
+              error
+            );
             const errorContent = "Sorry, an error occurred. Please try again.";
 
-            // Update bot message with error content on the server
             await axios.put(
               `${API_URL}/api/messages/${botMessageId}`,
               {
@@ -740,7 +815,6 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
 
-            // Update local state
             const errorMessage: Message = {
               ...botMessage,
               content: errorContent,
@@ -752,8 +826,6 @@ const ChatInterface = memo(
               message: errorMessage,
             });
             setTimeout(() => scrollToMessage(botMessageId), 100);
-          } finally {
-            setLoadingMessageId(null);
           }
         } catch (error) {
           console.error("Error handling edit message:", error);
@@ -905,10 +977,6 @@ const ChatInterface = memo(
                     >
                       <ChatMessage
                         message={message}
-                        loading={
-                          message.id === loadingMessageId ||
-                          message.content === "loading..."
-                        }
                         onEditMessage={handleEditMessage}
                         selectedConnection={selectedConnection}
                         onFavorite={handleFavoriteMessage}
@@ -968,7 +1036,7 @@ const ChatInterface = memo(
             )}
             <ChatInput
               input={input}
-              isSubmitting={isSubmitting || loadingMessageId !== null}
+              isSubmitting={isSubmitting}
               onInputChange={setInput}
               onSubmit={handleSubmit}
               connections={connections}

@@ -5,6 +5,7 @@ import { API_URL } from "./config";
 import { Connection, Message } from "./types";
 import { getUserConnections, getRecommendedQuestions } from "./api";
 
+
 // Messages Reducer
 type MessagesAction =
   | { type: "SET_MESSAGES"; messages: Message[] }
@@ -111,55 +112,121 @@ export function useConnections(token: string) {
   };
 }
 
-// Hook for managing session and messages
-export function useSession(token: string) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, dispatchMessages] = useReducer(messagesReducer, []);
-  const [sessionConnection, setSessionConnection] = useState<string | null>(
-    null
-  );
+interface SessionState {
+  sessionId: string | null;
+  messages: Message[];
+  sessionConnection: string | null;
+}
+
+type SessionAction =
+  | {
+      type: "SET_SESSION";
+      sessionId: string;
+      messages: Message[];
+      connection: string | null;
+    }
+  | { type: "CLEAR_SESSION" }
+  | { type: "ADD_MESSAGE"; message: Message }
+  | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> };
+
+const sessionReducer = (
+  state: SessionState,
+  action: SessionAction
+): SessionState => {
+  switch (action.type) {
+    case "SET_SESSION":
+      console.log(
+        "Setting session:",
+        action.sessionId,
+        "Messages:",
+        action.messages.length
+      );
+      return {
+        sessionId: action.sessionId,
+        messages: action.messages,
+        sessionConnection: action.connection,
+      };
+    case "CLEAR_SESSION":
+      console.log("Clearing session");
+      return {
+        sessionId: null,
+        messages: [],
+        sessionConnection: null,
+      };
+    case "ADD_MESSAGE":
+      console.log("Adding message:", action.message.id, action.message.content);
+      return {
+        ...state,
+        messages: [...state.messages, action.message],
+      };
+    case "UPDATE_MESSAGE":
+      console.log("Updating message:", action.id, action.message);
+      return {
+        ...state,
+        messages: state.messages.map((msg) =>
+          msg.id === action.id ? { ...msg, ...action.message } : msg
+        ),
+      };
+    default:
+      return state;
+  }
+};
+
+export const useSession = (token: string) => {
+  const [state, dispatch] = useReducer(sessionReducer, {
+    sessionId: null,
+    messages: [],
+    sessionConnection: null,
+  });
 
   const loadSession = useCallback(
-    async (id: string) => {
+    async (sessionId: string) => {
       try {
-        const response = await axios.get(`${API_URL}/api/sessions/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+        console.log("Fetching session:", sessionId);
+        const response = await axios.get(
+          `${API_URL}/api/sessions/${sessionId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const { messages, connection } = response.data;
+        console.log("Session fetched, messages:", messages.length);
+        dispatch({
+          type: "SET_SESSION",
+          sessionId,
+          messages: messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            isBot: msg.isBot,
+            timestamp: msg.timestamp,
+            isFavorited: msg.isFavorited,
+            parentId: msg.parentId,
+            reaction: msg.reaction,
+            dislike_reason: msg.dislike_reason,
+          })),
+          connection,
         });
-        dispatchMessages({
-          type: "SET_MESSAGES",
-          messages: response.data.messages || [],
-        });
-        setSessionId(id);
-        setSessionConnection(response.data.connection || null);
       } catch (error) {
-        console.error("Error fetching session:", error);
-        dispatchMessages({ type: "SET_MESSAGES", messages: [] });
-        setSessionId(null);
-        setSessionConnection(null);
-        toast.error("Failed to load session.");
+        console.error("Error loading session:", error);
+        dispatch({ type: "CLEAR_SESSION" });
       }
     },
     [token]
   );
 
   const clearSession = useCallback(() => {
-    setSessionId(null);
-    setSessionConnection(null);
-    dispatchMessages({ type: "SET_MESSAGES", messages: [] });
+    dispatch({ type: "CLEAR_SESSION" });
   }, []);
 
   return {
-    sessionId,
-    messages,
-    dispatchMessages,
-    sessionConnection,
+    sessionId: state.sessionId,
+    messages: state.messages,
+    sessionConnection: state.sessionConnection,
     loadSession,
     clearSession,
+    dispatchMessages: dispatch,
   };
-}
+};
 
 // Hook for fetching recommended questions
 export function useRecommendedQuestions(
