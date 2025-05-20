@@ -87,8 +87,11 @@ const ChatInterface = memo(
         const loadingMessages = messages.filter(
           (msg) => msg.isBot && msg.content === "loading..."
         );
-        if (loadingMessages.length === 0) return;
-
+        if (loadingMessages.length === 0) {
+          setIsSubmitting(false);
+          return;
+        }
+        setIsSubmitting(true);
         const interval = setInterval(async () => {
           console.log(
             "Polling for updates on loading messages:",
@@ -108,6 +111,7 @@ const ChatInterface = memo(
                   `Updating message ${msg.id} with content:`,
                   response.data.content
                 );
+                setIsSubmitting(false);
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
                   id: msg.id,
@@ -119,6 +123,7 @@ const ChatInterface = memo(
               }
             }
           } catch (error) {
+            setIsSubmitting(false);
             console.error("Error polling message updates:", error);
           }
         }, 2000);
