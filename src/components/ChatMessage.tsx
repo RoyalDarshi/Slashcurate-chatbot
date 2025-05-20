@@ -97,56 +97,68 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           setCurrentView("error");
           setCsvData([]);
           setHasNumericData(false);
-        } else if (parsedData?.answer) {
-          const tableData = Array.isArray(parsedData.answer)
-            ? parsedData.answer
-            : [parsedData.answer];
-          setCsvData(tableData);
+        } else {
+          try {
+            const parsedData = JSON.parse(message.content);
+            let tableData = [];
 
-          const hasGraphicalData =
-            tableData.length > 0 &&
-            tableData.some((row) =>
-              Object.entries(row).some(([key, val]) => {
-                const lowerKey = key.toLowerCase();
-                const isExcludedKey =
-                  lowerKey.includes("id") ||
-                  lowerKey.includes("code") ||
-                  lowerKey.includes("phone") ||
-                  lowerKey.includes("postal") ||
-                  lowerKey === "phone_number";
+            // Handle cases where parsedData is a single object or has an answer property
+            if (parsedData?.answer) {
+              tableData = Array.isArray(parsedData.answer)
+                ? parsedData.answer
+                : [parsedData.answer];
+            } else if (Object.keys(parsedData).length > 0) {
+              // Handle single object case like { count: 0 }
+              tableData = [parsedData];
+            }
 
-                const numericValue = (() => {
-                  if (typeof val === "number") return val;
-                  if (typeof val === "string") {
-                    const cleaned = val.replace(/,/g, "").trim();
-                    return /^\d+(\.\d+)?$/.test(cleaned)
-                      ? parseFloat(cleaned)
-                      : NaN;
-                  }
-                  return NaN;
-                })();
+            setCsvData(tableData);
 
-                return (
-                  !isExcludedKey &&
-                  !isNaN(numericValue) &&
-                  isFinite(numericValue)
-                );
-              })
-            );
-          setHasNumericData(hasGraphicalData);
+            const hasGraphicalData =
+              tableData.length > 0 &&
+              tableData.some((row) =>
+                Object.entries(row).some(([key, val]) => {
+                  const lowerKey = key.toLowerCase();
+                  const isExcludedKey =
+                    lowerKey.includes("id") ||
+                    lowerKey.includes("code") ||
+                    lowerKey.includes("phone") ||
+                    lowerKey.includes("postal") ||
+                    lowerKey === "phone_number";
 
-          if (tableData.length > 0) {
-            setCurrentView(hasGraphicalData ? "graph" : "table");
-          } else {
+                  const numericValue = (() => {
+                    if (typeof val === "number") return val;
+                    if (typeof val === "string") {
+                      const cleaned = val.replace(/,/g, "").trim();
+                      return /^\d+(\.\d+)?$/.test(cleaned)
+                        ? parseFloat(cleaned)
+                        : NaN;
+                    }
+                    return NaN;
+                  })();
+
+                  return (
+                    !isExcludedKey &&
+                    !isNaN(numericValue) &&
+                    isFinite(numericValue)
+                  );
+                })
+              );
+            setHasNumericData(hasGraphicalData);
+
+            if (tableData.length > 0) {
+              setCurrentView(hasGraphicalData ? "graph" : "table");
+            } else {
+              setCurrentView("text");
+            }
+          } catch {
+            setCsvData([]);
+            setHasNumericData(false);
             setCurrentView("text");
           }
-        } else {
-          setCsvData([]);
-          setHasNumericData(false);
-          setCurrentView("text");
         }
       }
-    }, [message, parsedData]);
+    }, [message]);
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
