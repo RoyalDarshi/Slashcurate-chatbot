@@ -1039,14 +1039,15 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
 const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
   return (
-    prevProps.message === nextProps.message &&
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.isFavorited === nextProps.message.isFavorited &&
     prevProps.loading === nextProps.loading &&
     prevProps.selectedConnection === nextProps.selectedConnection &&
-    prevProps.favoriteCount === nextProps.favoriteCount &&
     prevProps.isFavorited === nextProps.isFavorited &&
-    prevProps.onEditMessage === nextProps.onEditMessage &&
-    prevProps.onFavorite === nextProps.onFavorite &&
-    prevProps.onUnfavorite === nextProps.onUnfavorite
+    prevProps.responseStatus === nextProps.responseStatus &&
+    prevProps.disabled === nextProps.disabled &&
+    prevProps.onRetry === nextProps.onRetry
   );
 };
 

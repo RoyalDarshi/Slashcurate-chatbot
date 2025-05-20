@@ -24,6 +24,7 @@ import {
   useRecommendedQuestions,
   useChatScroll,
 } from "../hooks";
+import { m } from "framer-motion";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -180,7 +181,7 @@ const ChatInterface = memo(
             dispatchMessages({ type: "ADD_MESSAGE", message: userMessage });
             dispatchMessages({ type: "ADD_MESSAGE", message: botMessage });
             setLoadingMessageId(botMessageId);
-
+            setTimeout(() => scrollToMessage(botMessageId), 100);
             try {
               // Fetch bot response from chatbot API
               const connectionObj = connections.find(
@@ -318,6 +319,7 @@ const ChatInterface = memo(
         selectedConnection,
         handleAskFavoriteQuestion,
         onQuestionAsked,
+        setSelectedConnection,
       ]);
 
       // Auto-scroll when appropriate
@@ -355,7 +357,7 @@ const ChatInterface = memo(
             localStorage.removeItem("selectedConnection");
           }
         },
-        [onCreateConSelected, connections, handleNewChat]
+        [onCreateConSelected, connections, handleNewChat, setSelectedConnection]
       );
 
       const handleSubmit = useCallback(
@@ -484,13 +486,13 @@ const ChatInterface = memo(
             return;
           }
 
-          if (!sessionConnection) {
+          if (!selectedConnection) {
             toast.error("No connection available for this session.");
             return;
           }
 
           const connectionObj = connections.find(
-            (conn) => conn.connectionName === sessionConnection
+            (conn) => conn.connectionName === selectedConnection
           );
           if (!connectionObj) {
             toast.error("Connection not found.");
@@ -596,7 +598,7 @@ const ChatInterface = memo(
         },
         [
           messages,
-          sessionConnection,
+          selectedConnection,
           connections,
           token,
           dispatchMessages,
@@ -614,13 +616,13 @@ const ChatInterface = memo(
             return;
           }
 
-          if (!sessionConnection) {
+          if (!selectedConnection) {
             toast.error("No connection available for this session.");
             return;
           }
 
           const connectionObj = connections.find(
-            (conn) => conn.connectionName === sessionConnection
+            (conn) => conn.connectionName === selectedConnection
           );
           if (!connectionObj) {
             toast.error("Connection not found.");
@@ -903,7 +905,10 @@ const ChatInterface = memo(
                     >
                       <ChatMessage
                         message={message}
-                        loading={message.id === loadingMessageId}
+                        loading={
+                          message.id === loadingMessageId ||
+                          message.content === "loading..."
+                        }
                         onEditMessage={handleEditMessage}
                         selectedConnection={selectedConnection}
                         onFavorite={handleFavoriteMessage}
