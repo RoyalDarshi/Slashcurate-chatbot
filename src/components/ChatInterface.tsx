@@ -1,12 +1,10 @@
 import {
   useState,
-  useRef,
   useEffect,
   useCallback,
   memo,
   forwardRef,
   useImperativeHandle,
-  useReducer,
 } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -17,20 +15,15 @@ import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import { ArrowDown } from "lucide-react";
-import {
-  askChatbot,
-  getUserConnections,
-  getRecommendedQuestions,
-} from "../api";
+import { askChatbot } from "../api";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
-
-interface Session {
-  id: string;
-  messages: Message[];
-  timestamp: string;
-  title: string;
-}
+import {
+  useConnections,
+  useSession,
+  useRecommendedQuestions,
+  useChatScroll,
+} from "../hooks";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -39,30 +32,6 @@ export type ChatInterfaceHandle = {
     connection: string,
     query?: string
   ) => void;
-};
-
-// Reducer for managing messages
-type MessagesAction =
-  | { type: "SET_MESSAGES"; messages: Message[] }
-  | { type: "ADD_MESSAGE"; message: Message }
-  | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> };
-
-const messagesReducer = (
-  state: Message[],
-  action: MessagesAction
-): Message[] => {
-  switch (action.type) {
-    case "SET_MESSAGES":
-      return action.messages;
-    case "ADD_MESSAGE":
-      return [...state, action.message];
-    case "UPDATE_MESSAGE":
-      return state.map((msg) =>
-        msg.id === action.id ? { ...msg, ...action.message } : msg
-      );
-    default:
-      return state;
-  }
 };
 
 const ChatInterface = memo(
@@ -77,205 +46,47 @@ const ChatInterface = memo(
       ref
     ) => {
       const { theme } = useTheme();
+      const token = sessionStorage.getItem("token") ?? "";
+      const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
+
+      // Use custom hooks
+      const {
+        connections,
+        selectedConnection,
+        setSelectedConnection,
+        connectionError,
+        connectionsLoading,
+      } = useConnections(token);
+      const {
+        sessionId,
+        messages,
+        dispatchMessages,
+        sessionConnection,
+        loadSession,
+        clearSession,
+      } = useSession(token);
+      const recommendedQuestions = useRecommendedQuestions(token, sessionId);
+      const {
+        chatContainerRef,
+        messagesEndRef,
+        messageRefs,
+        scrollToBottom,
+        scrollToMessage,
+        userHasScrolledUp,
+      } = useChatScroll();
+
       const [loadingMessageId, setLoadingMessageId] = useState<string | null>(
         null
       );
       const [input, setInput] = useState("");
       const [isSubmitting, setIsSubmitting] = useState(false);
-      const [messages, dispatchMessages] = useReducer(messagesReducer, []);
-      const [connections, setConnections] = useState<Connection[]>([]);
-      const [selectedConnection, setSelectedConnection] = useState<
-        string | null
-      >(localStorage.getItem("selectedConnection") || null);
-      const [connectionError, setConnectionError] = useState<string | null>(
-        null
-      );
-      const [connectionsLoading, setConnectionsLoading] = useState(true);
       const [editingMessageId, setEditingMessageId] = useState<string | null>(
         null
       );
-      const [currentSessionId, setCurrentSessionId] = useState<string | null>(
-        null
-      );
-      const [recommendedQuestions, setRecommendedQuestions] = useState<any[]>(
-        []
-      );
-      const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
       const [sessionConnectionError, setSessionConnectionError] = useState<
         string | null
       >(null);
-      const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-      const messagesEndRef = useRef<HTMLDivElement>(null);
-      const chatContainerRef = useRef<HTMLDivElement>(null);
-      const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
-      const token = sessionStorage.getItem("token") ?? "";
 
-      const scrollToBottom = useCallback(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, []);
-
-      const scrollToMessage = useCallback((messageId: string) => {
-        const messageRef = messageRefs.current[messageId];
-        if (messageRef)
-          messageRef.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, []);
-
-      // Scroll behavior
-      useEffect(() => {
-        const handleScroll = () => {
-          if (!chatContainerRef.current) return;
-          const { scrollTop, clientHeight, scrollHeight } =
-            chatContainerRef.current;
-          setUserHasScrolledUp(scrollTop + clientHeight < scrollHeight - 10);
-        };
-        const chatContainer = chatContainerRef.current;
-        if (chatContainer)
-          chatContainer.addEventListener("scroll", handleScroll);
-        return () => chatContainer?.removeEventListener("scroll", handleScroll);
-      }, []);
-
-      useEffect(() => {
-        if (!userHasScrolledUp && !editingMessageId) scrollToBottom();
-      }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
-
-      // Fetch connections
-      const fetchConnections = useCallback(async () => {
-        setConnectionsLoading(true);
-        if (!token) {
-          toast.error("User ID not found. Please log in again.", {
-            style: {
-              background: theme.colors.surface,
-              color: theme.colors.error,
-            },
-            theme: mode,
-          });
-          setConnectionsLoading(false);
-          return;
-        }
-        try {
-          const response = await getUserConnections(token);
-          setConnections(response.data.connections);
-          if (response.data.connections.length === 0) {
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
-          } else {
-            const storedConnection = localStorage.getItem("selectedConnection");
-            const defaultConnection =
-              response.data.connections.find(
-                (conn: Connection) => conn.connectionName === storedConnection
-              ) || response.data.connections[0];
-            setSelectedConnection(defaultConnection?.connectionName || null);
-            localStorage.setItem(
-              "selectedConnection",
-              defaultConnection?.connectionName || ""
-            );
-          }
-          setConnectionError(null);
-        } catch (error) {
-          console.error("Error fetching connections:", error);
-          setConnectionError("Failed to make connection. Please try again.");
-          setSelectedConnection(null);
-        } finally {
-          setConnectionsLoading(false);
-        }
-      }, [token, theme, mode]);
-
-      // Fetch session
-      const fetchSession = useCallback(
-        async (sessionId: string) => {
-          setConnectionsLoading(true);
-          try {
-            const response = await axios.get(
-              `${API_URL}/api/sessions/${sessionId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-            dispatchMessages({
-              type: "SET_MESSAGES",
-              messages: response.data.messages || [],
-            });
-            setCurrentSessionId(sessionId);
-            if (response.data.connection) {
-              setSelectedConnection(response.data.connection);
-              localStorage.setItem(
-                "selectedConnection",
-                response.data.connection
-              );
-            } else {
-              setSelectedConnection(null);
-              setSessionConnectionError(
-                "This session does not have a connection."
-              );
-              localStorage.removeItem("selectedConnection");
-            }
-            setTimeout(scrollToBottom, 300);
-          } catch (error) {
-            console.error("Error fetching session:", error);
-            setSessionConnectionError("Failed to load session.");
-            dispatchMessages({ type: "SET_MESSAGES", messages: [] });
-          } finally {
-            setConnectionsLoading(false);
-          }
-        },
-        [token, scrollToBottom]
-      );
-
-      // Initial load
-      useEffect(() => {
-        const loadInitialData = async () => {
-          const storedSessionId = localStorage.getItem("currentSessionId");
-          if (storedSessionId) await fetchSession(storedSessionId);
-          await fetchConnections();
-        };
-        loadInitialData();
-      }, [fetchConnections, fetchSession]);
-
-      // Fetch recommended questions
-      useEffect(() => {
-        const fetchRecQuestions = async () => {
-          if (token && !currentSessionId) {
-            try {
-              const data = await getRecommendedQuestions(token);
-              setRecommendedQuestions(data);
-            } catch (error) {
-              console.error("Failed to fetch recommended questions:", error);
-            }
-          }
-        };
-        fetchRecQuestions();
-      }, [token, currentSessionId]);
-
-      // Handle initial question
-      useEffect(() => {
-        if (initialQuestion && !connectionsLoading && connections.length > 0) {
-          if (!selectedConnection) {
-            const defaultConnection = connections[0];
-            setSelectedConnection(defaultConnection.connectionName);
-            localStorage.setItem(
-              "selectedConnection",
-              defaultConnection.connectionName
-            );
-          }
-          handleAskFavoriteQuestion(
-            initialQuestion.text,
-            initialQuestion.connection,
-            initialQuestion.query
-          );
-          if (onQuestionAsked) onQuestionAsked();
-        }
-      }, [
-        initialQuestion,
-        connections,
-        connectionsLoading,
-        selectedConnection,
-        onQuestionAsked,
-      ]);
-
-      // Centralized question-asking logic
       const askQuestion = useCallback(
         async (
           question: string,
@@ -288,16 +99,16 @@ const ChatInterface = memo(
             return;
           }
 
-          let sessionId = currentSessionId;
-          const useExistingSession =
-            sessionId &&
-            !sessionConnectionError &&
-            selectedConnection === connection;
-          if (sessionConnectionError) {
-            setSessionConnectionError(null);
+          // Check if we can ask questions in the current session
+          if (sessionId && !sessionConnection) {
+            toast.error(
+              "This session does not have a connection. Cannot ask new questions."
+            );
+            return;
           }
 
-          if (!useExistingSession) {
+          let currentSessionId = sessionId;
+          if (!sessionId) {
             try {
               const response = await axios.post(
                 `${API_URL}/api/sessions`,
@@ -308,12 +119,10 @@ const ChatInterface = memo(
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
-              sessionId = response.data.id;
-              setCurrentSessionId(sessionId);
-              localStorage.setItem("currentSessionId", sessionId??"");
-              setSelectedConnection(connection);
-              localStorage.setItem("selectedConnection", connection);
-              dispatchMessages({ type: "SET_MESSAGES", messages: [] });
+              currentSessionId = response.data.id;
+              // setSessionId(currentSessionId);
+              // setSessionConnection(connection);
+              localStorage.setItem("currentSessionId", currentSessionId);
             } catch (error) {
               console.error("Error creating session:", error);
               toast.error("Failed to create session.");
@@ -343,7 +152,7 @@ const ChatInterface = memo(
               `${API_URL}/api/messages`,
               {
                 token,
-                session_id: sessionId,
+                session_id: currentSessionId,
                 content: question,
                 isBot: false,
                 isFavorited,
@@ -360,7 +169,10 @@ const ChatInterface = memo(
 
           setLoadingMessageId(botLoadingMessage.id);
           dispatchMessages({ type: "ADD_MESSAGE", message: userMessage });
-          dispatchMessages({ type: "ADD_MESSAGE", message: botLoadingMessage });
+          dispatchMessages({
+            type: "ADD_MESSAGE",
+            message: botLoadingMessage,
+          });
 
           try {
             const connectionObj = connections.find(
@@ -389,7 +201,7 @@ const ChatInterface = memo(
               `${API_URL}/api/messages`,
               {
                 token,
-                session_id: sessionId,
+                session_id: currentSessionId,
                 content: botResponse.content,
                 isBot: true,
                 isFavorited,
@@ -419,7 +231,7 @@ const ChatInterface = memo(
               `${API_URL}/api/messages`,
               {
                 token,
-                session_id: sessionId,
+                session_id: currentSessionId,
                 content: errorMessage.content,
                 isBot: true,
                 parentId: userMessage.id,
@@ -437,14 +249,104 @@ const ChatInterface = memo(
           }
         },
         [
-          currentSessionId,
-          selectedConnection,
+          sessionId,
+          sessionConnection,
           connections,
           token,
           scrollToMessage,
-          theme,
-          mode,
+          dispatchMessages,
         ]
+      );
+
+      const handleAskFavoriteQuestion = useCallback(
+        (question: string, connection: string, query?: string) => {
+          askQuestion(question, connection, true, query);
+        },
+        [askQuestion]
+      );
+
+      // Sync selectedConnection with sessionConnection
+      useEffect(() => {
+        if (sessionConnection) {
+          setSelectedConnection(sessionConnection);
+          localStorage.setItem("selectedConnection", sessionConnection);
+          setSessionConnectionError(null);
+        } else if (sessionId) {
+          setSelectedConnection(null);
+          localStorage.removeItem("selectedConnection");
+          setSessionConnectionError("This session does not have a connection.");
+        }
+      }, [sessionConnection, sessionId, setSelectedConnection]);
+
+      // Initial load
+      useEffect(() => {
+        const storedSessionId = localStorage.getItem("currentSessionId");
+        if (storedSessionId) loadSession(storedSessionId);
+      }, [loadSession]);
+
+      // Handle initial question
+      useEffect(() => {
+        if (initialQuestion && !connectionsLoading && connections.length > 0) {
+          if (!selectedConnection) {
+            const defaultConnection = connections[0];
+            setSelectedConnection(defaultConnection.connectionName);
+            localStorage.setItem(
+              "selectedConnection",
+              defaultConnection.connectionName
+            );
+          }
+          handleAskFavoriteQuestion(
+            initialQuestion.text,
+            initialQuestion.connection,
+            initialQuestion.query
+          );
+          if (onQuestionAsked) onQuestionAsked();
+        }
+      }, [
+        initialQuestion,
+        connections,
+        connectionsLoading,
+        selectedConnection,
+        handleAskFavoriteQuestion,
+        onQuestionAsked,
+      ]);
+
+      // Auto-scroll when appropriate
+      useEffect(() => {
+        if (!userHasScrolledUp && !editingMessageId) scrollToBottom();
+      }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
+
+      const handleNewChat = useCallback(() => {
+        clearSession();
+        setInput("");
+        setEditingMessageId(null);
+        localStorage.removeItem("currentSessionId");
+      }, [clearSession]);
+
+      const handleSelect = useCallback(
+        (option: any) => {
+          if (option?.value === "create-con") {
+            onCreateConSelected();
+            setSelectedConnection(null);
+            localStorage.removeItem("selectedConnection");
+          } else if (option) {
+            handleNewChat();
+            const selectedConnectionObj = connections.find(
+              (conn) => conn.connectionName === option.value.connectionName
+            );
+            if (selectedConnectionObj) {
+              setSelectedConnection(selectedConnectionObj.connectionName);
+              localStorage.setItem(
+                "selectedConnection",
+                selectedConnectionObj.connectionName
+              );
+            }
+          } else {
+            setSelectedConnection(null);
+            localStorage.removeItem("selectedConnection");
+          }
+        },
+        [onCreateConSelected, connections, handleNewChat]
       );
 
       const handleSubmit = useCallback(
@@ -469,69 +371,16 @@ const ChatInterface = memo(
         [input, isSubmitting, selectedConnection, askQuestion, theme, mode]
       );
 
-      const handleAskFavoriteQuestion = useCallback(
-        async (question: string, connection: string, query?: string) => {
-          await askQuestion(question, connection, true, query);
-        },
-        [askQuestion]
-      );
-
-      const handleNewChat = useCallback(() => {
-        dispatchMessages({ type: "SET_MESSAGES", messages: [] });
-        setInput("");
-        setEditingMessageId(null);
-        setCurrentSessionId(null);
-        setSessionConnectionError(null);
-        localStorage.removeItem("currentSessionId");
-      }, []);
-
-      const handleSelect = useCallback(
-        async (option: any) => {
-          if (option?.value === "create-con") {
-            onCreateConSelected();
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
-          } else if (option) {
-            handleNewChat();
-            const selectedConnectionObj = connections.find(
-              (conn) => conn.connectionName === option.value.connectionName
-            );
-            if (selectedConnectionObj) {
-              setSelectedConnection(selectedConnectionObj.connectionName);
-              localStorage.setItem(
-                "selectedConnection",
-                selectedConnectionObj.connectionName
-              );
-              setConnectionError(null);
-            }
-          } else {
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
-          }
-        },
-        [onCreateConSelected, connections, handleNewChat]
-      );
-
       const handleFavoriteMessage = useCallback(
         async (messageId: string) => {
           if (!token || !selectedConnection) {
             toast.error(
-              "Cannot favorite message: Missing token or connection.",
-              {
-                style: {
-                  background: theme.colors.surface,
-                  color: theme.colors.error,
-                },
-                theme: mode,
-              }
+              "Cannot favorite message: Missing token or connection."
             );
             return;
           }
           const questionMessage = messages.find((msg) => msg.id === messageId);
-          if (!questionMessage || questionMessage.isBot) {
-            toast.error("Invalid question message.");
-            return;
-          }
+          if (!questionMessage || questionMessage.isBot) return;
           try {
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId
@@ -566,7 +415,7 @@ const ChatInterface = memo(
             toast.error("Failed to favorite message.");
           }
         },
-        [token, messages, selectedConnection, theme, mode]
+        [token, messages, selectedConnection, dispatchMessages]
       );
 
       const handleUnfavoriteMessage = useCallback(
@@ -605,90 +454,85 @@ const ChatInterface = memo(
             toast.error("Failed to unfavorite message.");
           }
         },
-        [token, messages, selectedConnection]
+        [token, messages, selectedConnection, dispatchMessages]
       );
 
-      const handleRetry = async (userMessageId: string) => {
-        const userMessage = messages.find((msg) => msg.id === userMessageId);
-        if (!userMessage) return;
-        const botMessage = messages.find(
-          (msg) => msg.parentId === userMessageId
-        );
-        if (!botMessage) return;
-
-        // Update bot message to loading state
-        dispatchMessages({
-          type: "UPDATE_MESSAGE",
-          id: botMessage.id,
-          message: { content: "loading..." },
-        });
-        setLoadingMessageId(botMessage.id);
-
-        try {
-          const connectionObj = connections.find(
-            (conn) => conn.connectionName === selectedConnection
+      const handleRetry = useCallback(
+        async (userMessageId: string) => {
+          const userMessage = messages.find((msg) => msg.id === userMessageId);
+          if (!userMessage) return;
+          const botMessage = messages.find(
+            (msg) => msg.parentId === userMessageId
           );
-          if (!connectionObj) throw new Error("Connection not found");
-          const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
-            question: userMessage.content,
-            connection: connectionObj,
-          });
-          const newBotResponse: Message = {
-            ...botMessage,
-            content: JSON.stringify(response.data, null, 2),
-            timestamp: new Date().toISOString(),
-          };
-          // Update the bot message in the database
-          await axios.put(
-            `${API_URL}/api/messages/${botMessage.id}`,
-            {
-              token,
-              content: newBotResponse.content,
-              timestamp: newBotResponse.timestamp,
-            },
-            { headers: { "Content-Type": "application/json" } }
-          );
+          if (!botMessage) return;
+
           dispatchMessages({
             type: "UPDATE_MESSAGE",
             id: botMessage.id,
-            message: newBotResponse,
+            message: { content: "loading..." },
           });
-        } catch (error) {
-          console.error("Error retrying message:", error);
-          const errorMessage: Message = {
-            ...botMessage,
-            content: "Sorry, an error occurred. Please try again.",
-            timestamp: new Date().toISOString(),
-          };
-          await axios.put(
-            `${API_URL}/api/messages/${botMessage.id}`,
-            {
-              token,
-              content: errorMessage.content,
-              timestamp: errorMessage.timestamp,
-            },
-            { headers: { "Content-Type": "application/json" } }
-          );
-          dispatchMessages({
-            type: "UPDATE_MESSAGE",
-            id: botMessage.id,
-            message: errorMessage,
-          });
-        } finally {
-          setLoadingMessageId(null);
-        }
-      };
+          setLoadingMessageId(botMessage.id);
+
+          try {
+            const connectionObj = connections.find(
+              (conn) => conn.connectionName === selectedConnection
+            );
+            if (!connectionObj) throw new Error("Connection not found");
+            const response = await axios.post(`${CHATBOT_API_URL}/ask`, {
+              question: userMessage.content,
+              connection: connectionObj,
+            });
+            const newBotResponse: Message = {
+              ...botMessage,
+              content: JSON.stringify(response.data, null, 2),
+              timestamp: new Date().toISOString(),
+            };
+            await axios.put(
+              `${API_URL}/api/messages/${botMessage.id}`,
+              {
+                token,
+                content: newBotResponse.content,
+                timestamp: newBotResponse.timestamp,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessage.id,
+              message: newBotResponse,
+            });
+          } catch (error) {
+            console.error("Error retrying message:", error);
+            const errorMessage: Message = {
+              ...botMessage,
+              content: "Sorry, an error occurred. Please try again.",
+              timestamp: new Date().toISOString(),
+            };
+            await axios.put(
+              `${API_URL}/api/messages/${botMessage.id}`,
+              {
+                token,
+                content: errorMessage.content,
+                timestamp: errorMessage.timestamp,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessage.id,
+              message: errorMessage,
+            });
+          } finally {
+            setLoadingMessageId(null);
+          }
+        },
+        [messages, selectedConnection, connections, token, dispatchMessages]
+      );
 
       const handleEditMessage = useCallback(
         async (id: string, newContent: string) => {
           if (!selectedConnection) {
-            toast.error("No connection selected.", {
-              style: {
-                background: theme.colors.surface,
-                color: theme.colors.error,
-              },
-              theme: mode,
-            });
+            toast.error("No connection selected.");
             return;
           }
           try {
@@ -743,7 +587,6 @@ const ChatInterface = memo(
                   question: newContent,
                   connection: connectionObj,
                 });
-
                 const botResponse: Message = {
                   id: botLoadingMessage.id,
                   content: JSON.stringify(response.data, null, 2),
@@ -752,7 +595,6 @@ const ChatInterface = memo(
                   isFavorited: false,
                   parentId: id,
                 };
-
                 if (responseMessage) {
                   await axios.put(
                     `${API_URL}/api/messages/${responseMessage.id}`,
@@ -760,11 +602,12 @@ const ChatInterface = memo(
                     { headers: { "Content-Type": "application/json" } }
                   );
                 } else {
-                  await axios.post(
+                  // Capture the server response to get the new ID
+                  const botResponseData = await axios.post(
                     `${API_URL}/api/messages`,
                     {
                       token,
-                      session_id: currentSessionId,
+                      session_id: sessionId,
                       content: botResponse.content,
                       isBot: true,
                       parentId: id,
@@ -772,6 +615,7 @@ const ChatInterface = memo(
                     },
                     { headers: { "Content-Type": "application/json" } }
                   );
+                  botResponse.id = botResponseData.data.id; // Update to server-assigned ID
                 }
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
@@ -800,7 +644,7 @@ const ChatInterface = memo(
                     `${API_URL}/api/messages`,
                     {
                       token,
-                      session_id: currentSessionId,
+                      session_id: sessionId,
                       content: errorMessage.content,
                       isBot: true,
                       parentId: id,
@@ -825,13 +669,13 @@ const ChatInterface = memo(
           }
         },
         [
+          messages,
           selectedConnection,
           connections,
-          currentSessionId,
+          sessionId,
           token,
           scrollToMessage,
-          theme,
-          mode,
+          dispatchMessages,
         ]
       );
 
@@ -865,7 +709,6 @@ const ChatInterface = memo(
                 boxShadow: theme.shadow.md,
                 padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                 marginBottom: theme.spacing.md,
-                transition: "all 0.3s ease",
               }}
             >
               <div className="flex items-center">
@@ -892,33 +735,6 @@ const ChatInterface = memo(
                   </div>
                 </div>
               </div>
-              {/* <button
-                onClick={() => setSessionConnectionError(null)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: theme.colors.text,
-                  opacity: 0.6,
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.opacity = "1")}
-                onMouseOut={(e) => (e.currentTarget.style.opacity = "0.6")}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button> */}
             </div>
           )}
           <div
@@ -945,7 +761,7 @@ const ChatInterface = memo(
                 </p>
                 <button
                   onClick={onCreateConSelected}
-                  className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide transition-all duration-200"
+                  className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
                   style={{
                     color: "white",
                     backgroundColor: theme.colors.accent,
