@@ -35,65 +35,103 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       };
     }, []);
 
+    // Data transformation function
+    function transformDynamicData(rawData) {
+      if (!rawData || rawData.length === 0) {
+        return { data: [], keys: [], indexBy: "" };
+      }
+
+      const sample = rawData[0];
+      const keys = Object.keys(sample);
+
+      // Step 1: Find potential numeric value keys (real numbers or numeric strings)
+      const numericKeys = keys.filter((k) => {
+        const val = sample[k];
+        return val !== null && val !== "" && !isNaN(Number(val));
+      });
+
+      if (numericKeys.length === 0) {
+        throw new Error("No numeric value key found in dataset.");
+      }
+
+      const valueKey = numericKeys[0]; // Pick the first numeric key
+
+      // Step 2: Pick a group key (optional)
+      const stringKeys = keys.filter(
+        (k) => typeof sample[k] === "string" && k !== valueKey
+      );
+      const groupKey = stringKeys.length > 1 ? stringKeys[1] : null;
+
+      // Step 3: Pick the index key (x-axis) as a string field not used as value or group
+      const indexByKey = stringKeys.find((k) => k !== groupKey);
+      if (!indexByKey) {
+        throw new Error("Could not determine indexBy (x-axis) key.");
+      }
+
+      // CASE 1: No group key (simple bar chart)
+      if (!groupKey) {
+        return {
+          data: rawData.map((row) => ({
+            [indexByKey]: row[indexByKey],
+            value: Number(row[valueKey]),
+          })),
+          keys: ["value"],
+          indexBy: indexByKey,
+        };
+      }
+
+      // CASE 2: Grouped or stacked bar chart
+      const allGroupValues = [...new Set(rawData.map((row) => row[groupKey]))];
+
+      const grouped = rawData.reduce((acc, row) => {
+        const label = row[indexByKey];
+        const group = row[groupKey];
+        const value = Number(row[valueKey]);
+
+        if (!acc[label]) {
+          acc[label] = { [indexByKey]: label };
+          allGroupValues.forEach((type) => (acc[label][type] = 0));
+        }
+
+        acc[label][group] += value;
+        return acc;
+      }, {});
+
+      return {
+        data: Object.values(grouped),
+        keys: allGroupValues,
+        indexBy: indexByKey,
+      };
+    }
+
     useEffect(() => {
       const processApiData = (dataset: any[]) => {
         try {
-          if (!dataset || dataset.length === 0) {
+          const {
+            data: processedData,
+            keys: processedKeys,
+            indexBy,
+          } = transformDynamicData(dataset);
+
+          if (!processedData.length || !indexBy || !processedKeys.length) {
             setIsValidGraphData(false);
             return;
           }
 
-          const firstItem = dataset[0];
-          const keys = Object.keys(firstItem);
-
-          // Find ID-like columns for x-axis
-          const idColumns = keys.filter((k) => k.toLowerCase().endsWith("id"));
-          const hasIdColumn = idColumns.length > 0;
-
-          // Set xKey priority: first ID column > first numeric column
-          let selectedXKey = hasIdColumn ? idColumns[0] : "";
-          const numericKeys = keys.filter((key) => {
-            if (hasIdColumn && idColumns.includes(key)) return false;
-            const value = firstItem[key];
-            return !isNaN(Number(value)) && value !== "" && value !== null;
-          });
-
-          // Fallback to first numeric key if no ID columns
-          if (!selectedXKey && numericKeys.length > 0) {
-            selectedXKey = numericKeys[0];
-          }
-
-          // Validate we have viable keys
-          if (!selectedXKey || numericKeys.length === 0) {
-            setIsValidGraphData(false);
-            return;
-          }
-
-          // Filter out non-quantitative yKeys
-          const quantitativeKeys = numericKeys.filter(
-            (key) =>
-              !/[_-](?:id|code|number|phone|identifier|pincode|pin|phone_number)$/i.test(
-                key
-              )
+          // Validate that yKeys contain numeric data
+          const hasValidNumericData = processedData.some((item) =>
+            processedKeys.some((key) => !isNaN(Number(item[key])))
           );
 
-          // Aggregate data by xKey
-          const aggregated = dataset.reduce((acc, item) => {
-            const xValue = item[selectedXKey];
-            if (!acc[xValue]) {
-              acc[xValue] = { [selectedXKey]: xValue };
-              quantitativeKeys.forEach((k) => (acc[xValue][k] = 0));
-            }
-            quantitativeKeys.forEach((k) => {
-              acc[xValue][k] += Number(item[k]) || 0;
-            });
-            return acc;
-          }, {});
+          if (!hasValidNumericData) {
+            setIsValidGraphData(false);
+            return;
+          }
 
-          setXKey(selectedXKey);
-          setYKeys(quantitativeKeys);
-          setGraphData(Object.values(aggregated));
-          setIsValidGraphData(quantitativeKeys.length > 0);
+          setXKey(indexBy);
+          setYKeys(processedKeys);
+          setGraphData(processedData);
+          setIsValidGraphData(true);
         } catch (error) {
           console.error("Data processing error:", error);
           setIsValidGraphData(false);
@@ -186,8 +224,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
     const totalBarsPerGroup = yKeys.length;
     const totalGroups = graphData.length;
 
-    const calculatedWidth =
-      totalGroups * (totalBarsPerGroup * barWidth + groupPadding);
+    const calculatedWidth = 1000;
 
     // Clamp between containerWidth and calculatedWidth
     const graphWidth = Math.max(containerWidth, calculatedWidth);
@@ -217,9 +254,9 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             padding={0.3}
             valueScale={{ type: "linear" }}
             indexScale={{ type: "band", round: true }}
-            groupMode="grouped"
+            groupMode={"stacked"}
             colors={modernColors}
-            borderRadius={6}
+            borderRadius={0}
             borderWidth={0}
             defs={[
               {
@@ -234,26 +271,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             fill={[{ match: "*", id: "gradient" }]}
             axisTop={null}
             axisRight={null}
-            axisBottom={{
-              tickSize: 5,
-              tickPadding: 10,
-              tickRotation: graphData.length > 8 ? 45 : 0,
-              legend: formatKey(xKey),
-              legendPosition: "middle",
-              legendOffset: 46,
-              truncateTickAt: 0,
-            }}
-            axisLeft={{
-              tickSize: 5,
-              tickPadding: 12,
-              tickRotation: 0,
-              legend: "Value",
-              legendPosition: "middle",
-              legendOffset: -50,
-              tickValues: yGridValues,
-              format: (value) =>
-                Number.isInteger(value) ? value : value.toFixed(1),
-            }}
             gridXValues={
               xGridValues.length > 10
                 ? xGridValues.filter((_, i) => i % 2 === 0)
@@ -354,14 +371,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                     fontSize: 12,
                     fontFamily: theme.typography.fontFamily,
                     fontWeight: 500,
-                  },
-                },
-                legend: {
-                  text: {
-                    fill: theme.colors.text,
-                    fontSize: 14,
-                    fontFamily: theme.typography.fontFamily,
-                    fontWeight: 600,
                   },
                 },
               },
