@@ -57,13 +57,22 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       const valueKey = numericKeys[0]; // Pick the first numeric key
 
       // Step 2: Pick a group key (optional)
-      const stringKeys = keys.filter(
+      let stringKeys = keys.filter(
         (k) => typeof sample[k] === "string" && k !== valueKey
       );
-      const groupKey = stringKeys.length > 1 ? stringKeys[1] : null;
 
-      // Step 3: Pick the index key (x-axis) as a string field not used as value or group
+      // **Fix: Add default label if no string keys exist**
+      if (stringKeys.length === 0) {
+        rawData = rawData.map((item, idx) => ({
+          ...item,
+          label: `Item ${idx + 1}`,
+        }));
+        stringKeys = ["label"];
+      }
+
+      const groupKey = stringKeys.length > 1 ? stringKeys[1] : null;
       const indexByKey = stringKeys.find((k) => k !== groupKey);
+
       if (!indexByKey) {
         throw new Error("Could not determine indexBy (x-axis) key.");
       }
@@ -205,6 +214,54 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       "#6366f1", // indigo
     ];
 
+    const enhancedColors = [
+      "#4f46e5", // indigo
+      "#10b981", // emerald
+      "#8b5cf6", // violet
+      "#f59e0b", // amber
+      "#ec4899", // pink
+      "#06b6d4", // cyan
+      "#ef4444", // red
+      "#6366f1", // indigo light
+      "#14b8a6", // teal
+      "#8b5cf6", // violet lighter
+    ];
+
+    const CustomBar = ({
+      x,
+      y,
+      width,
+      height,
+      color,
+      data,
+      barIndex,
+      bars,
+    }: any) => {
+      // Find other bars with same x position (same stack)
+      const barsInStack = bars.filter(
+        (bar: any) => bar.data.indexValue === data.indexValue
+      );
+
+      // If this bar is the top of its stack
+      const isTopBar = barsInStack.every(
+        (bar: any) => bar.y <= y || bar.data.id === data.id
+      );
+
+      const radius = isTopBar ? 6 : 0;
+
+      return (
+        <g transform={`translate(${x}, ${y})`}>
+          <rect
+            width={width}
+            height={height}
+            fill={color}
+            rx={radius}
+            ry={radius}
+          />
+        </g>
+      );
+    };
+
     // Dynamic grid values
     const xGridValues = graphData.map((item) => item[xKey]);
     const yValues = graphData.flatMap((item) =>
@@ -219,12 +276,15 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
     );
 
     // Dynamically calculate graph width
-    const barWidth = 24;
+    const barWidth = 34;
     const groupPadding = 12;
     const totalBarsPerGroup = yKeys.length;
     const totalGroups = graphData.length;
 
-    const calculatedWidth = 1000;
+    const calculatedWidth =
+      totalGroups * (barWidth + groupPadding) -
+      groupPadding +
+      20 * totalBarsPerGroup;
 
     // Clamp between containerWidth and calculatedWidth
     const graphWidth = Math.max(containerWidth, calculatedWidth);
@@ -250,27 +310,99 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             data={graphData}
             keys={yKeys}
             indexBy={xKey}
-            margin={{ top: 50, right: 140, bottom: bottomMargin, left: 70 }}
-            padding={0.3}
+            margin={{ top: 60, right: 150, bottom: bottomMargin, left: 80 }}
+            padding={0.32}
             valueScale={{ type: "linear" }}
             indexScale={{ type: "band", round: true }}
             groupMode={"stacked"}
-            colors={modernColors}
-            borderRadius={0}
+            colors={enhancedColors}
+            borderRadius={4}
             borderWidth={0}
             defs={[
               {
                 id: "gradient",
                 type: "linearGradient",
                 colors: [
-                  { offset: 0, color: "inherit", opacity: 0.8 },
+                  { offset: 0, color: "inherit", opacity: 0.85 },
                   { offset: 100, color: "inherit", opacity: 1 },
                 ],
               },
+              {
+                id: "pattern",
+                type: "patternLines",
+                background: "inherit",
+                color: "rgba(255, 255, 255, 0.1)",
+                rotation: -45,
+                lineWidth: 3,
+                spacing: 8,
+              },
             ]}
-            fill={[{ match: "*", id: "gradient" }]}
+            fill={[
+              { match: "*", id: "gradient" },
+              { match: (data) => data.index % 2 === 0, id: "pattern" },
+            ]}
             axisTop={null}
             axisRight={null}
+            axisBottom={{
+              tickSize: 5,
+              tickPadding: 8,
+              tickRotation: xGridValues.length > 8 ? -45 : 0,
+              legendPosition: "middle",
+              legendOffset: 50,
+              truncateTickAt: 0,
+              renderTick: (tick) => {
+                return (
+                  <g transform={`translate(${tick.x},${tick.y})`}>
+                    <line y2="6" stroke={theme.colors.border} />
+                    <text
+                      textAnchor={xGridValues.length > 8 ? "end" : "middle"}
+                      dominantBaseline="text-before-edge"
+                      transform={
+                        xGridValues.length > 8
+                          ? "rotate(-45) translate(-10,0)"
+                          : ""
+                      }
+                      style={{
+                        fontSize: "12px",
+                        fill: theme.colors.textSecondary,
+                        fontWeight: 500,
+                        fontFamily: theme.typography.fontFamily,
+                      }}
+                    >
+                      {tick.value}
+                    </text>
+                  </g>
+                );
+              },
+            }}
+            axisLeft={{
+              tickSize: 5,
+              tickPadding: 8,
+              tickRotation: 0,
+              legendPosition: "middle",
+              legendOffset: -56,
+              truncateTickAt: 0,
+              tickValues: yGridValues,
+              renderTick: (tick) => {
+                return (
+                  <g transform={`translate(${tick.x},${tick.y})`}>
+                    <line x2="-6" stroke={theme.colors.border} />
+                    <text
+                      textAnchor="end"
+                      dominantBaseline="middle"
+                      style={{
+                        fontSize: "12px",
+                        fill: theme.colors.textSecondary,
+                        fontWeight: 500,
+                        fontFamily: theme.typography.fontFamily,
+                      }}
+                    >
+                      {tick.value}
+                    </text>
+                  </g>
+                );
+              },
+            }}
             gridXValues={
               xGridValues.length > 10
                 ? xGridValues.filter((_, i) => i % 2 === 0)
@@ -288,12 +420,12 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                 justify: false,
                 translateX: 0,
                 translateY: yKeys.length > 3 ? 80 : 60,
-                itemsSpacing: 16,
-                itemWidth: 100,
-                itemHeight: -11,
+                itemsSpacing: 18,
+                itemWidth: 110,
+                itemHeight: -12,
                 itemDirection: "left-to-right",
                 itemOpacity: 0.85,
-                symbolSize: 12,
+                symbolSize: 14,
                 symbolShape: "circle",
                 symbolBorderWidth: 0,
                 effects: [
@@ -301,7 +433,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                     on: "hover",
                     style: {
                       itemOpacity: 1,
-                      symbolSize: 14,
+                      symbolSize: 16,
                     },
                   },
                 ],
@@ -311,21 +443,22 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             tooltip={({ id, value, color, indexValue }) => (
               <div
                 style={{
-                  padding: "12px 16px",
+                  padding: "14px 18px",
                   background: theme.colors.surface,
                   color: theme.colors.text,
                   fontSize: "14px",
                   borderRadius: "8px",
-                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
+                  boxShadow: "0 4px 24px rgba(0, 0, 0, 0.18)",
                   border: `1px solid ${theme.colors.border}`,
+                  transition: "transform 0.2s ease",
                 }}
               >
                 <div
                   style={{
-                    marginBottom: "8px",
+                    marginBottom: "10px",
                     fontWeight: 600,
                     color: theme.colors.textSecondary,
-                    fontSize: "12px",
+                    fontSize: "13px",
                   }}
                 >
                   {indexValue}
@@ -333,18 +466,18 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <div
                     style={{
-                      width: "12px",
-                      height: "12px",
+                      width: "14px",
+                      height: "14px",
                       backgroundColor: color,
                       borderRadius: "4px",
-                      marginRight: "8px",
+                      marginRight: "10px",
                     }}
                   />
                   <span style={{ fontWeight: 500 }}>
                     {formatKey(id.toString())}:{" "}
                   </span>
-                  <span style={{ marginLeft: "4px", fontWeight: 600 }}>
-                    {value}
+                  <span style={{ marginLeft: "6px", fontWeight: 600 }}>
+                    {value.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -373,12 +506,19 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                     fontWeight: 500,
                   },
                 },
+                legend: {
+                  text: {
+                    fill: theme.colors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: 600,
+                  },
+                },
               },
               grid: {
                 line: {
-                  stroke: `${theme.colors.border}60`,
+                  stroke: `${theme.colors.border}40`,
                   strokeWidth: 1,
-                  strokeDasharray: "4 4",
+                  strokeDasharray: "5 5",
                 },
               },
               legends: {
@@ -397,14 +537,14 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                   fontFamily: theme.typography.fontFamily,
                   borderRadius: "8px",
                   boxShadow: `0 4px 20px ${theme.colors.text}15`,
-                  padding: "12px 16px",
+                  padding: "14px 18px",
                 },
               },
             }}
             animate={true}
             motionConfig={{
               mass: 1,
-              tension: 170,
+              tension: 180,
               friction: 26,
               clamp: false,
               precision: 0.01,
