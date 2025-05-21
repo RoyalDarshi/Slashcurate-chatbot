@@ -437,6 +437,7 @@ const ChatInterface = memo(
         clearSession();
         setInput("");
         setEditingMessageId(null);
+        setSessionConnectionError(null);
         localStorage.removeItem("currentSessionId");
       }, [clearSession]);
 
