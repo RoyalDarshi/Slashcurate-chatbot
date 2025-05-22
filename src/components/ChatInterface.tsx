@@ -295,9 +295,13 @@ const ChatInterface = memo(
                     question,
                     sql_query: query,
                     connection: connectionObj,
-                    sessionId,
+                    sessionId: currentSessionId,
                   }
-                : { question, connection: connectionObj, sessionId };
+                : {
+                    question,
+                    connection: connectionObj,
+                    sessionId: currentSessionId,
+                  };
               const response = await axios.post(
                 `${CHATBOT_API_URL}/ask`,
                 payload
