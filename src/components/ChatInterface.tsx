@@ -163,6 +163,15 @@ const ChatInterface = memo(
           );
       }, [token, loadSession, clearSession]);
 
+      const handleNewChat = useCallback(() => {
+        console.log("Starting new chat, clearing session");
+        clearSession();
+        setInput("");
+        setEditingMessageId(null);
+        setSessionConnectionError(null);
+        localStorage.removeItem("currentSessionId");
+      }, [clearSession]);
+
       const askQuestion = useCallback(
         async (
           question: string,
@@ -282,8 +291,13 @@ const ChatInterface = memo(
 
               console.log("Sending question to chatbot API:", question);
               const payload = query
-                ? { question, sql_query: query, connection: connectionObj }
-                : { question, connection: connectionObj };
+                ? {
+                    question,
+                    sql_query: query,
+                    connection: connectionObj,
+                    sessionId,
+                  }
+                : { question, connection: connectionObj, sessionId };
               const response = await axios.post(
                 `${CHATBOT_API_URL}/ask`,
                 payload
@@ -357,14 +371,43 @@ const ChatInterface = memo(
           token,
           scrollToMessage,
           dispatchMessages,
+          loadSession,
         ]
       );
 
       const handleAskFavoriteQuestion = useCallback(
         (question: string, connection: string, query?: string) => {
-          askQuestion(question, connection, true, query);
+          // Validate that the connection exists in the available connections
+          const connectionObj = connections.find(
+            (conn) => conn.connectionName === connection
+          );
+          if (!connectionObj) {
+            toast.error(
+              "The connection for this favorite question no longer exists."
+            );
+            return;
+          }
+
+          // Check if there’s a current session and compare connections
+          if (sessionId && sessionConnection === connection) {
+            // Same connection as current session, ask in existing session
+            askQuestion(question, connection, true, query);
+          } else {
+            // Different connection or no current session, start a new session
+            handleNewChat(); // Clears the current session
+            setSelectedConnection(connection); // Update the selected connection
+            localStorage.setItem("selectedConnection", connection); // Persist the connection
+            askQuestion(question, connection, true, query); // Ask question, creating a new session
+          }
         },
-        [askQuestion]
+        [
+          sessionId,
+          sessionConnection,
+          connections,
+          askQuestion,
+          handleNewChat,
+          setSelectedConnection,
+        ]
       );
 
       useEffect(() => {
@@ -431,15 +474,6 @@ const ChatInterface = memo(
       useEffect(() => {
         if (!userHasScrolledUp && !editingMessageId) scrollToBottom();
       }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
-
-      const handleNewChat = useCallback(() => {
-        console.log("Starting new chat, clearing session");
-        clearSession();
-        setInput("");
-        setEditingMessageId(null);
-        setSessionConnectionError(null);
-        localStorage.removeItem("currentSessionId");
-      }, [clearSession]);
 
       const handleSelect = useCallback(
         (option: any) => {
@@ -636,6 +670,7 @@ const ChatInterface = memo(
             const payload = {
               question: userMessage.content,
               connection: connectionObj,
+              sessionId,
             };
             const response = await axios.post(
               `${CHATBOT_API_URL}/ask`,
@@ -816,6 +851,7 @@ const ChatInterface = memo(
             const payload = {
               question: content,
               connection: connectionObj,
+              sessionId,
             };
             const response = await axios.post(
               `${CHATBOT_API_URL}/ask`,
