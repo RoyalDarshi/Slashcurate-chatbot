@@ -129,104 +129,115 @@ type SessionAction =
   | { type: "ADD_MESSAGE"; message: Message }
   | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> };
 
-const sessionReducer = (
-  state: SessionState,
-  action: SessionAction
-): SessionState => {
-  switch (action.type) {
-    case "SET_SESSION":
-      console.log(
-        "Setting session:",
-        action.sessionId,
-        "Messages:",
-        action.messages.length
-      );
-      return {
-        sessionId: action.sessionId,
-        messages: action.messages,
-        sessionConnection: action.connection,
-      };
-    case "CLEAR_SESSION":
-      console.log("Clearing session");
-      return {
-        sessionId: null,
-        messages: [],
-        sessionConnection: null,
-      };
-    case "ADD_MESSAGE":
-      console.log("Adding message:", action.message.id, action.message.content);
-      return {
-        ...state,
-        messages: [...state.messages, action.message],
-      };
-    case "UPDATE_MESSAGE":
-      console.log("Updating message:", action.id, action.message);
-      return {
-        ...state,
-        messages: state.messages.map((msg) =>
-          msg.id === action.id ? { ...msg, ...action.message } : msg
-        ),
-      };
-    default:
-      return state;
-  }
-};
-
-export const useSession = (token: string) => {
-  const [state, dispatch] = useReducer(sessionReducer, {
-    sessionId: null,
-    messages: [],
-    sessionConnection: null,
-  });
-
-  const loadSession = useCallback(
-    async (sessionId: string) => {
-      try {
-        console.log("Fetching session:", sessionId);
-        const response = await axios.get(
-          `${API_URL}/api/sessions/${sessionId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+  const sessionReducer = (
+    state: SessionState,
+    action: SessionAction
+  ): SessionState => {
+    switch (action.type) {
+      case "SET_SESSION":
+        console.log(
+          "Setting session: ID=",
+          action.sessionId,
+          "Messages=",
+          action.messages.length,
+          "Connection=",
+          action.connection
         );
-        const { messages, connection } = response.data;
-        console.log("Session fetched, messages:", messages.length);
-        dispatch({
-          type: "SET_SESSION",
-          sessionId,
-          messages: messages.map((msg: any) => ({
-            id: msg.id,
-            content: msg.content,
-            isBot: msg.isBot,
-            timestamp: msg.timestamp,
-            isFavorited: msg.isFavorited,
-            parentId: msg.parentId,
-            reaction: msg.reaction,
-            dislike_reason: msg.dislike_reason,
-          })),
-          connection,
-        });
-      } catch (error) {
-        console.error("Error loading session:", error);
-        dispatch({ type: "CLEAR_SESSION" });
-      }
-    },
-    [token]
-  );
-
-  const clearSession = useCallback(() => {
-    dispatch({ type: "CLEAR_SESSION" });
-  }, []);
-
-  return {
-    sessionId: state.sessionId,
-    messages: state.messages,
-    sessionConnection: state.sessionConnection,
-    loadSession,
-    clearSession,
-    dispatchMessages: dispatch,
+        return {
+          sessionId: action.sessionId,
+          messages: action.messages,
+          sessionConnection: action.connection,
+        };
+      case "CLEAR_SESSION":
+        console.log(
+          "Clearing session: Resetting sessionId, messages, and connection"
+        );
+        return {
+          sessionId: null,
+          messages: [],
+          sessionConnection: null,
+        };
+      case "ADD_MESSAGE":
+        console.log(
+          "Adding message:",
+          action.message.id,
+          action.message.content
+        );
+        return {
+          ...state,
+          messages: [...state.messages, action.message],
+        };
+      case "UPDATE_MESSAGE":
+        console.log("Updating message:", action.id, action.message);
+        return {
+          ...state,
+          messages: state.messages.map((msg) =>
+            msg.id === action.id ? { ...msg, ...action.message } : msg
+          ),
+        };
+      default:
+        return state;
+    }
   };
-};
+
+  export const useSession = (token: string) => {
+    const [state, dispatch] = useReducer(sessionReducer, {
+      sessionId: null,
+      messages: [],
+      sessionConnection: null,
+    });
+
+    const loadSession = useCallback(
+      async (sessionId: string) => {
+        try {
+          console.log("Fetching session:", sessionId);
+          const response = await axios.get(
+            `${API_URL}/api/sessions/${sessionId}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          const { messages, connection } = response.data;
+          console.log("Session fetched, messages:", messages.length);
+          dispatch({
+            type: "SET_SESSION",
+            sessionId,
+            messages: messages.map((msg: any) => ({
+              id: msg.id,
+              content: msg.content,
+              isBot: msg.isBot,
+              timestamp: msg.timestamp,
+              isFavorited: msg.isFavorited,
+              parentId: msg.parentId,
+              reaction: msg.reaction,
+              dislike_reason: msg.dislike_reason,
+            })),
+            connection,
+          });
+        } catch (error) {
+          console.error("Error loading session:", error);
+          dispatch({ type: "CLEAR_SESSION" });
+          console.log("Session load failed, cleared session state");
+        }
+      },
+      [token]
+    );
+
+    const clearSession = useCallback(() => {
+      console.log("Clearing session, resetting messages and sessionId");
+      dispatch({ type: "CLEAR_SESSION" });
+      localStorage.removeItem("currentSessionId");
+    }, []);
+
+    return {
+      sessionId: state.sessionId,
+      messages: state.messages,
+      sessionConnection: state.sessionConnection,
+      loadSession,
+      clearSession,
+      dispatchMessages: dispatch,
+    };
+  };
 
 // Hook for fetching recommended questions
 export function useRecommendedQuestions(
