@@ -643,8 +643,8 @@ const ChatInterface = memo(
             return;
           }
           setIsSubmitting(true);
-          await askQuestion(input, selectedConnection, false);
           setInput("");
+          await askQuestion(input, selectedConnection, false);
           setIsSubmitting(false);
         },
         [input, isSubmitting, selectedConnection, askQuestion, theme, mode]
@@ -855,8 +855,8 @@ const ChatInterface = memo(
             setTimeout(() => scrollToMessage(originalBotMessageId), 100);
           } catch (error) {
             console.error("Error retrying message:", error);
-            const errorContent = getErrorMessage(error);
-            toast.error(`Retry failed: ${errorContent}`);
+            // const errorContent = getErrorMessage(error);
+            const errorContent = "Sorry, an error occurred. Please try again.";
 
             await axios
               .put(
