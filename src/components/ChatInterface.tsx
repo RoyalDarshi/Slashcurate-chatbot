@@ -1048,8 +1048,8 @@ const ChatInterface = memo(
               "Error getting bot response for edited message:",
               error
             );
-            const errorContent = getErrorMessage(error);
-            toast.error(`Edit error: ${errorContent}`);
+            // const errorContent = getErrorMessage(error);
+            const errorContent = "Sorry, an error occurred. Please try again.";
 
             await axios
               .put(
