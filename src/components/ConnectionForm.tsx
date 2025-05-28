@@ -20,6 +20,7 @@ import {
   User,
   Key,
   FileText,
+  ClipboardList, // Icon for Extract Metadata
 } from "lucide-react";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
@@ -202,11 +203,16 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   });
   const [errors, setErrors] = useState<Errors>({});
   const [isTestButtonEnabled, setIsTestButtonEnabled] = useState(false);
+  const [isExtractMetadataButtonEnabled, setIsExtractMetadataButtonEnabled] =
+    useState(false);
   const [isSubmitButtonEnabled, setIsSubmitButtonEnabled] = useState(false);
   const [isFormModified, setIsFormModified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Loading, please wait...");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
+
+  const [isTestSuccessful, setIsTestSuccessful] = useState(false);
+  const [isMetadataExtracted, setIsMetadataExtracted] = useState(false);
 
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
@@ -226,7 +232,20 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
   useEffect(() => {
     setIsTestButtonEnabled(isFormValid);
+    // If form becomes invalid, reset downstream button states
+    if (!isFormValid) {
+      setIsTestSuccessful(false);
+      setIsMetadataExtracted(false);
+    }
   }, [isFormValid]);
+
+  useEffect(() => {
+    setIsExtractMetadataButtonEnabled(isTestSuccessful && !isMetadataExtracted);
+  }, [isTestSuccessful, isMetadataExtracted]);
+
+  useEffect(() => {
+    setIsSubmitButtonEnabled(isMetadataExtracted);
+  }, [isMetadataExtracted]);
 
   useEffect(() => {
     if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
@@ -234,8 +253,12 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       const isModified = Object.entries(formData).some(
         ([key, value]) => key !== "selectedDB" && !!value
       );
-      setIsSubmitButtonEnabled(false); // Reset until tested
       setIsFormModified(isModified);
+      if (isModified) {
+        // If any relevant field is changed, reset progress
+        setIsTestSuccessful(false);
+        setIsMetadataExtracted(false);
+      }
     }, 500);
     return () => {
       if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
@@ -307,15 +330,31 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     debouncedValidateField(name as keyof FormData, value);
+    // When data changes, reset test and metadata success
+    setIsTestSuccessful(false);
+    setIsMetadataExtracted(false);
   };
 
   const handleSelectDB = (value: string) => {
     setFormData((prev) => ({ ...prev, selectedDB: value }));
     setIsSelectOpen(false);
+    // Reset progress if DB type changes
+    setIsTestSuccessful(false);
+    setIsMetadataExtracted(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isMetadataExtracted) {
+      // Now depends on metadata extraction
+      toast.error(
+        "Please test connection and extract metadata before creating.",
+        {
+          theme: mode,
+        }
+      );
+      return;
+    }
     if (!isFormValid) {
       toast.error("Please fill all required fields correctly.", {
         theme: mode,
@@ -375,13 +414,16 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
     setLoading(true);
     setLoadingText("Testing connection, please wait...");
+    setIsTestSuccessful(false); // Reset before attempting
+    setIsMetadataExtracted(false); // Also reset metadata extraction status
+
     try {
-      const response = await testConnection(formData);
+      const response = await testConnection(formData); // Assuming testConnection doesn't need a token or uses a generic one
       setLoading(false);
 
       if (response.status === 200) {
         toast.success("Connection test successful.", { theme: mode });
-        setIsSubmitButtonEnabled(true);
+        setIsTestSuccessful(true);
       } else {
         toast.error(
           `Error: ${
@@ -391,7 +433,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             theme: mode,
           }
         );
-        setIsSubmitButtonEnabled(false);
+        setIsTestSuccessful(false);
       }
     } catch (error) {
       setLoading(false);
@@ -403,7 +445,53 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
         }`,
         { theme: mode }
       );
-      setIsSubmitButtonEnabled(false);
+      setIsTestSuccessful(false);
+    }
+  };
+
+  const handleExtractMetadata = async () => {
+    if (!isTestSuccessful) {
+      toast.error("Please test the connection successfully first.", {
+        theme: mode,
+      });
+      return;
+    }
+    // Optionally re-validate here if needed, though isTestSuccessful implies form was valid
+    // if (!isFormValid) { ... }
+
+    setLoading(true);
+    setLoadingText("Extracting metadata, please wait...");
+    setIsMetadataExtracted(false); // Reset before attempting
+
+    try {
+      // Pass the token if your extractMetadataFromDB API requires it
+      const response = await testConnection(formData); // Pass formData and token
+      setLoading(false);
+
+      if (response.status === 200) {
+        toast.success("Metadata extracted successfully.", { theme: mode });
+        setIsMetadataExtracted(true);
+        // You might want to store/display some of the extracted metadata if the API returns it
+      } else {
+        toast.error(
+          `Metadata extraction failed: ${
+            response.data.message || "Unknown error"
+          }`,
+          { theme: mode }
+        );
+        setIsMetadataExtracted(false);
+      }
+    } catch (error) {
+      setLoading(false);
+      toast.error(
+        `Metadata extraction error: ${
+          axios.isAxiosError(error)
+            ? error.response?.data?.message || "Request failed"
+            : (error as Error).message
+        }`,
+        { theme: mode }
+      );
+      setIsMetadataExtracted(false);
     }
   };
 
@@ -421,9 +509,12 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       selectedDB: formData.selectedDB, // Retain selected DB
     });
     setErrors({});
+    setIsTestButtonEnabled(false); // Will be re-enabled by useEffect if form becomes valid
+    setIsExtractMetadataButtonEnabled(false);
     setIsSubmitButtonEnabled(false);
-    setIsTestButtonEnabled(false);
     setIsFormModified(false);
+    setIsTestSuccessful(false);
+    setIsMetadataExtracted(false);
   };
 
   const renderInputField = ({
@@ -637,19 +728,29 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
               <button
                 type="button"
                 onClick={handleClearForm}
-                disabled={!isFormModified}
+                disabled={
+                  !isFormModified && !isTestSuccessful && !isMetadataExtracted
+                } // Enable if form has content or progress has been made
                 className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200"
                 style={{
-                  backgroundColor: isFormModified
-                    ? theme.colors.error
-                    : `${theme.colors.text}20`,
+                  backgroundColor:
+                    isFormModified || isTestSuccessful || isMetadataExtracted
+                      ? theme.colors.error
+                      : `${theme.colors.text}20`,
                   color: "white",
                   borderRadius: theme.borderRadius.default,
-                  boxShadow: isFormModified
-                    ? `0 4px 6px ${theme.colors.text}20`
-                    : "none",
-                  opacity: isFormModified ? 1 : 0.5,
-                  cursor: isFormModified ? "pointer" : "not-allowed",
+                  boxShadow:
+                    isFormModified || isTestSuccessful || isMetadataExtracted
+                      ? `0 4px 6px ${theme.colors.text}20`
+                      : "none",
+                  opacity:
+                    isFormModified || isTestSuccessful || isMetadataExtracted
+                      ? 1
+                      : 0.5,
+                  cursor:
+                    isFormModified || isTestSuccessful || isMetadataExtracted
+                      ? "pointer"
+                      : "not-allowed",
                 }}
               >
                 Clear Form
@@ -657,22 +758,60 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
               <button
                 type="button"
                 onClick={handleTestConnection}
-                disabled={!isTestButtonEnabled}
+                disabled={!isTestButtonEnabled || isTestSuccessful} // Disable if already tested successfully or form invalid
                 className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200"
                 style={{
-                  backgroundColor: isTestButtonEnabled
-                    ? theme.colors.accent
-                    : `${theme.colors.text}20`,
+                  backgroundColor:
+                    isTestButtonEnabled && !isTestSuccessful
+                      ? theme.colors.accent
+                      : `${theme.colors.text}20`,
                   color: "white",
                   borderRadius: theme.borderRadius.default,
-                  boxShadow: isTestButtonEnabled
-                    ? `0 4px 6px ${theme.colors.text}20`
-                    : "none",
-                  opacity: isTestButtonEnabled ? 1 : 0.5,
-                  cursor: isTestButtonEnabled ? "pointer" : "not-allowed",
+                  boxShadow:
+                    isTestButtonEnabled && !isTestSuccessful
+                      ? `0 4px 6px ${theme.colors.text}20`
+                      : "none",
+                  opacity: isTestButtonEnabled && !isTestSuccessful ? 1 : 0.5,
+                  cursor:
+                    isTestButtonEnabled && !isTestSuccessful
+                      ? "pointer"
+                      : "not-allowed",
                 }}
               >
-                Test Connection
+                {isTestSuccessful ? "Tested" : "Test Connection"}
+              </button>
+              <button
+                type="button"
+                onClick={handleExtractMetadata}
+                disabled={
+                  !isExtractMetadataButtonEnabled || isMetadataExtracted
+                } // Disable if not ready or already extracted
+                className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200 flex items-center justify-center"
+                style={{
+                  backgroundColor:
+                    isExtractMetadataButtonEnabled && !isMetadataExtracted
+                      ? theme.colors.accent
+                      : `${theme.colors.text}20`,
+                  color: "white",
+                  borderRadius: theme.borderRadius.default,
+                  boxShadow:
+                    isExtractMetadataButtonEnabled && !isMetadataExtracted
+                      ? `0 4px 6px ${theme.colors.text}20`
+                      : "none",
+                  opacity:
+                    isExtractMetadataButtonEnabled && !isMetadataExtracted
+                      ? 1
+                      : 0.5,
+                  cursor:
+                    isExtractMetadataButtonEnabled && !isMetadataExtracted
+                      ? "pointer"
+                      : "not-allowed",
+                }}
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                {isMetadataExtracted
+                  ? "Metadata Extracted"
+                  : "Extract Metadata"}
               </button>
               <button
                 type="submit"
