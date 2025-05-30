@@ -31,6 +31,7 @@ import {
   testConnection,
 } from "../api";
 import { API_URL, CHATBOT_API_URL } from "../config";
+import { connect } from "http2";
 
 // Define interfaces for type safety
 interface FormData {
@@ -466,10 +467,9 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
     try {
       // Pass the token if your extractMetadataFromDB API requires it
-      const response = await axios.post(
-        `${CHATBOT_API_URL}/meta_data`,
-        formData
-      ); // Pass formData and token
+      const response = await axios.post(`${CHATBOT_API_URL}/meta_data`, {
+        connection: formData,
+      }); // Pass formData and token
       setLoading(false);
 
       if (response.status === 200) {
