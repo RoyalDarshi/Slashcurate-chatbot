@@ -456,7 +456,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
     }, [formattedQuery, language, theme.colors]);
 
     return (
-      <div style={{ backgroundColor: theme.colors.surface }}>
+      <div>
         {formattedQuery ? (
           <div className="query-content">
             {title && (
@@ -465,7 +465,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
               </h3>
             )}
             <pre
-              className="p-1 rounded overflow-x-auto whitespace-pre-wrap font-mono"
+              className="p-1 overflow-x-auto whitespace-pre-wrap font-mono"
               style={{
                 backgroundColor: theme.colors.surface,
                 fontSize: fontSize,

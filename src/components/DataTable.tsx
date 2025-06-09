@@ -31,7 +31,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isMobile, setIsMobile] = useState(false);
-  const [showControls, setShowControls] = useState(false);
+  const [showControls, setShowControls] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
@@ -312,7 +312,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       }}
     >
       {/* Controls toggle button for small datasets */}
-      {filteredData.length <= 20 && (
+      {/* {filteredData.length <= 20 && (
         <div className="flex justify-end ">
           <button
             onClick={toggleControls}
@@ -338,7 +338,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             </svg>
           </button>
         </div>
-      )}
+      )} */}
 
       {/* Header with search and info - Conditionally displayed */}
       {(filteredData.length > 20 || showControls) && (
@@ -516,7 +516,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       {/* Table content - Enhanced styling for better visibility */}
       <div className="w-full flex justify-center py-2">
         <div
-          className="overflow-auto max-h-96 scrollbar-thin"
+          className="overflow-auto max-h-64 scrollbar-thin"
           style={{
             scrollbarColor: `${theme.colors.accent}40 ${theme.colors.surface}`,
           }}
@@ -537,7 +537,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                         return (
                           <th
                             key={header.id}
-                            className="px-6 py-3 text-center text-sm font-medium"
+                            className="px-4 py-2 text-center text-sm font-medium"
                             onClick={header.column.getToggleSortingHandler()}
                           >
                             {flexRender(
@@ -575,7 +575,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="px-6 py-5 text-center text-md"
+                        className="px-4 py-2 text-center text-md"
                         style={{ color: theme.colors.text }}
                       >
                         {flexRender(

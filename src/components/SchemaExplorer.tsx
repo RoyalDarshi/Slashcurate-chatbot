@@ -148,9 +148,10 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
 
   if (!schemas || schemas.length === 0) {
     return (
-      <div className="p-4 text-center" style={{ color: theme.colors.text }}>
-        Loading schemas or no schemas available...
-      </div>
+      <div
+        className="p-0 text-center"
+        style={{ color: theme.colors.text }}
+      ></div>
     );
   }
 

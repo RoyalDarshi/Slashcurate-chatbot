@@ -1,4 +1,4 @@
-import {
+import React, {
   useState,
   useEffect,
   useCallback,
@@ -11,18 +11,24 @@ import { ToastContainer, toast } from "react-toastify";
 import { Message, Connection, ChatInterfaceProps } from "../types";
 import { API_URL, CHATBOT_API_URL } from "../config";
 import ChatInput from "./ChatInput";
-import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
-import { ArrowDown } from "lucide-react";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
+import { useConnections, useSession, useRecommendedQuestions } from "../hooks";
+import DashboardView from "./DashboardView";
+import SchemaExplorer from "./SchemaExplorer";
+import schemaSampleData from "../data/sampleSchemaData";
 import {
-  useConnections,
-  useSession,
-  useRecommendedQuestions,
-  useChatScroll,
-} from "../hooks";
+  ListChecks,
+  HelpCircle,
+  Database,
+  Layers,
+  PlusCircle,
+  ChevronDown,
+  X, // Import X icon for close button
+} from "lucide-react"; // Import necessary icons
+import { FaFilePdf } from "react-icons/fa";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -33,62 +39,148 @@ export type ChatInterfaceHandle = {
   ) => void;
 };
 
-// Helper function to extract error messages
-const getErrorMessage = (error: any): string => {
-  let extractedErrorMessage = "Sorry, an error occurred. Please try again."; // Default
+// --- Mock Data Generation Helpers ---
+// These helpers are used to simulate KPI and main view data for the dashboard.
+// In a real application, this data would come from your backend API.
+const generateId = () => Math.random().toString(36).substr(2, 9);
+const generateRandomNumber = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
+const generateKpiData = (questionSeed = "") => {
+  const seed = questionSeed.length + generateRandomNumber(0, 10);
+  return {
+    kpi1: {
+      value: 1000 + seed * 10 + generateRandomNumber(0, 500),
+      label: "Key Metric A",
+      change: generateRandomNumber(-10, 15),
+    },
+    kpi2: {
+      value: 50 + seed + generateRandomNumber(0, 100),
+      label: "Key Metric B",
+      change: generateRandomNumber(-5, 20),
+    },
+    kpi3: {
+      value: 750 + seed * 5 + generateRandomNumber(0, 250),
+      label: "Key Metric C",
+      change: generateRandomNumber(-12, 12),
+    },
+  };
+};
+
+/**
+ * Generates dummy data for a stacked bar graph.
+ * Each object in the array represents a category (e.g., a month)
+ * and contains multiple metrics that can be stacked.
+ *
+ * @param {number} numCategories - The number of categories (e.g., months) to generate.
+ * @param {number} seedOffset - An additional offset to influence random number generation.
+ * @returns {Array<Object>} An array of data objects for a stacked bar graph.
+ */
+function generateStackedBarGraphData(numCategories = 8, seedOffset = 0) {
+  const categories = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  // Ensure we don't try to generate more categories than available names
+  const actualCategories = categories.slice(0, numCategories);
+
+  const data = actualCategories.map((category, index) => {
+    // Generate random numbers for each series, influenced by the seedOffset
+    // The seedOffset helps make the data slightly different based on the question seed.
+    const seriesA =
+      Math.floor(Math.random() * (250 - 100 + 1)) + 100 + seedOffset;
+    const seriesB =
+      Math.floor(Math.random() * (180 - 50 + 1)) + 50 + seedOffset / 2;
+    const seriesC =
+      Math.floor(Math.random() * (120 - 20 + 1)) + 20 + seedOffset / 4;
+
+    return {
+      name: category,
+      seriesA: Math.max(0, Math.round(seriesA)), // Ensure non-negative and round
+      seriesB: Math.max(0, Math.round(seriesB)),
+      seriesC: Math.max(0, Math.round(seriesC)),
+    };
+  });
+
+  return data;
+}
+
+// Updated function to generate data suitable for a stacked view
+const generateMainViewData = (questionSeed = "") => {
+  const categories = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
+  const baseSeed = questionSeed.length + generateRandomNumber(0, 10);
+
+  // Use the new generateStackedBarGraphData function for chartData
+  const chartData = generateStackedBarGraphData(categories.length, baseSeed);
+
+  const tableData = Array.from(
+    { length: generateRandomNumber(3, 7) },
+    (_, i) => ({
+      id: `ID-${1001 + i + baseSeed}`,
+      category: `Category ${String.fromCharCode(65 + (i % 5))}`,
+      value: generateRandomNumber(1000, 10000),
+      status: ["Active", "Pending", "Closed"][generateRandomNumber(0, 2)],
+      lastUpdated: `2023-0${generateRandomNumber(1, 9)}-${generateRandomNumber(
+        10,
+        28
+      )}`,
+    })
+  );
+  const queryData = `SELECT\n    column1,\n    column2,\n    SUM(value) AS total_value\nFROM\n    your_table\nWHERE\n    condition LIKE '%${
+    questionSeed.split(" ")[0] || "example"
+  }%'\nGROUP BY\n    column1, column2\nORDER BY\n    total_value DESC;`;
+
+  return { chartData, tableData, queryData };
+};
+
+// Helper function to extract error messages from Axios errors or generic errors
+const getErrorMessage = (error: any): string => {
+  let extractedErrorMessage = "Sorry, an error occurred. Please try again.";
   if (axios.isAxiosError(error)) {
     if (error.response && error.response.data) {
       const data = error.response.data;
-      if (typeof data === "string" && data.trim().length > 0) {
+      if (typeof data === "string" && data.trim().length > 0)
         extractedErrorMessage = data;
-      } else if (
+      else if (
         data.detail &&
         typeof data.detail === "string" &&
         data.detail.trim().length > 0
-      ) {
+      )
         extractedErrorMessage = data.detail;
-      } else if (
+      else if (
         data.message &&
         typeof data.message === "string" &&
         data.message.trim().length > 0
-      ) {
+      )
         extractedErrorMessage = data.message;
-      } else if (error.message) {
-        // Fallback to Axios error message if data is not helpful
-        extractedErrorMessage = error.message;
-      }
-    } else if (error.message) {
-      // No response.data but error.message exists (e.g., network error)
-      extractedErrorMessage = error.message;
-    }
-  } else if (error instanceof Error && error.message) {
-    // Non-Axios error
+      else if (error.message) extractedErrorMessage = error.message;
+    } else if (error.message) extractedErrorMessage = error.message;
+  } else if (error instanceof Error && error.message)
     extractedErrorMessage = error.message;
-  }
-
-  // Ensure it's not an empty string
-  if (!extractedErrorMessage || extractedErrorMessage.trim() === "") {
-    extractedErrorMessage = "An unknown error occurred. Please try again.";
-  }
-  return extractedErrorMessage;
+  return (
+    extractedErrorMessage || "An unknown error occurred. Please try again."
+  );
 };
 
+// --- Main ChatInterface Component ---
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
-    (
-      {
-        onCreateConSelected,
-        onSessionSelected,
-        initialQuestion,
-        onQuestionAsked,
-      },
-      ref
-    ) => {
-      const { theme } = useTheme();
-      const token = sessionStorage.getItem("token") ?? "";
-      const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
+    ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
+      const { theme } = useTheme(); // Access the current theme (dark/light mode, colors, etc.)
+      const token = sessionStorage.getItem("token") ?? ""; // Retrieve authentication token
 
+      // Hooks for managing connections, sessions, and recommended questions
       const {
         connections,
         selectedConnection,
@@ -96,103 +188,106 @@ const ChatInterface = memo(
         connectionError,
         connectionsLoading,
       } = useConnections(token);
+
       const {
         sessionId,
-        messages,
-        dispatchMessages, // This is the dispatch from useSession's useReducer
+        messages, // 'messages' are still used for the "Previous Questions" modal
+        dispatchMessages,
         sessionConnection,
         loadSession,
         clearSession,
       } = useSession(token);
-      const recommendedQuestions = useRecommendedQuestions(token, sessionId);
-      const {
-        chatContainerRef,
-        messagesEndRef,
-        messageRefs,
-        scrollToBottom,
-        scrollToMessage,
-        userHasScrolledUp,
-      } = useChatScroll();
 
+      const recommendedQuestions = useRecommendedQuestions(token, sessionId);
+
+      // State for the chat input field and submission status
       const [input, setInput] = useState("");
       const [isSubmitting, setIsSubmitting] = useState(false);
-      const [editingMessageId, setEditingMessageId] = useState<string | null>(
-        null
-      );
-      const [sessionConnectionError, setSessionConnectionError] = useState<
-        string | null
-      >(null);
+      const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false); // State for Schema Explorer visibility
+      const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
+        useState(false); // State for Connection dropdown visibility
 
-      // Poll for loading messages
+      // Initial mock data for the dashboard when no questions have been asked
+      const initialDashboardKpis = generateKpiData("Welcome!");
+      const initialMainViewData = generateMainViewData("Welcome!");
+
+      // State for managing the dashboard history (each entry is a dashboard state for a question)
+      const [dashboardHistory, setDashboardHistory] = useState([
+        {
+          id: generateId(),
+          question: "Initial Dashboard View",
+          kpiData: initialDashboardKpis,
+          mainViewData: initialMainViewData,
+          textualSummary:
+            "Welcome to your interactive analytics dashboard! Ask a question to get started.",
+          lastViewType: "graph" as "graph" | "table" | "query", // Default view type
+        },
+      ]);
+      // State to track the currently displayed dashboard history item
+      const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
+      // State to track the active view type (graph, table, or query) within the main dashboard view
+      const [currentMainViewType, setCurrentMainViewType] = useState<
+        "graph" | "table" | "query"
+      >("table");
+      // State to control the visibility of the "Previous Questions" modal
+      const [showPrevQuestionsModal, setShowPrevQuestionsModal] =
+        useState(false);
+
+      // Get the currently active dashboard view from the history
+      const currentDashboardView = dashboardHistory[currentHistoryIndex];
+
+      // Effect to handle initial question prop (e.g., from a deep link or favorite question)
       useEffect(() => {
-        const loadingMessages = messages.filter(
-          (msg) => msg.isBot && msg.content === "loading..."
-        );
-        if (loadingMessages.length === 0) {
-          setIsSubmitting(false);
-          return;
+        if (initialQuestion && !connectionsLoading && connections.length > 0) {
+          const questionText = initialQuestion.text;
+          // Generate mock data for the initial question
+          const kpiData = generateKpiData(questionText);
+          const mainViewData = generateMainViewData(questionText);
+          const newEntry = {
+            id: generateId(),
+            question: questionText,
+            kpiData,
+            mainViewData,
+            textualSummary: `Displaying analysis for: ${questionText}`,
+            lastViewType: "graph" as "graph" | "table" | "query",
+          };
+          setDashboardHistory([newEntry]); // Replace history with this single entry
+          setCurrentHistoryIndex(0); // Set to the first (and only) entry
+          setCurrentMainViewType("graph"); // Default to graph view
         }
-        setIsSubmitting(true);
-        const interval = setInterval(async () => {
-          // console.log( // Kept for debugging if needed
-          //   "Polling for updates on loading messages:",
-          //   loadingMessages.map((msg) => msg.id)
-          // );
-          try {
-            for (const msg of loadingMessages) {
-              const response = await axios.post(
-                `${API_URL}/api/getmessages/${msg.id}`,
-                { token },
-                {
-                  headers: { Authorization: `Bearer ${token}` },
-                }
-              );
-              if (response.data.content !== "loading...") {
-                // console.log( // Kept for debugging
-                //   `Updating message ${msg.id} with content:`,
-                //   response.data.content
-                // );
-                setIsSubmitting(false);
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE", // Correctly uses SessionAction type
-                  id: msg.id,
-                  message: {
-                    content: response.data.content,
-                    timestamp: response.data.timestamp,
-                  },
-                });
-              }
-            }
-          } catch (error) {
-            setIsSubmitting(false);
-            console.error("Error polling message updates:", error);
-          }
-        }, 2000);
+      }, [initialQuestion, connectionsLoading, connections]);
 
-        return () => clearInterval(interval);
-      }, [messages, token, dispatchMessages]);
+      // Effect to manage the `isSubmitting` state based on the dashboard's processing status
+      useEffect(() => {
+        if (
+          currentDashboardView?.textualSummary === "Processing your request..."
+        ) {
+          setIsSubmitting(true);
+        } else if (
+          isSubmitting &&
+          currentDashboardView?.textualSummary !== "Processing your request..."
+        ) {
+          setIsSubmitting(false);
+        }
+      }, [currentDashboardView, isSubmitting]);
 
-      // Refresh session on tab visibility change with validation
+      // Effect to validate and load the session on tab visibility change
       useEffect(() => {
         const handleVisibilityChange = async () => {
           if (document.visibilityState === "visible") {
             const storedSessionId = localStorage.getItem("currentSessionId");
             if (storedSessionId) {
-              // console.log("Tab visible, validating session:", storedSessionId); // Kept for debugging
               try {
-                // Validate session existence
+                // Validate session with backend API
                 await axios.get(`${API_URL}/api/sessions/${storedSessionId}`, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
-                // console.log("Session valid, loading:", storedSessionId); // Kept for debugging
-                loadSession(storedSessionId);
+                loadSession(storedSessionId); // Load the session into the application state
               } catch (error) {
                 console.error("Session validation failed:", error);
-                localStorage.removeItem("currentSessionId");
-                clearSession();
+                localStorage.removeItem("currentSessionId"); // Clear invalid session
+                clearSession(); // Reset session state
               }
-            } else {
-              // console.log("No stored session ID found on visibility change"); // Kept for debugging
             }
           }
         };
@@ -204,282 +299,279 @@ const ChatInterface = memo(
           );
       }, [token, loadSession, clearSession]);
 
+      // Callback to handle starting a new chat session
       const handleNewChat = useCallback(() => {
-        // console.log("Starting new chat, clearing session"); // Kept for debugging
-        clearSession(); // This dispatches CLEAR_SESSION to sessionReducer
-        setInput("");
-        setEditingMessageId(null);
-        setSessionConnectionError(null);
-      }, [clearSession]);
+        clearSession(); // Clear the current session
+        setInput(""); // Clear the input field
+        // Reset dashboard history to its initial state
+        setDashboardHistory([
+          {
+            id: generateId(),
+            question: "Initial Dashboard View",
+            kpiData: initialDashboardKpis,
+            mainViewData: initialMainViewData,
+            textualSummary: "Welcome! Ask a question to analyze your data.",
+            lastViewType: "graph",
+          },
+        ]);
+        setCurrentHistoryIndex(0); // Reset to the first history item
+        setCurrentMainViewType("graph"); // Reset main view type
+      }, [clearSession, initialDashboardKpis, initialMainViewData]);
 
-      const askQuestion = useCallback(
-        async (
-          question: string,
-          connection: string,
-          isFavorited: boolean,
-          query?: string
-        ) => {
-          if (!connection) {
-            toast.error("No connection provided.");
+      // Function to create a new session via API (simulated here)
+      const startNewSession = useCallback(
+        async (connectionName: string, question: string) => {
+          try {
+            // Simulate API call to create a new session with a delay
+            const response = await axios.post(
+              `${API_URL}/api/sessions`,
+              {
+                token,
+                currentConnection: connectionName,
+                title: question.substring(0, 50) + "...",
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            const newSessionId = response.data.id;
+            localStorage.setItem("currentSessionId", newSessionId); // Store session ID in local storage
+            toast.success("New session created!");
+            return newSessionId;
+          } catch (error) {
+            console.error("Error creating new session:", error);
+            toast.error(
+              `Failed to start new session: ${getErrorMessage(error)}`
+            );
+            return null;
+          }
+        },
+        []
+      );
+
+      // Callback to ask a question and update the dashboard view
+      const askQuestionAndUpdateDashboard = useCallback(
+        async (question: string, connectionName: string) => {
+          if (!connectionName) {
+            toast.error("No connection selected.");
             return;
           }
+          setIsSubmitting(true); // Set submission state to true
+
+          const processingEntryId = generateId();
+          const processingEntry = {
+            id: processingEntryId,
+            question: question,
+            kpiData: {
+              kpi1: { value: "...", label: "Processing...", change: 0 },
+              kpi2: { value: "...", label: "Processing...", change: 0 },
+              kpi3: { value: "...", label: "Processing...", change: 0 },
+            },
+            mainViewData: {
+              chartData: [],
+              tableData: [],
+              queryData: "Fetching query...",
+            },
+            textualSummary: "Processing your request...",
+            lastViewType: currentMainViewType, // Keep current view type preference
+          };
+
+          // Add a temporary "Processing" entry to dashboard history
+          const newHistory = [
+            ...dashboardHistory.slice(0, currentHistoryIndex + 1), // Keep current and previous history
+            processingEntry, // Add the new processing entry
+          ];
+          setDashboardHistory(newHistory);
+          setCurrentHistoryIndex(newHistory.length - 1); // Navigate to the new processing entry
 
           let currentSessionId = sessionId;
 
-          if (currentSessionId && !sessionConnection) {
-            const currentSessionInfo = connections.find(
-              (c) => c.connectionName === selectedConnection
-            );
-            if (!currentSessionInfo && messages.length > 0) {
-              toast.error(
-                "This session does not have a valid connection. Cannot ask new questions."
+          // If no session exists, create one
+          if (!currentSessionId) {
+            currentSessionId = await startNewSession(connectionName, question);
+            if (!currentSessionId) {
+              setIsSubmitting(false);
+              // Remove the processing entry if session creation failed
+              setDashboardHistory((prev) =>
+                prev.filter((item) => item.id !== processingEntryId)
               );
+              setCurrentHistoryIndex((prev) => Math.max(0, prev - 1));
               return;
             }
           }
-
-          if (!currentSessionId) {
-            const storedSessionId = localStorage.getItem("currentSessionId");
-            if (storedSessionId) {
-              // console.log("Using stored session ID from localStorage (askQuestion):", storedSessionId); // Kept for debugging
-              try {
-                await loadSession(storedSessionId);
-                currentSessionId = storedSessionId;
-              } catch (error) {
-                console.error(
-                  "Failed to load stored session from localStorage (askQuestion):",
-                  error
-                );
-                localStorage.removeItem("currentSessionId");
-              }
-            }
-          }
-
-          if (!currentSessionId) {
-            try {
-              // console.log("Creating new session for question:", question); // Kept for debugging
-              const response = await axios.post(
-                `${API_URL}/api/sessions`,
-                {
-                  token,
-                  currentConnection: connection,
-                  title: question.substring(0, 50) + "...",
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-              currentSessionId = response.data.id;
-              localStorage.setItem("currentSessionId", currentSessionId);
-              dispatchMessages({
-                type: "SET_SESSION",
-                sessionId: currentSessionId,
-                messages: [],
-                connection: connection,
-              });
-              // console.log("New session created and set in state:", currentSessionId); // Kept for debugging
-            } catch (error) {
-              console.error("Error creating session:", error);
-              return;
-            }
-          }
-
-          const userMessage: Message = {
-            id: Date.now().toString(),
-            content: question,
-            isBot: false,
-            timestamp: new Date().toISOString(),
-            isFavorited,
-            parentId: null,
-          };
-
-          let finalUserMessageId: string | null = null;
-          let botMessageId: string | null = null;
 
           try {
-            // console.log("Saving user message for session:", currentSessionId); // Kept for debugging
-            const userResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: currentSessionId,
+            // Add user message to session messages (for "Previous Questions" modal)
+            if (currentSessionId) {
+              const userMessageForHistory: Message = {
+                id: generateId(),
                 content: question,
                 isBot: false,
-                isFavorited,
-                parentId: null,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            const finalUserMessage = {
-              ...userMessage,
-              id: userResponse.data.id,
-            };
-            finalUserMessageId = finalUserMessage.id;
-            dispatchMessages({
-              type: "ADD_MESSAGE",
-              message: finalUserMessage,
-            });
-
-            // console.log("Creating bot loading message for user message:", finalUserMessage.id); // Kept for debugging
-            const botLoadingResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: currentSessionId,
-                content: "loading...",
-                isBot: true,
-                isFavorited: false,
-                parentId: finalUserMessage.id,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            botMessageId = botLoadingResponse.data.id;
-            const botLoadingMessage: Message = {
-              // Renamed to botLoadingMessage for clarity
-              id: botMessageId,
-              isBot: true,
-              content: "loading...",
-              timestamp: new Date().toISOString(),
-              isFavorited: false,
-              parentId: finalUserMessage.id,
-            };
-            dispatchMessages({
-              type: "ADD_MESSAGE",
-              message: botLoadingMessage,
-            });
-            setTimeout(() => scrollToMessage(botMessageId!), 100); // Added non-null assertion as it's assigned above
-
-            try {
-              const connectionObj = connections.find(
-                (conn) => conn.connectionName === connection
-              );
-              if (!connectionObj) {
-                throw new Error(
-                  `Connection '${connection}' not found during askQuestion.`
-                );
-              }
-
-              // console.log("Sending question to chatbot API:", question); // Kept for debugging
-              const payload = query
-                ? {
-                    question,
-                    sql_query: query,
-                    connection: connectionObj,
-                    sessionId: currentSessionId,
-                  }
-                : {
-                    question,
-                    connection: connectionObj,
-                    sessionId: currentSessionId,
-                  };
-              const response = await axios.post(
-                `${CHATBOT_API_URL}/ask`,
-                payload
-              );
-              const botResponseContent = JSON.stringify(response.data, null, 2);
-              // console.log("Received bot response:", botResponseContent); // Kept for debugging
-
-              // console.log("Updating bot message on server:", botMessageId); // Kept for debugging
-              await axios.put(
-                `${API_URL}/api/messages/${botMessageId}`,
-                {
-                  token,
-                  content: botResponseContent,
-                  timestamp: new Date().toISOString(),
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-
-              const updatedBotMessage: Partial<Message> = {
-                content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                isFavorited: false,
+                parentId: null,
               };
               dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: botMessageId!, // Added non-null assertion
-                message: updatedBotMessage,
+                type: "ADD_MESSAGE",
+                message: userMessageForHistory,
               });
-              setTimeout(() => scrollToMessage(botMessageId!), 100); // Added non-null assertion
-            } catch (error) {
-              // Catch for CHATBOT_API_URL/ask
-              console.error("Error getting bot response:", error);
-              const errorContent =
-                "Sorry, an error occurred. Please try again.";
 
-              // console.log("Updating bot message to error on server:", botMessageId); // Kept for debugging
-              if (botMessageId) {
-                await axios
-                  .put(
-                    `${API_URL}/api/messages/${botMessageId}`,
-                    {
-                      token,
-                      content: errorContent,
-                      timestamp: new Date().toISOString(),
-                    },
-                    { headers: { "Content-Type": "application/json" } }
-                  )
-                  .catch((updateError) =>
-                    console.error(
-                      "Failed to update message to error state on server:",
-                      updateError
-                    )
-                  );
-
-                const errorMessageUpdate: Partial<Message> = {
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                };
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessageId,
-                  message: errorMessageUpdate,
-                });
-                setTimeout(() => scrollToMessage(botMessageId), 100);
-              } else {
-                // This case should be rare if bot loading message was created
-                console.error(
-                  "botMessageId is null when trying to update with error for /ask"
-                );
-                const generalErrorMessage: Message = {
-                  id: `error-${Date.now().toString()}`,
-                  content: errorContent,
-                  isBot: true,
-                  timestamp: new Date().toISOString(),
+              // Send user message to backend (simulated)
+              await axios.post(
+                `${API_URL}/api/messages`,
+                {
+                  session_id: currentSessionId,
+                  content: question,
+                  isBot: false,
+                  parentId: null,
                   isFavorited: false,
-                  parentId: finalUserMessageId,
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+            }
+
+            const connectionObj = connections.find(
+              (con) => con.connectionName === connectionName
+            );
+            if (!connectionObj) {
+              toast.error("Selected connection does not exist.");
+              return;
+            }
+            const query = "";
+
+            // Simulate API call for dashboard data with a delay
+            const payload = query
+              ? {
+                  question,
+                  sql_query: query,
+                  connection: connectionObj,
+                  sessionId: currentSessionId,
+                }
+              : {
+                  question,
+                  connection: connectionObj,
+                  sessionId: currentSessionId,
                 };
-                dispatchMessages({
-                  type: "ADD_MESSAGE",
-                  message: generalErrorMessage,
-                });
-                setTimeout(() => scrollToMessage(generalErrorMessage.id), 100);
-              }
+            const response = await axios.post(
+              `${CHATBOT_API_URL}/ask`,
+              payload
+            );
+            const botResponseContent = JSON.stringify(response.data, null, 2);
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            const kpiData = generateKpiData(question);
+            const mainViewData = generateMainViewData(question); // Use the updated generator
+            const textualSummary = `Insights for "${question}": Metric A showed significant activity. Refer to the detailed views for more information.`;
+
+            const newDashboardEntry = {
+              id: processingEntryId, // Update the existing processing entry
+              question: question,
+              kpiData,
+              mainViewData,
+              textualSummary,
+              lastViewType: currentMainViewType, // Persist current view type preference
+            };
+
+            // Update the dashboard history with the actual data
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.id === processingEntryId ? newDashboardEntry : item
+              )
+            );
+
+            // After successful response, add bot message to session messages (for "Previous Questions" modal)
+            if (currentSessionId) {
+              const botMessageForHistory: Message = {
+                id: generateId(),
+                content: textualSummary,
+                isBot: true,
+                timestamp: new Date().toISOString(),
+                isFavorited: false,
+                parentId: userMessageForHistory.id, // Link to user's question
+              };
+              dispatchMessages({
+                type: "ADD_MESSAGE",
+                message: botMessageForHistory,
+              });
+
+              // Also send bot message to backend (simulated)
+              await axios.post(
+                `${API_URL}/api/messages`,
+                {
+                  session_id: currentSessionId,
+                  content: textualSummary,
+                  isBot: true,
+                  parentId: userMessageForHistory.id,
+                  isFavorited: false,
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
             }
           } catch (error) {
-            // Catch for initial message saving or bot loading message creation
-            console.error(
-              "Error saving user message or creating bot loading message:",
-              error
+            console.error("Error fetching dashboard data:", error);
+            toast.error(`Failed to get analysis: ${getErrorMessage(error)}`);
+            // Update the processing entry with error details
+            const errorEntry = {
+              ...processingEntry,
+              kpiData: {
+                kpi1: { value: "Error1", label: "Error1", change: 0 },
+                kpi2: { value: "Error", label: "Error", change: 0 },
+                kpi3: { value: "Error", label: "Error", change: 0 },
+              },
+              mainViewData: {
+                chartData: [],
+                tableData: [],
+                queryData: "Error fetching data.",
+              },
+              textualSummary: `Error processing "${question}": ${getErrorMessage(
+                error
+              )}`,
+            };
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.id === processingEntryId ? errorEntry : item
+              )
             );
-            toast.error(`Failed to send message: ${getErrorMessage(error)}`);
-            // If user message failed to save, remove its temporary presence if added optimistically (not current setup)
-            // If bot loading message failed, the user message is there but no bot response will appear.
+          } finally {
+            setIsSubmitting(false); // Reset submission state
           }
         },
         [
+          dashboardHistory,
+          currentHistoryIndex,
+          currentMainViewType,
           sessionId,
-          sessionConnection,
-          connections,
-          token,
-          scrollToMessage,
           dispatchMessages,
-          loadSession,
-          selectedConnection,
+          startNewSession,
+          API_URL,
+          CHATBOT_API_URL,
+          token,
+          connections,
         ]
       );
 
+      // Callback for handling the main chat input submission
+      const handleSubmit = useCallback(
+        async (e: React.FormEvent) => {
+          e.preventDefault();
+          if (!input.trim() || isSubmitting) return; // Prevent empty or multiple submissions
+          if (!selectedConnection) {
+            toast.error("No connection selected.");
+            return;
+          }
+
+          const questionToAsk = input;
+          setInput(""); // Clear the input field immediately
+          await askQuestionAndUpdateDashboard(
+            questionToAsk,
+            selectedConnection
+          );
+        },
+        [input, isSubmitting, selectedConnection, askQuestionAndUpdateDashboard]
+      );
+
+      // Callback for handling a favorite question being asked
       const handleAskFavoriteQuestion = useCallback(
-        async (question: string, connection: string, query?: string) => {
+        async (question: string, connectionName: string, query?: string) => {
           const connectionObj = connections.find(
-            (conn) => conn.connectionName === connection
+            (conn) => conn.connectionName === connectionName
           );
           if (!connectionObj) {
             toast.error(
@@ -487,88 +579,56 @@ const ChatInterface = memo(
             );
             return;
           }
-
-          if (sessionId && sessionConnection === connection) {
-            // console.log("Asking favorite question in existing session (same connection):", sessionId); // Kept for debugging
-            await askQuestion(question, connection, true, query);
-          } else {
-            // console.log(`Handling favorite question. Current session: ${sessionId}, current session connection: ${sessionConnection}, target connection: ${connection}`); // Kept for debugging
-            // console.log("Clearing current session and setting up for new connection:", connection); // Kept for debugging
-
-            handleNewChat();
-
-            await new Promise<void>((resolve) => {
-              setTimeout(resolve, 0);
-            });
-
-            setSelectedConnection(connection);
-            // console.log("New connection set in state:", connection); // Kept for debugging
-            // console.log("Asking favorite question, which will create/use a new session with connection:", connection); // Kept for debugging
-            await askQuestion(question, connection, true, query);
-            // console.log("Favorite question processed with connection:", connection); // Kept for debugging
-          }
+          handleNewChat(); // Start a new chat session for the favorite question
+          // Allow state update to propagate before asking new question
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          setSelectedConnection(connectionName); // Set the selected connection
+          setInput(question); // Pre-fill the input with the favorite question
+          // Ask the question, which will update the dashboard
+          await askQuestionAndUpdateDashboard(question, connectionName);
         },
         [
-          sessionId,
-          sessionConnection,
           connections,
-          askQuestion,
           handleNewChat,
           setSelectedConnection,
+          askQuestionAndUpdateDashboard,
         ]
       );
 
+      // Effect to synchronize selectedConnection with sessionConnection if a session is loaded
       useEffect(() => {
         if (sessionConnection) {
-          if (selectedConnection !== sessionConnection) {
+          if (selectedConnection !== sessionConnection)
             setSelectedConnection(sessionConnection);
-          }
-          setSessionConnectionError(null);
-        } else if (sessionId && !sessionConnection) {
-          setSessionConnectionError(
-            "This session was loaded but has no associated connection. You can view history or start a new chat."
-          );
         }
-      }, [
-        sessionConnection,
-        sessionId,
-        setSelectedConnection,
-        selectedConnection,
-      ]);
+      }, [sessionConnection, setSelectedConnection, selectedConnection]);
 
+      // Effect to load/validate session from local storage on component mount
       useEffect(() => {
         const storedSessionId = localStorage.getItem("currentSessionId");
         if (storedSessionId) {
-          // console.log("Initial load, validating session from localStorage:", storedSessionId); // Kept for debugging
           axios
             .get(`${API_URL}/api/sessions/${storedSessionId}`, {
               headers: { Authorization: `Bearer ${token}` },
             })
-            .then(() => {
-              // Axios response object not directly used here, relies on loadSession
-              // console.log("Stored session valid, loading:", storedSessionId); // Kept for debugging
-              loadSession(storedSessionId);
-            })
+            .then(() => loadSession(storedSessionId)) // Load session if valid
             .catch((error) => {
               console.error("Stored session invalid or error loading:", error);
-              localStorage.removeItem("currentSessionId");
-              clearSession();
+              localStorage.removeItem("currentSessionId"); // Clear invalid session
+              clearSession(); // Reset session state
             });
-        } else {
-          // console.log("No stored session ID found on initial load, starting fresh."); // Kept for debugging
-          if (sessionId) {
-            clearSession();
-          }
+        } else if (sessionId) {
+          // If there's a sessionId in state but not in localStorage, clear it.
+          clearSession();
         }
       }, [loadSession, token, clearSession, sessionId]);
 
+      // Effect to handle initial question prop from outside the component
       useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
           let targetConnection = initialQuestion.connection;
+          // Fallback to first connection if the specified one isn't found
           if (!connections.some((c) => c.connectionName === targetConnection)) {
-            console.warn(
-              `Initial question's connection "${targetConnection}" not found. Using first available.`
-            );
             targetConnection = connections[0]?.connectionName;
             if (!targetConnection) {
               toast.error(
@@ -578,49 +638,77 @@ const ChatInterface = memo(
               return;
             }
           }
-
-          handleAskFavoriteQuestion(
-            initialQuestion.text,
-            targetConnection,
-            initialQuestion.query
-          );
+          setSelectedConnection(targetConnection); // Set the connection for the initial question
+          // Ask the initial question, which will update the dashboard
+          askQuestionAndUpdateDashboard(initialQuestion.text, targetConnection);
           if (onQuestionAsked) onQuestionAsked();
         }
       }, [
         initialQuestion,
         connections,
         connectionsLoading,
-        handleAskFavoriteQuestion,
+        askQuestionAndUpdateDashboard,
         onQuestionAsked,
+        setSelectedConnection,
       ]);
 
+      // Effect to manage dashboard history index when history changes
       useEffect(() => {
-        if (!userHasScrolledUp && !editingMessageId) scrollToBottom();
-      }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
+        if (
+          dashboardHistory.length > 0 &&
+          currentHistoryIndex >= dashboardHistory.length
+        ) {
+          setCurrentHistoryIndex(dashboardHistory.length - 1);
+        } else if (dashboardHistory.length === 0 && currentHistoryIndex !== 0) {
+          setCurrentHistoryIndex(0);
+          // Re-initialize dashboard history if it becomes empty
+          setDashboardHistory([
+            {
+              id: generateId(),
+              question: "Initial Dashboard View",
+              kpiData: initialDashboardKpis,
+              mainViewData: initialMainViewData,
+              textualSummary: "Welcome! Ask a question to analyze your data.",
+              lastViewType: "graph",
+            },
+          ]);
+        }
+      }, [
+        dashboardHistory,
+        currentHistoryIndex,
+        initialDashboardKpis,
+        initialMainViewData,
+      ]);
 
+      // Callback for handling connection selection from the dropdown
       const handleSelect = useCallback(
         (option: any) => {
           if (option?.value === "create-con") {
-            onCreateConSelected();
-            if (sessionId) handleNewChat();
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
+            onCreateConSelected(); // Trigger action to create a new connection
+            if (sessionId) handleNewChat(); // Start a new chat if a session is active
+            setSelectedConnection(null); // Clear selected connection
+            localStorage.removeItem("selectedConnection"); // Remove from local storage
           } else if (option) {
             const newSelectedConnection = option.value.connectionName;
             if (selectedConnection !== newSelectedConnection || !sessionId) {
+              // If connection changes or no session, start new chat/session
               handleNewChat();
-              setSelectedConnection(newSelectedConnection);
-              localStorage.setItem("selectedConnection", newSelectedConnection);
+              setSelectedConnection(newSelectedConnection); // Set the new selected connection
+              localStorage.setItem("selectedConnection", newSelectedConnection); // Store in local storage
             }
           } else {
-            if (sessionId && selectedConnection) handleNewChat();
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
+            // Option is null (cleared selection)
+            if (selectedConnection) {
+              // Only call new chat if there was a selection before
+              handleNewChat();
+            }
+            setSelectedConnection(null); // Clear selected connection
+            localStorage.removeItem("selectedConnection"); // Remove from local storage
           }
+          setIsConnectionDropdownOpen(false); // Close dropdown after selection
         },
         [
           onCreateConSelected,
-          connections,
           handleNewChat,
           setSelectedConnection,
           sessionId,
@@ -628,511 +716,100 @@ const ChatInterface = memo(
         ]
       );
 
-      const handleSubmit = useCallback(
-        async (e: React.FormEvent) => {
-          e.preventDefault();
-          if (!input.trim() || isSubmitting) return;
-          if (!selectedConnection) {
-            toast.error("No connection selected.", {
-              style: {
-                background: theme.colors.surface,
-                color: theme.colors.error,
-              },
-              theme: mode,
-            });
-            return;
-          }
-          setIsSubmitting(true);
-          setInput("");
-          await askQuestion(input, selectedConnection, false);
-          setIsSubmitting(false);
+      // Callback for handling PDF click (mock function)
+      const handlePdfClick = useCallback(
+        (connectionName: string, e: React.MouseEvent) => {
+          e.stopPropagation(); // Prevent dropdown from closing
+          toast.info(
+            `Generating Data Atlas for ${connectionName}... (Mock Action)`
+          );
+          // In a real app, you'd trigger PDF generation or navigation here
         },
-        [input, isSubmitting, selectedConnection, askQuestion, theme, mode]
+        []
       );
 
-      const handleFavoriteMessage = useCallback(
-        async (messageId: string) => {
-          const currentConnectionForAction =
-            sessionConnection || selectedConnection;
-          if (!token || !currentConnectionForAction) {
-            toast.error(
-              "Cannot favorite message: Missing token or active connection for this action."
-            );
-            return;
-          }
-          const questionMessage = messages.find((msg) => msg.id === messageId);
-          if (!questionMessage || questionMessage.isBot) return;
-          try {
-            const responseMessage = messages.find(
-              (msg) => msg.parentId === messageId
-            );
-            await axios.post(
-              `${API_URL}/favorite`,
-              {
-                token,
-                questionId: messageId,
-                questionContent: questionMessage.content,
-                currentConnection: currentConnectionForAction,
-                responseQuery:
-                  responseMessage &&
-                  responseMessage.content !== "loading..." &&
-                  !getErrorMessage(null).includes(responseMessage.content) // Basic check if it's not an error/loading
-                    ? JSON.parse(responseMessage.content).sql_query // This might fail if content is not JSON
-                    : null,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: messageId,
-              message: { isFavorited: true },
-            });
-            if (responseMessage) {
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: responseMessage.id,
-                message: { isFavorited: true },
-              });
-            }
-          } catch (error) {
-            console.error("Error favoriting message:", error);
-            toast.error(
-              `Failed to favorite message: ${getErrorMessage(error)}`
-            );
-          }
+      // Callback for selecting a previous question from the modal
+      const handleSelectPrevQuestion = useCallback(
+        (questionContent: string) => {
+          setInput(questionContent); // Set the input field with the selected question
+          setShowPrevQuestionsModal(false); // Close the modal
         },
-        [
-          token,
-          messages,
-          selectedConnection,
-          sessionConnection,
-          dispatchMessages,
-        ]
+        []
       );
 
-      const handleUnfavoriteMessage = useCallback(
-        async (messageId: string) => {
-          const currentConnectionForAction =
-            sessionConnection || selectedConnection;
-          if (!token || !currentConnectionForAction) {
-            toast.error(
-              "Cannot unfavorite message: Token or active connection missing."
-            );
-            return;
+      // Callback to navigate through dashboard history (prev/next)
+      const navigateDashboardHistory = useCallback(
+        (direction: "prev" | "next") => {
+          let newIndex = currentHistoryIndex;
+          if (direction === "prev" && currentHistoryIndex > 0) {
+            newIndex = currentHistoryIndex - 1;
+          } else if (
+            direction === "next" &&
+            currentHistoryIndex < dashboardHistory.length - 1
+          ) {
+            newIndex = currentHistoryIndex + 1;
           }
-          try {
-            await axios.post(
-              `${API_URL}/unfavorite`,
-              {
-                token,
-                currentConnection: currentConnectionForAction,
-                questionId: messageId,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            const responseMessage = messages.find(
-              (msg) => msg.parentId === messageId
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: messageId,
-              message: { isFavorited: false },
-            });
-            if (responseMessage) {
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: responseMessage.id,
-                message: { isFavorited: false },
-              });
-            }
-          } catch (error) {
-            console.error("Error unfavoriting message:", error);
-            toast.error(
-              `Failed to unfavorite message: ${getErrorMessage(error)}`
-            );
-          }
+          setCurrentHistoryIndex(newIndex); // Update the history index
+          // Set the main view type based on the last saved preference for that history item
+          setCurrentMainViewType(
+            dashboardHistory[newIndex]?.lastViewType || "graph"
+          );
         },
-        [
-          token,
-          messages,
-          selectedConnection,
-          sessionConnection,
-          dispatchMessages,
-        ]
+        [currentHistoryIndex, dashboardHistory]
       );
 
-      const handleRetry = useCallback(
-        async (userMessageId: string) => {
-          const userMessage = messages.find(
-            (msg) => msg.id === userMessageId && !msg.isBot
-          );
-          if (!userMessage) {
-            toast.error("User message not found for retry.");
-            return;
-          }
-
-          const botMessage = messages.find(
-            (msg) => msg.parentId === userMessageId && msg.isBot
-          );
-          if (!botMessage) {
-            toast.error("Bot response not found for retry.");
-            return;
-          }
-
-          const connectionForRetry = sessionConnection || selectedConnection;
-          if (!connectionForRetry) {
-            toast.error(
-              "No active connection available for this session to retry."
-            );
-            return;
-          }
-
-          const connectionObj = connections.find(
-            (conn) => conn.connectionName === connectionForRetry
-          );
-          if (!connectionObj) {
-            toast.error("Connection details not found for retry.");
-            return;
-          }
-
-          if (!sessionId) {
-            toast.error("Session ID is missing, cannot retry.");
-            return;
-          }
-
-          const originalBotMessageId = botMessage.id; // Store before potential changes
-
-          try {
-            // console.log("Retrying message, setting to loading:", originalBotMessageId); // Kept for debugging
-            await axios.put(
-              `${API_URL}/api/messages/${originalBotMessageId}`,
-              {
-                token,
-                content: "loading...",
-                timestamp: new Date().toISOString(),
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: originalBotMessageId,
-              message: {
-                content: "loading...",
-                timestamp: new Date().toISOString(),
-              },
-            });
-
-            // console.log("Sending retry request for question:", userMessage.content); // Kept for debugging
-            const payload = {
-              question: userMessage.content,
-              connection: connectionObj,
-              sessionId,
-            };
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              payload
-            );
-            const botResponseContent = JSON.stringify(response.data, null, 2);
-            // console.log("Retry response received:", botResponseContent); // Kept for debugging
-
-            await axios.put(
-              `${API_URL}/api/messages/${originalBotMessageId}`,
-              {
-                token,
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: originalBotMessageId,
-              message: {
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-              },
-            });
-            setTimeout(() => scrollToMessage(originalBotMessageId), 100);
-          } catch (error) {
-            console.error("Error retrying message:", error);
-            // const errorContent = getErrorMessage(error);
-            const errorContent = "Sorry, an error occurred. Please try again.";
-
-            await axios
-              .put(
-                `${API_URL}/api/messages/${originalBotMessageId}`,
-                {
-                  token,
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                },
-                { headers: { "Content-Type": "application/json" } }
+      // Callback to change the active view type within the main dashboard view
+      const handleViewTypeChange = useCallback(
+        (viewType: "graph" | "table" | "query") => {
+          setCurrentMainViewType(viewType); // Update the active view type
+          // Optionally, save this preference to the current history item
+          if (currentDashboardView) {
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.id === currentDashboardView.id
+                  ? { ...item, lastViewType: viewType }
+                  : item
               )
-              .catch((updateError) =>
-                console.error(
-                  "Failed to update message to error state on server (retry):",
-                  updateError
-                )
-              );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: originalBotMessageId,
-              message: {
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-              },
-            });
-            setTimeout(() => scrollToMessage(originalBotMessageId), 100);
+            );
           }
         },
-        [
-          messages,
-          selectedConnection,
-          sessionConnection,
-          connections,
-          token,
-          dispatchMessages,
-          scrollToMessage,
-          sessionId,
-        ]
+        [currentDashboardView]
       );
 
-      async function handleEditMessage(id: string, content: string) {
-        const userMessage = messages.find((msg) => msg.id === id && !msg.isBot);
-        if (!userMessage) {
-          toast.error("User message not found for edit.");
-          return;
-        }
-
-        const connectionForEdit = sessionConnection || selectedConnection;
-        if (!connectionForEdit) {
-          toast.error(
-            "No active connection available for this session to edit."
-          );
-          return;
-        }
-
-        const connectionObj = connections.find(
-          (conn) => conn.connectionName === connectionForEdit
-        );
-        if (!connectionObj) {
-          toast.error("Connection details not found for edit.");
-          return;
-        }
-
-        if (!sessionId) {
-          toast.error("Session ID is missing, cannot edit message.");
-          return;
-        }
-
-        let botMessageToUpdateId: string | null = null;
-        const responseMessage = messages.find(
-          // Find existing bot response
-          (msg) => msg.parentId === id && msg.isBot
-        );
-        if (responseMessage) {
-          botMessageToUpdateId = responseMessage.id;
-        }
-
-        try {
-          // console.log("Updating user message on server:", id, content); // Kept for debugging
-          await axios.put(
-            `${API_URL}/api/messages/${id}`,
-            {
-              token,
-              content,
-              timestamp: new Date().toISOString(),
-            },
-            { headers: { "Content-Type": "application/json" } }
-          );
-          dispatchMessages({
-            type: "UPDATE_MESSAGE",
-            id,
-            message: {
-              content,
-              timestamp: new Date().toISOString(),
-            },
-          });
-
-          if (botMessageToUpdateId) {
-            // console.log("Updating existing bot message to loading for edited user message:", botMessageToUpdateId); // Kept for debugging
-            await axios.put(
-              `${API_URL}/api/messages/${botMessageToUpdateId}`,
-              {
-                token,
-                content: "loading...",
-                timestamp: new Date().toISOString(),
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessageToUpdateId,
-              message: {
-                content: "loading...",
-                timestamp: new Date().toISOString(),
-              },
-            });
-          } else {
-            // console.log("No existing bot message found, creating new bot loading message for edited user message:", id); // Kept for debugging
-            const botLoadingResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: sessionId,
-                content: "loading...",
-                isBot: true,
-                isFavorited: false,
-                parentId: id,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            botMessageToUpdateId = botLoadingResponse.data.id; // Assign new ID
-            const newBotLoadingMessage: Message = {
-              id: botMessageToUpdateId,
-              content: "loading...",
-              isBot: true,
-              timestamp: new Date().toISOString(),
-              isFavorited: false,
-              parentId: id,
-            };
-            dispatchMessages({
-              type: "ADD_MESSAGE",
-              message: newBotLoadingMessage,
-            });
-          }
-
-          if (!botMessageToUpdateId) {
-            // Should not happen if logic above is correct
-            throw new Error(
-              "Failed to obtain a bot message ID for update/creation."
-            );
-          }
-
-          try {
-            // Inner try for the actual chatbot API call
-            // console.log("Sending edited question to chatbot API:", content); // Kept for debugging
-            const payload = {
-              question: content,
-              connection: connectionObj,
-              sessionId,
-            };
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              payload
-            );
-            const botResponseContent = JSON.stringify(response.data, null, 2);
-            // console.log("Received bot response for edited message:", botResponseContent); // Kept for debugging
-
-            await axios.put(
-              `${API_URL}/api/messages/${botMessageToUpdateId}`,
-              {
-                token,
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessageToUpdateId,
-              message: {
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-              },
-            });
-            setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100); // Added non-null assertion
-          } catch (error) {
-            // Catch for CHATBOT_API_URL/ask
-            console.error(
-              "Error getting bot response for edited message:",
-              error
-            );
-            // const errorContent = getErrorMessage(error);
-            const errorContent = "Sorry, an error occurred. Please try again.";
-
-            await axios
-              .put(
-                `${API_URL}/api/messages/${botMessageToUpdateId}`, // Use the ID obtained
-                {
-                  token,
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                },
-                { headers: { "Content-Type": "application/json" } }
-              )
-              .catch((updateError) =>
-                console.error(
-                  "Failed to update message to error state on server (edit):",
-                  updateError
-                )
-              );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessageToUpdateId, // Use the ID obtained
-              message: {
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-              },
-            });
-            setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100); // Added non-null assertion
-          }
-        } catch (error) {
-          // Catch for outer operations (user message update, initial bot message update/creation)
-          console.error("Error handling edit message (outer scope):", error);
-          toast.error(`Failed to process edit: ${getErrorMessage(error)}`);
-        }
-      }
-
+      // Expose functions to parent components via ref
       useImperativeHandle(ref, () => ({
         handleNewChat,
         handleAskFavoriteQuestion,
       }));
 
-      // Determine response status for user messages based on their corresponding bot message
-      const getMessageResponseStatus = (
-        userMessageId: string
-      ): "loading" | "success" | "error" | null => {
-        const botResponse = messages.find(
-          (msg) => msg.isBot && msg.parentId === userMessageId
-        );
-        if (botResponse) {
-          if (botResponse.content === "loading...") return "loading";
+      // Filter user questions from session messages for the "Previous Questions" modal
+      const userQuestionsFromSession = messages
+        .filter((msg) => !msg.isBot)
+        .reverse();
 
-          // Check if bot content IS an error message generated by getErrorMessage
-          // This is a heuristic. A dedicated `isError` flag on Message would be better.
-          const potentialErrorMessages = [
-            "Sorry, an error occurred. Please try again.",
-            "An unknown error occurred. Please try again.",
-            // Add other known error strings if they are specific and not likely to be actual data
-          ];
-          if (
-            potentialErrorMessages.includes(botResponse.content) ||
-            (botResponse.content &&
-              botResponse.content.startsWith("Request failed with status code"))
-          ) {
-            // Common Axios error message
-            return "error";
-          }
-          // If backend consistently returns error details in a specific way that's not JSON (e.g. plain text error)
-          // and successful responses are always JSON, we could try to parse JSON:
-          try {
-            JSON.parse(botResponse.content); // If it's valid JSON, assume success (or successful empty)
-            return "success";
-          } catch (e) {
-            // If it's not "loading..." and not valid JSON, it's likely a plain text error message.
-            return "error";
-          }
-        }
-        return null; // No bot response yet or not applicable
-      };
+      // Determine if the dashboard should be shown (based on active session or existing messages)
+      const showDashboard = sessionId || messages.length > 0;
 
       return (
         <div
-          className="flex flex-col h-full"
-          style={{ background: theme.colors.background }}
+          className={`flex flex-col h-screen transition-colors duration-300 overflow-hidden`}
+          style={{
+            backgroundColor: theme.colors.background,
+            color: theme.colors.text,
+          }}
         >
+          {/* ToastContainer for displaying notifications */}
           <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme={theme.mode}
             toastStyle={{
               background: theme.colors.surface,
               color: theme.colors.text,
@@ -1141,206 +818,435 @@ const ChatInterface = memo(
               padding: theme.spacing.sm,
             }}
           />
-          {sessionConnectionError && (
-            <div
-              className="flex items-center justify-between sticky top-0 z-20 mx-auto my-2 max-w-3xl animate-fade-in"
-              style={{
-                background: theme.colors.surface,
-                color: theme.colors.error,
-                borderLeft: `4px solid ${theme.colors.error}`,
-                borderRadius: theme.borderRadius.default,
-                boxShadow: theme.shadow.md,
-                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                marginBottom: theme.spacing.md,
-              }}
-            >
-              <div className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ marginRight: theme.spacing.sm }}
+
+          {/* Main content area */}
+          <main className="flex-grow flex flex-col items-center overflow-y-auto">
+            <div className="w-full flex-grow flex flex-col">
+              {" "}
+              {/* Fixed width container, added flex-grow and flex-col */}
+              {connectionsLoading ? (
+                // Display loader while connections are loading
+                <div className="flex justify-center items-center flex-grow">
+                  <Loader text="Loading connections..." />
+                </div>
+              ) : connections.length === 0 && !connectionsLoading ? (
+                // Case 1: No connections exist at all, prompt to create one
+                <div className="flex flex-col items-center justify-center flex-grow text-center">
+                  <h1
+                    className={`text-2xl font-semibold mb-4 ${
+                      theme.mode === "dark"
+                        ? "text-slate-300"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    No Data Connections
+                  </h1>
+                  <p
+                    className={`${
+                      theme.mode === "dark"
+                        ? "text-slate-400"
+                        : "text-slate-600"
+                    } mb-6`}
+                  >
+                    Please create a data connection to start analyzing your
+                    data.
+                  </p>
+                  <button
+                    onClick={onCreateConSelected}
+                    className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                  >
+                    Create Connection
+                  </button>
+                </div>
+              ) : !selectedConnection && connections.length > 0 ? (
+                // Case 2: Connections exist, but none is selected, prompt to select one
+                <div className="flex flex-col items-center justify-center flex-grow text-center">
+                  <h1
+                    className={`text-2xl font-semibold mb-4 ${
+                      theme.mode === "dark"
+                        ? "text-slate-300"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    Welcome to Your Analytics Dashboard
+                  </h1>
+                  <p
+                    className={`${
+                      theme.mode === "dark"
+                        ? "text-slate-400"
+                        : "text-slate-600"
+                    } mb-6`}
+                  >
+                    Please select a data connection to begin your analysis.
+                  </p>
+                </div>
+              ) : showDashboard ? (
+                // Case 3: User has asked a question or has an active session, show the DashboardView
+                <DashboardView
+                  dashboardItem={currentDashboardView} // Pass the current dashboard data
+                  theme={theme} // Pass theme for consistent styling
+                  isSubmitting={isSubmitting} // Indicate if data is being processed
+                  activeViewType={currentMainViewType} // Current active view (graph, table, query)
+                  onViewTypeChange={handleViewTypeChange} // Callback to change view type
+                  onNavigateHistory={navigateDashboardHistory} // Callback for history navigation
+                  historyIndex={currentHistoryIndex} // Current position in history
+                  historyLength={dashboardHistory.length} // Total number of history items
+                />
+              ) : (
+                // Case 4: No questions asked yet, but a connection is selected. Show initial prompt and recommended questions.
+                <div className="flex flex-col items-center justify-center flex-grow px-4 text-center">
+                  <h1
+                    className={`text-2xl font-semibold mb-4 ${
+                      theme.mode === "dark"
+                        ? "text-slate-300"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    Ask a question to get started!
+                  </h1>
+                  <p
+                    className={`${
+                      theme.mode === "dark"
+                        ? "text-slate-400"
+                        : "text-slate-600"
+                    } mb-8 max-w-md`}
+                  >
+                    Enter your query in the input box below to analyze your data
+                    and generate insights.
+                  </p>
+                  {recommendedQuestions.length > 0 && (
+                    <div className="w-full max-w-2xl">
+                      <RecommendedQuestions
+                        questions={recommendedQuestions}
+                        onQuestionSelect={handleAskFavoriteQuestion}
+                        theme={theme}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </main>
+
+          {/* Schema Explorer Modal */}
+          {isDbExplorerOpen && selectedConnection && (
+            <div className="w-3/4  backdrop-blur-lg self-center absolute bottom-16 z-50 flex items-center justify-center">
+              <SchemaExplorer
+                schemas={schemaSampleData}
+                onClose={() => setIsDbExplorerOpen(false)}
+                theme={theme}
+                onColumnClick={() => console.log("Column clicked")}
+                selectedConnection={selectedConnection}
+              />
+            </div>
+          )}
+
+          {/* Footer with buttons and ChatInput */}
+          <footer
+            className={`shadow-top flex justify-center pb-2`} /* Added padding to footer */
+            style={{
+              background: theme.colors.background,
+            }}
+          >
+            <div className="w-full max-w-4xl flex items-center gap-2 px-2">
+              {" "}
+              {/* Fixed width container and horizontal padding */}
+              {/* Connection Dropdown Button */}
+              <div className="relative">
+                <CustomTooltip
+                  title="Change or create a connection"
+                  position="top"
                 >
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                <div>
-                  <div className="font-medium">{sessionConnectionError}</div>
-                  <div className="text-sm opacity-75">
-                    You can view the chat history but cannot ask new questions
-                    with this session. Start a new chat or select a valid
-                    connection.
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsConnectionDropdownOpen((prev) => !prev);
+                      setIsDbExplorerOpen(false); // Close schema explorer when opening connection dropdown
+                    }}
+                    disabled={isSubmitting}
+                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50
+                            `}
+                    style={{
+                      background: theme.colors.surface,
+                      color: theme.colors.accent,
+                    }}
+                    aria-label="Select Connection"
+                  >
+                    <Database size={20} />
+                    {/* <ChevronDown
+                      size={16}
+                      className={`absolute bottom-0 right-0 transition-transform duration-200 ${
+                        isConnectionDropdownOpen ? "rotate-180" : ""
+                      }`}
+                      style={{ color: theme.colors.accent }}
+                    /> */}
+                  </button>
+                </CustomTooltip>
+
+                {isConnectionDropdownOpen && (
+                  <div
+                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2"
+                    style={{
+                      background: theme.colors.surface,
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                      width: "min-content",
+                      maxWidth: "min-content",
+                    }}
+                  >
+                    {connections.length === 0 ? (
+                      <div
+                        className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
+                        style={{ color: theme.colors.text }}
+                        onClick={() => handleSelect({ value: "create-con" })}
+                      >
+                        <span className="truncate">Create Connection</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div
+                          className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
+                          style={{ color: theme.colors.text }}
+                          onClick={() => handleSelect({ value: "create-con" })}
+                        >
+                          <span className="truncate">Create Connection</span>
+                        </div>
+                        {connections.map((connection: Connection) => (
+                          <div
+                            key={connection.connectionName}
+                            className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
+                            style={{
+                              color: theme.colors.text,
+                              background:
+                                selectedConnection === connection.connectionName
+                                  ? `${theme.colors.accent}10`
+                                  : "transparent",
+                            }}
+                            onClick={() => handleSelect({ value: connection })}
+                          >
+                            <span
+                              className="truncate"
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {connection.connectionName}
+                            </span>
+                            {connection.isAdmin && (
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  backgroundColor: theme.colors.background,
+                                  color: theme.colors.accent,
+                                  fontSize: theme.typography.size.sm,
+                                  fontWeight: theme.typography.weight.normal,
+                                  padding: `0 ${theme.spacing.sm}`,
+                                  borderRadius: theme.borderRadius.default,
+                                  marginLeft: theme.spacing.sm,
+                                  textTransform: "lowercase",
+                                }}
+                              >
+                                Default
+                              </span>
+                            )}
+                            <div className="relative group">
+                              <button
+                                type="button"
+                                onClick={(e) =>
+                                  handlePdfClick(connection.connectionName, e)
+                                }
+                                className="p-1"
+                                aria-label="View Data Atlas"
+                              >
+                                <FaFilePdf
+                                  size={16}
+                                  style={{ color: theme.colors.error }}
+                                  className="hover:scale-105 transition-transform duration-300"
+                                />
+                              </button>
+                              <span
+                                className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
+                                style={{
+                                  background: theme.colors.accent,
+                                  color: theme.colors.surface,
+                                  boxShadow: `0 0 6px ${theme.colors.accent}40`,
+                                }}
+                              >
+                                View Data Atlas
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
+                )}
+              </div>
+              {/* Database Explorer Button */}
+              <CustomTooltip title="Explore Database Schema" position="top">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDbExplorerOpen((prev) => !prev);
+                    setIsConnectionDropdownOpen(false); // Close connection dropdown when opening schema explorer
+                  }}
+                  disabled={isSubmitting || !selectedConnection}
+                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
+                    isDbExplorerOpen ? "schema-active" : ""
+                  }`}
+                  style={{
+                    background: theme.colors.surface,
+                    color: theme.colors.accent,
+                  }}
+                  aria-label="Explore Database Schema"
+                >
+                  <Layers
+                    size={20}
+                    style={{
+                      transform: isDbExplorerOpen
+                        ? "rotate(180deg)"
+                        : "rotate(0deg)",
+                      transition: "transform 0.3s ease",
+                    }}
+                  />
+                </button>
+              </CustomTooltip>
+              {/* New Chat Button */}
+              <CustomTooltip title="Create a new session" position="top">
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  disabled={isSubmitting}
+                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50
+                            `}
+                  style={{
+                    background: theme.colors.surface,
+                    color: theme.colors.accent,
+                  }}
+                  aria-label="New Chat"
+                >
+                  <PlusCircle size={20} />
+                </button>
+              </CustomTooltip>
+              {/* ChatInput component */}
+              <ChatInput
+                input={input}
+                isSubmitting={isSubmitting}
+                onInputChange={setInput}
+                onSubmit={handleSubmit}
+                connections={connections}
+                selectedConnection={selectedConnection}
+                onSelect={handleSelect}
+                onNewChat={handleNewChat} // This is no longer directly used by ChatInput for its button, but kept for consistency
+                disabled={
+                  isSubmitting ||
+                  (!selectedConnection && connections.length > 0)
+                }
+              />
+              <CustomTooltip title="View Previous Questions" position="top">
+                <button
+                  onClick={() => setShowPrevQuestionsModal(true)}
+                  disabled={
+                    isSubmitting || userQuestionsFromSession.length === 0
+                  }
+                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50
+                            `}
+                  style={{
+                    background: theme.colors.surface,
+                    color: theme.colors.accent,
+                  }}
+                >
+                  <ListChecks size={20} />
+                </button>
+              </CustomTooltip>
+            </div>
+          </footer>
+
+          {/* Modal for displaying previous questions */}
+          {showPrevQuestionsModal && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div
+                className={`rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col ${
+                  theme.mode === "dark" ? "bg-slate-800" : "bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between p-4 border-b dark:border-slate-700 border-slate-200">
+                  <h3
+                    className={`text-lg font-semibold ${
+                      theme.mode === "dark"
+                        ? "text-slate-100"
+                        : "text-slate-800"
+                    }`}
+                  >
+                    Previous Questions
+                  </h3>
+                  <button
+                    onClick={() => setShowPrevQuestionsModal(false)}
+                    className={`p-1 rounded-md ${
+                      theme.mode === "dark"
+                        ? "text-slate-400 hover:bg-slate-700"
+                        : "text-slate-500 hover:bg-slate-200"
+                    }`}
+                  >
+                    &times;
+                  </button>
+                </div>
+                <div className="overflow-y-auto p-4 space-y-2">
+                  {userQuestionsFromSession.length > 0 ? (
+                    userQuestionsFromSession.map((msg) => (
+                      <button
+                        key={msg.id}
+                        onClick={() => handleSelectPrevQuestion(msg.content)}
+                        className={`w-full text-left p-2.5 rounded-md transition-colors text-sm ${
+                          theme.mode === "dark"
+                            ? "bg-slate-700 hover:bg-slate-600 text-slate-200"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {msg.content}
+                      </button>
+                    ))
+                  ) : (
+                    <p
+                      className={`${
+                        theme.mode === "dark"
+                          ? "text-slate-400"
+                          : "text-slate-600"
+                      }`}
+                    >
+                      No previous questions in this session.
+                    </p>
+                  )}
+                </div>
+                <div className="p-3 border-t dark:border-slate-700 border-slate-200 text-right">
+                  <button
+                    onClick={() => setShowPrevQuestionsModal(false)}
+                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      theme.mode === "dark"
+                        ? "bg-slate-600 hover:bg-slate-500 text-slate-200"
+                        : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                    }`}
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </div>
           )}
-          <div
-            ref={chatContainerRef}
-            className="flex-1 overflow-y-auto"
-            style={{
-              padding: theme.spacing.lg,
-              maxHeight: "calc(100vh - 150px)", // Adjusted maxHeight for better visibility of input
-            }}
-          >
-            {connectionsLoading ? (
-              <Loader text="Loading connections..." />
-            ) : connections.length === 0 && !selectedConnection ? (
-              <div
-                className="flex flex-col items-center justify-center h-full text-center"
-                style={{ color: theme.colors.text }}
-              >
-                <p className="text-2xl font-semibold mb-4">
-                  No Connections Found
-                </p>
-                <p className="text-lg">
-                  Please create a connection to start interacting with your data
-                  assistant.
-                </p>
-                <button
-                  onClick={onCreateConSelected}
-                  className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
-                  style={{
-                    color: "white",
-                    backgroundColor: theme.colors.accent,
-                    borderRadius: theme.borderRadius.pill,
-                    padding: "8px 16px",
-                  }}
-                  onMouseOver={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.accentHover)
-                  }
-                  onMouseOut={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.accent)
-                  }
-                >
-                  Create Connection
-                </button>
-              </div>
-            ) : messages.length === 0 &&
-              !connectionError &&
-              !sessionConnectionError ? (
-              <div
-                className="flex flex-col items-center justify-center h-full text-center"
-                style={{ color: theme.colors.text }}
-              >
-                <h1 className="text-3xl font-bold mb-4">
-                  Hello! I’m your Data Assistant. How can I help you today?
-                </h1>
-                {recommendedQuestions &&
-                  recommendedQuestions.length > 0 &&
-                  selectedConnection && (
-                    <RecommendedQuestions
-                      questions={recommendedQuestions}
-                      onQuestionClick={(q, c, query) =>
-                        handleAskFavoriteQuestion(
-                          q,
-                          c || selectedConnection,
-                          query
-                        )
-                      }
-                    />
-                  )}
-              </div>
-            ) : (
-              <div>
-                {messages.map((message) => {
-                  const responseStatus = message.isBot
-                    ? null
-                    : getMessageResponseStatus(message.id);
-                  return (
-                    <div
-                      className="flex flex-col w-full max-w-full"
-                      style={{ gap: theme.spacing.md }}
-                      key={message.id}
-                      ref={(el) => (messageRefs.current[message.id] = el)}
-                    >
-                      <ChatMessage
-                        message={message}
-                        onEditMessage={handleEditMessage}
-                        selectedConnection={
-                          sessionConnection || selectedConnection
-                        }
-                        onFavorite={handleFavoriteMessage}
-                        onUnfavorite={handleUnfavoriteMessage}
-                        isFavorited={message.isFavorited || false}
-                        responseStatus={responseStatus} // Pass the determined status
-                        disabled={!!sessionConnectionError && message.isBot}
-                        onRetry={handleRetry}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-          <div
-            style={{
-              position: "sticky",
-              bottom: 0,
-              background: theme.colors.background,
-              padding: theme.spacing.md,
-              paddingTop: theme.spacing.xs, // Added small top padding
-            }}
-          >
-            {userHasScrolledUp && (
-              <div
-                className="flex justify-end"
-                style={{
-                  position: "absolute",
-                  bottom: "80px", // Adjusted based on typical input height + padding
-                  right: "30px", // Adjusted for better placement
-                  zIndex: 1000,
-                }}
-              >
-                <CustomTooltip title="Scroll to Bottom" position="top">
-                  <button
-                    onClick={scrollToBottom}
-                    style={{
-                      background: theme.colors.accent,
-                      color: "white",
-                      padding: "8px",
-                      borderRadius: theme.borderRadius.large,
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow: theme.shadow.md,
-                    }}
-                  >
-                    <ArrowDown size={20} />
-                  </button>
-                </CustomTooltip>
-              </div>
-            )}
-            <ChatInput
-              input={input}
-              isSubmitting={isSubmitting}
-              onInputChange={setInput}
-              onSubmit={handleSubmit}
-              connections={connections}
-              selectedConnection={selectedConnection}
-              onSelect={handleSelect}
-              onNewChat={handleNewChat}
-              disabled={!!sessionConnectionError && !selectedConnection}
-            />
-          </div>
+
+          {/* Connection error display */}
           {connectionError && (
             <div
-              className="text-center"
-              style={{ padding: theme.spacing.md, color: theme.colors.error }}
+              className={`text-center p-2 text-sm ${
+                theme.mode === "dark"
+                  ? "text-red-400 bg-red-900/[0.3]"
+                  : "text-red-600 bg-red-100/[0.5]"
+              }`}
             >
-              {connectionError}
+              Connection Error: {connectionError}
             </div>
           )}
         </div>
@@ -1349,13 +1255,13 @@ const ChatInterface = memo(
   )
 );
 
+// Memoization to optimize re-renders
 const areEqual = (
   prevProps: ChatInterfaceProps,
   nextProps: ChatInterfaceProps
 ) => {
   return (
     prevProps.onCreateConSelected === nextProps.onCreateConSelected &&
-    prevProps.onSessionSelected === nextProps.onSessionSelected &&
     prevProps.initialQuestion?.text === nextProps.initialQuestion?.text &&
     prevProps.initialQuestion?.connection ===
       nextProps.initialQuestion?.connection &&
