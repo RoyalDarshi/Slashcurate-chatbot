@@ -5,9 +5,13 @@ import React, {
   memo,
   forwardRef,
   useImperativeHandle,
+  useMemo,
 } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
+// Note: Typically, you'd import 'react-toastify/dist/ReactToastify.css' here for styles
+
+// Importing external components, hooks, and types
 import { Message, Connection, ChatInterfaceProps } from "../types";
 import { API_URL, CHATBOT_API_URL } from "../config";
 import ChatInput from "./ChatInput";
@@ -19,6 +23,7 @@ import { useConnections, useSession, useRecommendedQuestions } from "../hooks";
 import DashboardView from "./DashboardView";
 import SchemaExplorer from "./SchemaExplorer";
 import schemaSampleData from "../data/sampleSchemaData";
+
 import {
   ListChecks,
   HelpCircle,
@@ -26,9 +31,8 @@ import {
   Layers,
   PlusCircle,
   ChevronDown,
-  X, // Import X icon for close button
-} from "lucide-react"; // Import necessary icons
-import { FaFilePdf } from "react-icons/fa";
+  X,
+} from "lucide-react";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -39,112 +43,62 @@ export type ChatInterfaceHandle = {
   ) => void;
 };
 
-// --- Mock Data Generation Helpers ---
-// These helpers are used to simulate KPI and main view data for the dashboard.
-// In a real application, this data would come from your backend API.
-const generateId = () => Math.random().toString(36).substr(2, 9);
-const generateRandomNumber = (min: number, max: number) =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
-
-const generateKpiData = (questionSeed = "") => {
-  const seed = questionSeed.length + generateRandomNumber(0, 10);
-  return {
-    kpi1: {
-      value: 1000 + seed * 10 + generateRandomNumber(0, 500),
-      label: "Key Metric A",
-      change: generateRandomNumber(-10, 15),
-    },
-    kpi2: {
-      value: 50 + seed + generateRandomNumber(0, 100),
-      label: "Key Metric B",
-      change: generateRandomNumber(-5, 20),
-    },
-    kpi3: {
-      value: 750 + seed * 5 + generateRandomNumber(0, 250),
-      label: "Key Metric C",
-      change: generateRandomNumber(-12, 12),
-    },
-  };
-};
-
-/**
- * Generates dummy data for a stacked bar graph.
- * Each object in the array represents a category (e.g., a month)
- * and contains multiple metrics that can be stacked.
- *
- * @param {number} numCategories - The number of categories (e.g., months) to generate.
- * @param {number} seedOffset - An additional offset to influence random number generation.
- * @returns {Array<Object>} An array of data objects for a stacked bar graph.
- */
-function generateStackedBarGraphData(numCategories = 8, seedOffset = 0) {
-  const categories = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-
-  // Ensure we don't try to generate more categories than available names
-  const actualCategories = categories.slice(0, numCategories);
-
-  const data = actualCategories.map((category, index) => {
-    // Generate random numbers for each series, influenced by the seedOffset
-    // The seedOffset helps make the data slightly different based on the question seed.
-    const seriesA =
-      Math.floor(Math.random() * (250 - 100 + 1)) + 100 + seedOffset;
-    const seriesB =
-      Math.floor(Math.random() * (180 - 50 + 1)) + 50 + seedOffset / 2;
-    const seriesC =
-      Math.floor(Math.random() * (120 - 20 + 1)) + 20 + seedOffset / 4;
-
-    return {
-      name: category,
-      seriesA: Math.max(0, Math.round(seriesA)), // Ensure non-negative and round
-      seriesB: Math.max(0, Math.round(seriesB)),
-      seriesC: Math.max(0, Math.round(seriesC)),
-    };
-  });
-
-  return data;
+// Define the expected structure for KPI and Main View Data
+interface KpiData {
+  kpi1: { label: string; value: string | number | null; change: number };
+  kpi2: { label: string; value: string | number | null; change: number };
+  kpi3: { label: string; value: string | number | null; change: number };
 }
 
-// Updated function to generate data suitable for a stacked view
-const generateMainViewData = (questionSeed = "") => {
-  const categories = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
-  const baseSeed = questionSeed.length + generateRandomNumber(0, 10);
+interface MainViewData {
+  chartData: any[];
+  tableData: any[];
+  queryData: string;
+}
 
-  // Use the new generateStackedBarGraphData function for chartData
-  const chartData = generateStackedBarGraphData(categories.length, baseSeed);
+// Data Generation Helpers
+const generateId = () => Math.random().toString(36).substr(2, 9);
 
-  const tableData = Array.from(
-    { length: generateRandomNumber(3, 7) },
-    (_, i) => ({
-      id: `ID-${1001 + i + baseSeed}`,
-      category: `Category ${String.fromCharCode(65 + (i % 5))}`,
-      value: generateRandomNumber(1000, 10000),
-      status: ["Active", "Pending", "Closed"][generateRandomNumber(0, 2)],
-      lastUpdated: `2023-0${generateRandomNumber(1, 9)}-${generateRandomNumber(
-        10,
-        28
-      )}`,
-    })
-  );
-  const queryData = `SELECT\n    column1,\n    column2,\n    SUM(value) AS total_value\nFROM\n    your_table\nWHERE\n    condition LIKE '%${
-    questionSeed.split(" ")[0] || "example"
-  }%'\nGROUP BY\n    column1, column2\nORDER BY\n    total_value DESC;`;
-
-  return { chartData, tableData, queryData };
+// Initial empty KPI data structure
+const initialEmptyKpiData: KpiData = {
+  kpi1: { value: null, label: "No Data", change: 0 },
+  kpi2: { value: null, label: "No Data", change: 0 },
+  kpi3: { value: null, label: "No Data", change: 0 },
 };
 
-// Helper function to extract error messages from Axios errors or generic errors
+// Initial empty Main View Data structure
+const initialEmptyMainViewData: MainViewData = {
+  chartData: [],
+  tableData: [],
+  queryData: "No query available.",
+};
+
+// Placeholder for loading/error states in the dashboard
+const getDashboardLoadingState = () => ({
+  kpiData: {
+    kpi1: { value: null, label: "Loading...", change: 0 },
+    kpi2: { value: null, label: "Loading...", change: 0 },
+    kpi3: { value: null, label: "Loading...", change: 0 },
+  },
+  mainViewData: { chartData: [], tableData: [], queryData: "Loading query..." },
+  textualSummary: "Processing your request...",
+});
+
+const getDashboardErrorState = () => ({
+  kpiData: {
+    kpi1: { value: null, label: "Error", change: 0 },
+    kpi2: { value: null, label: "Error", change: 0 },
+    kpi3: { value: null, label: "Error", change: 0 },
+  },
+  mainViewData: {
+    chartData: [],
+    tableData: [],
+    queryData: "Error loading query.",
+  },
+  textualSummary: "Error: Could not generate analysis.",
+});
+
+// Helper function to extract error messages
 const getErrorMessage = (error: any): string => {
   let extractedErrorMessage = "Sorry, an error occurred. Please try again.";
   if (axios.isAxiosError(error)) {
@@ -164,7 +118,6 @@ const getErrorMessage = (error: any): string => {
         data.message.trim().length > 0
       )
         extractedErrorMessage = data.message;
-      else if (error.message) extractedErrorMessage = error.message;
     } else if (error.message) extractedErrorMessage = error.message;
   } else if (error instanceof Error && error.message)
     extractedErrorMessage = error.message;
@@ -173,14 +126,13 @@ const getErrorMessage = (error: any): string => {
   );
 };
 
-// --- Main ChatInterface Component ---
+// Main ChatInterface Component
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
-      const { theme } = useTheme(); // Access the current theme (dark/light mode, colors, etc.)
-      const token = sessionStorage.getItem("token") ?? ""; // Retrieve authentication token
+      const { theme } = useTheme();
+      const token = sessionStorage.getItem("token") ?? "";
 
-      // Hooks for managing connections, sessions, and recommended questions
       const {
         connections,
         selectedConnection,
@@ -191,7 +143,7 @@ const ChatInterface = memo(
 
       const {
         sessionId,
-        messages, // 'messages' are still used for the "Previous Questions" modal
+        messages,
         dispatchMessages,
         sessionConnection,
         loadSession,
@@ -200,64 +152,37 @@ const ChatInterface = memo(
 
       const recommendedQuestions = useRecommendedQuestions(token, sessionId);
 
-      // State for the chat input field and submission status
       const [input, setInput] = useState("");
       const [isSubmitting, setIsSubmitting] = useState(false);
-      const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false); // State for Schema Explorer visibility
+      const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
       const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
-        useState(false); // State for Connection dropdown visibility
+        useState(false);
 
-      // Initial mock data for the dashboard when no questions have been asked
-      const initialDashboardKpis = generateKpiData("Welcome!");
-      const initialMainViewData = generateMainViewData("Welcome!");
-
-      // State for managing the dashboard history (each entry is a dashboard state for a question)
-      const [dashboardHistory, setDashboardHistory] = useState([
-        {
+      // Memoized initial dashboard state to prevent infinite loop
+      const initialDashboardState = useMemo(
+        () => ({
           id: generateId(),
-          question: "Initial Dashboard View",
-          kpiData: initialDashboardKpis,
-          mainViewData: initialMainViewData,
-          textualSummary:
-            "Welcome to your interactive analytics dashboard! Ask a question to get started.",
-          lastViewType: "graph" as "graph" | "table" | "query", // Default view type
-        },
+          question: "Welcome to your interactive analytics dashboard!",
+          kpiData: initialEmptyKpiData,
+          mainViewData: initialEmptyMainViewData,
+          textualSummary: "Ask a question to get started.",
+          lastViewType: "graph" as "graph" | "table" | "query",
+        }),
+        []
+      );
+
+      const [dashboardHistory, setDashboardHistory] = useState([
+        initialDashboardState,
       ]);
-      // State to track the currently displayed dashboard history item
       const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
-      // State to track the active view type (graph, table, or query) within the main dashboard view
       const [currentMainViewType, setCurrentMainViewType] = useState<
         "graph" | "table" | "query"
       >("table");
-      // State to control the visibility of the "Previous Questions" modal
       const [showPrevQuestionsModal, setShowPrevQuestionsModal] =
         useState(false);
 
-      // Get the currently active dashboard view from the history
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
-      // Effect to handle initial question prop (e.g., from a deep link or favorite question)
-      useEffect(() => {
-        if (initialQuestion && !connectionsLoading && connections.length > 0) {
-          const questionText = initialQuestion.text;
-          // Generate mock data for the initial question
-          const kpiData = generateKpiData(questionText);
-          const mainViewData = generateMainViewData(questionText);
-          const newEntry = {
-            id: generateId(),
-            question: questionText,
-            kpiData,
-            mainViewData,
-            textualSummary: `Displaying analysis for: ${questionText}`,
-            lastViewType: "graph" as "graph" | "table" | "query",
-          };
-          setDashboardHistory([newEntry]); // Replace history with this single entry
-          setCurrentHistoryIndex(0); // Set to the first (and only) entry
-          setCurrentMainViewType("graph"); // Default to graph view
-        }
-      }, [initialQuestion, connectionsLoading, connections]);
-
-      // Effect to manage the `isSubmitting` state based on the dashboard's processing status
       useEffect(() => {
         if (
           currentDashboardView?.textualSummary === "Processing your request..."
@@ -265,64 +190,143 @@ const ChatInterface = memo(
           setIsSubmitting(true);
         } else if (
           isSubmitting &&
-          currentDashboardView?.textualSummary !== "Processing your request..."
+          currentDashboardView?.textualSummary !==
+            "Processing your request..." &&
+          currentDashboardView?.textualSummary !==
+            "Error: Could not generate analysis."
         ) {
           setIsSubmitting(false);
         }
       }, [currentDashboardView, isSubmitting]);
 
-      // Effect to validate and load the session on tab visibility change
       useEffect(() => {
-        const handleVisibilityChange = async () => {
-          if (document.visibilityState === "visible") {
-            const storedSessionId = localStorage.getItem("currentSessionId");
-            if (storedSessionId) {
-              try {
-                // Validate session with backend API
-                await axios.get(`${API_URL}/api/sessions/${storedSessionId}`, {
+        const handleSessionLoad = async () => {
+          const storedSessionId = localStorage.getItem("currentSessionId");
+          if (storedSessionId && connections.length > 0) {
+            try {
+              const response = await axios.get(
+                `${API_URL}/api/sessions/${storedSessionId}`,
+                {
                   headers: { Authorization: `Bearer ${token}` },
-                });
-                loadSession(storedSessionId); // Load the session into the application state
-              } catch (error) {
-                console.error("Session validation failed:", error);
-                localStorage.removeItem("currentSessionId"); // Clear invalid session
-                clearSession(); // Reset session state
+                }
+              );
+              const sessionData = response.data;
+              await loadSession(storedSessionId);
+
+              const lastUserMessage = sessionData.messages
+                .filter((msg: Message) => !msg.isBot)
+                .sort(
+                  (a: Message, b: Message) =>
+                    new Date(b.timestamp).getTime() -
+                    new Date(a.timestamp).getTime()
+                )[0];
+
+              if (lastUserMessage) {
+                const lastBotMessage = sessionData.messages
+                  .filter(
+                    (msg: Message) =>
+                      msg.isBot && msg.parentId === lastUserMessage.id
+                  )
+                  .sort(
+                    (a: Message, b: Message) =>
+                      new Date(b.timestamp).getTime() -
+                      new Date(a.timestamp).getTime()
+                  )[0];
+
+                if (lastBotMessage && lastBotMessage.content !== "loading...") {
+                  try {
+                    const botResponseContent = JSON.parse(
+                      lastBotMessage.content
+                    );
+                    const actualKpiData =
+                      botResponseContent.kpiData || initialEmptyKpiData;
+                    const actualMainViewData = {
+                      chartData: Array.isArray(botResponseContent.answer)
+                        ? botResponseContent.answer
+                        : [],
+                      tableData: Array.isArray(botResponseContent.answer)
+                        ? botResponseContent.answer
+                        : [],
+                      queryData:
+                        typeof botResponseContent.sql_query === "string"
+                          ? botResponseContent.sql_query
+                          : "No query available.",
+                    };
+                    const actualTextualSummary =
+                      botResponseContent.textualSummary ||
+                      `Here is the analysis for: "${lastUserMessage.content}"`;
+
+                    const newEntry = {
+                      id: generateId(),
+                      question: lastUserMessage.content,
+                      kpiData: actualKpiData,
+                      mainViewData: actualMainViewData,
+                      textualSummary: actualTextualSummary,
+                      lastViewType: "table" as "graph" | "table" | "query",
+                    };
+                    setDashboardHistory([newEntry]);
+                    setCurrentHistoryIndex(0);
+                    setCurrentMainViewType("table");
+                    setInput(lastUserMessage.content);
+                  } catch (parseError) {
+                    console.error(
+                      "Failed to parse bot response content from session:",
+                      parseError
+                    );
+                    setDashboardHistory([initialDashboardState]);
+                    setCurrentHistoryIndex(0);
+                    setCurrentMainViewType("table");
+                  }
+                } else {
+                  setDashboardHistory([initialDashboardState]);
+                  setCurrentHistoryIndex(0);
+                  setCurrentMainViewType("table");
+                  setInput(lastUserMessage.content);
+                }
+              } else {
+                setDashboardHistory([initialDashboardState]);
+                setCurrentHistoryIndex(0);
+                setCurrentMainViewType("table");
               }
+            } catch (error) {
+              console.error("Session validation failed or no data:", error);
+              localStorage.removeItem("currentSessionId");
+              clearSession();
+              setDashboardHistory([initialDashboardState]);
+              setCurrentHistoryIndex(0);
+              setCurrentMainViewType("table");
             }
+          } else if (!storedSessionId) {
+            clearSession();
+            setDashboardHistory([initialDashboardState]);
+            setCurrentHistoryIndex(0);
+            setCurrentMainViewType("table");
           }
         };
-        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        handleSessionLoad();
+        document.addEventListener("visibilitychange", handleSessionLoad);
         return () =>
-          document.removeEventListener(
-            "visibilitychange",
-            handleVisibilityChange
-          );
-      }, [token, loadSession, clearSession]);
+          document.removeEventListener("visibilitychange", handleSessionLoad);
+      }, [
+        token,
+        loadSession,
+        clearSession,
+        initialDashboardState,
+        connections,
+      ]);
 
-      // Callback to handle starting a new chat session
       const handleNewChat = useCallback(() => {
-        clearSession(); // Clear the current session
-        setInput(""); // Clear the input field
-        // Reset dashboard history to its initial state
-        setDashboardHistory([
-          {
-            id: generateId(),
-            question: "Initial Dashboard View",
-            kpiData: initialDashboardKpis,
-            mainViewData: initialMainViewData,
-            textualSummary: "Welcome! Ask a question to analyze your data.",
-            lastViewType: "graph",
-          },
-        ]);
-        setCurrentHistoryIndex(0); // Reset to the first history item
-        setCurrentMainViewType("graph"); // Reset main view type
-      }, [clearSession, initialDashboardKpis, initialMainViewData]);
+        clearSession();
+        setInput("");
+        setDashboardHistory([initialDashboardState]);
+        setCurrentHistoryIndex(0);
+        setCurrentMainViewType("graph");
+      }, [clearSession, initialDashboardState]);
 
-      // Function to create a new session via API (simulated here)
       const startNewSession = useCallback(
         async (connectionName: string, question: string) => {
           try {
-            // Simulate API call to create a new session with a delay
             const response = await axios.post(
               `${API_URL}/api/sessions`,
               {
@@ -333,7 +337,7 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } }
             );
             const newSessionId = response.data.id;
-            localStorage.setItem("currentSessionId", newSessionId); // Store session ID in local storage
+            localStorage.setItem("currentSessionId", newSessionId);
             toast.success("New session created!");
             return newSessionId;
           } catch (error) {
@@ -344,230 +348,375 @@ const ChatInterface = memo(
             return null;
           }
         },
-        []
+        [token]
       );
 
-      // Callback to ask a question and update the dashboard view
-      const askQuestionAndUpdateDashboard = useCallback(
-        async (question: string, connectionName: string) => {
-          if (!connectionName) {
-            toast.error("No connection selected.");
+      const askQuestion = useCallback(
+        async (
+          question: string,
+          connection: string,
+          isFavorited: boolean,
+          query?: string
+        ) => {
+          if (!connection) {
+            toast.error("No connection provided.");
             return;
           }
-          setIsSubmitting(true); // Set submission state to true
 
-          const processingEntryId = generateId();
-          const processingEntry = {
-            id: processingEntryId,
+          const newLoadingEntryId = generateId();
+          const newLoadingEntry = {
+            id: newLoadingEntryId,
             question: question,
-            kpiData: {
-              kpi1: { value: "...", label: "Processing...", change: 0 },
-              kpi2: { value: "...", label: "Processing...", change: 0 },
-              kpi3: { value: "...", label: "Processing...", change: 0 },
-            },
-            mainViewData: {
-              chartData: [],
-              tableData: [],
-              queryData: "Fetching query...",
-            },
-            textualSummary: "Processing your request...",
-            lastViewType: currentMainViewType, // Keep current view type preference
+            ...getDashboardLoadingState(),
+            lastViewType: "graph" as "graph" | "table" | "query",
           };
 
-          // Add a temporary "Processing" entry to dashboard history
-          const newHistory = [
-            ...dashboardHistory.slice(0, currentHistoryIndex + 1), // Keep current and previous history
-            processingEntry, // Add the new processing entry
-          ];
-          setDashboardHistory(newHistory);
-          setCurrentHistoryIndex(newHistory.length - 1); // Navigate to the new processing entry
+          setDashboardHistory((prev) => {
+            const newHistory =
+              currentHistoryIndex === prev.length - 1
+                ? [...prev, newLoadingEntry]
+                : [...prev.slice(0, currentHistoryIndex + 1), newLoadingEntry];
+            return newHistory;
+          });
+
+          setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
 
           let currentSessionId = sessionId;
 
-          // If no session exists, create one
-          if (!currentSessionId) {
-            currentSessionId = await startNewSession(connectionName, question);
-            if (!currentSessionId) {
-              setIsSubmitting(false);
-              // Remove the processing entry if session creation failed
-              setDashboardHistory((prev) =>
-                prev.filter((item) => item.id !== processingEntryId)
+          if (currentSessionId && !sessionConnection) {
+            const currentSessionInfo = connections.find(
+              (c) => c.connectionName === selectedConnection
+            );
+            if (!currentSessionInfo && messages.length > 0) {
+              toast.error(
+                "This session does not have a valid connection. Cannot ask new questions."
               );
-              setCurrentHistoryIndex((prev) => Math.max(0, prev - 1));
+              setDashboardHistory((prev) =>
+                prev.map((item) =>
+                  item.id === newLoadingEntryId
+                    ? {
+                        ...item,
+                        ...getDashboardErrorState(),
+                        textualSummary:
+                          "Error: No valid session connection found.",
+                      }
+                    : item
+                )
+              );
               return;
             }
           }
 
-          try {
-            // Add user message to session messages (for "Previous Questions" modal)
-            if (currentSessionId) {
-              const userMessageForHistory: Message = {
-                id: generateId(),
-                content: question,
-                isBot: false,
-                timestamp: new Date().toISOString(),
-                isFavorited: false,
-                parentId: null,
-              };
-              dispatchMessages({
-                type: "ADD_MESSAGE",
-                message: userMessageForHistory,
-              });
-
-              // Send user message to backend (simulated)
-              await axios.post(
-                `${API_URL}/api/messages`,
-                {
-                  session_id: currentSessionId,
-                  content: question,
-                  isBot: false,
-                  parentId: null,
-                  isFavorited: false,
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
+          if (!currentSessionId) {
+            const storedSessionId = localStorage.getItem("currentSessionId");
+            if (storedSessionId) {
+              try {
+                await loadSession(storedSessionId);
+                currentSessionId = storedSessionId;
+              } catch (error) {
+                console.error(
+                  "Failed to load stored session from localStorage (askQuestion):",
+                  error
+                );
+                localStorage.removeItem("currentSessionId");
+              }
             }
+          }
 
-            const connectionObj = connections.find(
-              (con) => con.connectionName === connectionName
-            );
-            if (!connectionObj) {
-              toast.error("Selected connection does not exist.");
+          if (!currentSessionId) {
+            try {
+              const newSessId = await startNewSession(connection, question);
+              if (newSessId) {
+                currentSessionId = newSessId;
+                dispatchMessages({
+                  type: "SET_SESSION",
+                  sessionId: currentSessionId,
+                  messages: [],
+                  connection: connection,
+                });
+              } else {
+                setDashboardHistory((prev) =>
+                  prev.map((item) =>
+                    item.id === newLoadingEntryId
+                      ? {
+                          ...item,
+                          ...getDashboardErrorState(),
+                          textualSummary: "Error: Could not create session.",
+                        }
+                      : item
+                  )
+                );
+                return;
+              }
+            } catch (error) {
+              console.error("Error creating session:", error);
+              setDashboardHistory((prev) =>
+                prev.map((item) =>
+                  item.id === newLoadingEntryId
+                    ? {
+                        ...item,
+                        ...getDashboardErrorState(),
+                        textualSummary: "Error: Could not create session.",
+                      }
+                    : item
+                )
+              );
               return;
             }
-            const query = "";
+          }
 
-            // Simulate API call for dashboard data with a delay
-            const payload = query
-              ? {
-                  question,
-                  sql_query: query,
-                  connection: connectionObj,
-                  sessionId: currentSessionId,
-                }
-              : {
-                  question,
-                  connection: connectionObj,
-                  sessionId: currentSessionId,
-                };
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              payload
+          const userMessage: Message = {
+            id: Date.now().toString(),
+            content: question,
+            isBot: false,
+            timestamp: new Date().toISOString(),
+            isFavorited,
+            parentId: null,
+          };
+
+          let finalUserMessageId: string | null = null;
+          let botMessageId: string | null = null;
+
+          try {
+            const userResponse = await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: currentSessionId,
+                content: question,
+                isBot: false,
+                isFavorited,
+                parentId: null,
+              },
+              { headers: { "Content-Type": "application/json" } }
             );
-            const botResponseContent = JSON.stringify(response.data, null, 2);
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-            const kpiData = generateKpiData(question);
-            const mainViewData = generateMainViewData(question); // Use the updated generator
-            const textualSummary = `Insights for "${question}": Metric A showed significant activity. Refer to the detailed views for more information.`;
-
-            const newDashboardEntry = {
-              id: processingEntryId, // Update the existing processing entry
-              question: question,
-              kpiData,
-              mainViewData,
-              textualSummary,
-              lastViewType: currentMainViewType, // Persist current view type preference
+            const finalUserMessage = {
+              ...userMessage,
+              id: userResponse.data.id,
             };
+            finalUserMessageId = finalUserMessage.id;
+            dispatchMessages({
+              type: "ADD_MESSAGE",
+              message: finalUserMessage,
+            });
 
-            // Update the dashboard history with the actual data
-            setDashboardHistory((prev) =>
-              prev.map((item) =>
-                item.id === processingEntryId ? newDashboardEntry : item
-              )
-            );
-
-            // After successful response, add bot message to session messages (for "Previous Questions" modal)
-            if (currentSessionId) {
-              const botMessageForHistory: Message = {
-                id: generateId(),
-                content: textualSummary,
+            const botLoadingResponse = await axios.post(
+              `${API_URL}/api/messages`,
+              {
+                token,
+                session_id: currentSessionId,
+                content: "loading...",
                 isBot: true,
-                timestamp: new Date().toISOString(),
                 isFavorited: false,
-                parentId: userMessageForHistory.id, // Link to user's question
+                parentId: finalUserMessage.id,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            botMessageId = botLoadingResponse.data.id;
+            const botLoadingMessage: Message = {
+              id: botMessageId,
+              isBot: true,
+              content: "loading...",
+              timestamp: new Date().toISOString(),
+              isFavorited: false,
+              parentId: finalUserMessage.id,
+            };
+            dispatchMessages({
+              type: "ADD_MESSAGE",
+              message: botLoadingMessage,
+            });
+
+            try {
+              const connectionObj = connections.find(
+                (conn) => conn.connectionName === connection
+              );
+              if (!connectionObj) {
+                throw new Error(
+                  `Connection '${connection}' not found during askQuestion.`
+                );
+              }
+
+              const payload = query
+                ? {
+                    question,
+                    sql_query: query,
+                    connection: connectionObj,
+                    sessionId: currentSessionId,
+                  }
+                : {
+                    question,
+                    connection: connectionObj,
+                    sessionId: currentSessionId,
+                  };
+              const response = await axios.post(
+                `${CHATBOT_API_URL}/ask`,
+                payload
+              );
+
+              const botResponseData = response.data;
+
+              const actualKpiData =
+                botResponseData.kpiData || initialEmptyKpiData;
+
+              const actualMainViewData = {
+                chartData: Array.isArray(botResponseData.answer)
+                  ? botResponseData.answer
+                  : [],
+                tableData: Array.isArray(botResponseData.answer)
+                  ? botResponseData.answer
+                  : [],
+                queryData:
+                  typeof botResponseData.sql_query === "string"
+                    ? botResponseData.sql_query
+                    : "No query available.",
+              };
+
+              const actualTextualSummary =
+                botResponseData.textualSummary ||
+                `Here is the analysis for: "${question}"`;
+
+              setDashboardHistory((prev) =>
+                prev.map((item) =>
+                  item.id === newLoadingEntryId
+                    ? {
+                        ...item,
+                        kpiData: actualKpiData,
+                        mainViewData: actualMainViewData,
+                        textualSummary: actualTextualSummary,
+                      }
+                    : item
+                )
+              );
+
+              const botResponseContent = JSON.stringify(
+                botResponseData,
+                null,
+                2
+              );
+
+              await axios.put(
+                `${API_URL}/api/messages/${botMessageId}`,
+                {
+                  token,
+                  content: botResponseContent,
+                  timestamp: new Date().toISOString(),
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+
+              const updatedBotMessage: Partial<Message> = {
+                content: botResponseContent,
+                timestamp: new Date().toISOString(),
               };
               dispatchMessages({
-                type: "ADD_MESSAGE",
-                message: botMessageForHistory,
+                type: "UPDATE_MESSAGE",
+                id: botMessageId!,
+                message: updatedBotMessage,
               });
+            } catch (error) {
+              console.error("Error getting bot response:", error);
+              const errorContent =
+                "Sorry, an error occurred. Please try again.";
 
-              // Also send bot message to backend (simulated)
-              await axios.post(
-                `${API_URL}/api/messages`,
-                {
-                  session_id: currentSessionId,
-                  content: textualSummary,
-                  isBot: true,
-                  parentId: userMessageForHistory.id,
-                  isFavorited: false,
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
+              setDashboardHistory((prev) =>
+                prev.map((item) =>
+                  item.id === newLoadingEntryId
+                    ? {
+                        ...item,
+                        ...getDashboardErrorState(),
+                        textualSummary: "Error: Could not generate analysis.",
+                      }
+                    : item
+                )
               );
+
+              if (botMessageId) {
+                await axios
+                  .put(
+                    `${API_URL}/api/messages/${botMessageId}`,
+                    {
+                      token,
+                      content: errorContent,
+                      timestamp: new Date().toISOString(),
+                    },
+                    { headers: { "Content-Type": "application/json" } }
+                  )
+                  .catch((updateError) =>
+                    console.error(
+                      "Failed to update message to error state on server:",
+                      updateError
+                    )
+                  );
+
+                const errorMessageUpdate: Partial<Message> = {
+                  content: errorContent,
+                  timestamp: new Date().toISOString(),
+                };
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessageId,
+                  message: errorMessageUpdate,
+                });
+              } else {
+                console.error(
+                  "botMessageId is null when trying to update with error for /ask"
+                );
+                const generalErrorMessage: Message = {
+                  id: `error-${Date.now().toString()}`,
+                  content: errorContent,
+                  isBot: true,
+                  timestamp: new Date().toISOString(),
+                  isFavorited: false,
+                  parentId: finalUserMessageId,
+                };
+                dispatchMessages({
+                  type: "ADD_MESSAGE",
+                  message: generalErrorMessage,
+                });
+              }
             }
           } catch (error) {
-            console.error("Error fetching dashboard data:", error);
-            toast.error(`Failed to get analysis: ${getErrorMessage(error)}`);
-            // Update the processing entry with error details
-            const errorEntry = {
-              ...processingEntry,
-              kpiData: {
-                kpi1: { value: "Error1", label: "Error1", change: 0 },
-                kpi2: { value: "Error", label: "Error", change: 0 },
-                kpi3: { value: "Error", label: "Error", change: 0 },
-              },
-              mainViewData: {
-                chartData: [],
-                tableData: [],
-                queryData: "Error fetching data.",
-              },
-              textualSummary: `Error processing "${question}": ${getErrorMessage(
-                error
-              )}`,
-            };
-            setDashboardHistory((prev) =>
-              prev.map((item) =>
-                item.id === processingEntryId ? errorEntry : item
-              )
+            console.error(
+              "Error saving user message or creating bot loading message:",
+              error
             );
-          } finally {
-            setIsSubmitting(false); // Reset submission state
+            toast.error(`Failed to send message: ${getErrorMessage(error)}`);
+
+            setDashboardHistory((prev) =>
+              prev.filter((item) => item.id !== newLoadingEntryId)
+            );
+            setCurrentHistoryIndex((prevIndex) => Math.max(0, prevIndex - 1));
           }
         },
         [
-          dashboardHistory,
-          currentHistoryIndex,
-          currentMainViewType,
           sessionId,
-          dispatchMessages,
-          startNewSession,
-          API_URL,
-          CHATBOT_API_URL,
-          token,
+          sessionConnection,
           connections,
+          token,
+          dispatchMessages,
+          loadSession,
+          selectedConnection,
+          currentHistoryIndex,
+          startNewSession,
         ]
       );
 
-      // Callback for handling the main chat input submission
       const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
           e.preventDefault();
-          if (!input.trim() || isSubmitting) return; // Prevent empty or multiple submissions
+          if (!input.trim() || isSubmitting) return;
           if (!selectedConnection) {
             toast.error("No connection selected.");
             return;
           }
 
           const questionToAsk = input;
-          setInput(""); // Clear the input field immediately
-          await askQuestionAndUpdateDashboard(
-            questionToAsk,
-            selectedConnection
-          );
+          setInput("");
+          await askQuestion(questionToAsk, selectedConnection, false);
         },
-        [input, isSubmitting, selectedConnection, askQuestionAndUpdateDashboard]
+        [input, isSubmitting, selectedConnection, askQuestion]
       );
 
-      // Callback for handling a favorite question being asked
       const handleAskFavoriteQuestion = useCallback(
         async (question: string, connectionName: string, query?: string) => {
           const connectionObj = connections.find(
@@ -579,23 +728,15 @@ const ChatInterface = memo(
             );
             return;
           }
-          handleNewChat(); // Start a new chat session for the favorite question
-          // Allow state update to propagate before asking new question
+          handleNewChat();
           await new Promise<void>((resolve) => setTimeout(resolve, 0));
-          setSelectedConnection(connectionName); // Set the selected connection
-          setInput(question); // Pre-fill the input with the favorite question
-          // Ask the question, which will update the dashboard
-          await askQuestionAndUpdateDashboard(question, connectionName);
+          setSelectedConnection(connectionName);
+          setInput(question);
+          await askQuestion(question, connectionName, false, query);
         },
-        [
-          connections,
-          handleNewChat,
-          setSelectedConnection,
-          askQuestionAndUpdateDashboard,
-        ]
+        [connections, handleNewChat, setSelectedConnection, askQuestion]
       );
 
-      // Effect to synchronize selectedConnection with sessionConnection if a session is loaded
       useEffect(() => {
         if (sessionConnection) {
           if (selectedConnection !== sessionConnection)
@@ -603,31 +744,9 @@ const ChatInterface = memo(
         }
       }, [sessionConnection, setSelectedConnection, selectedConnection]);
 
-      // Effect to load/validate session from local storage on component mount
-      useEffect(() => {
-        const storedSessionId = localStorage.getItem("currentSessionId");
-        if (storedSessionId) {
-          axios
-            .get(`${API_URL}/api/sessions/${storedSessionId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            })
-            .then(() => loadSession(storedSessionId)) // Load session if valid
-            .catch((error) => {
-              console.error("Stored session invalid or error loading:", error);
-              localStorage.removeItem("currentSessionId"); // Clear invalid session
-              clearSession(); // Reset session state
-            });
-        } else if (sessionId) {
-          // If there's a sessionId in state but not in localStorage, clear it.
-          clearSession();
-        }
-      }, [loadSession, token, clearSession, sessionId]);
-
-      // Effect to handle initial question prop from outside the component
       useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
           let targetConnection = initialQuestion.connection;
-          // Fallback to first connection if the specified one isn't found
           if (!connections.some((c) => c.connectionName === targetConnection)) {
             targetConnection = connections[0]?.connectionName;
             if (!targetConnection) {
@@ -638,21 +757,24 @@ const ChatInterface = memo(
               return;
             }
           }
-          setSelectedConnection(targetConnection); // Set the connection for the initial question
-          // Ask the initial question, which will update the dashboard
-          askQuestionAndUpdateDashboard(initialQuestion.text, targetConnection);
+          setSelectedConnection(targetConnection);
+          askQuestion(
+            initialQuestion.text,
+            targetConnection,
+            false,
+            initialQuestion.query
+          );
           if (onQuestionAsked) onQuestionAsked();
         }
       }, [
         initialQuestion,
         connections,
         connectionsLoading,
-        askQuestionAndUpdateDashboard,
+        askQuestion,
         onQuestionAsked,
         setSelectedConnection,
       ]);
 
-      // Effect to manage dashboard history index when history changes
       useEffect(() => {
         if (
           dashboardHistory.length > 0 &&
@@ -661,51 +783,32 @@ const ChatInterface = memo(
           setCurrentHistoryIndex(dashboardHistory.length - 1);
         } else if (dashboardHistory.length === 0 && currentHistoryIndex !== 0) {
           setCurrentHistoryIndex(0);
-          // Re-initialize dashboard history if it becomes empty
-          setDashboardHistory([
-            {
-              id: generateId(),
-              question: "Initial Dashboard View",
-              kpiData: initialDashboardKpis,
-              mainViewData: initialMainViewData,
-              textualSummary: "Welcome! Ask a question to analyze your data.",
-              lastViewType: "graph",
-            },
-          ]);
+          setDashboardHistory([initialDashboardState]);
         }
-      }, [
-        dashboardHistory,
-        currentHistoryIndex,
-        initialDashboardKpis,
-        initialMainViewData,
-      ]);
+      }, [dashboardHistory, currentHistoryIndex, initialDashboardState]);
 
-      // Callback for handling connection selection from the dropdown
       const handleSelect = useCallback(
         (option: any) => {
           if (option?.value === "create-con") {
-            onCreateConSelected(); // Trigger action to create a new connection
-            if (sessionId) handleNewChat(); // Start a new chat if a session is active
-            setSelectedConnection(null); // Clear selected connection
-            localStorage.removeItem("selectedConnection"); // Remove from local storage
+            onCreateConSelected();
+            if (sessionId) handleNewChat();
+            setSelectedConnection(null);
+            localStorage.removeItem("selectedConnection");
           } else if (option) {
             const newSelectedConnection = option.value.connectionName;
             if (selectedConnection !== newSelectedConnection || !sessionId) {
-              // If connection changes or no session, start new chat/session
               handleNewChat();
-              setSelectedConnection(newSelectedConnection); // Set the new selected connection
-              localStorage.setItem("selectedConnection", newSelectedConnection); // Store in local storage
+              setSelectedConnection(newSelectedConnection);
+              localStorage.setItem("selectedConnection", newSelectedConnection);
             }
           } else {
-            // Option is null (cleared selection)
             if (selectedConnection) {
-              // Only call new chat if there was a selection before
               handleNewChat();
             }
-            setSelectedConnection(null); // Clear selected connection
-            localStorage.removeItem("selectedConnection"); // Remove from local storage
+            setSelectedConnection(null);
+            localStorage.removeItem("selectedConnection");
           }
-          setIsConnectionDropdownOpen(false); // Close dropdown after selection
+          setIsConnectionDropdownOpen(false);
         },
         [
           onCreateConSelected,
@@ -716,28 +819,116 @@ const ChatInterface = memo(
         ]
       );
 
-      // Callback for handling PDF click (mock function)
       const handlePdfClick = useCallback(
         (connectionName: string, e: React.MouseEvent) => {
-          e.stopPropagation(); // Prevent dropdown from closing
+          e.stopPropagation();
           toast.info(
             `Generating Data Atlas for ${connectionName}... (Mock Action)`
           );
-          // In a real app, you'd trigger PDF generation or navigation here
         },
         []
       );
 
-      // Callback for selecting a previous question from the modal
+      const PdfIcon = (props: React.SVGProps<SVGSVGElement>) => (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          {...props}
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 0l6 6v2H14zM16 13c0 .55-.45 1-1 1h-2v2c0 .55-.45 1-1 1H9c-.55 0-1-.45-1-1v-2H6c-.55 0-1-.45-1-1V9c0-.55.45-1 1-1h2V6c0-.55.45-1 1-1h2c.55 0 1 .45 1 1v2h2c.55 0 1 .45 1 1v4z" />
+        </svg>
+      );
+
       const handleSelectPrevQuestion = useCallback(
-        (questionContent: string) => {
-          setInput(questionContent); // Set the input field with the selected question
-          setShowPrevQuestionsModal(false); // Close the modal
+        async (questionContent: string) => {
+          if (!selectedConnection) {
+            toast.error(
+              "No connection selected. Please select a connection first."
+            );
+            return;
+          }
+
+          setInput(questionContent);
+          setShowPrevQuestionsModal(false);
+
+          // Find the user message in the session messages
+          const selectedUserMessage = messages.find(
+            (msg) => !msg.isBot && msg.content === questionContent
+          );
+
+          if (selectedUserMessage) {
+            // Find the corresponding bot message
+            const correspondingBotMessage = messages.find(
+              (msg) => msg.isBot && msg.parentId === selectedUserMessage.id
+            );
+
+            if (
+              correspondingBotMessage &&
+              correspondingBotMessage.content !== "loading..."
+            ) {
+              try {
+                // Parse the bot's JSON content
+                const botResponseContent = JSON.parse(
+                  correspondingBotMessage.content
+                );
+
+                const actualKpiData =
+                  botResponseContent.kpiData || initialEmptyKpiData;
+                const actualMainViewData = {
+                  chartData: Array.isArray(botResponseContent.answer)
+                    ? botResponseContent.answer
+                    : [],
+                  tableData: Array.isArray(botResponseContent.answer)
+                    ? botResponseContent.answer
+                    : [],
+                  queryData:
+                    typeof botResponseContent.sql_query === "string"
+                      ? botResponseContent.sql_query
+                      : "No query available.",
+                };
+                const actualTextualSummary =
+                  botResponseContent.textualSummary ||
+                  `Here is the analysis for: "${questionContent}"`;
+
+                const newEntry = {
+                  id: generateId(), // Generate a new ID for this history entry
+                  question: questionContent,
+                  kpiData: actualKpiData,
+                  mainViewData: actualMainViewData,
+                  textualSummary: actualTextualSummary,
+                  lastViewType: "table" as "graph" | "table" | "query", // Default to table view
+                };
+
+                // Add the new entry to dashboard history and set it as current
+                setDashboardHistory((prev) => {
+                  const newHistory =
+                    currentHistoryIndex === prev.length - 1
+                      ? [...prev, newEntry]
+                      : [...prev.slice(0, currentHistoryIndex + 1), newEntry];
+                  return newHistory;
+                });
+                setCurrentHistoryIndex((prevIndex) => prevIndex + 1); // Move to the newly added entry
+              } catch (parseError) {
+                console.error(
+                  "Failed to parse bot response content for previous question:",
+                  parseError
+                );
+                // Fallback: If parsing fails, re-ask the question.
+                await askQuestion(questionContent, selectedConnection, false);
+              }
+            } else {
+              // Fallback: If no corresponding bot message or it's still loading, re-ask the question.
+              await askQuestion(questionContent, selectedConnection, false);
+            }
+          } else {
+            // Fallback: If the user message is not found in session messages, re-ask.
+            await askQuestion(questionContent, selectedConnection, false);
+          }
         },
-        []
+        [selectedConnection, messages, askQuestion, currentHistoryIndex]
       );
 
-      // Callback to navigate through dashboard history (prev/next)
       const navigateDashboardHistory = useCallback(
         (direction: "prev" | "next") => {
           let newIndex = currentHistoryIndex;
@@ -749,20 +940,17 @@ const ChatInterface = memo(
           ) {
             newIndex = currentHistoryIndex + 1;
           }
-          setCurrentHistoryIndex(newIndex); // Update the history index
-          // Set the main view type based on the last saved preference for that history item
+          setCurrentHistoryIndex(newIndex);
           setCurrentMainViewType(
-            dashboardHistory[newIndex]?.lastViewType || "graph"
+            dashboardHistory[newIndex]?.lastViewType || "table"
           );
         },
         [currentHistoryIndex, dashboardHistory]
       );
 
-      // Callback to change the active view type within the main dashboard view
       const handleViewTypeChange = useCallback(
         (viewType: "graph" | "table" | "query") => {
-          setCurrentMainViewType(viewType); // Update the active view type
-          // Optionally, save this preference to the current history item
+          setCurrentMainViewType(viewType);
           if (currentDashboardView) {
             setDashboardHistory((prev) =>
               prev.map((item) =>
@@ -776,19 +964,19 @@ const ChatInterface = memo(
         [currentDashboardView]
       );
 
-      // Expose functions to parent components via ref
       useImperativeHandle(ref, () => ({
         handleNewChat,
         handleAskFavoriteQuestion,
       }));
 
-      // Filter user questions from session messages for the "Previous Questions" modal
       const userQuestionsFromSession = messages
         .filter((msg) => !msg.isBot)
         .reverse();
 
-      // Determine if the dashboard should be shown (based on active session or existing messages)
-      const showDashboard = sessionId || messages.length > 0;
+      const showDashboard =
+        sessionId ||
+        messages.length > 0 ||
+        currentDashboardView.question !== initialDashboardState.question;
 
       return (
         <div
@@ -798,7 +986,6 @@ const ChatInterface = memo(
             color: theme.colors.text,
           }}
         >
-          {/* ToastContainer for displaying notifications */}
           <ToastContainer
             position="top-right"
             autoClose={5000}
@@ -819,18 +1006,13 @@ const ChatInterface = memo(
             }}
           />
 
-          {/* Main content area */}
           <main className="flex-grow flex flex-col items-center overflow-y-auto">
             <div className="w-full flex-grow flex flex-col">
-              {" "}
-              {/* Fixed width container, added flex-grow and flex-col */}
               {connectionsLoading ? (
-                // Display loader while connections are loading
                 <div className="flex justify-center items-center flex-grow">
                   <Loader text="Loading connections..." />
                 </div>
               ) : connections.length === 0 && !connectionsLoading ? (
-                // Case 1: No connections exist at all, prompt to create one
                 <div className="flex flex-col items-center justify-center flex-grow text-center">
                   <h1
                     className={`text-2xl font-semibold mb-4 ${
@@ -859,7 +1041,6 @@ const ChatInterface = memo(
                   </button>
                 </div>
               ) : !selectedConnection && connections.length > 0 ? (
-                // Case 2: Connections exist, but none is selected, prompt to select one
                 <div className="flex flex-col items-center justify-center flex-grow text-center">
                   <h1
                     className={`text-2xl font-semibold mb-4 ${
@@ -880,57 +1061,23 @@ const ChatInterface = memo(
                     Please select a data connection to begin your analysis.
                   </p>
                 </div>
-              ) : showDashboard ? (
-                // Case 3: User has asked a question or has an active session, show the DashboardView
-                <DashboardView
-                  dashboardItem={currentDashboardView} // Pass the current dashboard data
-                  theme={theme} // Pass theme for consistent styling
-                  isSubmitting={isSubmitting} // Indicate if data is being processed
-                  activeViewType={currentMainViewType} // Current active view (graph, table, query)
-                  onViewTypeChange={handleViewTypeChange} // Callback to change view type
-                  onNavigateHistory={navigateDashboardHistory} // Callback for history navigation
-                  historyIndex={currentHistoryIndex} // Current position in history
-                  historyLength={dashboardHistory.length} // Total number of history items
-                />
               ) : (
-                // Case 4: No questions asked yet, but a connection is selected. Show initial prompt and recommended questions.
-                <div className="flex flex-col items-center justify-center flex-grow px-4 text-center">
-                  <h1
-                    className={`text-2xl font-semibold mb-4 ${
-                      theme.mode === "dark"
-                        ? "text-slate-300"
-                        : "text-slate-700"
-                    }`}
-                  >
-                    Ask a question to get started!
-                  </h1>
-                  <p
-                    className={`${
-                      theme.mode === "dark"
-                        ? "text-slate-400"
-                        : "text-slate-600"
-                    } mb-8 max-w-md`}
-                  >
-                    Enter your query in the input box below to analyze your data
-                    and generate insights.
-                  </p>
-                  {recommendedQuestions.length > 0 && (
-                    <div className="w-full max-w-2xl">
-                      <RecommendedQuestions
-                        questions={recommendedQuestions}
-                        onQuestionSelect={handleAskFavoriteQuestion}
-                        theme={theme}
-                      />
-                    </div>
-                  )}
-                </div>
+                <DashboardView
+                  dashboardItem={currentDashboardView}
+                  theme={theme}
+                  isSubmitting={isSubmitting}
+                  activeViewType={currentMainViewType}
+                  onViewTypeChange={handleViewTypeChange}
+                  onNavigateHistory={navigateDashboardHistory}
+                  historyIndex={currentHistoryIndex}
+                  historyLength={dashboardHistory.length}
+                />
               )}
             </div>
           </main>
 
-          {/* Schema Explorer Modal */}
           {isDbExplorerOpen && selectedConnection && (
-            <div className="w-3/4  backdrop-blur-lg self-center absolute bottom-16 z-50 flex items-center justify-center">
+            <div className="w-3/4 backdrop-blur-lg self-center absolute bottom-16 z-50 flex items-center justify-center">
               <SchemaExplorer
                 schemas={schemaSampleData}
                 onClose={() => setIsDbExplorerOpen(false)}
@@ -941,17 +1088,13 @@ const ChatInterface = memo(
             </div>
           )}
 
-          {/* Footer with buttons and ChatInput */}
           <footer
-            className={`shadow-top flex justify-center pb-2`} /* Added padding to footer */
+            className={`shadow-top flex justify-center pb-2`}
             style={{
               background: theme.colors.background,
             }}
           >
             <div className="w-full max-w-4xl flex items-center gap-2 px-2">
-              {" "}
-              {/* Fixed width container and horizontal padding */}
-              {/* Connection Dropdown Button */}
               <div className="relative">
                 <CustomTooltip
                   title="Change or create a connection"
@@ -961,11 +1104,10 @@ const ChatInterface = memo(
                     type="button"
                     onClick={() => {
                       setIsConnectionDropdownOpen((prev) => !prev);
-                      setIsDbExplorerOpen(false); // Close schema explorer when opening connection dropdown
+                      setIsDbExplorerOpen(false);
                     }}
                     disabled={isSubmitting}
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50
-                            `}
+                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
                     style={{
                       background: theme.colors.surface,
                       color: theme.colors.accent,
@@ -973,13 +1115,6 @@ const ChatInterface = memo(
                     aria-label="Select Connection"
                   >
                     <Database size={20} />
-                    {/* <ChevronDown
-                      size={16}
-                      className={`absolute bottom-0 right-0 transition-transform duration-200 ${
-                        isConnectionDropdownOpen ? "rotate-180" : ""
-                      }`}
-                      style={{ color: theme.colors.accent }}
-                    /> */}
                   </button>
                 </CustomTooltip>
 
@@ -1061,7 +1196,7 @@ const ChatInterface = memo(
                                 className="p-1"
                                 aria-label="View Data Atlas"
                               >
-                                <FaFilePdf
+                                <PdfIcon
                                   size={16}
                                   style={{ color: theme.colors.error }}
                                   className="hover:scale-105 transition-transform duration-300"
@@ -1085,13 +1220,12 @@ const ChatInterface = memo(
                   </div>
                 )}
               </div>
-              {/* Database Explorer Button */}
               <CustomTooltip title="Explore Database Schema" position="top">
                 <button
                   type="button"
                   onClick={() => {
                     setIsDbExplorerOpen((prev) => !prev);
-                    setIsConnectionDropdownOpen(false); // Close connection dropdown when opening schema explorer
+                    setIsConnectionDropdownOpen(false);
                   }}
                   disabled={isSubmitting || !selectedConnection}
                   className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
@@ -1114,14 +1248,12 @@ const ChatInterface = memo(
                   />
                 </button>
               </CustomTooltip>
-              {/* New Chat Button */}
               <CustomTooltip title="Create a new session" position="top">
                 <button
                   type="button"
                   onClick={handleNewChat}
                   disabled={isSubmitting}
-                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50
-                            `}
+                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
                   style={{
                     background: theme.colors.surface,
                     color: theme.colors.accent,
@@ -1131,7 +1263,6 @@ const ChatInterface = memo(
                   <PlusCircle size={20} />
                 </button>
               </CustomTooltip>
-              {/* ChatInput component */}
               <ChatInput
                 input={input}
                 isSubmitting={isSubmitting}
@@ -1140,7 +1271,7 @@ const ChatInterface = memo(
                 connections={connections}
                 selectedConnection={selectedConnection}
                 onSelect={handleSelect}
-                onNewChat={handleNewChat} // This is no longer directly used by ChatInput for its button, but kept for consistency
+                onNewChat={handleNewChat}
                 disabled={
                   isSubmitting ||
                   (!selectedConnection && connections.length > 0)
@@ -1152,8 +1283,7 @@ const ChatInterface = memo(
                   disabled={
                     isSubmitting || userQuestionsFromSession.length === 0
                   }
-                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50
-                            `}
+                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
                   style={{
                     background: theme.colors.surface,
                     color: theme.colors.accent,
@@ -1165,7 +1295,6 @@ const ChatInterface = memo(
             </div>
           </footer>
 
-          {/* Modal for displaying previous questions */}
           {showPrevQuestionsModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <div
@@ -1191,7 +1320,7 @@ const ChatInterface = memo(
                         : "text-slate-500 hover:bg-slate-200"
                     }`}
                   >
-                    &times;
+                    <X size={20} />
                   </button>
                 </div>
                 <div className="overflow-y-auto p-4 space-y-2">
@@ -1237,7 +1366,6 @@ const ChatInterface = memo(
             </div>
           )}
 
-          {/* Connection error display */}
           {connectionError && (
             <div
               className={`text-center p-2 text-sm ${
@@ -1255,7 +1383,6 @@ const ChatInterface = memo(
   )
 );
 
-// Memoization to optimize re-renders
 const areEqual = (
   prevProps: ChatInterfaceProps,
   nextProps: ChatInterfaceProps

@@ -113,31 +113,33 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Main Content Area: Graph on left, Table/Query on right */}
       <div className="flex flex-col lg:flex-row gap-2 flex-grow overflow-hidden">
-        {/* Graph Section (always visible on the left) */}
+        {/* Graph Section */}
         <div
           className="flex-1 rounded-xl shadow-lg flex justify-center items-center overflow-hidden"
           style={{
             backgroundColor: theme.colors.surface,
             boxShadow: theme.shadow.lg,
             borderRadius: theme.borderRadius.large,
+            minHeight: "400px", // ensure height for graph
           }}
         >
           <DynamicBarGraph
             data={dashboardItem.mainViewData.chartData}
-            isValidGraph={() => true} // Placeholder for actual validation logic
+            isValidGraph={() => true}
           />
         </div>
 
-        <div>
-          {/* KPI Cards - Adjusted grid for better responsiveness and spacing */}
-          <div className="grid m-2 grid-cols-3 gap-2 flex-shrink-0 w-full lg:w-auto">
+        {/* Right Section: KPI Cards + Table/Query */}
+        <div className="flex flex-col lg:w-[40%] w-full overflow-hidden">
+          {/* KPI Cards */}
+          <div className="grid m-2 grid-cols-3 gap-2">
             <KPICard
               title={dashboardItem.kpiData.kpi1.label}
               value={dashboardItem.kpiData.kpi1.value}
               change={dashboardItem.kpiData.kpi1.change}
               icon={
                 <TrendingUp size={24} style={{ color: theme.colors.accent }} />
-              } // Use accent color for icons
+              }
               theme={theme}
             />
             <KPICard
@@ -149,7 +151,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   size={24}
                   style={{ color: theme.colors.accent }}
                 />
-              } // Use accent color for icons
+              }
               theme={theme}
             />
             <KPICard
@@ -161,36 +163,39 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   size={24}
                   style={{ color: theme.colors.accent }}
                 />
-              } // Use accent color for icons
+              }
               theme={theme}
             />
           </div>
-          {/* Right Section: Table or Query */}
+
+          {/* Table/Query Section */}
           <div
-            className="flex-1 rounded-xl flex flex-col justify-between overflow-y-auto"
+            className="flex-1 overflow-y-auto m-2 rounded-xl"
             style={{
               backgroundColor: theme.colors.surface,
               boxShadow: theme.shadow.lg,
               borderRadius: theme.borderRadius.large,
+              minHeight: "300px", // optional min height
+              maxHeight: "100%", // limits table height
             }}
           >
-            <div>
-              {activeViewType === "table" && (
+            {activeViewType === "table" && (
+              <div className="p-2">
                 <DataTable data={dashboardItem.mainViewData.tableData} />
-              )}
-            </div>
+              </div>
+            )}
             {activeViewType === "query" && (
-              <div className="w-100 self-center p-10">
+              <div className="p-6">
                 <QueryDisplay
                   query={dashboardItem.mainViewData.queryData}
-                  fontSize="text-base" // Slightly increased font size for query display
+                  fontSize="text-base"
                 />
               </div>
             )}
           </div>
         </div>
 
-        {/* View Toggle Icon Buttons (only for Table and Query) */}
+        {/* View Toggle Buttons */}
         <div className="flex flex-row self-start lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 flex-shrink-0 mt-4 lg:mt-0 justify-center">
           {(["table", "query"] as const).map((viewType) => (
             <button
@@ -212,10 +217,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 borderRadius: theme.borderRadius.large,
               }}
             >
-              {viewType === "table" && <Table size={24} />}{" "}
-              {/* Increased icon size */}
-              {viewType === "query" && <Database size={24} />}{" "}
-              {/* Increased icon size */}
+              {viewType === "table" && <Table size={24} />}
+              {viewType === "query" && <Database size={24} />}
             </button>
           ))}
         </div>

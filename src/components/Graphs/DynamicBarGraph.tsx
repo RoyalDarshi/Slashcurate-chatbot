@@ -58,91 +58,7 @@ const theme = {
   },
 };
 
-interface DynamicBarGraphProps {
-  data: any[];
-  isValidGraph: (validData: boolean) => void;
-}
-
-// Enhanced Custom Bar Shape with gradient fills and glow effects
-const CustomBarShape = (props: any) => {
-  const { x, y, width, height, fill, dataKey, yKeys, index } = props;
-
-  const isTopBar =
-    yKeys && yKeys.length > 0 && dataKey === yKeys[yKeys.length - 1];
-  const radius = 8;
-
-  // Create gradient definitions
-  const gradientId = `gradient-${dataKey}-${index || 0}`;
-
-  if (isTopBar) {
-    const pathData = `M ${x}, ${y + radius}
-                      A ${radius}, ${radius}, 0, 0, 1, ${x + radius}, ${y}
-                      L ${x + width - radius}, ${y}
-                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${
-      y + radius
-    }
-                      L ${x + width}, ${y + height}
-                      L ${x}, ${y + height}
-                      Z`;
-
-    return (
-      <g>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={fill} stopOpacity="1" />
-            <stop offset="100%" stopColor={fill} stopOpacity="0.7" />
-          </linearGradient>
-          <filter id={`glow-${gradientId}`}>
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        <path
-          d={pathData}
-          fill={fill}
-          style={{
-            transition: "all 0.3s ease",
-          }}
-        />
-      </g>
-    );
-  } else {
-    return (
-      <g>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={fill} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={fill} stopOpacity="0.6" />
-          </linearGradient>
-        </defs>
-        <rect
-          x={x}
-          y={y}
-          width={width}
-          height={height}
-          fill={fill}
-          style={{
-            transition: "all 0.3s ease",
-          }}
-        />
-      </g>
-    );
-  }
-};
-
-const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
-  ({ data, isValidGraph }) => {
-    const [graphData, setGraphData] = useState<any[]>([]);
-    const [xKey, setXKey] = useState<string | null>(null);
-    const [yKeys, setYKeys] = useState<string[]>([]);
-    const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
-    const [isLoaded, setIsLoaded] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    // Stunning modern color palette with gradients
+// Stunning modern color palette with gradients
     // const modernColors = [
     //   "#6366f1", // Indigo
     //   "#ec4899", // Pink
@@ -164,6 +80,72 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       "#EDC949",
     ];
 
+interface DynamicBarGraphProps {
+  data: any[];
+  isValidGraph: (validData: boolean) => void;
+}
+
+// Enhanced Custom Bar Shape with gradient fills and glow effects
+const CustomBarShape = (props: any) => {
+  const { x, y, width, height, fill, dataKey, payload, yKeys } = props;
+  const radius = 8;
+  const value = Number(payload[dataKey]);
+
+  // Find the top-most non-zero bar in this stack (last yKey with value > 0)
+  const topMostKey = [...yKeys]
+    .reverse()
+    .find((key) => Number(payload[key]) > 0);
+
+  const isTopBar = dataKey === topMostKey;
+
+  const gradientId = `gradient-${dataKey}-${payload[dataKey]}`;
+
+  if (isTopBar && value > 0) {
+    const pathData = `M ${x}, ${y + radius}
+                      A ${radius}, ${radius}, 0, 0, 1, ${x + radius}, ${y}
+                      L ${x + width - radius}, ${y}
+                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${
+      y + radius
+    }
+                      L ${x + width}, ${y + height}
+                      L ${x}, ${y + height}
+                      Z`;
+
+    return (
+      <g>
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={fill} stopOpacity="1" />
+            <stop offset="100%" stopColor={fill} stopOpacity="0.7" />
+          </linearGradient>
+        </defs>
+        <path d={pathData} fill={fill} />
+      </g>
+    );
+  } else {
+    return (
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={fill}
+        style={{ transition: "all 0.3s ease" }}
+      />
+    );
+  }
+};
+
+
+const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
+  ({ data, isValidGraph }) => {
+    const [graphData, setGraphData] = useState<any[]>([]);
+    const [xKey, setXKey] = useState<string | null>(null);
+    const [yKeys, setYKeys] = useState<string[]>([]);
+    const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
     const formatKey = useCallback((key: string): string => {
       return key
         .replace(/_/g, " ")
@@ -172,56 +154,82 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
         .trim();
     }, []);
 
-    const transformDynamicData = useCallback((rawData: any[]) => {
+    function transformDynamicData(rawData) {
       if (!rawData || rawData.length === 0) {
         return { data: [], keys: [], indexBy: "" };
       }
 
       const sample = rawData[0];
-      const allKeys = Object.keys(sample);
+      const keys = Object.keys(sample);
 
-      let indexByKey: string | null = null;
-      for (const key of allKeys) {
-        if (typeof sample[key] === "string" && isNaN(Number(sample[key]))) {
-          indexByKey = key;
-          break;
-        }
+      // Step 1: Find potential numeric value keys (real numbers or numeric strings)
+      const numericKeys = keys.filter((k) => {
+        const val = sample[k];
+        return val !== null && val !== "" && !isNaN(Number(val));
+      });
+
+      if (numericKeys.length === 0) {
+        throw new Error("No numeric value key found in dataset.");
       }
+
+      const valueKey = numericKeys[0]; // Pick the first numeric key
+
+      // Step 2: Pick a group key (optional)
+      let stringKeys = keys.filter(
+        (k) => typeof sample[k] === "string" && k !== valueKey
+      );
+
+      // **Fix: Add default label if no string keys exist**
+      if (stringKeys.length === 0) {
+        rawData = rawData.map((item, idx) => ({
+          ...item,
+          label: `Item ${idx + 1}`,
+        }));
+        stringKeys = ["label"];
+      }
+
+      const groupKey = stringKeys.length > 1 ? stringKeys[1] : null;
+      const indexByKey = stringKeys.find((k) => k !== groupKey);
 
       if (!indexByKey) {
-        indexByKey =
-          allKeys.find((key) => typeof sample[key] === "string") || allKeys[0];
-        if (!indexByKey) {
-          throw new Error(
-            "Could not determine indexBy (x-axis) key. No string keys found."
-          );
-        }
+        throw new Error("Could not determine indexBy (x-axis) key.");
       }
 
-      const numericKeysForStacking = allKeys.filter((key) => {
-        return key !== indexByKey && !isNaN(Number(sample[key]));
-      });
-
-      if (numericKeysForStacking.length === 0) {
-        throw new Error("No numeric keys found for stacking.");
-      }
-
-      const processedData = rawData.map((row) => {
-        const newRow: { [key: string]: any } = {
-          [indexByKey!]: row[indexByKey!],
+      // CASE 1: No group key (simple bar chart)
+      if (!groupKey) {
+        return {
+          data: rawData.map((row) => ({
+            [indexByKey]: row[indexByKey],
+            value: Number(row[valueKey]),
+          })),
+          keys: ["value"],
+          indexBy: indexByKey,
         };
-        numericKeysForStacking.forEach((key) => {
-          newRow[key] = Number(row[key]);
-        });
-        return newRow;
-      });
+      }
+
+      // CASE 2: Grouped or stacked bar chart
+      const allGroupValues = [...new Set(rawData.map((row) => row[groupKey]))];
+
+      const grouped = rawData.reduce((acc, row) => {
+        const label = row[indexByKey];
+        const group = row[groupKey];
+        const value = Number(row[valueKey]);
+
+        if (!acc[label]) {
+          acc[label] = { [indexByKey]: label };
+          allGroupValues.forEach((type) => (acc[label][type] = 0));
+        }
+
+        acc[label][group] += value;
+        return acc;
+      }, {});
 
       return {
-        data: processedData,
-        keys: numericKeysForStacking,
+        data: Object.values(grouped),
+        keys: allGroupValues,
         indexBy: indexByKey,
       };
-    }, []);
+    }
 
     useEffect(() => {
       const processApiData = (dataset: any[]) => {
@@ -237,6 +245,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             return;
           }
 
+          // Validate that yKeys contain numeric data
           const hasValidNumericData = processedData.some((item) =>
             processedKeys.some((key) => !isNaN(Number(item[key])))
           );
@@ -250,9 +259,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
           setYKeys(processedKeys);
           setGraphData(processedData);
           setIsValidGraphData(true);
-
-          // Trigger loading animation
-          setTimeout(() => setIsLoaded(true), 100);
         } catch (error) {
           console.error("Data processing error:", error);
           setIsValidGraphData(false);
@@ -260,7 +266,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       };
 
       processApiData(data);
-    }, [data, transformDynamicData]);
+    }, [data]);
 
     useEffect(() => {
       isValidGraph(isValidGraphData);
@@ -575,7 +581,9 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                     dataKey={key}
                     stackId="a"
                     fill={modernColors[index % modernColors.length]}
-                    shape={<CustomBarShape yKeys={yKeys} />}
+                    shape={(props) => (
+                      <CustomBarShape {...props} yKeys={yKeys} dataKey={key} />
+                    )}
                     animationDuration={1200}
                     animationEasing="ease-out"
                     animationBegin={index * 100}
