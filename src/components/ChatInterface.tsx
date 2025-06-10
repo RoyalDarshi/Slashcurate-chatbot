@@ -270,7 +270,7 @@ const ChatInterface = memo(
                     setDashboardHistory([newEntry]);
                     setCurrentHistoryIndex(0);
                     setCurrentMainViewType("table");
-                    setInput(lastUserMessage.content);
+                    setInput("");
                   } catch (parseError) {
                     console.error(
                       "Failed to parse bot response content from session:",
@@ -284,7 +284,7 @@ const ChatInterface = memo(
                   setDashboardHistory([initialDashboardState]);
                   setCurrentHistoryIndex(0);
                   setCurrentMainViewType("table");
-                  setInput(lastUserMessage.content);
+                  setInput("");
                 }
               } else {
                 setDashboardHistory([initialDashboardState]);
@@ -851,7 +851,7 @@ const ChatInterface = memo(
             return;
           }
 
-          setInput(questionContent);
+          setInput("");
           setShowPrevQuestionsModal(false);
 
           // Find the user message in the session messages
@@ -1047,7 +1047,10 @@ const ChatInterface = memo(
                 isSubmitting &&
                 currentDashboardView.textualSummary ===
                   "Processing your request..." ? (
-                  <DashboardSkeletonLoader question={currentDashboardView.question} theme={theme} />
+                  <DashboardSkeletonLoader
+                    question={currentDashboardView.question}
+                    theme={theme}
+                  />
                 ) : (
                   <DashboardView
                     dashboardItem={currentDashboardView}
@@ -1073,16 +1076,6 @@ const ChatInterface = memo(
                   >
                     Hello there! How can I help you today?
                   </h1>
-                  <p
-                    className={`${
-                      theme.mode === "dark"
-                        ? "text-slate-400"
-                        : "text-slate-600"
-                    } mb-8 text-lg`}
-                  >
-                    Start by selecting a connection or exploring recommended
-                    questions.
-                  </p>
                   {!selectedConnection && connections.length > 0 && (
                     <div className="flex flex-col items-center mb-6">
                       <p
