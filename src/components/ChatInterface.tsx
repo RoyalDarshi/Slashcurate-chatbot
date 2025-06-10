@@ -186,6 +186,7 @@ const ChatInterface = memo(
 
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
+      // Modified useEffect to stop loading on error or completion
       useEffect(() => {
         if (
           currentDashboardView?.textualSummary === "Processing your request..."
@@ -193,11 +194,10 @@ const ChatInterface = memo(
           setIsSubmitting(true);
         } else if (
           isSubmitting &&
-          currentDashboardView?.textualSummary !==
-            "Processing your request..." &&
-          currentDashboardView?.textualSummary !==
-            "Error: Could not generate analysis."
+          currentDashboardView?.textualSummary !== "Processing your request..."
         ) {
+          // If isSubmitting is true and the text is no longer 'Processing your request...', stop loading.
+          // This covers both successful responses and error states.
           setIsSubmitting(false);
         }
       }, [currentDashboardView, isSubmitting]);
@@ -733,7 +733,6 @@ const ChatInterface = memo(
           handleNewChat();
           await new Promise<void>((resolve) => setTimeout(resolve, 0));
           setSelectedConnection(connectionName);
-          setInput(question);
           await askQuestion(question, connectionName, false, query);
         },
         [connections, handleNewChat, setSelectedConnection, askQuestion]

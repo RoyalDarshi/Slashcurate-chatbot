@@ -162,10 +162,18 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       const sample = rawData[0];
       const keys = Object.keys(sample);
 
-      // Step 1: Find potential numeric value keys (real numbers or numeric strings)
+      // Define suffixes to exclude from the graph
+      const excludedSuffixes = ["id", "code", "number"];
+
+      const isExcluded = (key: string) =>
+        excludedSuffixes.some((suffix) => key.toLowerCase().endsWith(suffix));
+
+      // Step 1: Filter out numeric keys excluding unwanted suffixes
       const numericKeys = keys.filter((k) => {
         const val = sample[k];
-        return val !== null && val !== "" && !isNaN(Number(val));
+        return (
+          val !== null && val !== "" && !isNaN(Number(val)) && !isExcluded(k)
+        );
       });
 
       if (numericKeys.length === 0) {
@@ -176,7 +184,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
 
       // Step 2: Pick a group key (optional)
       let stringKeys = keys.filter(
-        (k) => typeof sample[k] === "string" && k !== valueKey
+        (k) => typeof sample[k] === "string" && k !== valueKey && !isExcluded(k)
       );
 
       // **Fix: Add default label if no string keys exist**
@@ -400,28 +408,8 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
 
     if (!isValidGraphData || !xKey || yKeys.length === 0) {
       return (
-        <div
-          style={{
-            background: theme.colors.background,
-            minHeight: "400px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: theme.borderRadius.large,
-            padding: theme.spacing.xxl,
-          }}
-        >
-          <div
-            style={{
-              background: theme.colors.cardBg,
-              backdropFilter: "blur(20px)",
-              border: `1px solid ${theme.colors.cardBorder}`,
-              borderRadius: theme.borderRadius.medium,
-              padding: theme.spacing.xxl,
-              textAlign: "center",
-              boxShadow: theme.shadows.medium,
-            }}
-          >
+        <div>
+          <div>
             <div
               style={{
                 width: "64px",
@@ -453,10 +441,11 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             </div>
             <h3
               style={{
-                color: "white",
+                color: theme.colors.text,
                 fontSize: "24px",
                 fontWeight: 700,
                 margin: "0 0 12px 0",
+                textAlign: "center",
                 fontFamily: theme.typography.fontFamily,
               }}
             >
@@ -464,8 +453,9 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             </h3>
             <p
               style={{
-                color: "rgba(255, 255, 255, 0.7)",
+                color: theme.colors.textSecondary,
                 fontSize: "16px",
+                textAlign: "center",
                 margin: 0,
                 fontFamily: theme.typography.fontFamily,
               }}
@@ -493,13 +483,8 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
         <div
           ref={containerRef}
           style={{
-            background: theme.colors.cardBg,
-            backdropFilter: "blur(20px)",
-            border: `1px solid ${theme.colors.cardBorder}`,
-            borderRadius: theme.borderRadius.medium,
-            boxShadow: theme.shadows.strong,
             height: "455px",
-            width: "42vw",
+            width: "52vw",
             position: "relative",
           }}
         >
