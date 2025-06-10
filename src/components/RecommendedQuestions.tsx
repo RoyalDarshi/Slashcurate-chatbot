@@ -11,7 +11,11 @@ interface RecommendedQuestion {
 
 interface RecommendedQuestionsProps {
   questions: RecommendedQuestion[];
-  onQuestionClick: (question: string,connection:string, query?: string) => void;
+  onQuestionClick: (
+    question: string,
+    connection: string,
+    query?: string
+  ) => void;
 }
 
 const ModernizedRecommendedQuestions = ({

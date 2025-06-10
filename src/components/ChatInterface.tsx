@@ -12,6 +12,8 @@ import { ToastContainer, toast } from "react-toastify";
 // Note: Typically, you'd import 'react-toastify/dist/ReactToastify.css' here for styles
 
 // Importing external components, hooks, and types
+// Adjusted import paths assuming a flat directory structure where all files are siblings
+// or in direct sibling subdirectories (e.g., ./data/sampleSchemaData)
 import { Message, Connection, ChatInterfaceProps } from "../types";
 import { API_URL, CHATBOT_API_URL } from "../config";
 import ChatInput from "./ChatInput";
@@ -22,6 +24,7 @@ import CustomTooltip from "./CustomTooltip";
 import { useConnections, useSession, useRecommendedQuestions } from "../hooks";
 import DashboardView from "./DashboardView";
 import SchemaExplorer from "./SchemaExplorer";
+import DashboardSkeletonLoader from "./DashboardSkeletonLoader"; // Import the new skeleton loader
 import schemaSampleData from "../data/sampleSchemaData";
 
 import {
@@ -166,7 +169,7 @@ const ChatInterface = memo(
           kpiData: initialEmptyKpiData,
           mainViewData: initialEmptyMainViewData,
           textualSummary: "Ask a question to get started.",
-          lastViewType: "graph" as "graph" | "table" | "query",
+          lastViewType: "table" as "graph" | "table" | "query",
         }),
         []
       );
@@ -321,7 +324,7 @@ const ChatInterface = memo(
         setInput("");
         setDashboardHistory([initialDashboardState]);
         setCurrentHistoryIndex(0);
-        setCurrentMainViewType("graph");
+        setCurrentMainViewType("table");
       }, [clearSession, initialDashboardState]);
 
       const startNewSession = useCallback(
@@ -338,7 +341,6 @@ const ChatInterface = memo(
             );
             const newSessionId = response.data.id;
             localStorage.setItem("currentSessionId", newSessionId);
-            toast.success("New session created!");
             return newSessionId;
           } catch (error) {
             console.error("Error creating new session:", error);
@@ -368,7 +370,7 @@ const ChatInterface = memo(
             id: newLoadingEntryId,
             question: question,
             ...getDashboardLoadingState(),
-            lastViewType: "graph" as "graph" | "table" | "query",
+            lastViewType: "table" as "graph" | "table" | "query",
           };
 
           setDashboardHistory((prev) => {
@@ -941,9 +943,7 @@ const ChatInterface = memo(
             newIndex = currentHistoryIndex + 1;
           }
           setCurrentHistoryIndex(newIndex);
-          setCurrentMainViewType(
-            dashboardHistory[newIndex]?.lastViewType || "table"
-          );
+          setCurrentMainViewType("table");
         },
         [currentHistoryIndex, dashboardHistory]
       );
@@ -973,7 +973,8 @@ const ChatInterface = memo(
         .filter((msg) => !msg.isBot)
         .reverse();
 
-      const showDashboard =
+      // Determine if the dashboard view should be shown (i.e., an active session or some history exists)
+      const showDashboardContent =
         sessionId ||
         messages.length > 0 ||
         currentDashboardView.question !== initialDashboardState.question;
@@ -1013,6 +1014,7 @@ const ChatInterface = memo(
                   <Loader text="Loading connections..." />
                 </div>
               ) : connections.length === 0 && !connectionsLoading ? (
+                // Scenario: No data connections at all
                 <div className="flex flex-col items-center justify-center flex-grow text-center">
                   <h1
                     className={`text-2xl font-semibold mb-4 ${
@@ -1040,38 +1042,68 @@ const ChatInterface = memo(
                     Create Connection
                   </button>
                 </div>
-              ) : !selectedConnection && connections.length > 0 ? (
-                <div className="flex flex-col items-center justify-center flex-grow text-center">
+              ) : showDashboardContent ? (
+                // Scenario: An active session exists or questions have been asked
+                isSubmitting &&
+                currentDashboardView.textualSummary ===
+                  "Processing your request..." ? (
+                  <DashboardSkeletonLoader question={currentDashboardView.question} theme={theme} />
+                ) : (
+                  <DashboardView
+                    dashboardItem={currentDashboardView}
+                    theme={theme}
+                    isSubmitting={isSubmitting}
+                    activeViewType={currentMainViewType}
+                    onViewTypeChange={handleViewTypeChange}
+                    onNavigateHistory={navigateDashboardHistory}
+                    historyIndex={currentHistoryIndex}
+                    historyLength={dashboardHistory.length}
+                  />
+                )
+              ) : (
+                // Scenario: Initial state, no active session/questions, but connections are available
+                <div className="flex flex-col items-center justify-start flex-grow text-center px-4 pt-12">
                   <h1
-                    className={`text-2xl font-semibold mb-4 ${
+                    className={`text-3xl font-bold mb-4 ${
                       theme.mode === "dark"
-                        ? "text-slate-300"
-                        : "text-slate-700"
+                        ? "text-slate-200"
+                        : "text-slate-800"
                     }`}
+                    style={{ marginTop: "10vh" }}
                   >
-                    Welcome to Your Analytics Dashboard
+                    Hello there! How can I help you today?
                   </h1>
                   <p
                     className={`${
                       theme.mode === "dark"
                         ? "text-slate-400"
                         : "text-slate-600"
-                    } mb-6`}
+                    } mb-8 text-lg`}
                   >
-                    Please select a data connection to begin your analysis.
+                    Start by selecting a connection or exploring recommended
+                    questions.
                   </p>
+                  {!selectedConnection && connections.length > 0 && (
+                    <div className="flex flex-col items-center mb-6">
+                      <p
+                        className={`${
+                          theme.mode === "dark"
+                            ? "text-slate-400"
+                            : "text-slate-600"
+                        } mb-4`}
+                      >
+                        You need to select a data connection first:
+                      </p>
+                      {/* You could optionally add a connection selection UI here or rely on the footer dropdown */}
+                    </div>
+                  )}
+                  {selectedConnection && recommendedQuestions.length > 0 && (
+                    <RecommendedQuestions
+                      questions={recommendedQuestions}
+                      onQuestionClick={handleAskFavoriteQuestion}
+                    />
+                  )}
                 </div>
-              ) : (
-                <DashboardView
-                  dashboardItem={currentDashboardView}
-                  theme={theme}
-                  isSubmitting={isSubmitting}
-                  activeViewType={currentMainViewType}
-                  onViewTypeChange={handleViewTypeChange}
-                  onNavigateHistory={navigateDashboardHistory}
-                  historyIndex={currentHistoryIndex}
-                  historyLength={dashboardHistory.length}
-                />
               )}
             </div>
           </main>
