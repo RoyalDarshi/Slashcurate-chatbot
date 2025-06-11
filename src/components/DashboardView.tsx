@@ -108,7 +108,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Main Content Area: Graph on left, Table/Query on right */}
-      <div className="flex flex-col lg:flex-row gap-2 flex-grow overflow-hidden">
+      <div className="flex  flex-grow">
         {/* Graph Section */}
         <div
           className="flex-1 rounded-xl shadow-lg flex flex-col overflow-hidden"

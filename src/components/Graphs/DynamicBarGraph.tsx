@@ -542,7 +542,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               alignItems: "center",
               justifyContent: "center",
               boxShadow: modernTheme.shadows.glow,
-              animation: "pulse 2s infinite",
+              // animation: "pulse 2s infinite",
             }}
           >
             <BarChart3 size={48} color="white" />
@@ -584,23 +584,16 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     const xTickAnchor = graphData.length > 8 ? "end" : "middle";
 
     return (
-      <div
-      // style={{
-      //   background: modernTheme.colors.background,
-      //   minHeight: "100vh",
-      //   padding: modernTheme.spacing.lg,
-      //   fontFamily: modernTheme.typography.fontFamily,
-      // }}
-      >
+      <div>
         <div
-          className="flex flex-col h-full w-full max-w-7xl mx-auto"
+          className="flex flex-col"
           style={{
             borderRadius: modernTheme.borderRadius.xl,
             background: modernTheme.gradients.surface,
             backdropFilter: "blur(20px) saturate(180%)",
             WebkitBackdropFilter: "blur(20px) saturate(180%)",
             border: `1px solid ${modernTheme.colors.border}`,
-            boxShadow: modernTheme.shadows.large,
+            // boxShadow: modernTheme.shadows.large,
             overflow: "hidden",
             transition: "all 0.4s ease",
           }}
@@ -629,7 +622,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 </label>
                 <select
                   id="groupBy"
-                  className="px-2 py-2 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                  className="px-2 py-2 w-28 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
                   style={{
                     background: "rgba(255, 255, 255, 0.9)",
                     backdropFilter: "blur(10px)",
@@ -699,7 +692,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   </label>
                   <select
                     id="valueKey"
-                    className="px-2 py-2 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                    className="px-2 py-2 w-28 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
                     style={{
                       background: "rgba(255, 255, 255, 0.9)",
                       backdropFilter: "blur(10px)",
@@ -728,7 +721,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             <div
               ref={containerRef}
               style={{
-                height: "400px",
+                height: "350px",
                 width: "100%",
                 position: "relative",
                 opacity: isAnimating ? 0.7 : 1,
@@ -739,12 +732,12 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={graphData}
-                  margin={{
-                    top: 30,
-                    right: 40,
-                    left: 30,
-                    bottom: xTickRotation === -45 ? 100 : 60,
-                  }}
+                  // margin={{
+                  //   top: 30,
+                  //   right: 40,
+                  //   left: 30,
+                  //   bottom: xTickRotation === -45 ? 100 : 60,
+                  // }}
                   barCategoryGap="25%"
                   barGap={6}
                 >
