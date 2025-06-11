@@ -116,7 +116,18 @@ interface ModernBarGraphProps {
 
 // Ultra-modern Custom Bar Shape with advanced gradients and animations
 const ModernBarShape = (props: any) => {
-  const { x, y, width, height, fill, dataKey, payload, yKeys, index } = props;
+  const {
+    x,
+    y,
+    width,
+    height,
+    fill,
+    dataKey,
+    payload,
+    yKeys,
+    index: groupIndex, // Renamed to avoid conflict
+    keyIndex,
+  } = props;
   const radius = Math.min(8, width / 3);
   const value = Number(payload[dataKey]);
 
@@ -125,12 +136,14 @@ const ModernBarShape = (props: any) => {
     .find((key) => Number(payload[key]) > 0);
 
   const isTopBar = dataKey === topMostKey;
-  const colorIndex = yKeys.indexOf(dataKey) % modernColors.length;
+  const indexInYKeys = yKeys.indexOf(dataKey);
+  const colorIndex = keyIndex % modernColors.length;
   const colorConfig = modernColors[colorIndex];
 
-  if (value <= 0) return null;
+  // FIX: Use unique ID based on groupIndex AND keyIndex
+  const gradientId = `gradient-${groupIndex}-${keyIndex}`;
 
-  const gradientId = `gradient-${dataKey}-${index}`;
+  if (value <= 0) return null;
 
   if (isTopBar) {
     const pathData = `M ${x}, ${y + radius}
@@ -216,7 +229,10 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     const [graphData, setGraphData] = useState<any[]>([]);
     const [xKey, setXKey] = useState<string | null>(null);
     const [yKeys, setYKeys] = useState<string[]>([]);
-    const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
+    // Initialize isValidGraphData based on whether initial data is present
+    const [isValidGraphData, setIsValidGraphData] = useState<boolean>(
+      data.length > 0
+    );
     const containerRef = useRef<HTMLDivElement>(null);
 
     const formatKey = useCallback((key: any): string => {
@@ -394,7 +410,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             setXKey(indexBy);
             setYKeys(processedKeys);
             setGraphData(processedData);
-            setIsValidGraphData(true);
+            setIsValidGraphData(true); // Set to true after successful processing
             setIsAnimating(false);
           }, 300);
         } catch (error) {
@@ -406,6 +422,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           setIsAnimating(false);
         }
       } else {
+        // If conditions for a valid graph are not met, set to false
         setIsValidGraphData(false);
         setGraphData([]);
         setXKey(null);
@@ -519,7 +536,10 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       return null;
     };
 
-    if (!isValidGraphData || !xKey || yKeys.length === 0 || !graphData.length) {
+    if (
+      !isAnimating &&
+      (!isValidGraphData || !xKey || yKeys.length === 0 || !graphData.length)
+    ) {
       return (
         <div
           className="flex flex-col items-center justify-center h-full p-12"
@@ -801,25 +821,32 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                     }}
                     content={<ModernTooltip />}
                   />
-                  {yKeys.map((key, index) => (
-                    <Bar
-                      key={key}
-                      dataKey={key}
-                      stackId="a"
-                      fill={modernColors[index % modernColors.length].solid}
-                      shape={(props) => (
-                        <ModernBarShape
-                          {...props}
-                          yKeys={yKeys}
-                          dataKey={key}
-                          index={index}
-                        />
-                      )}
-                      animationDuration={1200}
-                      animationEasing="ease-out"
-                      animationBegin={index * 150}
-                    />
-                  ))}
+                  {yKeys.map(
+                    (
+                      key,
+                      keyIndex // Added keyIndex
+                    ) => (
+                      <Bar
+                        key={key}
+                        dataKey={key}
+                        stackId="a"
+                        fill={
+                          modernColors[keyIndex % modernColors.length].solid
+                        }
+                        shape={(props) => (
+                          <ModernBarShape
+                            {...props}
+                            yKeys={yKeys}
+                            dataKey={key}
+                            keyIndex={keyIndex} // Pass keyIndex to shape
+                          />
+                        )}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
+                        animationBegin={keyIndex * 150}
+                      />
+                    )
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>
