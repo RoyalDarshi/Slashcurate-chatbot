@@ -1,32 +1,29 @@
-import React from "react";
+import React, { useState } from "react";
 import {
-  Activity,
   BarChartIcon as BarChartIconLucide,
-  ChevronLeft,
-  ChevronRight,
   Database,
   HelpCircle,
-  LineChartIcon,
   PieChartIcon as PieChartIconLucide,
-  RotateCcw,
   Table,
   TrendingUp,
 } from "lucide-react";
 import KPICard from "./KPICard";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
+import DynamicLineGraph from "./Graphs/DynamicLineGraph";
+import DynamicPieGraph from "./Graphs/DynamicPieGraph";
 import DataTable from "./DataTable";
 import QueryDisplay from "./QueryDisplay";
+import { Theme } from "../types";
 
-// Placeholder for generateKpiData and generateMainViewData types if not defined elsewhere
-// For now, using any, but ideally these would be properly typed.
+// Placeholder types (unchanged)
 declare function generateKpiData(): {
   kpi1: { label: string; value: string | number; change: string };
   kpi2: { label: string; value: string | number; change: string };
   kpi3: { label: string; value: string | number; change: string };
 };
 declare function generateMainViewData(): {
-  chartData: any; // Replace with actual chart data type
-  tableData: any; // Replace with actual table data type
+  chartData: any;
+  tableData: any;
   queryData: string;
 };
 
@@ -39,7 +36,7 @@ interface DashboardViewProps {
     textualSummary: string;
     lastViewType?: "graph" | "table" | "query";
   } | null;
-  theme: any; // Replace with your actual theme type
+  theme: Theme;
   isSubmitting: boolean;
   activeViewType: "graph" | "table" | "query";
   onViewTypeChange: (viewType: "graph" | "table" | "query") => void;
@@ -54,10 +51,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   isSubmitting,
   activeViewType,
   onViewTypeChange,
-  onNavigateHistory,
-  historyIndex,
-  historyLength,
 }) => {
+  // Add state for graph type, defaulting to 'bar'
+  const [graphType, setGraphType] = useState("bar");
+
   if (!dashboardItem) {
     return (
       <div
@@ -91,15 +88,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       style={{ backgroundColor: theme.colors.background }}
     >
       {/* Top section: Current Question and KPI Cards */}
-      <div className="l lg:flex-row items-start">
-        {/* Current Question - made full width and uses theme colors */}
+      <div className="lg:flex-row items-start">
         <div
-          className="w-full p-2 mb-2 rounded-xl shadow-md" // Added w-full here
+          className="w-full p-2 mb-2 rounded-xl shadow-md"
           style={{
-            backgroundColor: theme.colors.surface, // Using surface for question background
-            color: theme.colors.text, // Using text for question color
-            boxShadow: theme.shadow.md, // Using theme shadow
-            borderRadius: theme.borderRadius.large, // Using theme border radius
+            backgroundColor: theme.colors.surface,
+            color: theme.colors.text,
+            boxShadow: theme.shadow.md,
+            borderRadius: theme.borderRadius.large,
           }}
         >
           <h3
@@ -115,18 +111,60 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex flex-col lg:flex-row gap-2 flex-grow overflow-hidden">
         {/* Graph Section */}
         <div
-          className="flex-1 rounded-xl shadow-lg flex justify-center items-center overflow-hidden"
+          className="flex-1 rounded-xl shadow-lg flex flex-col overflow-hidden"
           style={{
             backgroundColor: theme.colors.surface,
             boxShadow: theme.shadow.lg,
             borderRadius: theme.borderRadius.large,
-            minHeight: "400px", // ensure height for graph
+            minHeight: "400px",
           }}
         >
-          <DynamicBarGraph
-            data={dashboardItem.mainViewData.chartData}
-            isValidGraph={() => true}
-          />
+          {/* Select Dropdown for Graph Type */}
+          <div className="p-2 flex items-center">
+            <label
+              htmlFor="graph-type-select"
+              className="mr-2"
+              style={{ color: theme.colors.text }}
+            >
+              Graph Type:
+            </label>
+            <select
+              id="graph-type-select"
+              value={graphType}
+              onChange={(e) => setGraphType(e.target.value)}
+              className="p-2 rounded"
+              style={{
+                backgroundColor: theme.colors.bubbleBot,
+                color: theme.colors.bubbleBotText,
+              }}
+            >
+              <option value="bar">Bar</option>
+              <option value="line">Line</option>
+              <option value="pie">Pie</option>
+              {/* Add more graph types here if needed, e.g., <option value="scatter">Scatter</option> */}
+            </select>
+          </div>
+          {/* Graph Rendering */}
+          <div className="flex-1 flex justify-center items-center overflow-hidden">
+            {graphType === "bar" && (
+              <DynamicBarGraph
+                data={dashboardItem.mainViewData.chartData}
+                isValidGraph={() => true}
+              />
+            )}
+            {graphType === "line" && (
+              <DynamicLineGraph
+                data={dashboardItem.mainViewData.chartData}
+                isValidGraph={() => true}
+              />
+            )}
+            {graphType === "pie" && (
+              <DynamicPieGraph
+                data={dashboardItem.mainViewData.chartData}
+                isValidGraph={() => true}
+              />
+            )}
+          </div>
         </div>
 
         {/* Right Section: KPI Cards + Table/Query */}

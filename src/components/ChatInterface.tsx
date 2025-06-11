@@ -14,18 +14,19 @@ import { ToastContainer, toast } from "react-toastify";
 // Importing external components, hooks, and types
 // Adjusted import paths assuming a flat directory structure where all files are siblings
 // or in direct sibling subdirectories (e.g., ./data/sampleSchemaData)
-import { Message, Connection, ChatInterfaceProps } from "../types";
-import { API_URL, CHATBOT_API_URL } from "../config";
+import { Message, Connection, ChatInterfaceProps } from "../types"; // Corrected path
+import { API_URL, CHATBOT_API_URL } from "../config"; // Corrected path
 import ChatInput from "./ChatInput";
 import Loader from "./Loader";
-import { useTheme } from "../ThemeContext";
+import { useTheme } from "../ThemeContext"; // Corrected path
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
-import { useConnections, useSession, useRecommendedQuestions } from "../hooks";
+import { useConnections, useSession, useRecommendedQuestions } from "../hooks"; // Corrected path
 import DashboardView from "./DashboardView";
 import SchemaExplorer from "./SchemaExplorer";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader"; // Import the new skeleton loader
-import schemaSampleData from "../data/sampleSchemaData";
+import schemaSampleData from "../data/sampleSchemaData"; // Corrected path
+import DashboardError from "./DashboardError"; // Import the new error component
 
 import {
   ListChecks,
@@ -87,7 +88,8 @@ const getDashboardLoadingState = () => ({
   textualSummary: "Processing your request...",
 });
 
-const getDashboardErrorState = () => ({
+const getDashboardErrorState = (question: string, errorMsg: string) => ({
+  // Modified to accept question and error message
   kpiData: {
     kpi1: { value: null, label: "Error", change: 0 },
     kpi2: { value: null, label: "Error", change: 0 },
@@ -98,7 +100,8 @@ const getDashboardErrorState = () => ({
     tableData: [],
     queryData: "Error loading query.",
   },
-  textualSummary: "Error: Could not generate analysis.",
+  textualSummary: `Error: ${errorMsg}`, // Store the specific error message
+  question: question, // Store the original question
 });
 
 // Helper function to extract error messages
@@ -186,6 +189,10 @@ const ChatInterface = memo(
 
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
+      // Determine if the current view is an error state
+      const isErrorState =
+        currentDashboardView.textualSummary.startsWith("Error:");
+
       // Modified useEffect to stop loading on error or completion
       useEffect(() => {
         if (
@@ -237,56 +244,79 @@ const ChatInterface = memo(
                   )[0];
 
                 if (lastBotMessage && lastBotMessage.content !== "loading...") {
-                  try {
-                    const botResponseContent = JSON.parse(
-                      lastBotMessage.content
-                    );
-                    const actualKpiData =
-                      botResponseContent.kpiData || initialEmptyKpiData;
-                    const actualMainViewData = {
-                      chartData: Array.isArray(botResponseContent.answer)
-                        ? botResponseContent.answer
-                        : [],
-                      tableData: Array.isArray(botResponseContent.answer)
-                        ? botResponseContent.answer
-                        : [],
-                      queryData:
-                        typeof botResponseContent.sql_query === "string"
-                          ? botResponseContent.sql_query
-                          : "No query available.",
-                    };
-                    const actualTextualSummary =
-                      botResponseContent.textualSummary ||
-                      `Here is the analysis for: "${lastUserMessage.content}"`;
-
+                  // Check if the bot message content indicates an error
+                  if (
+                    lastBotMessage.content.startsWith("Error:") ||
+                    !lastBotMessage.content.trim().startsWith("{")
+                  ) {
                     const newEntry = {
                       id: generateId(),
                       question: lastUserMessage.content,
-                      kpiData: actualKpiData,
-                      mainViewData: actualMainViewData,
-                      textualSummary: actualTextualSummary,
+                      ...getDashboardErrorState(
+                        lastUserMessage.content,
+                        lastBotMessage.content.replace("Error: ", "")
+                      ),
                       lastViewType: "table" as "graph" | "table" | "query",
                     };
                     setDashboardHistory([newEntry]);
                     setCurrentHistoryIndex(0);
                     setCurrentMainViewType("table");
                     setInput("");
-                  } catch (parseError) {
-                    console.error(
-                      "Failed to parse bot response content from session:",
-                      parseError
-                    );
-                    setDashboardHistory([initialDashboardState]);
-                    setCurrentHistoryIndex(0);
-                    setCurrentMainViewType("table");
+                  } else {
+                    // Try to parse as JSON if it's not an error string
+                    try {
+                      const botResponseContent = JSON.parse(
+                        lastBotMessage.content
+                      );
+                      const actualKpiData =
+                        botResponseContent.kpiData || initialEmptyKpiData;
+                      const actualMainViewData = {
+                        chartData: Array.isArray(botResponseContent.answer)
+                          ? botResponseContent.answer
+                          : [],
+                        tableData: Array.isArray(botResponseContent.answer)
+                          ? botResponseContent.answer
+                          : [],
+                        queryData:
+                          typeof botResponseContent.sql_query === "string"
+                            ? botResponseContent.sql_query
+                            : "No query available.",
+                      };
+                      const actualTextualSummary =
+                        botResponseContent.textualSummary ||
+                        `Here is the analysis for: "${lastUserMessage.content}"`;
+
+                      const newEntry = {
+                        id: generateId(),
+                        question: lastUserMessage.content,
+                        kpiData: actualKpiData,
+                        mainViewData: actualMainViewData,
+                        textualSummary: actualTextualSummary,
+                        lastViewType: "table" as "graph" | "table" | "query",
+                      };
+                      setDashboardHistory([newEntry]);
+                      setCurrentHistoryIndex(0);
+                      setCurrentMainViewType("table");
+                      setInput("");
+                    } catch (parseError) {
+                      console.error(
+                        "Failed to parse bot response content from session:",
+                        parseError
+                      );
+                      setDashboardHistory([initialDashboardState]);
+                      setCurrentHistoryIndex(0);
+                      setCurrentMainViewType("table");
+                    }
                   }
                 } else {
+                  // If bot message is 'loading...' or doesn't exist, revert to initial state
                   setDashboardHistory([initialDashboardState]);
                   setCurrentHistoryIndex(0);
                   setCurrentMainViewType("table");
                   setInput("");
                 }
               } else {
+                // If no user message found in session, revert to initial state
                 setDashboardHistory([initialDashboardState]);
                 setCurrentHistoryIndex(0);
                 setCurrentMainViewType("table");
@@ -398,7 +428,10 @@ const ChatInterface = memo(
                   item.id === newLoadingEntryId
                     ? {
                         ...item,
-                        ...getDashboardErrorState(),
+                        ...getDashboardErrorState(
+                          question,
+                          "No valid session connection found."
+                        ),
                         textualSummary:
                           "Error: No valid session connection found.",
                       }
@@ -442,7 +475,10 @@ const ChatInterface = memo(
                     item.id === newLoadingEntryId
                       ? {
                           ...item,
-                          ...getDashboardErrorState(),
+                          ...getDashboardErrorState(
+                            question,
+                            "Could not create session."
+                          ),
                           textualSummary: "Error: Could not create session.",
                         }
                       : item
@@ -457,8 +493,11 @@ const ChatInterface = memo(
                   item.id === newLoadingEntryId
                     ? {
                         ...item,
-                        ...getDashboardErrorState(),
-                        textualSummary: "Error: Could not create session.",
+                        ...getDashboardErrorState(
+                          question,
+                          getErrorMessage(error)
+                        ), // Pass specific error message
+                        textualSummary: `Error: ${getErrorMessage(error)}`,
                       }
                     : item
                 )
@@ -617,16 +656,15 @@ const ChatInterface = memo(
               });
             } catch (error) {
               console.error("Error getting bot response:", error);
-              const errorContent =
-                "Sorry, an error occurred. Please try again.";
+              const errorContent = getErrorMessage(error); // Get the specific error message
 
               setDashboardHistory((prev) =>
                 prev.map((item) =>
                   item.id === newLoadingEntryId
                     ? {
                         ...item,
-                        ...getDashboardErrorState(),
-                        textualSummary: "Error: Could not generate analysis.",
+                        ...getDashboardErrorState(question, errorContent), // Pass specific error message
+                        textualSummary: `Error: ${errorContent}`,
                       }
                     : item
                 )
@@ -868,40 +906,20 @@ const ChatInterface = memo(
               correspondingBotMessage &&
               correspondingBotMessage.content !== "loading..."
             ) {
-              try {
-                // Parse the bot's JSON content
-                const botResponseContent = JSON.parse(
-                  correspondingBotMessage.content
-                );
-
-                const actualKpiData =
-                  botResponseContent.kpiData || initialEmptyKpiData;
-                const actualMainViewData = {
-                  chartData: Array.isArray(botResponseContent.answer)
-                    ? botResponseContent.answer
-                    : [],
-                  tableData: Array.isArray(botResponseContent.answer)
-                    ? botResponseContent.answer
-                    : [],
-                  queryData:
-                    typeof botResponseContent.sql_query === "string"
-                      ? botResponseContent.sql_query
-                      : "No query available.",
-                };
-                const actualTextualSummary =
-                  botResponseContent.textualSummary ||
-                  `Here is the analysis for: "${questionContent}"`;
-
+              // Check if the bot message content indicates an error
+              if (
+                correspondingBotMessage.content.startsWith("Error:") ||
+                !correspondingBotMessage.content.trim().startsWith("{")
+              ) {
                 const newEntry = {
                   id: generateId(), // Generate a new ID for this history entry
                   question: questionContent,
-                  kpiData: actualKpiData,
-                  mainViewData: actualMainViewData,
-                  textualSummary: actualTextualSummary,
+                  ...getDashboardErrorState(
+                    questionContent,
+                    correspondingBotMessage.content.replace("Error: ", "")
+                  ),
                   lastViewType: "table" as "graph" | "table" | "query", // Default to table view
                 };
-
-                // Add the new entry to dashboard history and set it as current
                 setDashboardHistory((prev) => {
                   const newHistory =
                     currentHistoryIndex === prev.length - 1
@@ -909,14 +927,58 @@ const ChatInterface = memo(
                       : [...prev.slice(0, currentHistoryIndex + 1), newEntry];
                   return newHistory;
                 });
-                setCurrentHistoryIndex((prevIndex) => prevIndex + 1); // Move to the newly added entry
-              } catch (parseError) {
-                console.error(
-                  "Failed to parse bot response content for previous question:",
-                  parseError
-                );
-                // Fallback: If parsing fails, re-ask the question.
-                await askQuestion(questionContent, selectedConnection, false);
+                setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
+              } else {
+                try {
+                  // Parse the bot's JSON content
+                  const botResponseContent = JSON.parse(
+                    correspondingBotMessage.content
+                  );
+
+                  const actualKpiData =
+                    botResponseContent.kpiData || initialEmptyKpiData;
+                  const actualMainViewData = {
+                    chartData: Array.isArray(botResponseContent.answer)
+                      ? botResponseContent.answer
+                      : [],
+                    tableData: Array.isArray(botResponseContent.answer)
+                      ? botResponseContent.answer
+                      : [],
+                    queryData:
+                      typeof botResponseContent.sql_query === "string"
+                        ? botResponseContent.sql_query
+                        : "No query available.",
+                  };
+                  const actualTextualSummary =
+                    botResponseContent.textualSummary ||
+                    `Here is the analysis for: "${questionContent}"`;
+
+                  const newEntry = {
+                    id: generateId(), // Generate a new ID for this history entry
+                    question: questionContent,
+                    kpiData: actualKpiData,
+                    mainViewData: actualMainViewData,
+                    textualSummary: actualTextualSummary,
+                    lastViewType: "table" as "graph" | "table" | "query", // Default to table view
+                  };
+
+                  // Add the new entry to dashboard history and set it as current
+                  setDashboardHistory((prev) => {
+                    const newHistory =
+                      currentHistoryIndex === prev.length - 1
+                        ? [...prev, newEntry]
+                        : [...prev.slice(0, currentHistoryIndex + 1), newEntry];
+                    return newHistory;
+                  });
+                  setCurrentHistoryIndex((prevIndex) => prevIndex + 1); // Move to the newly added entry
+                } catch (parseError) {
+                  console.error(
+                    "Failed to parse bot response content for previous question:",
+                    parseError
+                  );
+                  // Fallback: If parsing fails, re-ask the question.
+                  await askQuestion(questionContent, selectedConnection, false);
+                }
               }
             } else {
               // Fallback: If no corresponding bot message or it's still loading, re-ask the question.
@@ -1048,6 +1110,15 @@ const ChatInterface = memo(
                   "Processing your request..." ? (
                   <DashboardSkeletonLoader
                     question={currentDashboardView.question}
+                    theme={theme}
+                  />
+                ) : isErrorState ? ( // New condition to check for error state
+                  <DashboardError
+                    question={currentDashboardView.question}
+                    errorMessage={currentDashboardView.textualSummary.replace(
+                      "Error: ",
+                      ""
+                    )}
                     theme={theme}
                   />
                 ) : (
