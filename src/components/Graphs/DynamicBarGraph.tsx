@@ -233,6 +233,8 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(
       data.length > 0
     );
+    const [isStacked, setIsStacked] = useState(true);
+
     const containerRef = useRef<HTMLDivElement>(null);
 
     const formatKey = useCallback((key: any): string => {
@@ -266,17 +268,56 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         lowerKey.includes("email") ||
         lowerKey.includes("address") ||
         lowerKey === "first_name" ||
-        lowerKey === "last_name"
+        lowerKey === "last_name" ||
+        lowerKey === "name" || // NEW: skip generic 'name'
+        lowerKey.length < 3 // NEW: avoid too-short keys
       );
     };
 
     const validValueKeys = numericKeys.filter((key) => !isKeyExcluded(key));
 
+    const autoDetectBestGroupBy = (
+      rows: any[],
+      excludeFn: (key: string) => boolean
+    ): string | null => {
+      if (!rows.length) return null;
+
+      const sampleSize = Math.min(100, rows.length);
+      const sample = rows.slice(0, sampleSize);
+      const scores: Record<string, number> = {};
+
+      const keys = Object.keys(sample[0]);
+
+      keys.forEach((key) => {
+        if (excludeFn(key)) return;
+
+        const values = sample.map((row) => row[key]).filter(Boolean);
+        const uniqueCount = new Set(values).size;
+
+        // Skip if mostly unique or mostly same
+        if (uniqueCount <= 1 || uniqueCount > sampleSize * 0.6) return;
+
+        const nullCount =
+          values.length < sampleSize ? sampleSize - values.length : 0;
+        const nullPenalty = nullCount / sampleSize;
+
+        scores[key] = 1 / (uniqueCount + nullPenalty * 10); // lower uniqueCount is better
+      });
+
+      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+      return sorted.length ? sorted[0][0] : null;
+    };
+
     useEffect(() => {
+      console.log("Recalculating graph with", { groupBy, aggregate, valueKey });
       if (dataKeys.length > 0) {
-        if (!groupBy || !dataKeys.includes(groupBy)) {
-          setGroupBy(dataKeys[0]);
+        const bestGroupBy = autoDetectBestGroupBy(data, isKeyExcluded);
+        if (!groupBy) {
+          setGroupBy(
+            bestGroupBy || dataKeys.find((key) => !isKeyExcluded(key)) || null
+          );
         }
+
         if (
           numericKeys.length > 0 &&
           (!valueKey || !numericKeys.includes(valueKey))
@@ -433,6 +474,8 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     useEffect(() => {
       isValidGraph(isValidGraphData);
     }, [isValidGraphData, isValidGraph]);
+
+    const groupByOptions = dataKeys.filter((key) => !isKeyExcluded(key));
 
     // Ultra-modern Custom Tooltip with glassmorphism
     const ModernTooltip = ({ active, payload, label }: any) => {
@@ -653,18 +696,19 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                     boxShadow: modernTheme.shadows.soft,
                   }}
                   value={groupBy || ""}
-                  onChange={(e) => setGroupBy(e.target.value)}
+                  onChange={(e) => {
+                    const newGroupBy = e.target.value;
+                    setGroupBy(newGroupBy);
+                  }}
                 >
-                  {dataKeys.length > 0 ? (
-                    dataKeys
-                      .filter((key) => !isKeyExcluded(key))
-                      .map((key) => (
-                        <option key={key} value={key}>
-                          {formatKey(key)}
-                        </option>
-                      ))
+                  {groupByOptions.length > 0 ? (
+                    groupByOptions.map((key) => (
+                      <option key={key} value={key}>
+                        {formatKey(key)}
+                      </option>
+                    ))
                   ) : (
-                    <option value="">No keys available</option>
+                    <option value="">No suitable groupBy options</option>
                   )}
                 </select>
               </div>
@@ -796,7 +840,11 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                       fontFamily: modernTheme.typography.fontFamily,
                       fill: modernTheme.colors.textSecondary,
                     }}
-                    tickFormatter={formatKey}
+                    tickFormatter={(value) =>
+                      value.length > 14
+                        ? value.slice(0, 12) + "…"
+                        : formatKey(value)
+                    }
                   />
                   <YAxis
                     tickLine={false}

@@ -27,6 +27,7 @@ import SchemaExplorer from "./SchemaExplorer";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader"; // Import the new skeleton loader
 import schemaSampleData from "../data/sampleSchemaData"; // Corrected path
 import DashboardError from "./DashboardError"; // Import the new error component
+import PreviousQuestionsModal from "./PreviousQuestionModal"; // Import the new component
 
 import {
   ListChecks,
@@ -1062,7 +1063,7 @@ const ChatInterface = memo(
             toastStyle={{
               background: theme.colors.surface,
               color: theme.colors.text,
-              border: `1px solid ${theme.colors.text}20`,
+              border: `1px solid ${theme.colors.border}`,
               borderRadius: theme.borderRadius.default,
               padding: theme.spacing.sm,
             }}
@@ -1078,27 +1079,27 @@ const ChatInterface = memo(
                 // Scenario: No data connections at all
                 <div className="flex flex-col items-center justify-center flex-grow text-center">
                   <h1
-                    className={`text-2xl font-semibold mb-4 ${
-                      theme.mode === "dark"
-                        ? "text-slate-300"
-                        : "text-slate-700"
-                    }`}
+                    className={`text-2xl font-semibold mb-4`}
+                    style={{ color: theme.colors.text }}
                   >
                     No Data Connections
                   </h1>
                   <p
-                    className={`${
-                      theme.mode === "dark"
-                        ? "text-slate-400"
-                        : "text-slate-600"
-                    } mb-6`}
+                    className={`mb-6`}
+                    style={{ color: theme.colors.textSecondary }}
                   >
                     Please create a data connection to start analyzing your
                     data.
                   </p>
                   <button
                     onClick={onCreateConSelected}
-                    className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                    className="px-6 py-2 font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+                    style={{
+                      backgroundColor: theme.colors.accent,
+                      color: theme.colors.surface,
+                      boxShadow: theme.shadow.md,
+                      transition: theme.transition.default,
+                    }}
                   >
                     Create Connection
                   </button>
@@ -1137,23 +1138,16 @@ const ChatInterface = memo(
                 // Scenario: Initial state, no active session/questions, but connections are available
                 <div className="flex flex-col items-center justify-start flex-grow text-center px-4 pt-12">
                   <h1
-                    className={`text-3xl font-bold mb-4 ${
-                      theme.mode === "dark"
-                        ? "text-slate-200"
-                        : "text-slate-800"
-                    }`}
-                    style={{ marginTop: "10vh" }}
+                    className={`text-3xl font-bold mb-4`}
+                    style={{ marginTop: "10vh", color: theme.colors.text }}
                   >
                     Hello there! How can I help you today?
                   </h1>
                   {!selectedConnection && connections.length > 0 && (
                     <div className="flex flex-col items-center mb-6">
                       <p
-                        className={`${
-                          theme.mode === "dark"
-                            ? "text-slate-400"
-                            : "text-slate-600"
-                        } mb-4`}
+                        className={`mb-4`}
+                        style={{ color: theme.colors.textSecondary }}
                       >
                         You need to select a data connection first:
                       </p>
@@ -1219,15 +1213,18 @@ const ChatInterface = memo(
                     style={{
                       background: theme.colors.surface,
                       border: `1px solid ${theme.colors.border}`,
-                      boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                      boxShadow: theme.shadow.md,
                       width: "min-content",
                       maxWidth: "min-content",
                     }}
                   >
                     {connections.length === 0 ? (
                       <div
-                        className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
-                        style={{ color: theme.colors.text }}
+                        className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 cursor-pointer transition-all duration-300"
+                        style={{
+                          color: theme.colors.text,
+                          backgroundColor: `${theme.colors.accent}10`,
+                        }}
                         onClick={() => handleSelect({ value: "create-con" })}
                       >
                         <span className="truncate">Create Connection</span>
@@ -1235,8 +1232,11 @@ const ChatInterface = memo(
                     ) : (
                       <>
                         <div
-                          className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
-                          style={{ color: theme.colors.text }}
+                          className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 cursor-pointer transition-all duration-300"
+                          style={{
+                            color: theme.colors.text,
+                            backgroundColor: `${theme.colors.accent}10`,
+                          }}
                           onClick={() => handleSelect({ value: "create-con" })}
                         >
                           <span className="truncate">Create Connection</span>
@@ -1244,7 +1244,7 @@ const ChatInterface = memo(
                         {connections.map((connection: Connection) => (
                           <div
                             key={connection.connectionName}
-                            className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
+                            className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 cursor-pointer transition-all duration-300"
                             style={{
                               color: theme.colors.text,
                               background:
@@ -1390,84 +1390,21 @@ const ChatInterface = memo(
             </div>
           </footer>
 
-          {showPrevQuestionsModal && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div
-                className={`rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col ${
-                  theme.mode === "dark" ? "bg-slate-800" : "bg-white"
-                }`}
-              >
-                <div className="flex items-center justify-between p-4 border-b dark:border-slate-700 border-slate-200">
-                  <h3
-                    className={`text-lg font-semibold ${
-                      theme.mode === "dark"
-                        ? "text-slate-100"
-                        : "text-slate-800"
-                    }`}
-                  >
-                    Previous Questions
-                  </h3>
-                  <button
-                    onClick={() => setShowPrevQuestionsModal(false)}
-                    className={`p-1 rounded-md ${
-                      theme.mode === "dark"
-                        ? "text-slate-400 hover:bg-slate-700"
-                        : "text-slate-500 hover:bg-slate-200"
-                    }`}
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="overflow-y-auto p-4 space-y-2">
-                  {userQuestionsFromSession.length > 0 ? (
-                    userQuestionsFromSession.map((msg) => (
-                      <button
-                        key={msg.id}
-                        onClick={() => handleSelectPrevQuestion(msg.content)}
-                        className={`w-full text-left p-2.5 rounded-md transition-colors text-sm ${
-                          theme.mode === "dark"
-                            ? "bg-slate-700 hover:bg-slate-600 text-slate-200"
-                            : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                        }`}
-                      >
-                        {msg.content}
-                      </button>
-                    ))
-                  ) : (
-                    <p
-                      className={`${
-                        theme.mode === "dark"
-                          ? "text-slate-400"
-                          : "text-slate-600"
-                      }`}
-                    >
-                      No previous questions in this session.
-                    </p>
-                  )}
-                </div>
-                <div className="p-3 border-t dark:border-slate-700 border-slate-200 text-right">
-                  <button
-                    onClick={() => setShowPrevQuestionsModal(false)}
-                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      theme.mode === "dark"
-                        ? "bg-slate-600 hover:bg-slate-500 text-slate-200"
-                        : "bg-slate-200 hover:bg-slate-300 text-slate-700"
-                    }`}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <PreviousQuestionsModal
+            showPrevQuestionsModal={showPrevQuestionsModal}
+            onClose={() => setShowPrevQuestionsModal(false)}
+            userQuestionsFromSession={userQuestionsFromSession}
+            handleSelectPrevQuestion={handleSelectPrevQuestion}
+            theme={theme}
+          />
 
           {connectionError && (
             <div
-              className={`text-center p-2 text-sm ${
-                theme.mode === "dark"
-                  ? "text-red-400 bg-red-900/[0.3]"
-                  : "text-red-600 bg-red-100/[0.5]"
-              }`}
+              className={`text-center p-2 text-sm`}
+              style={{
+                color: theme.colors.error,
+                backgroundColor: `${theme.colors.error}20`,
+              }}
             >
               Connection Error: {connectionError}
             </div>
