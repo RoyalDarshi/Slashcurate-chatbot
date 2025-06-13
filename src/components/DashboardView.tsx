@@ -166,7 +166,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="p-2 flex items-center">
               <label
                 htmlFor="graph-type-select"
-                className="font-semibold text-sm text-gray-700"
+                className="font-semibold text-sm"
+                style={{ color: theme.colors.textSecondary }}
               >
                 Graph Type:
               </label>
@@ -175,6 +176,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 value={graphType}
                 onChange={(e) => setGraphType(e.target.value)}
                 className="px-2 py-1 rounded-md border shadow-sm"
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  color: theme.colors.text,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.borderRadius.default,
+                }}
               >
                 <option value="bar">Bar</option>
                 <option value="line">Line</option>
@@ -184,13 +191,22 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             {/* Group By */}
             <div className="flex items-center gap-2">
-              <label className="font-semibold text-sm text-gray-700">
+              <label
+                className="font-semibold text-sm"
+                style={{ color: theme.colors.textSecondary }}
+              >
                 Group By:
               </label>
               <select
                 className="px-2 py-1 rounded-md border shadow-sm"
                 value={groupBy || ""}
                 onChange={(e) => setGroupBy(e.target.value)}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  color: theme.colors.text,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.borderRadius.default,
+                }}
               >
                 {Object.keys(dashboardItem.mainViewData.chartData[0] || {}).map(
                   (key) => (
@@ -204,7 +220,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Aggregate */}
             <div className="flex items-center gap-2">
-              <label className="font-semibold text-sm text-gray-700">
+              <label
+                className="font-semibold text-sm"
+                style={{ color: theme.colors.textSecondary }}
+              >
                 Aggregate:
               </label>
               <select
@@ -213,6 +232,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 onChange={(e) =>
                   setAggregate(e.target.value as "sum" | "count")
                 }
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  color: theme.colors.text,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.borderRadius.default,
+                }}
               >
                 <option value="count">Count</option>
                 <option value="sum">Sum</option>
@@ -222,13 +247,22 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Value Key — only if "sum" is selected */}
             {aggregate === "sum" && (
               <div className="flex items-center gap-2">
-                <label className="font-semibold text-sm text-gray-700">
+                <label
+                  className="font-semibold text-sm"
+                  style={{ color: theme.colors.textSecondary }}
+                >
                   Value Key:
                 </label>
                 <select
                   className="px-2 py-1 rounded-md border shadow-sm"
                   value={valueKey || ""}
                   onChange={(e) => setValueKey(e.target.value)}
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.borderRadius.default,
+                  }}
                 >
                   {getValidValueKeys(dashboardItem.mainViewData.chartData).map(
                     (key) => (

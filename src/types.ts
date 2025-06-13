@@ -155,6 +155,10 @@ export interface Theme {
     hover: string; // General hover background
     disabled: string; // Disabled elements background
     disabledText: string; // Disabled elements text
+
+    // New properties for bar graph
+    barColors: string[]; // Array of colors for bars
+    surfaceGlass: string; // Glassmorphism effect color
   };
   spacing: {
     xs: string; // Extra small spacing (padding/margin)
@@ -194,7 +198,14 @@ export interface Theme {
   transition: {
     default: string; // Default transition timing (e.g., hover effects)
   };
+  // New gradients property
+  gradients: {
+    primary: string;
+    surface: string;
+    glass: string;
+  };
 }
+
 
 export interface ColumnInfo {
   name: string;

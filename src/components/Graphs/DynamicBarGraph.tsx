@@ -9,105 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { BarChart3, TrendingUp, Settings, Zap } from "lucide-react";
-
-// Ultra-modern design system with glassmorphism and advanced gradients
-const modernTheme = {
-  colors: {
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    surface: "rgba(255, 255, 255, 0.95)",
-    surfaceGlass: "rgba(255, 255, 255, 0.1)",
-    surfaceHover: "rgba(255, 255, 255, 0.15)",
-    text: "#1a202c",
-    textSecondary: "#4a5568",
-    textMuted: "#718096",
-    border: "rgba(255, 255, 255, 0.2)",
-    borderSoft: "rgba(226, 232, 240, 0.3)",
-    primary: "#6366f1",
-    primaryLight: "#818cf8",
-    accent: "#f59e0b",
-    success: "#10b981",
-    warning: "#f59e0b",
-    error: "#ef4444",
-  },
-  gradients: {
-    primary: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-    secondary: "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)",
-    accent: "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)",
-    surface:
-      "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 100%)",
-    glass:
-      "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)",
-  },
-  borderRadius: {
-    xl: "20px",
-    lg: "16px",
-    md: "12px",
-    sm: "8px",
-    xs: "6px",
-  },
-  spacing: {
-    xs: "4px",
-    sm: "8px",
-    md: "16px",
-    lg: "24px",
-    xl: "32px",
-    xxl: "48px",
-  },
-  typography: {
-    fontFamily:
-      "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  },
-  shadows: {
-    soft: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-    medium:
-      "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-    large:
-      "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-    glow: "0 0 20px rgba(99, 102, 241, 0.3)",
-    glowHover: "0 0 30px rgba(99, 102, 241, 0.4)",
-  },
-  animations: {
-    spring: "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
-    smooth: "cubic-bezier(0.4, 0, 0.2, 1)",
-    bounce: "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
-  },
-};
-
-// Modern vibrant color palette with gradients
-const modernColors = [
-  {
-    solid: "#6366f1",
-    gradient: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-  },
-  {
-    solid: "#06b6d4",
-    gradient: "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)",
-  },
-  {
-    solid: "#10b981",
-    gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-  },
-  {
-    solid: "#f59e0b",
-    gradient: "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)",
-  },
-  {
-    solid: "#ef4444",
-    gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-  },
-  {
-    solid: "#8b5cf6",
-    gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-  },
-  {
-    solid: "#ec4899",
-    gradient: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
-  },
-  {
-    solid: "#14b8a6",
-    gradient: "linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)",
-  },
-];
+import { useTheme } from "../../ThemeContext"; // Import useTheme hook
 
 interface ModernBarGraphProps {
   data: any[];
@@ -122,12 +24,12 @@ interface ModernBarGraphProps {
 
 // Ultra-modern Custom Bar Shape with advanced gradients and animations
 const ModernBarShape = (props: any) => {
+  const { theme } = useTheme(); // Use theme from context
   const {
     x,
     y,
     width,
     height,
-    fill,
     dataKey,
     payload,
     yKeys,
@@ -142,14 +44,16 @@ const ModernBarShape = (props: any) => {
     .find((key) => Number(payload[key]) > 0);
 
   const isTopBar = dataKey === topMostKey;
-  const indexInYKeys = yKeys.indexOf(dataKey);
-  const colorIndex = keyIndex % modernColors.length;
-  const colorConfig = modernColors[colorIndex];
+  const colorIndex = keyIndex % theme.colors.barColors.length;
+  const solidColor = theme.colors.barColors[colorIndex];
 
   // FIX: Use unique ID based on groupIndex AND keyIndex
   const gradientId = `gradient-${groupIndex}-${keyIndex}`;
 
   if (value <= 0) return null;
+
+  // Define a simple gradient for the bars as `theme.gradients` might not have specific bar gradients
+  const barGradient = `linear-gradient(135deg, ${solidColor} 0%, ${solidColor}cc 100%)`; // Added opacity to the end color
 
   if (isTopBar) {
     const pathData = `M ${x}, ${y + radius}
@@ -166,27 +70,15 @@ const ModernBarShape = (props: any) => {
       <g>
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={colorConfig.solid} stopOpacity="1" />
-            <stop
-              offset="100%"
-              stopColor={colorConfig.solid}
-              stopOpacity="0.7"
-            />
+            <stop offset="0%" stopColor={solidColor} stopOpacity="1" />
+            <stop offset="100%" stopColor={solidColor} stopOpacity="0.7" />
           </linearGradient>
-          {/* <filter id={`glow-${gradientId}`}>
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter> */}
         </defs>
         <path
           d={pathData}
           fill={`url(#${gradientId})`}
-          stroke="rgba(255, 255, 255, 0.4)"
+          stroke={theme.colors.surfaceGlass} // Using surfaceGlass from theme
           strokeWidth="1"
-          filter={`url(#glow-${gradientId})`}
           style={{
             transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
             transformOrigin: "center bottom",
@@ -199,12 +91,8 @@ const ModernBarShape = (props: any) => {
       <g>
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={colorConfig.solid} stopOpacity="1" />
-            <stop
-              offset="100%"
-              stopColor={colorConfig.solid}
-              stopOpacity="0.7"
-            />
+            <stop offset="0%" stopColor={solidColor} stopOpacity="1" />
+            <stop offset="100%" stopColor={solidColor} stopOpacity="0.7" />
           </linearGradient>
         </defs>
         <rect
@@ -213,7 +101,7 @@ const ModernBarShape = (props: any) => {
           width={width}
           height={height}
           fill={`url(#${gradientId})`}
-          stroke="rgba(255, 255, 255, 0.4)"
+          stroke={theme.colors.surfaceGlass} // Using surfaceGlass from theme
           strokeWidth="1"
           style={{
             transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
@@ -236,9 +124,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     setValueKey,
     valueKey,
   }) => {
-    // const [groupBy, setGroupBy] = useState<string | null>(null);
-    // const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
-    // const [valueKey, setValueKey] = useState<string | null>(null);
+    const { theme } = useTheme(); // Use theme from context
     const [isAnimating, setIsAnimating] = useState(false);
 
     const [graphData, setGraphData] = useState<any[]>([]);
@@ -248,7 +134,6 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(
       data.length > 0
     );
-    const [isStacked, setIsStacked] = useState(true);
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -495,19 +380,21 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     // Ultra-modern Custom Tooltip with glassmorphism
     const ModernTooltip = ({ active, payload, label }: any) => {
       if (active && payload && payload.length) {
+        // Use the color of the first bar in the payload for the accent/border
+        const accentColor = payload[0]?.color || theme.colors.accent;
         return (
           <div
             style={{
-              padding: modernTheme.spacing.lg,
-              background: "rgba(255, 255, 255, 0.95)",
+              padding: theme.spacing.lg,
+              background: theme.colors.surface, // Use surface from theme
               backdropFilter: "blur(20px) saturate(180%)",
               WebkitBackdropFilter: "blur(20px) saturate(180%)",
-              color: modernTheme.colors.text,
+              color: theme.colors.text,
               fontSize: "14px",
-              borderRadius: modernTheme.borderRadius.lg,
-              boxShadow: modernTheme.shadows.large,
-              border: `1px solid ${modernTheme.colors.border}`,
-              fontFamily: modernTheme.typography.fontFamily,
+              borderRadius: theme.borderRadius.large, // Use large from theme
+              boxShadow: theme.shadow.lg, // Use lg from theme
+              border: `1px solid ${theme.colors.border}`, // Use border from theme
+              fontFamily: theme.typography.fontFamily,
               minWidth: "200px",
               maxWidth: "280px",
               position: "relative",
@@ -521,23 +408,23 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 left: 0,
                 right: 0,
                 height: "3px",
-                background: modernTheme.gradients.primary,
+                background: theme.gradients.primary, // Use primary gradient from theme
               }}
             />
             <div
               style={{
-                marginBottom: modernTheme.spacing.md,
-                fontWeight: 700,
-                color: modernTheme.colors.text,
+                marginBottom: theme.spacing.md,
+                fontWeight: theme.typography.weight.bold,
+                color: theme.colors.text,
                 fontSize: "16px",
                 display: "flex",
                 alignItems: "center",
-                gap: modernTheme.spacing.sm,
+                gap: theme.spacing.sm,
               }}
             >
               <TrendingUp
                 size={16}
-                style={{ color: modernTheme.colors.primary }}
+                style={{ color: theme.colors.accent }} // Use accent from theme
               />
               {formatKey(label)}
             </div>
@@ -549,11 +436,11 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   alignItems: "center",
                   justifyContent: "space-between",
                   marginBottom:
-                    index < payload.length - 1 ? modernTheme.spacing.md : 0,
-                  padding: modernTheme.spacing.md,
-                  borderRadius: modernTheme.borderRadius.sm,
-                  background: `${entry.color}15`,
-                  border: `1px solid ${entry.color}30`,
+                    index < payload.length - 1 ? theme.spacing.md : 0,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.borderRadius.default, // Use default from theme
+                  background: `${entry.color}15`, // Keep opacity suffix
+                  border: `1px solid ${entry.color}30`, // Keep opacity suffix
                   transition: "all 0.2s ease",
                 }}
               >
@@ -564,21 +451,26 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                       height: "14px",
                       background: entry.color,
                       borderRadius: "50%",
-                      marginRight: modernTheme.spacing.md,
-                      boxShadow: `0 0 10px ${entry.color}60`,
-                      border: "2px solid rgba(255, 255, 255, 0.8)",
+                      marginRight: theme.spacing.md,
+                      boxShadow: theme.shadow.sm, // Use sm from theme
+                      border: `2px solid ${theme.colors.surface}`, // Use surface from theme
                     }}
                   />
-                  <span style={{ fontWeight: 600, fontSize: "14px" }}>
+                  <span
+                    style={{
+                      fontWeight: theme.typography.weight.medium,
+                      fontSize: "14px",
+                    }}
+                  >
                     {formatKey(entry.name)}
                   </span>
                 </div>
                 <span
                   style={{
-                    fontWeight: 700,
-                    color: modernTheme.colors.text,
+                    fontWeight: theme.typography.weight.bold,
+                    color: theme.colors.text,
                     fontSize: "15px",
-                    background: modernTheme.gradients.primary,
+                    background: theme.gradients.primary, // Use primary gradient from theme
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
@@ -602,38 +494,37 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         <div
           className="flex flex-col items-center justify-center h-full p-12"
           style={{
-            background: modernTheme.gradients.surface,
+            background: theme.colors.surface, // Use surface from theme
             backdropFilter: "blur(20px)",
-            borderRadius: modernTheme.borderRadius.xl,
-            border: `1px solid ${modernTheme.colors.border}`,
-            boxShadow: modernTheme.shadows.large,
+            borderRadius: theme.borderRadius.large, // Use large from theme
+            border: `1px solid ${theme.colors.border}`, // Use border from theme
+            boxShadow: theme.shadow.lg, // Use lg from theme
           }}
         >
           <div
             style={{
               width: "100px",
               height: "100px",
-              background: modernTheme.gradients.primary,
+              background: theme.gradients.primary, // Use primary gradient from theme
               borderRadius: "50%",
               margin: "0 auto 32px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: modernTheme.shadows.glow,
-              // animation: "pulse 2s infinite",
+              boxShadow: theme.shadow.md, // Use md from theme
             }}
           >
             <BarChart3 size={48} color="white" />
           </div>
           <h3
             style={{
-              color: modernTheme.colors.text,
+              color: theme.colors.text, // Use text from theme
               fontSize: "28px",
-              fontWeight: 700,
+              fontWeight: theme.typography.weight.bold,
               margin: "0 0 16px 0",
               textAlign: "center",
-              fontFamily: modernTheme.typography.fontFamily,
-              background: modernTheme.gradients.primary,
+              fontFamily: theme.typography.fontFamily,
+              background: theme.gradients.primary, // Use primary gradient from theme
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -643,11 +534,11 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           </h3>
           <p
             style={{
-              color: modernTheme.colors.textSecondary,
+              color: theme.colors.textSecondary, // Use textSecondary from theme
               fontSize: "18px",
               textAlign: "center",
               margin: 0,
-              fontFamily: modernTheme.typography.fontFamily,
+              fontFamily: theme.typography.fontFamily,
               lineHeight: 1.6,
             }}
           >
@@ -666,12 +557,11 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         <div
           className="flex flex-col"
           style={{
-            borderRadius: modernTheme.borderRadius.xl,
-            background: modernTheme.gradients.surface,
+            // borderRadius: theme.borderRadius.large, // Use large from theme
+            background: theme.colors.surface, // Use surface from theme
             backdropFilter: "blur(20px) saturate(180%)",
             WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            border: `1px solid ${modernTheme.colors.border}`,
-            // boxShadow: modernTheme.shadows.large,
+            // border: `1px solid ${theme.colors.border}`, // Use border from theme
             overflow: "hidden",
             transition: "all 0.4s ease",
           }}
@@ -679,22 +569,24 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           {/* Ultra-modern Header */}
           <div
             style={{
-              background: modernTheme.gradients.glass,
+              background: theme.gradients.glass, // Use glass gradient from theme
               backdropFilter: "blur(20px)",
-              borderBottom: `1px solid ${modernTheme.colors.border}`,
+              borderBottom: `1px solid ${theme.colors.border}`, // Use border from theme
             }}
           >
             {/* Enhanced Control Panel */}
+            {/* Keeping the control panel commented out as it was in the original file,
+                but updating styles to use theme for future use if uncommented */}
             {/* <div className="flex flex-wrap p-2 gap-3 items-center">
               <div className="flex items-center gap-1">
                  <Settings
                   size={18}
-                  style={{ color: modernTheme.colors.primary }}
+                  style={{ color: theme.colors.accent }}
                 />
                 <label
                   htmlFor="groupBy"
                   className="font-semibold text-sm"
-                  style={{ color: modernTheme.colors.text }}
+                  style={{ color: theme.colors.text }}
                 >
                   Group By:
                 </label>
@@ -702,13 +594,13 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   id="groupBy"
                   className="px-2 py-2 w-28 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
                   style={{
-                    background: "rgba(255, 255, 255, 0.9)",
+                    background: theme.colors.surface,
                     backdropFilter: "blur(10px)",
-                    color: modernTheme.colors.text,
-                    fontFamily: modernTheme.typography.fontFamily,
-                    fontWeight: 600,
+                    color: theme.colors.text,
+                    fontFamily: theme.typography.fontFamily,
+                    fontWeight: theme.typography.weight.medium,
                     minWidth: "140px",
-                    boxShadow: modernTheme.shadows.soft,
+                    boxShadow: theme.shadow.sm,
                   }}
                   value={groupBy || ""}
                   onChange={(e) => {
@@ -732,7 +624,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 <label
                   htmlFor="aggregate"
                   className="font-semibold text-sm"
-                  style={{ color: modernTheme.colors.text }}
+                  style={{ color: theme.colors.text }}
                 >
                   Aggregate:
                 </label>
@@ -740,13 +632,13 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   id="aggregate"
                   className="px-2 py-2 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
                   style={{
-                    background: "rgba(255, 255, 255, 0.9)",
+                    background: theme.colors.surface,
                     backdropFilter: "blur(10px)",
-                    color: modernTheme.colors.text,
-                    fontFamily: modernTheme.typography.fontFamily,
-                    fontWeight: 600,
+                    color: theme.colors.text,
+                    fontFamily: theme.typography.fontFamily,
+                    fontWeight: theme.typography.weight.medium,
                     minWidth: "120px",
-                    boxShadow: modernTheme.shadows.soft,
+                    boxShadow: theme.shadow.sm,
                   }}
                   value={aggregate}
                   onChange={(e) =>
@@ -765,7 +657,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   <label
                     htmlFor="valueKey"
                     className="font-semibold text-sm"
-                    style={{ color: modernTheme.colors.text }}
+                    style={{ color: theme.colors.text }}
                   >
                     Value Key:
                   </label>
@@ -773,13 +665,13 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                     id="valueKey"
                     className="px-2 py-2 w-28 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
                     style={{
-                      background: "rgba(255, 255, 255, 0.9)",
+                      background: theme.colors.surface,
                       backdropFilter: "blur(10px)",
-                      color: modernTheme.colors.text,
-                      fontFamily: modernTheme.typography.fontFamily,
-                      fontWeight: 600,
+                      color: theme.colors.text,
+                      fontFamily: theme.typography.fontFamily,
+                      fontWeight: theme.typography.weight.medium,
                       minWidth: "140px",
-                      boxShadow: modernTheme.shadows.soft,
+                      boxShadow: theme.shadow.sm,
                     }}
                     value={valueKey || ""}
                     onChange={(e) => setValueKey(e.target.value)}
@@ -811,17 +703,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               }}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={graphData}
-                  // margin={{
-                  //   top: 30,
-                  //   right: 40,
-                  //   left: 30,
-                  //   bottom: xTickRotation === -45 ? 100 : 60,
-                  // }}
-                  barCategoryGap="25%"
-                  barGap={6}
-                >
+                <BarChart data={graphData} barCategoryGap="25%" barGap={6}>
                   <defs>
                     <linearGradient
                       id="gridGradient"
@@ -830,22 +712,33 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                       x2="100%"
                       y2="0%"
                     >
-                      <stop offset="0%" stopColor="rgba(99, 102, 241, 0.1)" />
-                      <stop offset="50%" stopColor="rgba(99, 102, 241, 0.05)" />
-                      <stop offset="100%" stopColor="rgba(99, 102, 241, 0.1)" />
+                      <stop
+                        offset="0%"
+                        stopColor={`${theme.colors.accent}1A`}
+                      />{" "}
+                      {/* Accent with opacity */}
+                      <stop
+                        offset="50%"
+                        stopColor={`${theme.colors.accent}0D`}
+                      />{" "}
+                      {/* Accent with more opacity */}
+                      <stop
+                        offset="100%"
+                        stopColor={`${theme.colors.accent}1A`}
+                      />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
                     strokeDasharray="3 6"
                     vertical={false}
-                    stroke="rgba(99, 102, 241, 0.2)"
+                    stroke={`${theme.colors.accent}33`} // Accent with opacity
                     opacity={0.8}
                   />
                   <XAxis
                     dataKey={xKey}
                     tickLine={false}
                     axisLine={{
-                      stroke: "rgba(99, 102, 241, 0.3)",
+                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
                       strokeWidth: 2,
                     }}
                     angle={xTickRotation}
@@ -853,9 +746,9 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                     height={xTickRotation === -45 ? 100 : 60}
                     style={{
                       fontSize: "13px",
-                      fontWeight: 600,
-                      fontFamily: modernTheme.typography.fontFamily,
-                      fill: modernTheme.colors.textSecondary,
+                      fontWeight: theme.typography.weight.medium,
+                      fontFamily: theme.typography.fontFamily,
+                      fill: theme.colors.textSecondary,
                     }}
                     tickFormatter={(value) =>
                       value.length > 14
@@ -866,21 +759,21 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   <YAxis
                     tickLine={false}
                     axisLine={{
-                      stroke: "rgba(99, 102, 241, 0.3)",
+                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
                       strokeWidth: 2,
                     }}
                     style={{
                       fontSize: "13px",
-                      fontWeight: 600,
-                      fontFamily: modernTheme.typography.fontFamily,
-                      fill: modernTheme.colors.textSecondary,
+                      fontWeight: theme.typography.weight.medium,
+                      fontFamily: theme.typography.fontFamily,
+                      fill: theme.colors.textSecondary,
                     }}
                     domain={["auto", "auto"]}
                   />
                   <Tooltip
                     cursor={{
-                      fill: "rgba(99, 102, 241, 0.1)",
-                      stroke: "rgba(99, 102, 241, 0.3)",
+                      fill: `${theme.colors.accent}1A`, // Accent with opacity
+                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
                       strokeWidth: 2,
                       radius: 8,
                     }}
@@ -896,7 +789,9 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                         dataKey={key}
                         stackId="a"
                         fill={
-                          modernColors[keyIndex % modernColors.length].solid
+                          theme.colors.barColors[
+                            keyIndex % theme.colors.barColors.length
+                          ]
                         }
                         shape={(props) => (
                           <ModernBarShape
