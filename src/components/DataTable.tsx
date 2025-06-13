@@ -24,7 +24,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 20,
   });
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(true);
@@ -290,14 +290,16 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
 
   const rowsOptions = useMemo(() => {
     const size = filteredData.length;
+    let options = [20]; // Always include 20
 
-    if (size <= 100) return [10, 20, 50, 100];
-    if (size <= 1000) return [50, 100, 200, 500];
-    if (size <= 5000) return [100, 500, 1000];
-    if (size <= 10000) return [100, 500, 1000, 2000];
-    return [100, 500, 1000, 2000, 5000];
+    if (size <= 100) options = [...new Set([10, 20, 50, 100])];
+    else if (size <= 1000) options = [...new Set([20, 50, 100, 200, 500])];
+    else if (size <= 5000) options = [...new Set([20, 100, 500, 1000])];
+    else if (size <= 10000) options = [...new Set([20, 100, 500, 1000, 2000])];
+    else options = [...new Set([20, 100, 500, 1000, 2000, 5000])];
+
+    return options.sort((a, b) => a - b); // Sort numerically
   }, [filteredData.length]);
-
   // Toggle controls visibility
   const toggleControls = () => {
     setShowControls(!showControls);
@@ -516,8 +518,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       {/* Table content - Enhanced styling for better visibility */}
       <div className="w-full flex justify-center py-2">
         <div
-          className="overflow-auto max-h-64 scrollbar-thin"
+          className="overflow-auto scrollbar-thin"
           style={{
+            height: "calc(100vh - 350px)", // Adjust height based on your layout
             scrollbarColor: `${theme.colors.accent}40 ${theme.colors.surface}`,
           }}
         >
@@ -537,7 +540,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                         return (
                           <th
                             key={header.id}
-                            className="px-4 py-2 text-center text-sm font-medium"
+                            className="px-6 py-3 text-center text-sm font-medium"
                             onClick={header.column.getToggleSortingHandler()}
                           >
                             {flexRender(
@@ -575,7 +578,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="px-4 py-2 text-center text-md"
+                        className="px-6 py-4 text-center text-md"
                         style={{ color: theme.colors.text }}
                       >
                         {flexRender(

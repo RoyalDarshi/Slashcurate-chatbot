@@ -112,6 +112,12 @@ const modernColors = [
 interface ModernBarGraphProps {
   data: any[];
   isValidGraph: (validData: boolean) => void;
+  groupBy: string | null;
+  setGroupBy: React.Dispatch<React.SetStateAction<string | null>>;
+  aggregate: "sum" | "count";
+  setAggregate: React.Dispatch<React.SetStateAction<"sum" | "count">>;
+  valueKey: string | null;
+  setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 // Ultra-modern Custom Bar Shape with advanced gradients and animations
@@ -167,13 +173,13 @@ const ModernBarShape = (props: any) => {
               stopOpacity="0.7"
             />
           </linearGradient>
-          <filter id={`glow-${gradientId}`}>
+          {/* <filter id={`glow-${gradientId}`}>
             <feGaussianBlur stdDeviation="3" result="coloredBlur" />
             <feMerge>
               <feMergeNode in="coloredBlur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
-          </filter>
+          </filter> */}
         </defs>
         <path
           d={pathData}
@@ -220,10 +226,19 @@ const ModernBarShape = (props: any) => {
 };
 
 const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
-  ({ data, isValidGraph }) => {
-    const [groupBy, setGroupBy] = useState<string | null>(null);
-    const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
-    const [valueKey, setValueKey] = useState<string | null>(null);
+  ({
+    data,
+    isValidGraph,
+    groupBy,
+    aggregate,
+    setAggregate,
+    setGroupBy,
+    setValueKey,
+    valueKey,
+  }) => {
+    // const [groupBy, setGroupBy] = useState<string | null>(null);
+    // const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
+    // const [valueKey, setValueKey] = useState<string | null>(null);
     const [isAnimating, setIsAnimating] = useState(false);
 
     const [graphData, setGraphData] = useState<any[]>([]);
@@ -670,12 +685,12 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             }}
           >
             {/* Enhanced Control Panel */}
-            <div className="flex flex-wrap p-2 gap-3 items-center">
+            {/* <div className="flex flex-wrap p-2 gap-3 items-center">
               <div className="flex items-center gap-1">
-                {/* <Settings
+                 <Settings
                   size={18}
                   style={{ color: modernTheme.colors.primary }}
-                /> */}
+                />
                 <label
                   htmlFor="groupBy"
                   className="font-semibold text-sm"
@@ -777,7 +792,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   </select>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/* Enhanced Chart Container */}
@@ -785,8 +800,10 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             <div
               ref={containerRef}
               style={{
-                height: "350px",
+                height: "60vh",
                 width: "100%",
+                minHeight: "300px", // ✅ minimum visible height
+                flex: 1,
                 position: "relative",
                 opacity: isAnimating ? 0.7 : 1,
                 transform: isAnimating ? "scale(0.98)" : "scale(1)",

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BarChartIcon as BarChartIconLucide,
   Database,
@@ -54,6 +54,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   // Add state for graph type, defaulting to 'bar'
   const [graphType, setGraphType] = useState("bar");
+  const [groupBy, setGroupBy] = useState<string | null>(null);
+  const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
+  const [valueKey, setValueKey] = useState<string | null>(null);
 
   if (!dashboardItem) {
     return (
@@ -82,9 +85,44 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     );
   }
 
+  const isKeyExcluded = (key: string): boolean => {
+    const lowerKey = key.toLowerCase();
+    return (
+      /(id|code|number)$/.test(lowerKey) ||
+      lowerKey.includes("date") ||
+      lowerKey.includes("email") ||
+      lowerKey.includes("address") ||
+      lowerKey === "first_name" ||
+      lowerKey === "last_name" ||
+      lowerKey === "name" ||
+      lowerKey.length < 3
+    );
+  };
+
+  const getValidValueKeys = (data: any[]) => {
+    if (!data || data.length === 0) return [];
+    const keys = Object.keys(data[0]);
+    return keys.filter((key) => {
+      const sampleVal = data.find(
+        (d) => d[key] !== null && d[key] !== undefined
+      )?.[key];
+      return (
+        !isKeyExcluded(key) &&
+        (typeof sampleVal === "number" || !isNaN(Number(sampleVal)))
+      );
+    });
+  };
+
+  useEffect(() => {
+    if (aggregate === "sum" && !valueKey) {
+      const validKeys = getValidValueKeys(dashboardItem.mainViewData.chartData);
+      if (validKeys.length > 0) setValueKey(validKeys[0]);
+    }
+  }, [aggregate, dashboardItem.mainViewData.chartData, valueKey]);
+
   return (
     <div
-      className="flex flex-col h-full p-2"
+      className="flex flex-col flex-grow h-full min-h-[500px] p-2"
       style={{ backgroundColor: theme.colors.background }}
     >
       {/* Top section: Current Question and KPI Cards */}
@@ -116,39 +154,105 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             backgroundColor: theme.colors.surface,
             boxShadow: theme.shadow.lg,
             borderRadius: theme.borderRadius.large,
-            minHeight: "400px",
+            minHeight: "300px", // Ensure some visible base
+            maxHeight: "calc(100vh - 130px)", // Prevent overflow
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          {/* Select Dropdown for Graph Type */}
-          <div className="p-2 flex items-center">
-            <label
-              htmlFor="graph-type-select"
-              className="mr-2"
-              style={{ color: theme.colors.text }}
-            >
-              Graph Type:
-            </label>
-            <select
-              id="graph-type-select"
-              value={graphType}
-              onChange={(e) => setGraphType(e.target.value)}
-              className="p-2 rounded"
-              style={{
-                backgroundColor: theme.colors.bubbleBot,
-                color: theme.colors.bubbleBotText,
-              }}
-            >
-              <option value="bar">Bar</option>
-              <option value="line">Line</option>
-              <option value="pie">Pie</option>
-              {/* Add more graph types here if needed, e.g., <option value="scatter">Scatter</option> */}
-            </select>
+          {/* Shared Filters Panel */}
+          <div className="p-2 flex flex-wrap gap-3 items-center">
+            {/* Select Dropdown for Graph Type */}
+            <div className="p-2 flex items-center">
+              <label
+                htmlFor="graph-type-select"
+                className="font-semibold text-sm text-gray-700"
+              >
+                Graph Type:
+              </label>
+              <select
+                id="graph-type-select"
+                value={graphType}
+                onChange={(e) => setGraphType(e.target.value)}
+                className="px-2 py-1 rounded-md border shadow-sm"
+              >
+                <option value="bar">Bar</option>
+                <option value="line">Line</option>
+                <option value="pie">Pie</option>
+                {/* Add more graph types here if needed, e.g., <option value="scatter">Scatter</option> */}
+              </select>
+            </div>
+            {/* Group By */}
+            <div className="flex items-center gap-2">
+              <label className="font-semibold text-sm text-gray-700">
+                Group By:
+              </label>
+              <select
+                className="px-2 py-1 rounded-md border shadow-sm"
+                value={groupBy || ""}
+                onChange={(e) => setGroupBy(e.target.value)}
+              >
+                {Object.keys(dashboardItem.mainViewData.chartData[0] || {}).map(
+                  (key) => (
+                    <option key={key} value={key}>
+                      {key.replace(/_/g, " ")}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            {/* Aggregate */}
+            <div className="flex items-center gap-2">
+              <label className="font-semibold text-sm text-gray-700">
+                Aggregate:
+              </label>
+              <select
+                className="px-2 py-1 rounded-md border shadow-sm"
+                value={aggregate}
+                onChange={(e) =>
+                  setAggregate(e.target.value as "sum" | "count")
+                }
+              >
+                <option value="count">Count</option>
+                <option value="sum">Sum</option>
+              </select>
+            </div>
+
+            {/* Value Key — only if "sum" is selected */}
+            {aggregate === "sum" && (
+              <div className="flex items-center gap-2">
+                <label className="font-semibold text-sm text-gray-700">
+                  Value Key:
+                </label>
+                <select
+                  className="px-2 py-1 rounded-md border shadow-sm"
+                  value={valueKey || ""}
+                  onChange={(e) => setValueKey(e.target.value)}
+                >
+                  {getValidValueKeys(dashboardItem.mainViewData.chartData).map(
+                    (key) => (
+                      <option key={key} value={key}>
+                        {key.replace(/_/g, " ")}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+            )}
           </div>
+
           {/* Graph Rendering */}
-          <div className="flex-1 flex justify-center items-center overflow-hidden">
+          <div className="flex flex-col flex-1 min-h-[400px]">
             {graphType === "bar" && (
               <DynamicBarGraph
                 data={dashboardItem.mainViewData.chartData}
+                groupBy={groupBy}
+                setGroupBy={setGroupBy}
+                aggregate={aggregate}
+                setAggregate={setAggregate}
+                valueKey={valueKey}
+                setValueKey={setValueKey}
                 isValidGraph={() => true}
               />
             )}
@@ -223,7 +327,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             )}
             {activeViewType === "query" && (
-              <div className="p-6">
+              <div className="p-6 flex justify-center items-center">
                 <QueryDisplay
                   query={dashboardItem.mainViewData.queryData}
                   fontSize="text-base"
