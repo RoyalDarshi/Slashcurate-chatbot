@@ -384,7 +384,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             )}
             {activeViewType === "query" && (
-              <div className="p-6 flex justify-center items-center">
+              <div className="p-6 flex justify-center items-center relative">
                 <QueryDisplay
                   query={dashboardItem.mainViewData.queryData}
                   fontSize="text-base"

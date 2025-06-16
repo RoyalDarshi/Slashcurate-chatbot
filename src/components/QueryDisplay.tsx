@@ -1,6 +1,63 @@
-import React, { useMemo } from "react";
-import { useTheme } from "../ThemeContext";
+import React, { useMemo, useState } from "react";
+import { Copy, Check } from "lucide-react";
+import { motion } from "framer-motion"; // Assuming framer-motion is installed
+import { useTheme } from "../ThemeContext.tsx"; // Corrected import path
 
+// --- Placeholder CustomTooltip Component ---
+// In a real application, this would be in a separate file (e.g., CustomTooltip.tsx)
+interface CustomTooltipProps {
+  title: string;
+  children: React.ReactElement;
+  position?: "top" | "bottom" | "left" | "right";
+}
+
+const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  title,
+  children,
+  position = "top",
+}) => {
+  const [show, setShow] = useState(false);
+  const { theme } = useTheme();
+
+  const getPositionClasses = (pos: string) => {
+    switch (pos) {
+      case "top":
+        return "bottom-full left-1/2 -translate-x-1/2 mb-2";
+      case "bottom":
+        return "top-full left-1/2 -translate-x-1/2 mt-2";
+      case "left":
+        return "right-full top-1/2 -translate-y-1/2 mr-2";
+      case "right":
+        return "left-full top-1/2 -translate-y-1/2 ml-2";
+      default:
+        return "bottom-full left-1/2 -translate-x-1/2 mb-2";
+    }
+  };
+
+  return (
+    <div
+      className="relative flex items-center justify-center"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show && (
+        <div
+          className={`absolute z-20 px-2 py-1 text-xs rounded shadow-lg whitespace-nowrap
+                      ${getPositionClasses(position)}`}
+          style={{
+            backgroundColor: theme.colors.surface,
+            color: theme.colors.text,
+          }}
+        >
+          {title}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Original QueryDisplay Component ---
 interface QueryDisplayProps {
   query: string | object | null | undefined;
   title?: string;
@@ -33,19 +90,15 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
         return null;
       }
 
+      // SQL Syntax Highlighting Logic
       if (language === "sql") {
-        // A more accurate lexical analysis approach for SQL
         const lexSQL = (sql: string) => {
-          // First, escape HTML special characters
           const escapedSql = sql
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
 
-          // Tokenize the SQL into parts with proper coloring
           const tokens = [];
-
-          // Keywords list - case insensitive
           const keywords = [
             "SELECT",
             "FROM",
@@ -91,28 +144,22 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
             "END",
           ];
 
-          // Create a regex pattern for keywords with word boundaries
           const keywordPattern = new RegExp(
             `\\b(${keywords.join("|")})\\b`,
             "i"
           );
 
-          // Process the SQL character by character to handle all edge cases
           let i = 0;
           let currentToken = "";
-          let state = "normal"; // States: normal, string, identifier, comment
+          let state = "normal"; // States: normal, string, identifier
 
           while (i < escapedSql.length) {
             const char = escapedSql[i];
-            // const nextChar = i < escapedSql.length - 1 ? escapedSql[i + 1] : "";
 
-            // Handle different states
             if (state === "normal") {
-              // Check for the start of a quoted identifier
               if (char === '"') {
-                // Process any accumulated token if needed
                 if (currentToken) {
-                  // Check if it's a keyword
+                  // Process accumulated token before starting quoted identifier
                   if (keywordPattern.test(currentToken)) {
                     tokens.push({
                       type: "keyword",
@@ -120,21 +167,18 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                       color: theme.colors.accent,
                     });
                   } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
-                    // It's a number
                     tokens.push({
                       type: "number",
                       value: currentToken,
                       color: theme.colors.error,
                     });
                   } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
-                    // It's an unquoted identifier/name
                     tokens.push({
                       type: "identifier",
                       value: currentToken,
-                      color: theme.colors.success,
+                      color: theme.colors.text, // Use theme's text color for identifiers
                     });
                   } else {
-                    // Regular text
                     tokens.push({
                       type: "text",
                       value: currentToken,
@@ -143,13 +187,9 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                   }
                   currentToken = "";
                 }
-
-                // Start of a quoted identifier
                 state = "identifier";
                 currentToken = char;
-              }
-              // Check for string literal
-              else if (char === "'") {
+              } else if (char === "'") {
                 if (currentToken) {
                   tokens.push({
                     type: "text",
@@ -158,15 +198,10 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                   });
                   currentToken = "";
                 }
-
                 state = "string";
                 currentToken = char;
-              }
-              // Check for operators and punctuation
-              else if (/[.,;()=<>!+\-*/%]/.test(char)) {
-                // Process any accumulated token
+              } else if (/[.,;()=<>!+\-*/%]/.test(char)) {
                 if (currentToken) {
-                  // Check if it's a keyword
                   if (keywordPattern.test(currentToken)) {
                     tokens.push({
                       type: "keyword",
@@ -174,21 +209,18 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                       color: theme.colors.accent,
                     });
                   } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
-                    // It's a number
                     tokens.push({
                       type: "number",
                       value: currentToken,
                       color: theme.colors.error,
                     });
                   } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
-                    // It's an unquoted identifier/name
                     tokens.push({
                       type: "identifier",
                       value: currentToken,
-                      color: theme.colors.success,
+                      color: theme.colors.text, // Use theme's text color for identifiers
                     });
                   } else {
-                    // Regular text
                     tokens.push({
                       type: "text",
                       value: currentToken,
@@ -197,19 +229,9 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                   }
                   currentToken = "";
                 }
-
-                // Add operator/punctuation
-                tokens.push({
-                  type: "operator",
-                  value: char,
-                  color: null,
-                });
-              }
-              // Handle spaces
-              else if (/\s/.test(char)) {
-                // Process any accumulated token
+                tokens.push({ type: "operator", value: char, color: null });
+              } else if (/\s/.test(char)) {
                 if (currentToken) {
-                  // Check if it's a keyword
                   if (keywordPattern.test(currentToken)) {
                     tokens.push({
                       type: "keyword",
@@ -217,21 +239,18 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                       color: theme.colors.accent,
                     });
                   } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
-                    // It's a number
                     tokens.push({
                       type: "number",
                       value: currentToken,
                       color: theme.colors.error,
                     });
                   } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
-                    // It's an unquoted identifier/name
                     tokens.push({
                       type: "identifier",
                       value: currentToken,
-                      color: theme.colors.success,
+                      color: theme.colors.text, // Use theme's text color for identifiers
                     });
                   } else {
-                    // Regular text
                     tokens.push({
                       type: "text",
                       value: currentToken,
@@ -240,23 +259,14 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                   }
                   currentToken = "";
                 }
-
-                // Add whitespace
-                tokens.push({
-                  type: "whitespace",
-                  value: char,
-                  color: null,
-                });
-              }
-              // Regular character, accumulate
-              else {
+                tokens.push({ type: "whitespace", value: char, color: null });
+              } else {
                 currentToken += char;
               }
-            }
-            // Handle string literal state
-            else if (state === "string") {
+            } else if (state === "string") {
               currentToken += char;
               if (char === "'" && i > 0) {
+                // Check i > 0 to prevent issues with leading single quote
                 tokens.push({
                   type: "string",
                   value: currentToken,
@@ -265,27 +275,23 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                 currentToken = "";
                 state = "normal";
               }
-            }
-            // Handle quoted identifier state
-            else if (state === "identifier") {
+            } else if (state === "identifier") {
               currentToken += char;
               if (char === '"' && i > 0) {
+                // Check i > 0 to prevent issues with leading double quote
                 tokens.push({
                   type: "quotedIdentifier",
                   value: currentToken,
-                  color: theme.colors.success,
+                  color: theme.colors.text, // Use theme's text color for identifiers
                 });
                 currentToken = "";
                 state = "normal";
               }
             }
-
             i++;
           }
 
-          // Handle any remaining token
           if (currentToken) {
-            // Check if it's a keyword
             if (keywordPattern.test(currentToken)) {
               tokens.push({
                 type: "keyword",
@@ -293,153 +299,122 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                 color: theme.colors.accent,
               });
             } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
-              // It's a number
               tokens.push({
                 type: "number",
                 value: currentToken,
                 color: theme.colors.error,
               });
             } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
-              // It's an unquoted identifier/name
               tokens.push({
                 type: "identifier",
                 value: currentToken,
-                color: theme.colors.success,
+                color: theme.colors.text, // Use theme's text color for identifiers
               });
             } else {
-              // Regular text
-              tokens.push({
-                type: "text",
-                value: currentToken,
-                color: null,
-              });
+              tokens.push({ type: "text", value: currentToken, color: null });
             }
           }
-
           return tokens;
         };
 
-        // Process the lexed tokens for second-pass context analysis
         const processTokens = (tokens: any[]) => {
           let inFrom = false;
           let inOn = false;
-          let afterFrom = false;
-          let lastTableName = null;
 
-          // Function to identify a token sequence as a table reference
-          const isTableReference = (index: number) => {
-            // In the FROM clause, any identifier is a table
-            if (inFrom) {
-              return (
-                tokens[index].type === "identifier" ||
-                tokens[index].type === "quotedIdentifier"
-              );
-            }
-
-            // Check for table.column pattern
-            if (index + 2 < tokens.length) {
-              const isIdentifier =
-                tokens[index].type === "identifier" ||
-                tokens[index].type === "quotedIdentifier";
-              const isDot = tokens[index + 1].value === ".";
-              const isNextIdentifier =
-                tokens[index + 2].type === "identifier" ||
-                tokens[index + 2].type === "quotedIdentifier";
-
-              return isIdentifier && isDot && isNextIdentifier;
-            }
-
-            return false;
-          };
-
-          // Special handling for compound keywords like INNER JOIN and ORDER BY
           const handleCompoundKeywords = () => {
-            for (let i = 0; i < tokens.length - 2; i++) {
-              // Handle "INNER JOIN"
+            for (let i = 0; i < tokens.length; i++) {
+              // Handle "INNER JOIN", "LEFT JOIN", etc.
               if (
-                tokens[i].type === "keyword" &&
-                tokens[i].value.toUpperCase() === "INNER" &&
+                ["INNER", "LEFT", "RIGHT", "FULL"].includes(
+                  tokens[i].value.toUpperCase()
+                ) &&
+                i + 1 < tokens.length &&
+                tokens[i + 1].type === "whitespace" &&
                 i + 2 < tokens.length &&
-                tokens[i + 2].type === "keyword" &&
                 tokens[i + 2].value.toUpperCase() === "JOIN"
               ) {
-                // Ensure INNER has the same color as other keywords
-                tokens[i].color = theme.colors.accent;
+                tokens[i].color = theme.colors.accent; // Color the first part (INNER, LEFT, etc.)
+                tokens[i + 2].color = theme.colors.accent; // Color "JOIN"
               }
-
-              // Handle "ORDER BY"
-              if (
-                tokens[i].type === "keyword" &&
-                tokens[i].value.toUpperCase() === "ORDER" &&
+              // Handle "ORDER BY", "GROUP BY"
+              else if (
+                ["ORDER", "GROUP"].includes(tokens[i].value.toUpperCase()) &&
+                i + 1 < tokens.length &&
+                tokens[i + 1].type === "whitespace" &&
                 i + 2 < tokens.length &&
-                tokens[i + 2].type === "keyword" &&
                 tokens[i + 2].value.toUpperCase() === "BY"
               ) {
-                // Ensure ORDER has the same color as other keywords
-                tokens[i].color = theme.colors.accent;
-                tokens[i + 2].color = theme.colors.accent;
+                tokens[i].color = theme.colors.accent; // Color "ORDER" or "GROUP"
+                tokens[i + 2].color = theme.colors.accent; // Color "BY"
               }
             }
           };
 
-          // Second pass - identify tables and mark qualified columns
           for (let i = 0; i < tokens.length; i++) {
             const token = tokens[i];
 
-            // Track context
             if (token.type === "keyword") {
               const upperValue = token.value.toUpperCase();
 
-              if (upperValue === "FROM") {
-                inFrom = true;
-                afterFrom = true;
-                inOn = false;
-              } else if (upperValue === "JOIN") {
+              if (upperValue === "FROM" || upperValue === "JOIN") {
                 inFrom = true;
                 inOn = false;
               } else if (upperValue === "ON") {
                 inFrom = false;
                 inOn = true;
               } else if (
-                ["WHERE", "GROUP", "ORDER", "HAVING", "LIMIT"].includes(
-                  upperValue
-                )
+                [
+                  "WHERE",
+                  "GROUP",
+                  "ORDER",
+                  "HAVING",
+                  "LIMIT",
+                  "SELECT",
+                ].includes(upperValue)
               ) {
                 inFrom = false;
                 inOn = false;
               }
-
-              // Force all keywords to have the accent color
               token.color = theme.colors.accent;
             }
 
-            // Identify table references in FROM/JOIN
-            if (isTableReference(i)) {
+            // Identify table names and qualified columns
+            if (
+              token.type === "identifier" ||
+              token.type === "quotedIdentifier"
+            ) {
               if (inFrom) {
-                // This is a table name
-                tokens[i].color = theme.colors.warning;
-                tokens[i].type = "table";
-                lastTableName = tokens[i].value;
-              } else if (i + 2 < tokens.length && tokens[i + 1].value === ".") {
-                // This is a table name in a qualified column reference
-                tokens[i].color = theme.colors.warning;
-                tokens[i].type = "table";
+                token.color = theme.colors.warning; // Highlight as a table name
+                token.type = "table";
+              } else if (i > 0 && tokens[i - 1].value === ".") {
+                // This is a column name after a dot, so the previous token was a table/alias
+                // Ensure the previous token (table/alias) is also highlighted if not already
+                if (
+                  i - 2 >= 0 &&
+                  (tokens[i - 2].type === "identifier" ||
+                    tokens[i - 2].type === "quotedIdentifier")
+                ) {
+                  tokens[i - 2].color = theme.colors.warning;
+                  tokens[i - 2].type = "table"; // Mark it as a table too
+                }
+                token.color = theme.colors.text; // Use theme's text color for column names
+                token.type = "column";
+              } else if (i + 1 < tokens.length && tokens[i + 1].value === ".") {
+                // This is a table/alias before a dot, highlight it
+                token.color = theme.colors.warning;
+                token.type = "table";
               }
             }
           }
 
-          // Handle compound keywords like INNER JOIN and ORDER BY
-          handleCompoundKeywords();
+          handleCompoundKeywords(); // Apply compound keyword coloring after initial pass
 
           return tokens;
         };
 
-        // Tokenize the SQL query
         const lexedTokens = lexSQL(formattedQuery);
-        // Process tokens for contextual highlighting
         const processedTokens = processTokens(lexedTokens);
 
-        // Generate HTML
         let html = "";
         for (const token of processedTokens) {
           if (token.color) {
@@ -448,36 +423,51 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
             html += token.value;
           }
         }
-
         return <span dangerouslySetInnerHTML={{ __html: html }} />;
       }
-
       return <span>{formattedQuery}</span>;
     }, [formattedQuery, language, theme.colors]);
 
     return (
+      // Wrap the QueryDisplay in AppThemeProvider to provide theme context
       <div>
         {formattedQuery ? (
-          <div className="query-content">
+          <div className="query-content relative">
             {title && (
-              <h3 className="mb-2" style={{ color: theme.colors.text }}>
+              <h3
+                className="mb-3 text-lg font-semibold"
+                style={{ color: theme.colors.text }}
+              >
                 {title}
               </h3>
             )}
-            <pre
-              className="p-1 overflow-x-auto whitespace-pre-wrap font-mono"
-              style={{
-                backgroundColor: theme.colors.surface,
-                fontSize: fontSize,
-              }}
-            >
-              <code>{colorizedQuery || formattedQuery}</code>
-            </pre>
+            <div className="relative rounded-md overflow-hidde">
+              {/* Copy Button */}
+              {formattedQuery && (
+                <div className="absolute top-2 right-2 z-10">
+                  <CopyButton query={formattedQuery} />
+                </div>
+              )}
+              <pre
+                className="p-4 overflow-x-auto whitespace-pre-wrap font-mono relative pr-12 rounded-md" // Added pr-12 for copy button spacing
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  fontSize: fontSize,
+                  color: theme.colors.text, // Default text color for the code block
+                }}
+              >
+                <code>{colorizedQuery || formattedQuery}</code>
+              </pre>
+            </div>
           </div>
         ) : (
           <div
-            className="italic"
-            style={{ color: theme.colors.textSecondary, fontSize: fontSize }}
+            className="italic p-4 text-center rounded-md"
+            style={{
+              color: theme.colors.textSecondary,
+              fontSize: fontSize,
+              backgroundColor: theme.colors.surface,
+            }}
           >
             No query to display.
           </div>
@@ -500,3 +490,77 @@ const areEqual = (
 };
 
 export default React.memo(QueryDisplay, areEqual);
+
+// Copy Button Component
+const CopyButton = ({ query }: { query: string }) => {
+  const { theme } = useTheme();
+  const [copied, setCopied] = useState(false);
+  const [copyTooltipText, setCopyTooltipText] = useState("Copy to clipboard");
+  const [canCopy, setCanCopy] = useState(true);
+
+  const handleCopy = () => {
+    if (!canCopy) return;
+    setCanCopy(false);
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(query)
+        .then(() => {
+          setCopied(true);
+          setCopyTooltipText("Copied!");
+        })
+        .catch((error) => {
+          console.error("Copy failed:", error);
+          setCopyTooltipText("Copy failed");
+        })
+        .finally(() => {
+          setTimeout(() => {
+            setCopied(false);
+            setCopyTooltipText("Copy to clipboard");
+            setCanCopy(true);
+          }, 2000);
+        });
+    } else {
+      // Fallback for browsers that don't support clipboard API
+      const textarea = document.createElement("textarea");
+      textarea.value = query;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        const success = document.execCommand("copy");
+        if (success) {
+          setCopied(true);
+          setCopyTooltipText("Copied!");
+        } else {
+          setCopyTooltipText("Copy failed");
+        }
+      } catch (err) {
+        console.error("Copy failed:", err);
+        setCopyTooltipText("Copy failed");
+      }
+      document.body.removeChild(textarea);
+      setTimeout(() => {
+        setCopied(false);
+        setCopyTooltipText("Copy to clipboard");
+        setCanCopy(true);
+      }, 2000);
+    }
+  };
+
+  return (
+    <CustomTooltip title={copyTooltipText} position="left">
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleCopy}
+        className="p-2 rounded-full transition-colors duration-200 ease-in-out flex items-center justify-center shadow-md"
+        style={{
+          backgroundColor: copied ? theme.colors.success : theme.colors.accent, // Use accent for uncopied state
+          color: theme.colors.onPrimary, // Text color for the button
+        }}
+      >
+        {copied ? <Check size={16} /> : <Copy size={16} />}
+      </motion.button>
+    </CustomTooltip>
+  );
+};
