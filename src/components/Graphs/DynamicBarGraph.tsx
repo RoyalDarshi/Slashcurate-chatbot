@@ -718,7 +718,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             <div className="relative">
               <button
                 onClick={() => setShowResolutionOptions(!showResolutionOptions)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg rounded-t-none rounded-br-none text-sm font-medium transition-all duration-200"
                 style={{
                   backgroundColor: `${theme.colors.accent}1A`,
                   color: theme.colors.accent,
@@ -729,9 +729,9 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 <Download size={16} />
                 <span>Export</span>
               </button>
-              
+
               {showResolutionOptions && (
-                <div 
+                <div
                   className="absolute right-0 mt-1 py-1 rounded-lg shadow-lg z-10"
                   style={{
                     backgroundColor: theme.colors.surface,

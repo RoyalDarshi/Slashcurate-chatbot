@@ -10,6 +10,8 @@ import { DataTableProps } from "../types";
 import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
 import { motion, AnimatePresence } from "framer-motion";
+import * as XLSX from "xlsx"; // Import XLSX for Excel export
+import { Download } from "lucide-react"; // Import Download icon
 
 // This function formats header text from snake_case to Title Case
 const formatHeaderText = (header: string): string => {
@@ -33,6 +35,33 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Function to handle exporting table data to Excel
+  const handleExportToExcel = () => {
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(filteredData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+      XLSX.writeFile(workbook, "table_data.xlsx");
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+    }
+  };
+
+  // Function to handle exporting table data to CSV
+  const handleExportToCSV = () => {
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(filteredData);
+      const csv = XLSX.utils.sheet_to_csv(worksheet);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "table_data.csv";
+      link.click();
+    } catch (error) {
+      console.error("Error exporting to CSV:", error);
+    }
+  };
 
   useEffect(() => {
     // Only set searching to true when the search term changes but isn't debounced yet
@@ -206,7 +235,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                   scale: column.getIsSorted() ? 1 : 0.9,
                 }}
                 transition={{ duration: 0.2, type: "spring", stiffness: 200 }}
-                className="flex items-center justify-center w-5 h-5 ml-1.5"
+                className="flex items-center justify-center w-4 h-4 ml-1.5"
                 style={{
                   color: column.getIsSorted() ? "white" : theme.colors.accent,
                 }}
@@ -375,7 +404,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 aria-label={isSearchOpen ? "Close search" : "Open search"}
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -432,49 +461,6 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 </motion.button>
               )}
             </motion.div>
-
-            <div
-              className={`${isMobile ? "mt-2" : "ml-4"} text-sm`}
-              style={{ color: theme.colors.textSecondary }}
-            >
-              <div
-                className={`${isMobile && "mt-2"} text-sm flex items-center`}
-                style={{ color: theme.colors.textSecondary }}
-              >
-                {isSearching ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        duration: 1,
-                        repeat: Infinity,
-                        ease: "linear",
-                      }}
-                      className="mr-2"
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M12 6v6" />
-                      </svg>
-                    </motion.div>
-                    <span>Searching...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>
-                      {filteredData.length}{" "}
-                      {filteredData.length === 1 ? "record" : "records"}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
           </div>
 
           <div
@@ -482,6 +468,27 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               isMobile ? "mt-2 justify-end" : "space-x-2"
             }`}
           >
+            {/* Export Button */}
+            {filteredData.length > 0 && (
+              <div className="flex items-center mr-4">
+                <CustomTooltip title="Export Data">
+                  <div className="relative group">
+                    <button
+                      className="flex items-center space-x-1 px-2 py-1 rounded-md transition-colors"
+                      style={{
+                        backgroundColor: `${theme.colors.accent}15`,
+                        color: theme.colors.accent,
+                      }}
+                      onClick={handleExportToExcel}
+                    >
+                      <Download size={16} />
+                      <span className="text-sm">Export</span>
+                    </button>
+                  </div>
+                </CustomTooltip>
+              </div>
+            )}
+
             <span
               className="text-sm mx-2"
               style={{ color: theme.colors.textSecondary }}
@@ -613,7 +620,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                       <span>No results found</span>
                       {hasNoResults && (
                         <button
-                          className="text-sm px-3 py-1 rounded-full mt-2 transition-colors"
+                          className="text-sm px-3 py-1 rounded-full mt-0 transition-colors"
                           style={{
                             backgroundColor: `${theme.colors.accent}20`,
                             color: theme.colors.accent,
@@ -709,7 +716,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     disabled={!table.getCanPreviousPage()}
                   >
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -737,7 +744,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     disabled={!table.getCanPreviousPage()}
                   >
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -817,7 +824,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     disabled={!table.getCanNextPage()}
                   >
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -845,7 +852,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     disabled={!table.getCanNextPage()}
                   >
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
