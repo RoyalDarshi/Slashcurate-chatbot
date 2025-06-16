@@ -132,43 +132,66 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
   const [yKeys, setYKeys] = useState<string[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const graphRef = useRef<HTMLDivElement>(null);
-  
-  // Function to handle graph download
-  const handleDownloadGraph = async (resolution: "low" | "high") => {
-    if (graphRef.current) {
-      try {
-        const scale = resolution === "high" ? 2 : 1;
-        const canvas = await html2canvas(graphRef.current, {
-          scale,
-          useCORS: true,
-          logging: false,
-        });
-        const image = canvas.toDataURL("image/png");
-        const link = document.createElement("a");
-        link.href = image;
-        link.download = `bar_graph_${resolution}.png`;
-        link.click();
-      } catch (error) {
-        console.error("Error downloading graph:", error);
+    const graphRef = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Function to handle graph download
+    const handleDownloadGraph = async (resolution: "low" | "high") => {
+      console.log("Resolution:", resolution);
+      console.log("Container Ref:", containerRef.current);
+      if (containerRef.current) {
+        try {
+          console.log("Inside handleDownloadGraph");
+          const scale = resolution === "high" ? 2 : 1;
+          const canvas = await html2canvas(containerRef.current, {
+            scale,
+            useCORS: true,
+            logging: false,
+            backgroundColor: theme.colors.surface,
+            onclone: (document, element) => {
+              // Make sure all SVG elements are properly rendered
+              const svgElements = element.querySelectorAll("svg");
+              svgElements.forEach((svg) => {
+                svg.setAttribute(
+                  "width",
+                  svg.getBoundingClientRect().width.toString()
+                );
+                svg.setAttribute(
+                  "height",
+                  svg.getBoundingClientRect().height.toString()
+                );
+              });
+            },
+          });
+          const image = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = image;
+          link.download = `bar_graph_${resolution}.png`;
+          link.click();
+        } catch (error) {
+          console.error("Error downloading graph:", error);
+        }
       }
-    }
-    setShowResolutionOptions(false);
-  };
-  
-  // Close resolution options when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showResolutionOptions) {
-        setShowResolutionOptions(false);
-      }
+      setShowResolutionOptions(false);
     };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showResolutionOptions]);
+
+    // Close resolution options when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          showResolutionOptions &&
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target as Node)
+        ) {
+          setShowResolutionOptions(false);
+        }
+      };
+
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [showResolutionOptions]);
 
     const formatKey = useCallback((key: any): string => {
       if (key === null || key === undefined) return "";
@@ -732,6 +755,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
               {showResolutionOptions && (
                 <div
+                  ref={dropdownRef} // ✅ HERE
                   className="absolute right-0 mt-1 py-1 rounded-lg shadow-lg z-10"
                   style={{
                     backgroundColor: theme.colors.surface,
@@ -759,7 +783,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           </div>
 
           {/* Enhanced Chart Container */}
-          <div className="flex-1">
+          <div className="flex-1" ref={containerRef}>
             <div
               ref={graphRef}
               style={{
