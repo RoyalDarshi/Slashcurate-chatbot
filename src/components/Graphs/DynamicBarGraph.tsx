@@ -8,8 +8,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { BarChart3, TrendingUp, Download } from "lucide-react";
 import { useTheme } from "../../ThemeContext"; // Corrected import path
+import html2canvas from "html2canvas";
 
 interface ModernBarGraphProps {
   data: any[];
@@ -124,12 +125,50 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
   }) => {
     const { theme } = useTheme(); // Use theme from context
     const [isAnimating, setIsAnimating] = useState(false);
+  const [showResolutionOptions, setShowResolutionOptions] = useState(false);
 
-    const [graphData, setGraphData] = useState<any[]>([]);
-    const [xKey, setXKey] = useState<string | null>(null);
-    const [yKeys, setYKeys] = useState<string[]>([]);
+  const [graphData, setGraphData] = useState<any[]>([]);
+  const [xKey, setXKey] = useState<string | null>(null);
+  const [yKeys, setYKeys] = useState<string[]>([]);
 
-    const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const graphRef = useRef<HTMLDivElement>(null);
+  
+  // Function to handle graph download
+  const handleDownloadGraph = async (resolution: "low" | "high") => {
+    if (graphRef.current) {
+      try {
+        const scale = resolution === "high" ? 2 : 1;
+        const canvas = await html2canvas(graphRef.current, {
+          scale,
+          useCORS: true,
+          logging: false,
+        });
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = image;
+        link.download = `bar_graph_${resolution}.png`;
+        link.click();
+      } catch (error) {
+        console.error("Error downloading graph:", error);
+      }
+    }
+    setShowResolutionOptions(false);
+  };
+  
+  // Close resolution options when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showResolutionOptions) {
+        setShowResolutionOptions(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showResolutionOptions]);
 
     const formatKey = useCallback((key: any): string => {
       if (key === null || key === undefined) return "";
@@ -674,10 +713,55 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             </div> */}
           </div>
 
+          {/* Export Button */}
+          <div className="flex justify-end mb-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowResolutionOptions(!showResolutionOptions)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
+                style={{
+                  backgroundColor: `${theme.colors.accent}1A`,
+                  color: theme.colors.accent,
+                  border: `1px solid ${theme.colors.accent}33`,
+                }}
+                title="Export Graph"
+              >
+                <Download size={16} />
+                <span>Export</span>
+              </button>
+              
+              {showResolutionOptions && (
+                <div 
+                  className="absolute right-0 mt-1 py-1 rounded-lg shadow-lg z-10"
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    border: `1px solid ${theme.colors.border}`,
+                    minWidth: "120px",
+                  }}
+                >
+                  <button
+                    onClick={() => handleDownloadGraph("low")}
+                    className="w-full text-left px-3 py-1.5 text-sm hover:opacity-80 transition-opacity"
+                    style={{ color: theme.colors.text }}
+                  >
+                    Standard Quality
+                  </button>
+                  <button
+                    onClick={() => handleDownloadGraph("high")}
+                    className="w-full text-left px-3 py-1.5 text-sm hover:opacity-80 transition-opacity"
+                    style={{ color: theme.colors.text }}
+                  >
+                    High Quality
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Enhanced Chart Container */}
           <div className="flex-1">
             <div
-              ref={containerRef}
+              ref={graphRef}
               style={{
                 height: "60vh",
                 width: "100%",
