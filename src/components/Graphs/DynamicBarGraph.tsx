@@ -8,12 +8,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { BarChart3, TrendingUp, Settings, Zap } from "lucide-react";
-import { useTheme } from "../../ThemeContext"; // Import useTheme hook
+import { BarChart3, TrendingUp } from "lucide-react";
+import { useTheme } from "../../ThemeContext"; // Corrected import path
 
 interface ModernBarGraphProps {
   data: any[];
-  isValidGraph: (validData: boolean) => void;
   groupBy: string | null;
   setGroupBy: React.Dispatch<React.SetStateAction<string | null>>;
   aggregate: "sum" | "count";
@@ -113,10 +112,9 @@ const ModernBarShape = (props: any) => {
   }
 };
 
-const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
+const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
   ({
     data,
-    isValidGraph,
     groupBy,
     aggregate,
     setAggregate,
@@ -130,10 +128,6 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     const [graphData, setGraphData] = useState<any[]>([]);
     const [xKey, setXKey] = useState<string | null>(null);
     const [yKeys, setYKeys] = useState<string[]>([]);
-    // Initialize isValidGraphData based on whether initial data is present
-    const [isValidGraphData, setIsValidGraphData] = useState<boolean>(
-      data.length > 0
-    );
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -208,8 +202,17 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       return sorted.length ? sorted[0][0] : null;
     };
 
+    // New useEffect to handle empty data immediately
     useEffect(() => {
-      console.log("Recalculating graph with", { groupBy, aggregate, valueKey });
+      if (!data || data.length === 0) {
+        setGraphData([]);
+        setXKey(null);
+        setYKeys([]);
+        setIsAnimating(false); // Ensure animation state is off
+      }
+    }, [data]);
+
+    useEffect(() => {
       if (dataKeys.length > 0) {
         const bestGroupBy = autoDetectBestGroupBy(data, isKeyExcluded);
         if (!groupBy) {
@@ -314,10 +317,11 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
     useEffect(() => {
       if (
+        data &&
+        data.length > 0 &&
         groupBy &&
         (aggregate === "count" || (aggregate === "sum" && valueKey))
       ) {
-        setIsAnimating(true);
         try {
           const {
             data: processedData,
@@ -325,55 +329,41 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             indexBy,
           } = transformDynamicData(data, groupBy, aggregate, valueKey);
 
-          if (!processedData.length || !indexBy || processedKeys.length === 0) {
-            setIsValidGraphData(false);
-            setGraphData([]);
-            setXKey(null);
-            setYKeys([]);
-            return;
-          }
-
           const hasValidNumericData = processedData.some((item) =>
             processedKeys.some(
-              (key) => item.hasOwnProperty(key) && !isNaN(Number(item[key]))
+              (key) =>
+                item.hasOwnProperty(key) &&
+                typeof item[key] === "number" &&
+                !isNaN(item[key])
             )
           );
 
-          if (!hasValidNumericData) {
-            setIsValidGraphData(false);
+          if (!processedData.length || !indexBy || !hasValidNumericData) {
             setGraphData([]);
             setXKey(null);
             setYKeys([]);
+            setIsAnimating(false);
             return;
           }
 
-          setTimeout(() => {
-            setXKey(indexBy);
-            setYKeys(processedKeys);
-            setGraphData(processedData);
-            setIsValidGraphData(true); // Set to true after successful processing
-            setIsAnimating(false);
-          }, 300);
+          setGraphData(processedData);
+          setXKey(indexBy);
+          setYKeys(processedKeys);
+          setIsAnimating(false);
         } catch (error) {
           console.error("Data processing error:", error);
-          setIsValidGraphData(false);
           setGraphData([]);
           setXKey(null);
           setYKeys([]);
           setIsAnimating(false);
         }
       } else {
-        // If conditions for a valid graph are not met, set to false
-        setIsValidGraphData(false);
         setGraphData([]);
         setXKey(null);
         setYKeys([]);
+        setIsAnimating(false);
       }
     }, [data, groupBy, aggregate, valueKey]);
-
-    useEffect(() => {
-      isValidGraph(isValidGraphData);
-    }, [isValidGraphData, isValidGraph]);
 
     const groupByOptions = dataKeys.filter((key) => !isKeyExcluded(key));
 
@@ -486,18 +476,15 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       return null;
     };
 
-    if (
-      !isAnimating &&
-      (!isValidGraphData || !xKey || yKeys.length === 0 || !graphData.length)
-    ) {
+    if (!xKey || yKeys.length === 0 || !graphData.length) {
+      console.log("No valid data for rendering");
       return (
         <div
           className="flex flex-col items-center justify-center h-full p-12"
           style={{
             background: theme.colors.surface, // Use surface from theme
             backdropFilter: "blur(20px)",
-            borderRadius: theme.borderRadius.large, // Use large from theme
-            border: `1px solid ${theme.colors.border}`, // Use border from theme
+            // border: `1px solid ${theme.colors.border}`, // Use border from theme
             boxShadow: theme.shadow.lg, // Use lg from theme
           }}
         >
@@ -551,7 +538,7 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
     const xTickRotation = graphData.length > 8 ? -45 : 0;
     const xTickAnchor = graphData.length > 8 ? "end" : "middle";
-
+    console.log("Rendering graph with", { xKey, yKeys, graphData });
     return (
       <div>
         <div
@@ -829,4 +816,4 @@ const ModernBarGraph: React.FC<ModernBarGraphProps> = React.memo(
   }
 );
 
-export default ModernBarGraph;
+export default DynamicBarGraph;
