@@ -1,63 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { Copy, Check } from "lucide-react";
-import { motion } from "framer-motion"; // Assuming framer-motion is installed
-import { useTheme } from "../ThemeContext.tsx"; // Corrected import path
+import { useTheme } from "../ThemeContext";
+import { Copy, Check, Code, Database } from "lucide-react";
+import CustomTooltip from "./CustomTooltip";
+import { motion, AnimatePresence } from "framer-motion";
 
-// --- Placeholder CustomTooltip Component ---
-// In a real application, this would be in a separate file (e.g., CustomTooltip.tsx)
-interface CustomTooltipProps {
-  title: string;
-  children: React.ReactElement;
-  position?: "top" | "bottom" | "left" | "right";
-}
-
-const CustomTooltip: React.FC<CustomTooltipProps> = ({
-  title,
-  children,
-  position = "top",
-}) => {
-  const [show, setShow] = useState(false);
-  const { theme } = useTheme();
-
-  const getPositionClasses = (pos: string) => {
-    switch (pos) {
-      case "top":
-        return "bottom-full left-1/2 -translate-x-1/2 mb-2";
-      case "bottom":
-        return "top-full left-1/2 -translate-x-1/2 mt-2";
-      case "left":
-        return "right-full top-1/2 -translate-y-1/2 mr-2";
-      case "right":
-        return "left-full top-1/2 -translate-y-1/2 ml-2";
-      default:
-        return "bottom-full left-1/2 -translate-x-1/2 mb-2";
-    }
-  };
-
-  return (
-    <div
-      className="relative flex items-center justify-center"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      {children}
-      {show && (
-        <div
-          className={`absolute z-20 px-2 py-1 text-xs rounded shadow-lg whitespace-nowrap
-                      ${getPositionClasses(position)}`}
-          style={{
-            backgroundColor: theme.colors.surface,
-            color: theme.colors.text,
-          }}
-        >
-          {title}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// --- Original QueryDisplay Component ---
 interface QueryDisplayProps {
   query: string | object | null | undefined;
   title?: string;
@@ -90,8 +36,8 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
         return null;
       }
 
-      // SQL Syntax Highlighting Logic
       if (language === "sql") {
+        // Enhanced SQL lexical analysis with better token handling
         const lexSQL = (sql: string) => {
           const escapedSql = sql
             .replace(/&/g, "&amp;")
@@ -99,6 +45,8 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
             .replace(/>/g, "&gt;");
 
           const tokens = [];
+
+          // Enhanced keywords list with more SQL functions and operators
           const keywords = [
             "SELECT",
             "FROM",
@@ -114,25 +62,34 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
             "RIGHT",
             "OUTER",
             "FULL",
+            "CROSS",
             "GROUP",
             "BY",
             "ORDER",
             "HAVING",
             "LIMIT",
             "OFFSET",
+            "TOP",
             "AS",
             "ON",
             "DISTINCT",
+            "UNION",
+            "ALL",
+            "EXCEPT",
+            "INTERSECT",
             "COUNT",
             "AVG",
             "SUM",
             "MIN",
             "MAX",
+            "STDDEV",
+            "VARIANCE",
             "DESC",
             "ASC",
             "BETWEEN",
             "IN",
             "LIKE",
+            "ILIKE",
             "IS",
             "NULL",
             "NOT",
@@ -142,16 +99,58 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
             "THEN",
             "ELSE",
             "END",
+            "IF",
+            "COALESCE",
+            "NULLIF",
+            "CAST",
+            "CONVERT",
+            "SUBSTRING",
+            "TRIM",
+            "UPPER",
+            "LOWER",
+            "LENGTH",
+            "CONCAT",
+            "REPLACE",
+            "WITH",
+            "RECURSIVE",
+            "OVER",
+            "PARTITION",
+            "ROW_NUMBER",
+            "RANK",
+            "DENSE_RANK",
+            "LEAD",
+            "LAG",
+            "FIRST_VALUE",
+            "LAST_VALUE",
+            "CREATE",
+            "ALTER",
+            "DROP",
+            "TABLE",
+            "VIEW",
+            "INDEX",
+            "TRIGGER",
+            "PROCEDURE",
+            "FUNCTION",
+            "DATABASE",
+            "SCHEMA",
+            "PRIMARY",
+            "KEY",
+            "FOREIGN",
+            "REFERENCES",
+            "UNIQUE",
+            "CHECK",
+            "DEFAULT",
+            "CONSTRAINT",
           ];
 
           const keywordPattern = new RegExp(
             `\\b(${keywords.join("|")})\\b`,
-            "i"
+            "gi"
           );
 
           let i = 0;
           let currentToken = "";
-          let state = "normal"; // States: normal, string, identifier
+          let state = "normal";
 
           while (i < escapedSql.length) {
             const char = escapedSql[i];
@@ -159,114 +158,76 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
             if (state === "normal") {
               if (char === '"') {
                 if (currentToken) {
-                  // Process accumulated token before starting quoted identifier
-                  if (keywordPattern.test(currentToken)) {
-                    tokens.push({
-                      type: "keyword",
-                      value: currentToken,
-                      color: theme.colors.accent,
-                    });
-                  } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
-                    tokens.push({
-                      type: "number",
-                      value: currentToken,
-                      color: theme.colors.error,
-                    });
-                  } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
-                    tokens.push({
-                      type: "identifier",
-                      value: currentToken,
-                      color: theme.colors.text, // Use theme's text color for identifiers
-                    });
-                  } else {
-                    tokens.push({
-                      type: "text",
-                      value: currentToken,
-                      color: null,
-                    });
-                  }
+                  tokens.push(
+                    processToken(currentToken, keywordPattern, theme)
+                  );
                   currentToken = "";
                 }
                 state = "identifier";
                 currentToken = char;
               } else if (char === "'") {
                 if (currentToken) {
-                  tokens.push({
-                    type: "text",
-                    value: currentToken,
-                    color: null,
-                  });
+                  tokens.push(
+                    processToken(currentToken, keywordPattern, theme)
+                  );
                   currentToken = "";
                 }
                 state = "string";
                 currentToken = char;
+              } else if (
+                char === "-" &&
+                i + 1 < escapedSql.length &&
+                escapedSql[i + 1] === "-"
+              ) {
+                if (currentToken) {
+                  tokens.push(
+                    processToken(currentToken, keywordPattern, theme)
+                  );
+                  currentToken = "";
+                }
+                // Handle SQL comments
+                let comment = "--";
+                i += 2;
+                while (i < escapedSql.length && escapedSql[i] !== "\n") {
+                  comment += escapedSql[i];
+                  i++;
+                }
+                tokens.push({
+                  type: "comment",
+                  value: comment,
+                  color: theme.colors.textSecondary,
+                });
+                continue;
               } else if (/[.,;()=<>!+\-*/%]/.test(char)) {
                 if (currentToken) {
-                  if (keywordPattern.test(currentToken)) {
-                    tokens.push({
-                      type: "keyword",
-                      value: currentToken,
-                      color: theme.colors.accent,
-                    });
-                  } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
-                    tokens.push({
-                      type: "number",
-                      value: currentToken,
-                      color: theme.colors.error,
-                    });
-                  } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
-                    tokens.push({
-                      type: "identifier",
-                      value: currentToken,
-                      color: theme.colors.text, // Use theme's text color for identifiers
-                    });
-                  } else {
-                    tokens.push({
-                      type: "text",
-                      value: currentToken,
-                      color: null,
-                    });
-                  }
+                  tokens.push(
+                    processToken(currentToken, keywordPattern, theme)
+                  );
                   currentToken = "";
                 }
-                tokens.push({ type: "operator", value: char, color: null });
+                tokens.push({
+                  type: "operator",
+                  value: char,
+                  color: theme.colors.accent,
+                });
               } else if (/\s/.test(char)) {
                 if (currentToken) {
-                  if (keywordPattern.test(currentToken)) {
-                    tokens.push({
-                      type: "keyword",
-                      value: currentToken,
-                      color: theme.colors.accent,
-                    });
-                  } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
-                    tokens.push({
-                      type: "number",
-                      value: currentToken,
-                      color: theme.colors.error,
-                    });
-                  } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
-                    tokens.push({
-                      type: "identifier",
-                      value: currentToken,
-                      color: theme.colors.text, // Use theme's text color for identifiers
-                    });
-                  } else {
-                    tokens.push({
-                      type: "text",
-                      value: currentToken,
-                      color: null,
-                    });
-                  }
+                  tokens.push(
+                    processToken(currentToken, keywordPattern, theme)
+                  );
                   currentToken = "";
                 }
-                tokens.push({ type: "whitespace", value: char, color: null });
+                tokens.push({
+                  type: "whitespace",
+                  value: char,
+                  color: null,
+                });
               } else {
                 currentToken += char;
               }
             } else if (state === "string") {
               currentToken += char;
-              if (char === "'" && i > 0) {
-                // Check i > 0 to prevent issues with leading single quote
+              if (char === "'" && (i === 0 || escapedSql[i - 1] !== "\\")) {
                 tokens.push({
                   type: "string",
                   value: currentToken,
@@ -277,202 +238,204 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
               }
             } else if (state === "identifier") {
               currentToken += char;
-              if (char === '"' && i > 0) {
-                // Check i > 0 to prevent issues with leading double quote
+              if (char === '"' && (i === 0 || escapedSql[i - 1] !== "\\")) {
                 tokens.push({
                   type: "quotedIdentifier",
                   value: currentToken,
-                  color: theme.colors.text, // Use theme's text color for identifiers
+                  color: theme.colors.success,
                 });
                 currentToken = "";
                 state = "normal";
               }
             }
+
             i++;
           }
 
           if (currentToken) {
-            if (keywordPattern.test(currentToken)) {
-              tokens.push({
-                type: "keyword",
-                value: currentToken,
-                color: theme.colors.accent,
-              });
-            } else if (/^\d+(\.\d+)?$/.test(currentToken)) {
-              tokens.push({
-                type: "number",
-                value: currentToken,
-                color: theme.colors.error,
-              });
-            } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(currentToken)) {
-              tokens.push({
-                type: "identifier",
-                value: currentToken,
-                color: theme.colors.text, // Use theme's text color for identifiers
-              });
-            } else {
-              tokens.push({ type: "text", value: currentToken, color: null });
-            }
+            tokens.push(processToken(currentToken, keywordPattern, theme));
           }
+
           return tokens;
         };
 
-        const processTokens = (tokens: any[]) => {
-          let inFrom = false;
-          let inOn = false;
-
-          const handleCompoundKeywords = () => {
-            for (let i = 0; i < tokens.length; i++) {
-              // Handle "INNER JOIN", "LEFT JOIN", etc.
-              if (
-                ["INNER", "LEFT", "RIGHT", "FULL"].includes(
-                  tokens[i].value.toUpperCase()
-                ) &&
-                i + 1 < tokens.length &&
-                tokens[i + 1].type === "whitespace" &&
-                i + 2 < tokens.length &&
-                tokens[i + 2].value.toUpperCase() === "JOIN"
-              ) {
-                tokens[i].color = theme.colors.accent; // Color the first part (INNER, LEFT, etc.)
-                tokens[i + 2].color = theme.colors.accent; // Color "JOIN"
-              }
-              // Handle "ORDER BY", "GROUP BY"
-              else if (
-                ["ORDER", "GROUP"].includes(tokens[i].value.toUpperCase()) &&
-                i + 1 < tokens.length &&
-                tokens[i + 1].type === "whitespace" &&
-                i + 2 < tokens.length &&
-                tokens[i + 2].value.toUpperCase() === "BY"
-              ) {
-                tokens[i].color = theme.colors.accent; // Color "ORDER" or "GROUP"
-                tokens[i + 2].color = theme.colors.accent; // Color "BY"
-              }
-            }
-          };
-
-          for (let i = 0; i < tokens.length; i++) {
-            const token = tokens[i];
-
-            if (token.type === "keyword") {
-              const upperValue = token.value.toUpperCase();
-
-              if (upperValue === "FROM" || upperValue === "JOIN") {
-                inFrom = true;
-                inOn = false;
-              } else if (upperValue === "ON") {
-                inFrom = false;
-                inOn = true;
-              } else if (
-                [
-                  "WHERE",
-                  "GROUP",
-                  "ORDER",
-                  "HAVING",
-                  "LIMIT",
-                  "SELECT",
-                ].includes(upperValue)
-              ) {
-                inFrom = false;
-                inOn = false;
-              }
-              token.color = theme.colors.accent;
-            }
-
-            // Identify table names and qualified columns
-            if (
-              token.type === "identifier" ||
-              token.type === "quotedIdentifier"
-            ) {
-              if (inFrom) {
-                token.color = theme.colors.warning; // Highlight as a table name
-                token.type = "table";
-              } else if (i > 0 && tokens[i - 1].value === ".") {
-                // This is a column name after a dot, so the previous token was a table/alias
-                // Ensure the previous token (table/alias) is also highlighted if not already
-                if (
-                  i - 2 >= 0 &&
-                  (tokens[i - 2].type === "identifier" ||
-                    tokens[i - 2].type === "quotedIdentifier")
-                ) {
-                  tokens[i - 2].color = theme.colors.warning;
-                  tokens[i - 2].type = "table"; // Mark it as a table too
-                }
-                token.color = theme.colors.text; // Use theme's text color for column names
-                token.type = "column";
-              } else if (i + 1 < tokens.length && tokens[i + 1].value === ".") {
-                // This is a table/alias before a dot, highlight it
-                token.color = theme.colors.warning;
-                token.type = "table";
-              }
-            }
+        const processToken = (
+          token: string,
+          keywordPattern: RegExp,
+          theme: any
+        ) => {
+          if (keywordPattern.test(token)) {
+            return {
+              type: "keyword",
+              value: token,
+              color: theme.colors.accent,
+            };
+          } else if (/^\d+(\.\d+)?$/.test(token)) {
+            return {
+              type: "number",
+              value: token,
+              color: theme.colors.error,
+            };
+          } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(token)) {
+            return {
+              type: "identifier",
+              value: token,
+              color: theme.colors.success,
+            };
+          } else {
+            return {
+              type: "text",
+              value: token,
+              color: null,
+            };
           }
-
-          handleCompoundKeywords(); // Apply compound keyword coloring after initial pass
-
-          return tokens;
         };
 
         const lexedTokens = lexSQL(formattedQuery);
-        const processedTokens = processTokens(lexedTokens);
 
         let html = "";
-        for (const token of processedTokens) {
+        for (const token of lexedTokens) {
           if (token.color) {
-            html += `<span style="color: ${token.color}">${token.value}</span>`;
+            html += `<span style="color: ${token.color}; font-weight: ${
+              token.type === "keyword" ? "600" : "normal"
+            }">${token.value}</span>`;
           } else {
             html += token.value;
           }
         }
+
         return <span dangerouslySetInnerHTML={{ __html: html }} />;
       }
+
       return <span>{formattedQuery}</span>;
     }, [formattedQuery, language, theme.colors]);
 
+    const getLanguageIcon = () => {
+      switch (language) {
+        case "sql":
+          return <Database size={16} />;
+        default:
+          return <Code size={16} />;
+      }
+    };
+
     return (
-      // Wrap the QueryDisplay in AppThemeProvider to provide theme context
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="w-full"
+      >
         {formattedQuery ? (
           <div className="query-content relative">
             {title && (
-              <h3
-                className="mb-3 text-lg font-semibold"
-                style={{ color: theme.colors.text }}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="flex items-center gap-2 mb-3 pb-2 border-b"
+                style={{
+                  borderColor: `${theme.colors.accent}20`,
+                  color: theme.colors.text,
+                }}
               >
-                {title}
-              </h3>
+                <div style={{ color: theme.colors.accent }}>
+                  {getLanguageIcon()}
+                </div>
+                <h3 className="text-lg font-semibold tracking-tight">
+                  {title}
+                </h3>
+                <div
+                  className="ml-auto text-xs px-2 py-1 rounded-full"
+                  style={{
+                    backgroundColor: `${theme.colors.accent}15`,
+                    color: theme.colors.accent,
+                    fontWeight: "500",
+                  }}
+                >
+                  {language.toUpperCase()}
+                </div>
+              </motion.div>
             )}
-            <div className="relative rounded-md overflow-hidde">
-              {/* Copy Button */}
+
+            <div className="relative group">
+              {/* Enhanced Copy Button */}
               {formattedQuery && (
-                <div className="absolute top-2 right-2 z-10">
+                <div className="absolute top-13 right-3 z-10 transition-opacity duration-200">
                   <CopyButton query={formattedQuery} />
                 </div>
               )}
-              <pre
-                className="p-4 overflow-x-auto whitespace-pre-wrap font-mono relative pr-12 rounded-md" // Added pr-12 for copy button spacing
+
+              {/* Code Block with enhanced styling */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+                className="relative overflow-hidden rounded-xl shadow-lg"
                 style={{
                   backgroundColor: theme.colors.surface,
-                  fontSize: fontSize,
-                  color: theme.colors.text, // Default text color for the code block
+                  border: `1px solid ${theme.colors.accent}20`,
                 }}
               >
-                <code>{colorizedQuery || formattedQuery}</code>
-              </pre>
+                {/* Top bar with subtle gradient */}
+                <div
+                  className="h-8 flex items-center px-4 border-b"
+                  style={{
+                    background: `linear-gradient(90deg, ${theme.colors.accent}08, ${theme.colors.accent}03)`,
+                    borderColor: `${theme.colors.accent}15`,
+                  }}
+                >
+                  <div className="flex space-x-1.5">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: `${theme.colors.error}` }}
+                    />
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: `${theme.colors.warning}` }}
+                    />
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: `${theme.colors.success}` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Code content */}
+                <pre
+                  className="p-4 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed"
+                  style={{
+                    fontSize: fontSize,
+                    lineHeight: "1.6",
+                    background: `linear-gradient(135deg, ${theme.colors.surface} 0%, ${theme.colors.surface}f8 100%)`,
+                  }}
+                >
+                  <code className="block">
+                    {colorizedQuery || formattedQuery}
+                  </code>
+                </pre>
+              </motion.div>
             </div>
           </div>
         ) : (
-          <div
-            className="italic p-4 text-center rounded-md"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-center p-8 rounded-xl border-2 border-dashed"
             style={{
+              borderColor: `${theme.colors.textSecondary}30`,
+              backgroundColor: `${theme.colors.surface}50`,
               color: theme.colors.textSecondary,
               fontSize: fontSize,
-              backgroundColor: theme.colors.surface,
             }}
           >
-            No query to display.
-          </div>
+            <div className="text-center">
+              <Code size={32} className="mx-auto mb-2 opacity-50" />
+              <p className="italic font-medium">No query to display</p>
+            </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     );
   }
 );
@@ -491,7 +454,7 @@ const areEqual = (
 
 export default React.memo(QueryDisplay, areEqual);
 
-// Copy Button Component
+// Enhanced Copy Button Component
 const CopyButton = ({ query }: { query: string }) => {
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
@@ -550,16 +513,47 @@ const CopyButton = ({ query }: { query: string }) => {
   return (
     <CustomTooltip title={copyTooltipText} position="left">
       <motion.button
-        whileHover={{ scale: 1.1 }}
+        whileHover={{
+          scale: 1.05,
+          // boxShadow: `0 4px 12px ${theme.colors.accent}25`,
+        }}
         whileTap={{ scale: 0.95 }}
         onClick={handleCopy}
-        className="p-2 rounded-full transition-colors duration-200 ease-in-out flex items-center justify-center shadow-md"
+        className="relative p-2.5  transition-all duration-200"
         style={{
-          backgroundColor: copied ? theme.colors.success : theme.colors.accent, // Use accent for uncopied state
-          color: theme.colors.onPrimary, // Text color for the button
+          // backgroundColor: copied
+          //   ? `${theme.colors.success}25`
+          //   : `${theme.colors.surface}95`,
+          color: copied ? theme.colors.success : theme.colors.accent,
+          // border: `1px solid ${
+          //   copied ? theme.colors.success : theme.colors.accent
+          // }30`,
+          // boxShadow: `0 2px 8px ${theme.colors.accent}15`,
         }}
       >
-        {copied ? <Check size={16} /> : <Copy size={16} />}
+        <AnimatePresence mode="wait">
+          {copied ? (
+            <motion.div
+              key="check"
+              initial={{ scale: 0, rotate: -90 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0, rotate: 90 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Check size={16} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="copy"
+              initial={{ scale: 0, rotate: 90 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0, rotate: -90 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Copy size={16} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.button>
     </CustomTooltip>
   );
