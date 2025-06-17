@@ -116,13 +116,46 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     });
   };
 
+  // Function to auto-detect the best key to group by
+  const autoDetectBestGroupBy = (
+    rows: any[],
+    excludeFn: (key: string) => boolean
+  ): string | null => {
+    if (!rows.length) return null;
+
+    const sampleSize = Math.min(100, rows.length);
+    const sample = rows.slice(0, sampleSize);
+    const scores: Record<string, number> = {};
+
+    const keys = Object.keys(sample[0]);
+
+    keys.forEach((key) => {
+      if (excludeFn(key)) return;
+
+      const values = sample.map((row) => row[key]).filter(Boolean);
+      const uniqueCount = new Set(values).size;
+
+      // Skip if mostly unique or mostly same
+      if (uniqueCount <= 1 || uniqueCount > sampleSize * 0.6) return;
+
+      const nullCount =
+        values.length < sampleSize ? sampleSize - values.length : 0;
+      const nullPenalty = nullCount / sampleSize;
+
+      scores[key] = 1 / (uniqueCount + nullPenalty * 10); // lower uniqueCount is better
+    });
+
+    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    return sorted.length ? sorted[0][0] : null;
+  };
+
   // Effect to reset groupBy and valueKey when dashboardItem.mainViewData.chartData changes
   useEffect(() => {
     const chartData = dashboardItem.mainViewData.chartData;
     if (chartData && chartData.length > 0) {
-      const allKeys = Object.keys(chartData[0]);
-      const suitableGroupBy = allKeys.find((key) => !isKeyExcluded(key));
-      setGroupBy(suitableGroupBy || null); // Reset groupBy to a suitable default
+      // Corrected function call from autoDetectBestBestGroupBy to autoDetectBestGroupBy
+      const bestGroupBy = autoDetectBestGroupBy(chartData, isKeyExcluded);
+      setGroupBy(bestGroupBy || null);
 
       const validKeysForValue = getValidValueKeys(chartData);
       setValueKey(validKeysForValue.length > 0 ? validKeysForValue[0] : null); // Reset valueKey to a suitable default
@@ -135,11 +168,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   }, [dashboardItem.mainViewData.chartData]); // Depend on chartData changing
 
   useEffect(() => {
-    if (aggregate === "sum" && !valueKey) {
+    if (aggregate === "sum" && !valueKey && dashboardItem) {
       const validKeys = getValidValueKeys(dashboardItem.mainViewData.chartData);
       if (validKeys.length > 0) setValueKey(validKeys[0]);
     }
-  }, [aggregate, dashboardItem.mainViewData.chartData, valueKey]);
+  }, [aggregate, dashboardItem?.mainViewData.chartData, valueKey]);
 
   return (
     <div
