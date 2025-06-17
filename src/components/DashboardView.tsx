@@ -415,7 +415,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Table/Query Section */}
           <div
-            className="flex-1 overflow-y-auto m-2 rounded-xl"
+            className="flex-1 overflow-y-auto mx-2 rounded-xl"
             style={{
               // backgroundColor: theme.colors.surface,
               // boxShadow: theme.shadow.lg,
