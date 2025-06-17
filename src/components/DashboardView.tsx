@@ -170,10 +170,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex  flex-grow">
         {/* Graph Section */}
         <div
-          className="flex-1 rounded-xl shadow-lg flex flex-col overflow-hidden"
+          className="flex-1 rounded-xl flex flex-col overflow-hidden"
           style={{
             backgroundColor: theme.colors.surface,
-            boxShadow: theme.shadow.lg,
+            boxShadow: theme.shadow.md,
             borderRadius: theme.borderRadius.large,
             minHeight: "300px", // Ensure some visible base
             maxHeight: "calc(100vh - 130px)", // Prevent overflow
@@ -413,7 +413,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => onViewTypeChange(viewType)}
               disabled={isSubmitting}
               title={viewType.charAt(0).toUpperCase() + viewType.slice(1)}
-              className="p-2 rounded-full transition-all duration-200 ease-in-out disabled:opacity-60"
+              className="p-2 transition-all duration-200 ease-in-out disabled:opacity-60"
               style={{
                 backgroundColor:
                   activeViewType === viewType
@@ -424,7 +424,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     ? "white"
                     : theme.colors.bubbleBotText,
                 boxShadow: theme.shadow.md,
-                borderRadius: theme.borderRadius.large,
+                borderRadius: theme.borderRadius.pill,
               }}
             >
               {viewType === "table" && <Table size={24} />}
