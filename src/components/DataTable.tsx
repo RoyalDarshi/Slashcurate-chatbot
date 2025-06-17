@@ -336,7 +336,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
 
   return (
     <div
-      className="rounded-lg overflow-hidden"
+      className="rounded-lg overflow-hidden shadow-lg"
       style={{
         background: theme.colors.surface,
         transition: "all 0.3s ease",

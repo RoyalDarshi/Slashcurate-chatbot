@@ -384,20 +384,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <div
             className="flex-1 overflow-y-auto m-2 rounded-xl"
             style={{
-              backgroundColor: theme.colors.surface,
-              boxShadow: theme.shadow.lg,
-              borderRadius: theme.borderRadius.large,
+              // backgroundColor: theme.colors.surface,
+              // boxShadow: theme.shadow.lg,
+              // borderRadius: theme.borderRadius.large,
               minHeight: "300px", // optional min height
               maxHeight: "100%", // limits table height
             }}
           >
             {activeViewType === "table" && (
-              <div className="p-2">
-                <DataTable data={dashboardItem.mainViewData.tableData} />
-              </div>
+              <DataTable data={dashboardItem.mainViewData.tableData} />
             )}
             {activeViewType === "query" && (
-              <div className="p-6 flex justify-center items-center relative">
+              <div className="flex justify-center items-center relative">
                 <QueryDisplay
                   query={dashboardItem.mainViewData.queryData}
                   fontSize="text-base"
