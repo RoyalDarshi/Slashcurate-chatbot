@@ -377,7 +377,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Right Section: KPI Cards + Table/Query */}
         <div className="flex flex-col lg:w-[40%] w-full overflow-hidden">
           {/* KPI Cards */}
-          <div className="grid m-2 grid-cols-3 gap-2">
+          {/* <div className="grid m-2 grid-cols-3 gap-2">
             <KPICard
               title={dashboardItem.kpiData.kpi1.label}
               value={dashboardItem.kpiData.kpi1.value}
@@ -411,7 +411,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               }
               theme={theme}
             />
-          </div>
+          </div> */}
 
           {/* Table/Query Section */}
           <div
