@@ -198,6 +198,21 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                   color: theme.colors.textSecondary,
                 });
                 continue;
+              } else if (/[a-zA-Z_][a-zA-Z0-9_]*\(/.test(currentToken + char)) {
+                const fnName = currentToken;
+                tokens.push({
+                  type: "function",
+                  value: fnName,
+                  color: theme.colors.warning,
+                });
+                tokens.push({
+                  type: "operator",
+                  value: "(",
+                  color: theme.colors.accent,
+                });
+                currentToken = "";
+                i++;
+                continue;
               } else if (/[.,;()=<>!+\-*/%]/.test(char)) {
                 if (currentToken) {
                   tokens.push(
@@ -264,7 +279,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
           keywordPattern: RegExp,
           theme: any
         ) => {
-          if (keywordPattern.test(token)) {
+          if (keywordPattern.test(token.toUpperCase())) {
             return {
               type: "keyword",
               value: token,
@@ -276,7 +291,13 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
               value: token,
               color: theme.colors.error,
             };
-          } else if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(token)) {
+          } else if (/^[a-zA-Z_][a-zA-Z0-9_]*\($/.test(token)) {
+            return {
+              type: "function",
+              value: token,
+              color: theme.colors.warning,
+            };
+          } else if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(token)) {
             return {
               type: "identifier",
               value: token,

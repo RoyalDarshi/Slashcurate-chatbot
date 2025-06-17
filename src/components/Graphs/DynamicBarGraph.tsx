@@ -125,13 +125,13 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
   }) => {
     const { theme } = useTheme(); // Use theme from context
     const [isAnimating, setIsAnimating] = useState(false);
-  const [showResolutionOptions, setShowResolutionOptions] = useState(false);
+    const [showResolutionOptions, setShowResolutionOptions] = useState(false);
 
-  const [graphData, setGraphData] = useState<any[]>([]);
-  const [xKey, setXKey] = useState<string | null>(null);
-  const [yKeys, setYKeys] = useState<string[]>([]);
+    const [graphData, setGraphData] = useState<any[]>([]);
+    const [xKey, setXKey] = useState<string | null>(null);
+    const [yKeys, setYKeys] = useState<string[]>([]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const graphRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 

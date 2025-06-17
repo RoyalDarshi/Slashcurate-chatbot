@@ -1,225 +1,390 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { PieChart, Pie, Tooltip, Legend, ResponsiveContainer,Cell } from "recharts";
+import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  PieChart as PieChartIconLucide,
+  TrendingUp,
+  Download,
+} from "lucide-react"; // Renamed PieChart for clarity
+import { useTheme } from "../../ThemeContext"; // Corrected import path
+import html2canvas from "html2canvas";
 
-// Modern glassmorphism theme (same as DynamicBarGraph.tsx)
-const theme = {
-  colors: {
-    surface: "rgba(255, 255, 255, 0.95)",
-    surfaceGlass: "rgba(255, 255, 255, 0.1)",
-    text: "#1a1a2e",
-    textSecondary: "#64748b",
-    border: "rgba(148, 163, 184, 0.2)",
-    primary: "#6366f1",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    accent: "#f472b6",
-    success: "#10b981",
-    warning: "#f59e0b",
-    error: "#ef4444",
-    cardBg: "rgba(255, 255, 255, 0.08)",
-    cardBorder: "rgba(255, 255, 255, 0.18)",
-  },
-  gradients: {
-    primary: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    secondary: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-    success: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-    warning: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
-    accent: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
-  },
-  borderRadius: {
-    large: "20px",
-    medium: "12px",
-    small: "8px",
-  },
-  spacing: {
-    xs: "4px",
-    sm: "8px",
-    md: "16px",
-    lg: "24px",
-    xl: "32px",
-    xxl: "48px",
-  },
-  typography: {
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-  },
-  shadows: {
-    soft: "0 4px 20px rgba(0, 0, 0, 0.08)",
-    medium: "0 8px 30px rgba(0, 0, 0, 0.12)",
-    strong: "0 20px 60px rgba(0, 0, 0, 0.15)",
-    glow: "0 0 40px rgba(99, 102, 241, 0.3)",
-  },
-};
-
-const modernColors = [
-  "#5B9BD5",
-  "#FFA726",
-  "#EF5350",
-  "#4DB6AC",
-  "#66BB6A",
-  "#FFEE58",
-  "#BA68C8",
-  "#FF8A80",
-  "#8D6E63",
-  "#BDBDBD",
-];
-
-interface DynamicPieGraphProps {
+interface ModernPieGraphProps {
   data: any[];
-  isValidGraph: (validData: boolean) => void;
+  groupBy: string | null;
+  setGroupBy: React.Dispatch<React.SetStateAction<string | null>>;
+  aggregate: "sum" | "count";
+  setAggregate: React.Dispatch<React.SetStateAction<"sum" | "count">>;
+  valueKey: string | null;
+  setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-const DynamicPieGraph: React.FC<DynamicPieGraphProps> = React.memo(
-  ({ data, isValidGraph }) => {
-    const [graphData, setGraphData] = useState<any[]>([]);
-    const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
-    const containerRef = useRef<HTMLDivElement>(null);
+const DynamicPieGraph: React.FC<ModernPieGraphProps> = React.memo(
+  ({
+    data,
+    groupBy,
+    aggregate,
+    setAggregate,
+    setGroupBy,
+    setValueKey,
+    valueKey,
+  }) => {
+    const { theme } = useTheme(); // Use theme from context
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [showResolutionOptions, setShowResolutionOptions] = useState(false);
 
-    const formatKey = useCallback((key: string): string => {
-      return key
+    const [graphData, setGraphData] = useState<any[]>([]);
+
+    const containerRef = useRef<HTMLDivElement>(null);
+    const graphRef = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Function to handle graph download
+    const handleDownloadGraph = async (resolution: "low" | "high") => {
+      if (containerRef.current) {
+        try {
+          const scale = resolution === "high" ? 2 : 1;
+          const canvas = await html2canvas(containerRef.current, {
+            scale,
+            useCORS: true,
+            logging: false,
+            backgroundColor: theme.colors.surface,
+            onclone: (document, element) => {
+              const svgElements = element.querySelectorAll("svg");
+              svgElements.forEach((svg) => {
+                svg.setAttribute(
+                  "width",
+                  svg.getBoundingClientRect().width.toString()
+                );
+                svg.setAttribute(
+                  "height",
+                  svg.getBoundingClientRect().height.toString()
+                );
+              });
+            },
+          });
+          const image = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = image;
+          link.download = `pie_graph_${resolution}.png`;
+          link.click();
+        } catch (error) {
+          console.error("Error downloading graph:", error);
+        }
+      }
+      setShowResolutionOptions(false);
+    };
+
+    // Close resolution options when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          showResolutionOptions &&
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target as Node)
+        ) {
+          setShowResolutionOptions(false);
+        }
+      };
+
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [showResolutionOptions]);
+
+    const formatKey = useCallback((key: any): string => {
+      if (key === null || key === undefined) return "";
+      const stringKey = String(key);
+      return stringKey
         .replace(/_/g, " ")
         .replace(/([A-Z])/g, " $1")
         .replace(/^./, (str) => str.toUpperCase())
         .trim();
     }, []);
 
-    function transformDynamicData(rawData) {
-      if (!rawData || rawData.length === 0) {
+    const dataKeys = data.length > 0 ? Object.keys(data[0]) : [];
+
+    const numericKeys = dataKeys.filter((key) => {
+      if (data.length === 0) return false;
+      return data.some((item) => {
+        const val = item[key];
+        return (
+          typeof val === "number" ||
+          (typeof val === "string" && !isNaN(parseFloat(val)))
+        );
+      });
+    });
+
+    const isKeyExcluded = (key: string) => {
+      const lowerKey = key.toLowerCase();
+      return (
+        /(id|code|number)$/.test(lowerKey) ||
+        lowerKey.includes("date") ||
+        lowerKey.includes("email") ||
+        lowerKey.includes("address") ||
+        lowerKey === "first_name" ||
+        lowerKey === "last_name" ||
+        lowerKey === "name" || // NEW: skip generic 'name'
+        lowerKey.length < 3 // NEW: avoid too-short keys
+      );
+    };
+
+    const validValueKeys = numericKeys.filter((key) => !isKeyExcluded(key));
+
+    const autoDetectBestGroupBy = (
+      rows: any[],
+      excludeFn: (key: string) => boolean
+    ): string | null => {
+      if (!rows.length) return null;
+
+      const sampleSize = Math.min(100, rows.length);
+      const sample = rows.slice(0, sampleSize);
+      const scores: Record<string, number> = {};
+
+      const keys = Object.keys(sample[0]);
+
+      keys.forEach((key) => {
+        if (excludeFn(key)) return;
+
+        const values = sample.map((row) => row[key]).filter(Boolean);
+        const uniqueCount = new Set(values).size;
+
+        // Skip if mostly unique or mostly same
+        if (uniqueCount <= 1 || uniqueCount > sampleSize * 0.6) return;
+
+        const nullCount =
+          values.length < sampleSize ? sampleSize - values.length : 0;
+        const nullPenalty = nullCount / sampleSize;
+
+        scores[key] = 1 / (uniqueCount + nullPenalty * 10); // lower uniqueCount is better
+      });
+
+      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+      return sorted.length ? sorted[0][0] : null;
+    };
+
+    // New useEffect to handle empty data immediately
+    useEffect(() => {
+      if (!data || data.length === 0) {
+        setGraphData([]);
+        setIsAnimating(false); // Ensure animation state is off
+      }
+    }, [data]);
+
+    useEffect(() => {
+      if (dataKeys.length > 0) {
+        const bestGroupBy = autoDetectBestGroupBy(data, isKeyExcluded);
+        if (!groupBy) {
+          setGroupBy(
+            bestGroupBy || dataKeys.find((key) => !isKeyExcluded(key)) || null
+          );
+        }
+
+        if (
+          numericKeys.length > 0 &&
+          (!valueKey || !numericKeys.includes(valueKey))
+        ) {
+          setValueKey(numericKeys[0]);
+        } else if (numericKeys.length === 0) {
+          setValueKey(null);
+        }
+      } else {
+        setGroupBy(null);
+        setValueKey(null);
+      }
+    }, [data, dataKeys, numericKeys]);
+
+    useEffect(() => {
+      if (aggregate === "sum") {
+        if (!valueKey || !validValueKeys.includes(valueKey)) {
+          setValueKey(validValueKeys.length > 0 ? validValueKeys[0] : null);
+        }
+      } else if (aggregate === "count") {
+        setValueKey(null);
+      }
+    }, [aggregate, validValueKeys, valueKey]);
+
+    function transformDynamicData(
+      rawData: any[],
+      selectedGroupBy: string | null,
+      selectedAggregate: "sum" | "count",
+      selectedValueKey: string | null
+    ) {
+      if (
+        !rawData ||
+        rawData.length === 0 ||
+        !selectedGroupBy ||
+        (selectedAggregate === "sum" && !selectedValueKey)
+      ) {
         return [];
       }
 
-      const sample = rawData[0];
-      const keys = Object.keys(sample);
-      const excludedSuffixes = ["id", "code", "number"];
+      const valueKeyToUse = selectedValueKey;
+      const groupByToUse = selectedGroupBy;
 
-      const isExcluded = (key: string) =>
-        excludedSuffixes.some((suffix) => key.toLowerCase().endsWith(suffix));
+      if (selectedAggregate === "sum" && !valueKeyToUse) {
+        console.warn("Aggregate is 'sum' but no valid valueKey is selected.");
+        return [];
+      }
 
-      const numericKeys = keys.filter((k) => {
-        const val = sample[k];
-        return (
-          val !== null && val !== "" && !isNaN(Number(val)) && !isExcluded(k)
-        );
+      const aggregatedData: { [key: string]: number } = {};
+
+      rawData.forEach((row) => {
+        const group = row[groupByToUse];
+        let value = 0;
+
+        if (selectedAggregate === "count") {
+          value = 1;
+        } else if (selectedAggregate === "sum" && valueKeyToUse) {
+          const numValue = parseFloat(row[valueKeyToUse]);
+          value = isNaN(numValue) ? 0 : numValue;
+        }
+
+        aggregatedData[group] = (aggregatedData[group] || 0) + value;
       });
 
-      if (numericKeys.length === 0) {
-        throw new Error("No numeric value key found in dataset.");
-      }
-
-      const valueKey = numericKeys[0];
-      let nameKey = keys.find(
-        (k) => typeof sample[k] === "string" && k !== valueKey && !isExcluded(k)
-      );
-
-      if (!nameKey) {
-        rawData = rawData.map((item, idx) => ({
-          ...item,
-          label: `Item ${idx + 1}`,
-        }));
-        nameKey = "label";
-      }
-
-      return rawData
-        .map((row) => ({
-          name: row[nameKey],
-          value: Number(row[valueKey]),
+      return Object.keys(aggregatedData)
+        .map((name) => ({
+          name,
+          value: aggregatedData[name],
         }))
-        .filter((item) => item.value > 0); // Pie charts require positive values
+        .filter((item) => item.value > 0); // Pie charts typically only show positive values
     }
 
     useEffect(() => {
-      const processApiData = (dataset: any[]) => {
+      if (
+        data &&
+        data.length > 0 &&
+        groupBy &&
+        (aggregate === "count" || (aggregate === "sum" && valueKey))
+      ) {
         try {
-          const processedData = transformDynamicData(dataset);
+          const processedData = transformDynamicData(
+            data,
+            groupBy,
+            aggregate,
+            valueKey
+          );
 
-          if (
-            !processedData.length ||
-            processedData.every((item) => item.value <= 0)
-          ) {
-            setIsValidGraphData(false);
+          const hasValidNumericData = processedData.some(
+            (item) => typeof item.value === "number" && !isNaN(item.value)
+          );
+
+          if (!processedData.length || !hasValidNumericData) {
+            setGraphData([]);
+            setIsAnimating(false);
             return;
           }
 
           setGraphData(processedData);
-          setIsValidGraphData(true);
+          setIsAnimating(false);
         } catch (error) {
           console.error("Data processing error:", error);
-          setIsValidGraphData(false);
+          setGraphData([]);
+          setIsAnimating(false);
         }
-      };
+      } else {
+        setGraphData([]);
+        setIsAnimating(false);
+      }
+    }, [data, groupBy, aggregate, valueKey]);
 
-      processApiData(data);
-    }, [data]);
-
-    useEffect(() => {
-      isValidGraph(isValidGraphData);
-    }, [isValidGraphData, isValidGraph]);
-
-    const CustomTooltip = ({ active, payload }: any) => {
+    // Ultra-modern Custom Tooltip with glassmorphism
+    const ModernTooltip = ({ active, payload }: any) => {
       if (active && payload && payload.length) {
         const entry = payload[0];
         return (
           <div
             style={{
               padding: theme.spacing.lg,
-              background: "rgba(255, 255, 255, 0.95)",
-              backdropFilter: "blur(20px)",
+              background: theme.colors.surface, // Use surface from theme
+              backdropFilter: "blur(20px) saturate(180%)",
+              WebkitBackdropFilter: "blur(20px) saturate(180%)",
               color: theme.colors.text,
               fontSize: "14px",
-              borderRadius: theme.borderRadius.medium,
-              boxShadow: theme.shadows.medium,
-              border: `1px solid ${theme.colors.cardBorder}`,
+              borderRadius: theme.borderRadius.large, // Use large from theme
+              boxShadow: theme.shadow.lg, // Use lg from theme
+              border: `1px solid ${theme.colors.border}`, // Use border from theme
               fontFamily: theme.typography.fontFamily,
               minWidth: "200px",
-              animation: "tooltipFadeIn 0.2s ease-out",
+              maxWidth: "280px",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            <style>
-              {`
-                @keyframes tooltipFadeIn {
-                  from { opacity: 0; transform: translateY(-10px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
-              `}
-            </style>
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: "3px",
+                background: theme.gradients.primary, // Use primary gradient from theme
+              }}
+            />
             <div
               style={{
                 marginBottom: theme.spacing.md,
-                fontWeight: 700,
+                fontWeight: theme.typography.weight.bold,
                 color: theme.colors.text,
                 fontSize: "16px",
-                borderBottom: `2px solid ${theme.colors.primary}`,
-                paddingBottom: theme.spacing.sm,
+                display: "flex",
+                alignItems: "center",
+                gap: theme.spacing.sm,
               }}
             >
-              {entry.payload.name}
+              <TrendingUp
+                size={16}
+                style={{ color: theme.colors.accent }} // Use accent from theme
+              />
+              {formatKey(entry.name)}
             </div>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                padding: theme.spacing.sm,
-                borderRadius: theme.borderRadius.small,
-                background: "rgba(99, 102, 241, 0.05)",
+                justifyContent: "space-between",
+                padding: theme.spacing.md,
+                borderRadius: theme.borderRadius.default, // Use default from theme
+                background: `${entry.color}15`, // Keep opacity suffix
+                border: `1px solid ${entry.color}30`, // Keep opacity suffix
+                transition: "all 0.2s ease",
               }}
             >
-              <div
-                style={{
-                  width: "16px",
-                  height: "16px",
-                  background: `linear-gradient(135deg, ${entry.color}, ${entry.color}dd)`,
-                  borderRadius: "50%",
-                  marginRight: theme.spacing.md,
-                  boxShadow: `0 2px 8px ${entry.color}40`,
-                }}
-              />
-              <span style={{ fontWeight: 600, flex: 1 }}>Value</span>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <div
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    background: entry.color,
+                    borderRadius: "50%",
+                    marginRight: theme.spacing.md,
+                    boxShadow: theme.shadow.sm, // Use sm from theme
+                    border: `2px solid ${theme.colors.surface}`, // Use surface from theme
+                  }}
+                />
+                <span
+                  style={{
+                    fontWeight: theme.typography.weight.medium,
+                    fontSize: "14px",
+                  }}
+                >
+                  Value
+                </span>
+              </div>
               <span
                 style={{
-                  fontWeight: 700,
-                  color: theme.colors.primary,
+                  fontWeight: theme.typography.weight.bold,
+                  color: theme.colors.text,
                   fontSize: "15px",
+                  background: theme.gradients.primary, // Use primary gradient from theme
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
                 }}
               >
-                {entry.value.toLocaleString()}
+                {entry.value.toLocaleString()} (
+                {(entry.percent * 100).toFixed(1)}%)
               </span>
             </div>
           </div>
@@ -228,154 +393,195 @@ const DynamicPieGraph: React.FC<DynamicPieGraphProps> = React.memo(
       return null;
     };
 
-    const CustomLegend = ({ payload }: any) => {
+    if (!graphData.length) {
       return (
         <div
+          className="flex flex-col items-center justify-center h-full p-12"
           style={{
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 10,
+            background: theme.colors.surface, // Use surface from theme
+            backdropFilter: "blur(20px)",
+            boxShadow: theme.shadow.lg, // Use lg from theme
           }}
         >
-          {payload.map((entry: any, index: number) => (
-            <div
-              key={`legend-item-${index}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                margin: theme.spacing.sm,
-                color: theme.colors.text,
-                fontSize: "12px",
-                fontFamily: theme.typography.fontFamily,
-                fontWeight: 600,
-              }}
-            >
-              <div
-                style={{
-                  width: "12px",
-                  height: "12px",
-                  background: `linear-gradient(135deg, ${entry.color}, ${entry.color}dd)`,
-                  borderRadius: "50%",
-                  marginRight: theme.spacing.sm,
-                  boxShadow: `0 2px 6px ${entry.color}40`,
-                }}
-              />
-              {formatKey(entry.value)}
-            </div>
-          ))}
-        </div>
-      );
-    };
-
-    if (!isValidGraphData || graphData.length === 0) {
-      return (
-        <div>
           <div
             style={{
-              width: "64px",
-              height: "64px",
-              background: theme.gradients.primary,
+              width: "100px",
+              height: "100px",
+              background: theme.gradients.primary, // Use primary gradient from theme
               borderRadius: "50%",
-              margin: "0 auto 24px",
+              margin: "0 auto 32px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              opacity: 0.7,
+              boxShadow: theme.shadow.md, // Use md from theme
             }}
           >
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 3v18h18" />
-              <path d="M18 12H8" />
-              <path d="M18 8h-5" />
-              <path d="M18 16h-3" />
-            </svg>
+            <PieChartIconLucide size={48} color="white" />
           </div>
           <h3
             style={{
-              color: theme.colors.text,
-              fontSize: "24px",
-              fontWeight: 700,
-              margin: "0 0 12px 0",
+              color: theme.colors.text, // Use text from theme
+              fontSize: "28px",
+              fontWeight: theme.typography.weight.bold,
+              margin: "0 0 16px 0",
               textAlign: "center",
               fontFamily: theme.typography.fontFamily,
+              background: theme.gradients.primary, // Use primary gradient from theme
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
             }}
           >
-            No Graph Available
+            No Data Visualization
           </h3>
           <p
             style={{
-              color: theme.colors.textSecondary,
-              fontSize: "16px",
+              color: theme.colors.textSecondary, // Use textSecondary from theme
+              fontSize: "18px",
               textAlign: "center",
               margin: 0,
               fontFamily: theme.typography.fontFamily,
+              lineHeight: 1.6,
             }}
           >
-            Insufficient numeric data for visualization
+            Configure your data grouping and aggregation settings to create
+            stunning visualizations
           </p>
         </div>
       );
     }
 
     return (
-      <div
-        style={{
-          borderRadius: theme.borderRadius.large,
-          fontFamily: theme.typography.fontFamily,
-          overflow: "hidden",
-        }}
-      >
+      <div>
         <div
-          ref={containerRef}
+          className="flex flex-col"
           style={{
-            height: "400px",
-            width: "52vw",
-            position: "relative",
+            background: theme.colors.surface, // Use surface from theme
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            overflow: "hidden",
+            transition: "all 0.4s ease",
           }}
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={graphData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={120}
-                fill="#8884d8"
-                // label={({ name, percent }) =>
-                //   `${formatKey(name)} (${(percent * 100).toFixed(1)}%)`
-                // }
-                labelLine={false}
-                animationDuration={1200}
-                animationEasing="ease-out"
+          {/* Ultra-modern Header */}
+          <div
+            style={{
+              background: theme.gradients.glass, // Use glass gradient from theme
+              backdropFilter: "blur(20px)",
+              borderBottom: `1px solid ${theme.colors.border}`, // Use border from theme
+            }}
+          >
+            {/* Control panel is managed by DashboardView, keeping this empty */}
+          </div>
+
+          {/* Export Button */}
+          <div className="flex justify-end mb-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowResolutionOptions(!showResolutionOptions)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg rounded-t-none rounded-br-none text-sm font-medium transition-all duration-200"
+                style={{
+                  backgroundColor: `${theme.colors.accent}1A`,
+                  color: theme.colors.accent,
+                  border: `1px solid ${theme.colors.accent}33`,
+                }}
+                title="Export Graph"
               >
-                {graphData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={modernColors[index % modernColors.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend content={<CustomLegend />} />
-            </PieChart>
-          </ResponsiveContainer>
+                <Download size={16} />
+                <span>Export</span>
+              </button>
+
+              {showResolutionOptions && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute right-0 mt-1 py-1 rounded-lg shadow-lg z-10"
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    border: `1px solid ${theme.colors.border}`,
+                    minWidth: "120px",
+                  }}
+                >
+                  <button
+                    onClick={() => handleDownloadGraph("low")}
+                    className="w-full text-left px-3 py-1.5 text-sm hover:opacity-80 transition-opacity"
+                    style={{ color: theme.colors.text }}
+                  >
+                    Standard Quality
+                  </button>
+                  <button
+                    onClick={() => handleDownloadGraph("high")}
+                    className="w-full text-left px-3 py-1.5 text-sm hover:opacity-80 transition-opacity"
+                    style={{ color: theme.colors.text }}
+                  >
+                    High Quality
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Enhanced Chart Container */}
+          <div className="flex-1" ref={containerRef}>
+            <div
+              ref={graphRef}
+              style={{
+                height: "60vh",
+                width: "100%",
+                minHeight: "300px", // ✅ minimum visible height
+                flex: 1,
+                position: "relative",
+                opacity: isAnimating ? 0.7 : 1,
+                transform: isAnimating ? "scale(0.98)" : "scale(1)",
+                transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={graphData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={120}
+                    // fill="#8884d8" // Removed direct fill
+                    label={({ name, percent }) =>
+                      `${formatKey(name)} (${(percent * 100).toFixed(1)}%)`
+                    }
+                    labelLine={true} // Enabled label line
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                  >
+                    {graphData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={
+                          theme.colors.barColors[
+                            index % theme.colors.barColors.length
+                          ]
+                        } // Use theme colors
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<ModernTooltip />} />
+                  {/* <Legend content={<CustomLegend />} /> // Removed Legend component */}
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
+
+        <style jsx>{`
+          @keyframes pulse {
+            0%,
+            100% {
+              transform: scale(1);
+            }
+            50% {
+              transform: scale(1.05);
+            }
+          }
+        `}</style>
       </div>
     );
   }

@@ -9,11 +9,14 @@ import {
 } from "lucide-react";
 import KPICard from "./KPICard"; // Corrected import path
 import DynamicBarGraph from "./Graphs/DynamicBarGraph"; // Corrected import path
+
 import DynamicLineGraph from "./Graphs/DynamicLineGraph"; // Corrected import path
 import DynamicPieGraph from "./Graphs/DynamicPieGraph"; // Corrected import path
+
 import DataTable from "./DataTable"; // Corrected import path
 import QueryDisplay from "./QueryDisplay"; // Corrected import path
-import { Theme } from "../types";
+import { Theme } from "../types"; // Corrected import path
+import { useTheme } from "../ThemeContext"; // Corrected import path for ThemeContext
 
 // Placeholder types (unchanged)
 declare function generateKpiData(): {
@@ -316,13 +319,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             {graphType === "line" && (
               <DynamicLineGraph
                 data={dashboardItem.mainViewData.chartData}
-                isValidGraph={() => true}
+                groupBy={groupBy}
+                setGroupBy={setGroupBy}
+                aggregate={aggregate}
+                setAggregate={setAggregate}
+                valueKey={valueKey}
+                setValueKey={setValueKey}
               />
             )}
             {graphType === "pie" && (
               <DynamicPieGraph
                 data={dashboardItem.mainViewData.chartData}
-                isValidGraph={() => true}
+                groupBy={groupBy}
+                setGroupBy={setGroupBy}
+                aggregate={aggregate}
+                setAggregate={setAggregate}
+                valueKey={valueKey}
+                setValueKey={setValueKey}
               />
             )}
           </div>
