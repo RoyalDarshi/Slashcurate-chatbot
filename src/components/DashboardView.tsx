@@ -6,17 +6,16 @@ import {
   PieChartIcon as PieChartIconLucide,
   Table,
   TrendingUp,
+  Heart, // Import Star icon for favoriting
 } from "lucide-react";
-import KPICard from "./KPICard"; // Corrected import path
-import DynamicBarGraph from "./Graphs/DynamicBarGraph"; // Corrected import path
-
-import DynamicLineGraph from "./Graphs/DynamicLineGraph"; // Corrected import path
-import DynamicPieGraph from "./Graphs/DynamicPieGraph"; // Corrected import path
-
-import DataTable from "./DataTable"; // Corrected import path
-import QueryDisplay from "./QueryDisplay"; // Corrected import path
-import { Theme } from "../types"; // Corrected import path
-import { useTheme } from "../ThemeContext"; // Corrected import path for ThemeContext
+import KPICard from "./KPICard";
+import DynamicBarGraph from "./Graphs/DynamicBarGraph";
+import DynamicLineGraph from "./Graphs/DynamicLineGraph";
+import DynamicPieGraph from "./Graphs/DynamicPieGraph";
+import DataTable from "./DataTable";
+import QueryDisplay from "./QueryDisplay";
+import { Theme } from "../types";
+import { useTheme } from "../ThemeContext";
 
 // Placeholder types (unchanged)
 declare function generateKpiData(): {
@@ -32,12 +31,15 @@ declare function generateMainViewData(): {
 
 interface DashboardViewProps {
   dashboardItem: {
-    id: string;
+    id: string; // Dashboard item's unique ID
     question: string;
     kpiData: ReturnType<typeof generateKpiData>;
     mainViewData: ReturnType<typeof generateMainViewData>;
     textualSummary: string;
     lastViewType?: "graph" | "table" | "query";
+    isFavorited: boolean; // Indicates if the question message for this item is favorited
+    questionMessageId: string; // The actual message ID from the backend
+    connectionName: string; // The connection associated with this dashboard item
   } | null;
   theme: Theme;
   isSubmitting: boolean;
@@ -46,6 +48,15 @@ interface DashboardViewProps {
   onNavigateHistory: (direction: "prev" | "next") => void;
   historyIndex: number;
   historyLength: number;
+  // New prop for handling favorite toggle
+  onToggleFavorite: (
+    questionMessageId: string, // Pass the actual message ID
+    questionContent: string,
+    responseQuery: string,
+    currentConnection: string,
+    isCurrentlyFavorited: boolean
+  ) => Promise<void>;
+  currentConnection: string; // Current active connection name
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({
@@ -54,6 +65,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   isSubmitting,
   activeViewType,
   onViewTypeChange,
+  onToggleFavorite,
+  currentConnection,
 }) => {
   // Add state for graph type, defaulting to 'bar'
   const [graphType, setGraphType] = useState("bar");
@@ -153,7 +166,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   useEffect(() => {
     const chartData = dashboardItem.mainViewData.chartData;
     if (chartData && chartData.length > 0) {
-      // Corrected function call from autoDetectBestBestGroupBy to autoDetectBestGroupBy
       const bestGroupBy = autoDetectBestGroupBy(chartData, isKeyExcluded);
       setGroupBy(bestGroupBy || null);
 
@@ -182,7 +194,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Top section: Current Question and KPI Cards */}
       <div className="lg:flex-row items-start">
         <div
-          className="w-full p-2 mb-2 rounded-xl shadow-md"
+          className="w-full p-2 mb-2 rounded-xl shadow-md flex items-center justify-between" // Added flex and justify-between for button
           style={{
             backgroundColor: theme.colors.surface,
             color: theme.colors.text,
@@ -191,11 +203,46 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           }}
         >
           <h3
-            className="text-xl font-bold text-center"
+            className="text-xl font-bold text-center flex-grow" // flex-grow to center text
             style={{ color: theme.colors.text }}
           >
             Question: {dashboardItem.question}
           </h3>
+          {/* Favorite Button */}
+          {dashboardItem.questionMessageId && ( // Only show if we have a message ID to favorite
+            <button
+              onClick={() =>
+                onToggleFavorite(
+                  dashboardItem.questionMessageId, // Pass the actual message ID
+                  dashboardItem.question,
+                  dashboardItem.mainViewData.queryData,
+                  dashboardItem.connectionName, // Use connectionName from dashboardItem
+                  dashboardItem.isFavorited
+                )
+              }
+              title={
+                dashboardItem.isFavorited
+                  ? "Remove from Favorites"
+                  : "Add to Favorites"
+              }
+              className="px-1 rounded-full transition-colors duration-200"
+              style={{
+                color: dashboardItem.isFavorited
+                  ? theme.colors.accent
+                  : theme.colors.textSecondary,
+                backgroundColor: "transparent",
+                border: "none",
+                cursor: "pointer",
+              }}
+              disabled={isSubmitting} // Disable during submission
+            >
+              {dashboardItem.isFavorited ? (
+                <Heart size={24} fill={theme.colors.accent} />
+              ) : (
+                <Heart size={24} />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -377,7 +424,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Right Section: KPI Cards + Table/Query */}
         <div className="flex flex-col lg:w-[40%] w-full overflow-hidden">
           {/* KPI Cards */}
-          {/* <div className="grid m-2 grid-cols-3 gap-2">
+          <div className="grid m-2 grid-cols-3 gap-2">
             <KPICard
               title={dashboardItem.kpiData.kpi1.label}
               value={dashboardItem.kpiData.kpi1.value}
@@ -411,7 +458,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               }
               theme={theme}
             />
-          </div> */}
+          </div>
 
           {/* Table/Query Section */}
           <div

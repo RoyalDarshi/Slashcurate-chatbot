@@ -29,15 +29,7 @@ import schemaSampleData from "../data/sampleSchemaData"; // Corrected path
 import DashboardError from "./DashboardError"; // Import the new error component
 import PreviousQuestionsModal from "./PreviousQuestionModal"; // Import the new component
 
-import {
-  ListChecks,
-  HelpCircle,
-  Database,
-  Layers,
-  PlusCircle,
-  ChevronDown,
-  X,
-} from "lucide-react";
+import { ListChecks, Database, Layers, PlusCircle } from "lucide-react";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -59,6 +51,19 @@ interface MainViewData {
   chartData: any[];
   tableData: any[];
   queryData: string;
+}
+
+// Define the DashboardItem interface
+interface DashboardItem {
+  id: string; // Dashboard item's unique ID
+  question: string;
+  kpiData: KpiData;
+  mainViewData: MainViewData;
+  textualSummary: string;
+  lastViewType: "graph" | "table" | "query";
+  isFavorited: boolean; // Indicates if the question message for this item is favorited
+  questionMessageId: string; // The actual message ID from the backend
+  connectionName: string; // The connection associated with this dashboard item
 }
 
 // Data Generation Helpers
@@ -167,20 +172,23 @@ const ChatInterface = memo(
 
       // Memoized initial dashboard state to prevent infinite loop
       const initialDashboardState = useMemo(
-        () => ({
+        (): DashboardItem => ({
           id: generateId(),
           question: "Welcome to your interactive analytics dashboard!",
           kpiData: initialEmptyKpiData,
           mainViewData: initialEmptyMainViewData,
           textualSummary: "Ask a question to get started.",
-          lastViewType: "table" as "graph" | "table" | "query",
+          lastViewType: "table",
+          isFavorited: false, // Default to false
+          questionMessageId: "", // Default empty
+          connectionName: "", // Default empty
         }),
         []
       );
 
-      const [dashboardHistory, setDashboardHistory] = useState([
-        initialDashboardState,
-      ]);
+      const [dashboardHistory, setDashboardHistory] = useState<DashboardItem[]>(
+        [initialDashboardState]
+      );
       const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
       const [currentMainViewType, setCurrentMainViewType] = useState<
         "graph" | "table" | "query"
@@ -250,14 +258,17 @@ const ChatInterface = memo(
                     lastBotMessage.content.startsWith("Error:") ||
                     !lastBotMessage.content.trim().startsWith("{")
                   ) {
-                    const newEntry = {
+                    const newEntry: DashboardItem = {
                       id: generateId(),
                       question: lastUserMessage.content,
                       ...getDashboardErrorState(
                         lastUserMessage.content,
                         lastBotMessage.content.replace("Error: ", "")
                       ),
-                      lastViewType: "table" as "graph" | "table" | "query",
+                      lastViewType: "table",
+                      isFavorited: lastUserMessage.isFavorited, // Get from the message
+                      questionMessageId: lastUserMessage.id, // Set the message ID
+                      connectionName: sessionData.connection,
                     };
                     setDashboardHistory([newEntry]);
                     setCurrentHistoryIndex(0);
@@ -287,13 +298,16 @@ const ChatInterface = memo(
                         botResponseContent.textualSummary ||
                         `Here is the analysis for: "${lastUserMessage.content}"`;
 
-                      const newEntry = {
+                      const newEntry: DashboardItem = {
                         id: generateId(),
                         question: lastUserMessage.content,
                         kpiData: actualKpiData,
                         mainViewData: actualMainViewData,
                         textualSummary: actualTextualSummary,
-                        lastViewType: "table" as "graph" | "table" | "query",
+                        lastViewType: "table",
+                        isFavorited: lastUserMessage.isFavorited, // Get from the message
+                        questionMessageId: lastUserMessage.id, // Set the message ID
+                        connectionName: sessionData.connection,
                       };
                       setDashboardHistory([newEntry]);
                       setCurrentHistoryIndex(0);
@@ -385,23 +399,21 @@ const ChatInterface = memo(
       );
 
       const askQuestion = useCallback(
-        async (
-          question: string,
-          connection: string,
-          isFavorited: boolean,
-          query?: string
-        ) => {
+        async (question: string, connection: string, query?: string) => {
           if (!connection) {
             toast.error("No connection provided.");
             return;
           }
 
           const newLoadingEntryId = generateId();
-          const newLoadingEntry = {
+          const newLoadingEntry: DashboardItem = {
             id: newLoadingEntryId,
             question: question,
+            questionMessageId: "", // Will be set after the message is created
+            connectionName: connection,
             ...getDashboardLoadingState(),
-            lastViewType: "table" as "graph" | "table" | "query",
+            lastViewType: "table",
+            isFavorited: false, // Newly asked questions are not favorited by default
           };
 
           setDashboardHistory((prev) => {
@@ -435,6 +447,9 @@ const ChatInterface = memo(
                         ),
                         textualSummary:
                           "Error: No valid session connection found.",
+                        isFavorited: false, // Ensure error state is unfavorited
+                        questionMessageId: "",
+                        connectionName: connection,
                       }
                     : item
                 )
@@ -481,6 +496,9 @@ const ChatInterface = memo(
                             "Could not create session."
                           ),
                           textualSummary: "Error: Could not create session.",
+                          isFavorited: false, // Ensure error state is unfavorited
+                          questionMessageId: "",
+                          connectionName: connection,
                         }
                       : item
                   )
@@ -499,6 +517,9 @@ const ChatInterface = memo(
                           getErrorMessage(error)
                         ), // Pass specific error message
                         textualSummary: `Error: ${getErrorMessage(error)}`,
+                        isFavorited: false, // Ensure error state is unfavorited
+                        questionMessageId: "",
+                        connectionName: connection,
                       }
                     : item
                 )
@@ -508,11 +529,11 @@ const ChatInterface = memo(
           }
 
           const userMessage: Message = {
-            id: Date.now().toString(),
+            id: Date.now().toString(), // Temp ID
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
-            isFavorited,
+            isFavorited: false, // Will be set to false at creation in backend
             parentId: null,
           };
 
@@ -527,7 +548,6 @@ const ChatInterface = memo(
                 session_id: currentSessionId,
                 content: question,
                 isBot: false,
-                isFavorited,
                 parentId: null,
               },
               { headers: { "Content-Type": "application/json" } }
@@ -535,12 +555,27 @@ const ChatInterface = memo(
             const finalUserMessage = {
               ...userMessage,
               id: userResponse.data.id,
+              isFavorited: userResponse.data.isFavorited, // Get actual status from backend
             };
             finalUserMessageId = finalUserMessage.id;
             dispatchMessages({
               type: "ADD_MESSAGE",
               message: finalUserMessage,
             });
+
+            // Update the dashboardHistory item with the real message ID and favorite status
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.id === newLoadingEntryId
+                  ? {
+                      ...item,
+                      questionMessageId: finalUserMessageId,
+                      isFavorited: finalUserMessage.isFavorited,
+                      connectionName: connection,
+                    }
+                  : item
+              )
+            );
 
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
@@ -625,6 +660,7 @@ const ChatInterface = memo(
                         kpiData: actualKpiData,
                         mainViewData: actualMainViewData,
                         textualSummary: actualTextualSummary,
+                        // isFavorited and questionMessageId should already be set from userResponse.data
                       }
                     : item
                 )
@@ -666,6 +702,9 @@ const ChatInterface = memo(
                         ...item,
                         ...getDashboardErrorState(question, errorContent), // Pass specific error message
                         textualSummary: `Error: ${errorContent}`,
+                        isFavorited: item.isFavorited, // Preserve existing favorite status
+                        questionMessageId: item.questionMessageId, // Preserve existing message ID
+                        connectionName: item.connectionName, // Preserve existing connection
                       }
                     : item
                 )
@@ -723,6 +762,7 @@ const ChatInterface = memo(
             );
             toast.error(`Failed to send message: ${getErrorMessage(error)}`);
 
+            // If an error occurred before message creation, filter out the loading entry
             setDashboardHistory((prev) =>
               prev.filter((item) => item.id !== newLoadingEntryId)
             );
@@ -753,7 +793,7 @@ const ChatInterface = memo(
 
           const questionToAsk = input;
           setInput("");
-          await askQuestion(questionToAsk, selectedConnection, false);
+          await askQuestion(questionToAsk, selectedConnection);
         },
         [input, isSubmitting, selectedConnection, askQuestion]
       );
@@ -772,9 +812,71 @@ const ChatInterface = memo(
           handleNewChat();
           await new Promise<void>((resolve) => setTimeout(resolve, 0));
           setSelectedConnection(connectionName);
-          await askQuestion(question, connectionName, false, query);
+          await askQuestion(question, connectionName, query);
         },
         [connections, handleNewChat, setSelectedConnection, askQuestion]
+      );
+
+      const handleToggleFavorite = useCallback(
+        async (
+          questionMessageId: string,
+          questionContent: string,
+          responseQuery: string,
+          currentConnection: string,
+          isCurrentlyFavorited: boolean
+        ) => {
+          if (!token) {
+            toast.error("Authentication required to favorite/unfavorite.");
+            return;
+          }
+
+          try {
+            if (isCurrentlyFavorited) {
+              await axios.post(
+                `${API_URL}/unfavorite`,
+                {
+                  questionId: questionMessageId,
+                  uid: "user1", // Hardcoded uid for now
+                  currentConnection,
+                  questionContent,
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+            } else {
+              await axios.post(
+                `${API_URL}/favorite`,
+                {
+                  questionId: questionMessageId,
+                  questionContent,
+                  responseQuery,
+                  currentConnection,
+                  uid: "user1", // Hardcoded uid for now
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+            }
+
+            // Update the specific dashboard item's isFavorited status in history
+            setDashboardHistory((prevHistory) =>
+              prevHistory.map((item) =>
+                item.questionMessageId === questionMessageId
+                  ? { ...item, isFavorited: !isCurrentlyFavorited }
+                  : item
+              )
+            );
+
+            // Update the corresponding message in the messages state
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: questionMessageId,
+              message: { isFavorited: !isCurrentlyFavorited },
+            });
+          } catch (error) {
+            console.error("Error toggling favorite:", error);
+            toast.error(`Failed to toggle favorite: ${getErrorMessage(error)}`);
+          }
+        },
+        [token, dispatchMessages]
       );
 
       useEffect(() => {
@@ -801,7 +903,6 @@ const ChatInterface = memo(
           askQuestion(
             initialQuestion.text,
             targetConnection,
-            false,
             initialQuestion.query
           );
           if (onQuestionAsked) onQuestionAsked();
@@ -912,14 +1013,17 @@ const ChatInterface = memo(
                 correspondingBotMessage.content.startsWith("Error:") ||
                 !correspondingBotMessage.content.trim().startsWith("{")
               ) {
-                const newEntry = {
+                const newEntry: DashboardItem = {
                   id: generateId(), // Generate a new ID for this history entry
                   question: questionContent,
                   ...getDashboardErrorState(
                     questionContent,
                     correspondingBotMessage.content.replace("Error: ", "")
                   ),
-                  lastViewType: "table" as "graph" | "table" | "query", // Default to table view
+                  lastViewType: "table", // Default to table view
+                  isFavorited: selectedUserMessage.isFavorited, // Get from the message
+                  questionMessageId: selectedUserMessage.id, // Set the message ID
+                  connectionName: selectedConnection, // Use the currently selected connection
                 };
                 setDashboardHistory((prev) => {
                   const newHistory =
@@ -954,13 +1058,16 @@ const ChatInterface = memo(
                     botResponseContent.textualSummary ||
                     `Here is the analysis for: "${questionContent}"`;
 
-                  const newEntry = {
+                  const newEntry: DashboardItem = {
                     id: generateId(), // Generate a new ID for this history entry
                     question: questionContent,
                     kpiData: actualKpiData,
                     mainViewData: actualMainViewData,
                     textualSummary: actualTextualSummary,
-                    lastViewType: "table" as "graph" | "table" | "query", // Default to table view
+                    lastViewType: "table", // Default to table view
+                    isFavorited: selectedUserMessage.isFavorited, // Get from the message
+                    questionMessageId: selectedUserMessage.id, // Set the message ID
+                    connectionName: selectedConnection, // Use the currently selected connection
                   };
 
                   // Add the new entry to dashboard history and set it as current
@@ -978,16 +1085,16 @@ const ChatInterface = memo(
                     parseError
                   );
                   // Fallback: If parsing fails, re-ask the question.
-                  await askQuestion(questionContent, selectedConnection, false);
+                  await askQuestion(questionContent, selectedConnection);
                 }
               }
             } else {
               // Fallback: If no corresponding bot message or it's still loading, re-ask the question.
-              await askQuestion(questionContent, selectedConnection, false);
+              await askQuestion(questionContent, selectedConnection);
             }
           } else {
             // Fallback: If the user message is not found in session messages, re-ask.
-            await askQuestion(questionContent, selectedConnection, false);
+            await askQuestion(questionContent, selectedConnection);
           }
         },
         [selectedConnection, messages, askQuestion, currentHistoryIndex]
@@ -1132,6 +1239,8 @@ const ChatInterface = memo(
                     onNavigateHistory={navigateDashboardHistory}
                     historyIndex={currentHistoryIndex}
                     historyLength={dashboardHistory.length}
+                    onToggleFavorite={handleToggleFavorite} // Pass the new handler
+                    currentConnection={selectedConnection || ""} // Pass the current selected connection
                   />
                 )
               ) : (
