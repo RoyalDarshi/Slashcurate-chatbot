@@ -169,6 +169,9 @@ const ChatInterface = memo(
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
       const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
         useState(false);
+      const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
+        null
+      );
 
       // Memoized initial dashboard state to prevent infinite loop
       const initialDashboardState = useMemo(
@@ -218,9 +221,14 @@ const ChatInterface = memo(
         }
       }, [currentDashboardView, isSubmitting]);
 
+      // Effect to load session history when connections are ready or visibility changes
       useEffect(() => {
         const handleSessionLoad = async () => {
           const storedSessionId = localStorage.getItem("currentSessionId");
+          const storedCurrentQuestionId = localStorage.getItem(
+            "currentDashboardQuestionId"
+          );
+
           if (storedSessionId && connections.length > 0) {
             try {
               const response = await axios.get(
@@ -230,55 +238,57 @@ const ChatInterface = memo(
                 }
               );
               const sessionData = response.data;
-              await loadSession(storedSessionId);
+              await loadSession(storedSessionId); // Load session messages into useSession hook
 
-              const lastUserMessage = sessionData.messages
+              const loadedDashboardHistory: DashboardItem[] = [];
+              const userMessages = sessionData.messages
                 .filter((msg: Message) => !msg.isBot)
                 .sort(
                   (a: Message, b: Message) =>
-                    new Date(b.timestamp).getTime() -
-                    new Date(a.timestamp).getTime()
-                )[0];
+                    new Date(a.timestamp).getTime() -
+                    new Date(b.timestamp).getTime()
+                ); // Sort by timestamp to process chronologically
 
-              if (lastUserMessage) {
-                const lastBotMessage = sessionData.messages
+              let restoredIndex = 0; // Default to the first question in the loaded history
+
+              for (const userMessage of userMessages) {
+                const correspondingBotMessage = sessionData.messages
                   .filter(
                     (msg: Message) =>
-                      msg.isBot && msg.parentId === lastUserMessage.id
+                      msg.isBot && msg.parentId === userMessage.id
                   )
                   .sort(
                     (a: Message, b: Message) =>
                       new Date(b.timestamp).getTime() -
                       new Date(a.timestamp).getTime()
-                  )[0];
+                  )[0]; // Get the latest bot response for this user message
 
-                if (lastBotMessage && lastBotMessage.content !== "loading...") {
-                  // Check if the bot message content indicates an error
+                if (
+                  correspondingBotMessage &&
+                  correspondingBotMessage.content !== "loading..."
+                ) {
                   if (
-                    lastBotMessage.content.startsWith("Error:") ||
-                    !lastBotMessage.content.trim().startsWith("{")
+                    correspondingBotMessage.content.startsWith("Error:") ||
+                    !correspondingBotMessage.content.trim().startsWith("{")
                   ) {
-                    const newEntry: DashboardItem = {
+                    // It's an error message
+                    loadedDashboardHistory.push({
                       id: generateId(),
-                      question: lastUserMessage.content,
+                      question: userMessage.content,
                       ...getDashboardErrorState(
-                        lastUserMessage.content,
-                        lastBotMessage.content.replace("Error: ", "")
+                        userMessage.content,
+                        correspondingBotMessage.content.replace("Error: ", "")
                       ),
                       lastViewType: "table",
-                      isFavorited: lastUserMessage.isFavorited, // Get from the message
-                      questionMessageId: lastUserMessage.id, // Set the message ID
+                      isFavorited: userMessage.isFavorited,
+                      questionMessageId: userMessage.id,
                       connectionName: sessionData.connection,
-                    };
-                    setDashboardHistory([newEntry]);
-                    setCurrentHistoryIndex(0);
-                    setCurrentMainViewType("table");
-                    setInput("");
+                    });
                   } else {
-                    // Try to parse as JSON if it's not an error string
+                    // Try to parse as JSON for a successful response
                     try {
                       const botResponseContent = JSON.parse(
-                        lastBotMessage.content
+                        correspondingBotMessage.content
                       );
                       const actualKpiData =
                         botResponseContent.kpiData || initialEmptyKpiData;
@@ -296,49 +306,73 @@ const ChatInterface = memo(
                       };
                       const actualTextualSummary =
                         botResponseContent.textualSummary ||
-                        `Here is the analysis for: "${lastUserMessage.content}"`;
+                        `Here is the analysis for: "${userMessage.content}"`;
 
-                      const newEntry: DashboardItem = {
+                      loadedDashboardHistory.push({
                         id: generateId(),
-                        question: lastUserMessage.content,
+                        question: userMessage.content,
                         kpiData: actualKpiData,
                         mainViewData: actualMainViewData,
                         textualSummary: actualTextualSummary,
-                        lastViewType: "table",
-                        isFavorited: lastUserMessage.isFavorited, // Get from the message
-                        questionMessageId: lastUserMessage.id, // Set the message ID
+                        lastViewType: "table", // Default to table view on load
+                        isFavorited: userMessage.isFavorited,
+                        questionMessageId: userMessage.id,
                         connectionName: sessionData.connection,
-                      };
-                      setDashboardHistory([newEntry]);
-                      setCurrentHistoryIndex(0);
-                      setCurrentMainViewType("table");
-                      setInput("");
+                      });
                     } catch (parseError) {
                       console.error(
                         "Failed to parse bot response content from session:",
                         parseError
                       );
-                      setDashboardHistory([initialDashboardState]);
-                      setCurrentHistoryIndex(0);
-                      setCurrentMainViewType("table");
+                      // If parsing fails, treat as an error or skip, but don't break the app
+                      loadedDashboardHistory.push({
+                        id: generateId(),
+                        question: userMessage.content,
+                        ...getDashboardErrorState(
+                          userMessage.content,
+                          "Failed to parse bot response."
+                        ),
+                        lastViewType: "table",
+                        isFavorited: userMessage.isFavorited,
+                        questionMessageId: userMessage.id,
+                        connectionName: sessionData.connection,
+                      });
                     }
                   }
-                } else {
-                  // If bot message is 'loading...' or doesn't exist, revert to initial state
-                  setDashboardHistory([initialDashboardState]);
-                  setCurrentHistoryIndex(0);
-                  setCurrentMainViewType("table");
-                  setInput("");
                 }
+                // If no corresponding bot message or it's still 'loading...', we skip this interaction as it's incomplete
+              }
+
+              if (loadedDashboardHistory.length > 0) {
+                // Find the index of the previously selected question
+                const foundIndex = loadedDashboardHistory.findIndex(
+                  (item) => item.questionMessageId === storedCurrentQuestionId
+                );
+
+                if (foundIndex !== -1) {
+                  restoredIndex = foundIndex;
+                } else {
+                  // If the stored question is not found (e.g., new session, question deleted), default to the last one
+                  restoredIndex = loadedDashboardHistory.length - 1;
+                }
+
+                setDashboardHistory(loadedDashboardHistory);
+                setCurrentHistoryIndex(restoredIndex);
+                setCurrentMainViewType(
+                  loadedDashboardHistory[restoredIndex].lastViewType || "table"
+                );
+                setInput("");
               } else {
-                // If no user message found in session, revert to initial state
+                // If no complete interactions found, revert to initial state
                 setDashboardHistory([initialDashboardState]);
                 setCurrentHistoryIndex(0);
                 setCurrentMainViewType("table");
+                setInput("");
               }
             } catch (error) {
               console.error("Session validation failed or no data:", error);
               localStorage.removeItem("currentSessionId");
+              localStorage.removeItem("currentDashboardQuestionId"); // Clear on error
               clearSession();
               setDashboardHistory([initialDashboardState]);
               setCurrentHistoryIndex(0);
@@ -346,16 +380,17 @@ const ChatInterface = memo(
             }
           } else if (!storedSessionId) {
             clearSession();
+            localStorage.removeItem("currentDashboardQuestionId"); // Clear if no session
             setDashboardHistory([initialDashboardState]);
             setCurrentHistoryIndex(0);
             setCurrentMainViewType("table");
           }
         };
 
-        handleSessionLoad();
-        document.addEventListener("visibilitychange", handleSessionLoad);
+        handleSessionLoad(); // Initial load
+        document.addEventListener("visibilitychange", handleSessionLoad); // Listen for tab visibility changes
         return () =>
-          document.removeEventListener("visibilitychange", handleSessionLoad);
+          document.removeEventListener("visibilitychange", handleSessionLoad); // Clean up listener
       }, [
         token,
         loadSession,
@@ -364,12 +399,29 @@ const ChatInterface = memo(
         connections,
       ]);
 
+      // Effect to save the current dashboard item's question ID to localStorage
+      useEffect(() => {
+        if (currentDashboardView?.questionMessageId) {
+          localStorage.setItem(
+            "currentDashboardQuestionId",
+            currentDashboardView.questionMessageId
+          );
+        } else if (
+          dashboardHistory.length === 1 &&
+          currentDashboardView.id === initialDashboardState.id
+        ) {
+          // If it's the initial empty state, clear the stored ID
+          localStorage.removeItem("currentDashboardQuestionId");
+        }
+      }, [currentDashboardView, dashboardHistory, initialDashboardState]);
+
       const handleNewChat = useCallback(() => {
         clearSession();
         setInput("");
         setDashboardHistory([initialDashboardState]);
         setCurrentHistoryIndex(0);
         setCurrentMainViewType("table");
+        localStorage.removeItem("currentDashboardQuestionId"); // Clear stored question on new chat
       }, [clearSession, initialDashboardState]);
 
       const startNewSession = useCallback(
@@ -386,6 +438,8 @@ const ChatInterface = memo(
             );
             const newSessionId = response.data.id;
             localStorage.setItem("currentSessionId", newSessionId);
+            // On new session, clear any old question ID
+            localStorage.removeItem("currentDashboardQuestionId");
             return newSessionId;
           } catch (error) {
             console.error("Error creating new session:", error);
@@ -470,6 +524,7 @@ const ChatInterface = memo(
                   error
                 );
                 localStorage.removeItem("currentSessionId");
+                localStorage.removeItem("currentDashboardQuestionId"); // Clear on error
               }
             }
           }
@@ -576,6 +631,14 @@ const ChatInterface = memo(
                   : item
               )
             );
+
+            // Update localStorage with the new question ID as it becomes the current
+            if (finalUserMessageId) {
+              localStorage.setItem(
+                "currentDashboardQuestionId",
+                finalUserMessageId
+              );
+            }
 
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
@@ -982,7 +1045,8 @@ const ChatInterface = memo(
       );
 
       const handleSelectPrevQuestion = useCallback(
-        async (questionContent: string) => {
+        async (messageId: string) => {
+          // Updated to accept messageId
           if (!selectedConnection) {
             toast.error(
               "No connection selected. Please select a connection first."
@@ -993,9 +1057,9 @@ const ChatInterface = memo(
           setInput("");
           setShowPrevQuestionsModal(false);
 
-          // Find the user message in the session messages
+          // Find the user message in the session messages by its unique ID
           const selectedUserMessage = messages.find(
-            (msg) => !msg.isBot && msg.content === questionContent
+            (msg) => !msg.isBot && msg.id === messageId
           );
 
           if (selectedUserMessage) {
@@ -1015,16 +1079,17 @@ const ChatInterface = memo(
               ) {
                 const newEntry: DashboardItem = {
                   id: generateId(), // Generate a new ID for this history entry
-                  question: questionContent,
+                  question: selectedUserMessage.content, // Use content from the found message
                   ...getDashboardErrorState(
-                    questionContent,
+                    selectedUserMessage.content,
                     correspondingBotMessage.content.replace("Error: ", "")
                   ),
                   lastViewType: "table", // Default to table view
-                  isFavorited: selectedUserMessage.isFavorited, // Get from the message
+                  isFavorited: selectedUserMessage.isFavorited, // Get from the message, which is now correctly identified
                   questionMessageId: selectedUserMessage.id, // Set the message ID
                   connectionName: selectedConnection, // Use the currently selected connection
                 };
+
                 setDashboardHistory((prev) => {
                   const newHistory =
                     currentHistoryIndex === prev.length - 1
@@ -1033,6 +1098,11 @@ const ChatInterface = memo(
                   return newHistory;
                 });
                 setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
+                // Save the selected question's ID to localStorage
+                localStorage.setItem(
+                  "currentDashboardQuestionId",
+                  selectedUserMessage.id
+                );
               } else {
                 try {
                   // Parse the bot's JSON content
@@ -1056,16 +1126,16 @@ const ChatInterface = memo(
                   };
                   const actualTextualSummary =
                     botResponseContent.textualSummary ||
-                    `Here is the analysis for: "${questionContent}"`;
+                    `Here is the analysis for: "${selectedUserMessage.content}"`;
 
                   const newEntry: DashboardItem = {
                     id: generateId(), // Generate a new ID for this history entry
-                    question: questionContent,
+                    question: selectedUserMessage.content,
                     kpiData: actualKpiData,
                     mainViewData: actualMainViewData,
                     textualSummary: actualTextualSummary,
                     lastViewType: "table", // Default to table view
-                    isFavorited: selectedUserMessage.isFavorited, // Get from the message
+                    isFavorited: selectedUserMessage.isFavorited, // Get from the message, which is now correctly identified
                     questionMessageId: selectedUserMessage.id, // Set the message ID
                     connectionName: selectedConnection, // Use the currently selected connection
                   };
@@ -1079,22 +1149,40 @@ const ChatInterface = memo(
                     return newHistory;
                   });
                   setCurrentHistoryIndex((prevIndex) => prevIndex + 1); // Move to the newly added entry
+                  // Save the selected question's ID to localStorage
+                  localStorage.setItem(
+                    "currentDashboardQuestionId",
+                    selectedUserMessage.id
+                  );
+                  setCurrentQuestionId(selectedUserMessage.id);
                 } catch (parseError) {
                   console.error(
                     "Failed to parse bot response content for previous question:",
                     parseError
                   );
                   // Fallback: If parsing fails, re-ask the question.
-                  await askQuestion(questionContent, selectedConnection);
+                  await askQuestion(
+                    selectedUserMessage.content,
+                    selectedConnection
+                  );
                 }
               }
             } else {
               // Fallback: If no corresponding bot message or it's still loading, re-ask the question.
-              await askQuestion(questionContent, selectedConnection);
+              await askQuestion(
+                selectedUserMessage.content,
+                selectedConnection
+              );
             }
           } else {
-            // Fallback: If the user message is not found in session messages, re-ask.
-            await askQuestion(questionContent, selectedConnection);
+            // Fallback: If the user message is not found in session messages by ID,
+            // this implies a state inconsistency or an issue with the message ID.
+            // For now, we will simply log an error.
+            console.error(
+              "User message not found in session by ID:",
+              messageId
+            );
+            toast.error("Could not load the selected previous question.");
           }
         },
         [selectedConnection, messages, askQuestion, currentHistoryIndex]
@@ -1113,6 +1201,13 @@ const ChatInterface = memo(
           }
           setCurrentHistoryIndex(newIndex);
           setCurrentMainViewType("table");
+          // Save the current question's ID when navigating history
+          if (dashboardHistory[newIndex]?.questionMessageId) {
+            localStorage.setItem(
+              "currentDashboardQuestionId",
+              dashboardHistory[newIndex].questionMessageId
+            );
+          }
         },
         [currentHistoryIndex, dashboardHistory]
       );
@@ -1310,7 +1405,6 @@ const ChatInterface = memo(
                       background: theme.colors.surface,
                       color: theme.colors.accent,
                     }}
-                    aria-label="Select Connection"
                   >
                     <Database size={20} />
                   </button>
@@ -1439,7 +1533,6 @@ const ChatInterface = memo(
                     background: theme.colors.surface,
                     color: theme.colors.accent,
                   }}
-                  aria-label="Explore Database Schema"
                 >
                   <Layers
                     size={20}
@@ -1462,7 +1555,6 @@ const ChatInterface = memo(
                     background: theme.colors.surface,
                     color: theme.colors.accent,
                   }}
-                  aria-label="New Chat"
                 >
                   <PlusCircle size={20} />
                 </button>
@@ -1504,6 +1596,7 @@ const ChatInterface = memo(
             onClose={() => setShowPrevQuestionsModal(false)}
             userQuestionsFromSession={userQuestionsFromSession}
             handleSelectPrevQuestion={handleSelectPrevQuestion}
+            currentQuestionId={currentQuestionId}
             theme={theme}
           />
 
