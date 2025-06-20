@@ -205,6 +205,13 @@ const ChatInterface = memo(
       const isErrorState =
         currentDashboardView.textualSummary.startsWith("Error:");
 
+      // Synchronize currentQuestionId with currentDashboardView
+      useEffect(() => {
+        if (currentDashboardView?.questionMessageId) {
+          setCurrentQuestionId(currentDashboardView.questionMessageId);
+        }
+      }, [currentDashboardView]);
+
       // Modified useEffect to stop loading on error or completion
       useEffect(() => {
         if (
@@ -358,6 +365,9 @@ const ChatInterface = memo(
 
                 setDashboardHistory(loadedDashboardHistory);
                 setCurrentHistoryIndex(restoredIndex);
+                setCurrentQuestionId(
+                  loadedDashboardHistory[restoredIndex].questionMessageId
+                );
                 setCurrentMainViewType(
                   loadedDashboardHistory[restoredIndex].lastViewType || "table"
                 );
@@ -1315,7 +1325,7 @@ const ChatInterface = memo(
                     question={currentDashboardView.question}
                     theme={theme}
                   />
-                ) : isErrorState ? ( // New condition to check for error state
+                ) : isErrorState ? (
                   <DashboardError
                     question={currentDashboardView.question}
                     errorMessage={currentDashboardView.textualSummary.replace(
