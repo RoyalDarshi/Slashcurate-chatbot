@@ -6,6 +6,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useMemo,
+  useRef, // Import useRef
 } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -14,22 +15,28 @@ import { ToastContainer, toast } from "react-toastify";
 // Importing external components, hooks, and types
 // Adjusted import paths assuming a flat directory structure where all files are siblings
 // or in direct sibling subdirectories (e.g., ./data/sampleSchemaData)
-import { Message, Connection, ChatInterfaceProps } from "../types"; // Corrected path
-import { API_URL, CHATBOT_API_URL } from "../config"; // Corrected path
+import { Message, Connection, ChatInterfaceProps } from "../types";
+import { API_URL, CHATBOT_API_URL } from "../config";
 import ChatInput from "./ChatInput";
 import Loader from "./Loader";
-import { useTheme } from "../ThemeContext"; // Corrected path
+import { useTheme } from "../ThemeContext";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
-import { useConnections, useSession, useRecommendedQuestions } from "../hooks"; // Corrected path
+import { useConnections, useSession, useRecommendedQuestions } from "../hooks";
 import DashboardView from "./DashboardView";
 import SchemaExplorer from "./SchemaExplorer";
-import DashboardSkeletonLoader from "./DashboardSkeletonLoader"; // Import the new skeleton loader
-import schemaSampleData from "../data/sampleSchemaData"; // Corrected path
-import DashboardError from "./DashboardError"; // Import the new error component
-import PreviousQuestionsModal from "./PreviousQuestionModal"; // Import the new component
+import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
+import schemaSampleData from "../data/sampleSchemaData";
+import DashboardError from "./DashboardError";
+import PreviousQuestionsModal from "./PreviousQuestionModal";
 
-import { ListChecks, Database, Layers, PlusCircle } from "lucide-react";
+import {
+  ListChecks,
+  Database,
+  Layers,
+  PlusCircle,
+  FileText,
+} from "lucide-react"; // Corrected import syntax
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -144,6 +151,9 @@ const ChatInterface = memo(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
       const token = sessionStorage.getItem("token") ?? "";
+
+      // Ref for the connections dropdown to detect outside clicks
+      const connectionDropdownRef = useRef<HTMLDivElement>(null);
 
       const {
         connections,
@@ -424,6 +434,28 @@ const ChatInterface = memo(
           localStorage.removeItem("currentDashboardQuestionId");
         }
       }, [currentDashboardView, dashboardHistory, initialDashboardState]);
+
+      // Effect to handle clicks outside the connection dropdown
+      useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          if (
+            connectionDropdownRef.current &&
+            !connectionDropdownRef.current.contains(event.target as Node)
+          ) {
+            setIsConnectionDropdownOpen(false);
+          }
+        };
+
+        if (isConnectionDropdownOpen) {
+          document.addEventListener("mousedown", handleClickOutside);
+        } else {
+          document.removeEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => {
+          document.removeEventListener("mousedown", handleClickOutside);
+        };
+      }, [isConnectionDropdownOpen]);
 
       const handleNewChat = useCallback(() => {
         clearSession();
@@ -1022,7 +1054,7 @@ const ChatInterface = memo(
             setSelectedConnection(null);
             localStorage.removeItem("selectedConnection");
           }
-          setIsConnectionDropdownOpen(false);
+          setIsConnectionDropdownOpen(false); // Close dropdown after selection
         },
         [
           onCreateConSelected,
@@ -1398,7 +1430,7 @@ const ChatInterface = memo(
             }}
           >
             <div className="w-full max-w-4xl flex items-center gap-2 px-2">
-              <div className="relative">
+              <div className="relative" ref={connectionDropdownRef}>
                 <CustomTooltip
                   title="Change or create a connection"
                   position="top"
@@ -1422,53 +1454,61 @@ const ChatInterface = memo(
 
                 {isConnectionDropdownOpen && (
                   <div
-                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2"
+                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2 w-64" // Removed overflow-hidden
                     style={{
                       background: theme.colors.surface,
                       border: `1px solid ${theme.colors.border}`,
                       boxShadow: theme.shadow.md,
-                      width: "min-content",
-                      maxWidth: "min-content",
                     }}
                   >
                     {connections.length === 0 ? (
                       <div
-                        className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 cursor-pointer transition-all duration-300"
+                        className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200" // Increased padding
                         style={{
                           color: theme.colors.text,
-                          backgroundColor: `${theme.colors.accent}10`,
+                          backgroundColor: `${theme.colors.surfaceGlass}`,
                         }}
                         onClick={() => handleSelect({ value: "create-con" })}
                       >
-                        <span className="truncate">Create Connection</span>
+                        <span className="truncate font-medium">
+                          <PlusCircle size={16} className="inline-block mr-2" />{" "}
+                          Create New Connection
+                        </span>{" "}
+                        {/* Improved text and added icon */}
                       </div>
                     ) : (
                       <>
                         <div
-                          className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 cursor-pointer transition-all duration-300"
+                          className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200" // Increased padding
                           style={{
                             color: theme.colors.text,
-                            backgroundColor: `${theme.colors.accent}10`,
+                            backgroundColor: `${theme.colors.surface}`,
                           }}
                           onClick={() => handleSelect({ value: "create-con" })}
                         >
-                          <span className="truncate">Create Connection</span>
+                          <span className="truncate font-medium">
+                            <PlusCircle
+                              size={16}
+                              className="inline-block mr-2"
+                            />{" "}
+                            Create New Connection
+                          </span>
                         </div>
                         {connections.map((connection: Connection) => (
                           <div
                             key={connection.connectionName}
-                            className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 cursor-pointer transition-all duration-300"
+                            className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200" // Increased padding
                             style={{
                               color: theme.colors.text,
                               background:
                                 selectedConnection === connection.connectionName
-                                  ? `${theme.colors.accent}10`
+                                  ? `${theme.colors.accent}20`
                                   : "transparent",
                             }}
                             onClick={() => handleSelect({ value: connection })}
                           >
                             <span
-                              className="truncate"
+                              className="truncate font-medium" // Added font-medium
                               style={{
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
@@ -1479,48 +1519,42 @@ const ChatInterface = memo(
                             </span>
                             {connection.isAdmin && (
                               <span
+                                className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold" // Styled admin badge
                                 style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  backgroundColor: theme.colors.background,
-                                  color: theme.colors.accent,
-                                  fontSize: theme.typography.size.sm,
-                                  fontWeight: theme.typography.weight.normal,
-                                  padding: `0 ${theme.spacing.sm}`,
-                                  borderRadius: theme.borderRadius.default,
-                                  marginLeft: theme.spacing.sm,
-                                  textTransform: "lowercase",
+                                  backgroundColor: theme.colors.accent,
+                                  color: theme.colors.surface,
                                 }}
                               >
                                 Default
                               </span>
                             )}
-                            <div className="relative group">
+                            {/* Replaced manual group-hover tooltip with CustomTooltip */}
+                            <CustomTooltip
+                              title="View Data Atlas"
+                              position="top"
+                            >
                               <button
                                 type="button"
                                 onClick={(e) =>
                                   handlePdfClick(connection.connectionName, e)
                                 }
-                                className="p-1"
+                                className="p-1 rounded-md"
+                                style={{ background: theme.colors.accentHover }}
                                 aria-label="View Data Atlas"
                               >
-                                <PdfIcon
-                                  size={16}
-                                  style={{ color: theme.colors.error }}
-                                  className="hover:scale-105 transition-transform duration-300"
-                                />
+                                <p
+                                  className="flex items-center gap-1"
+                                  style={{ fontSize: theme.typography.size.sm }}
+                                >
+                                  <FileText
+                                    size={16}
+                                    style={{ color: "white" }}
+                                    className="hover:scale-105 transition-transform duration-300"
+                                  />
+                                  Data Atlas
+                                </p>
                               </button>
-                              <span
-                                className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
-                                style={{
-                                  background: theme.colors.accent,
-                                  color: theme.colors.surface,
-                                  boxShadow: `0 0 6px ${theme.colors.accent}40`,
-                                }}
-                              >
-                                View Data Atlas
-                              </span>
-                            </div>
+                            </CustomTooltip>
                           </div>
                         ))}
                       </>
