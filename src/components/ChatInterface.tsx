@@ -1,3 +1,4 @@
+// ChatInterface.tsx
 import React, {
   useState,
   useEffect,
@@ -23,12 +24,13 @@ import { useTheme } from "../ThemeContext";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
 import { useConnections, useSession, useRecommendedQuestions } from "../hooks";
-import DashboardView from "./DashboardView";
+import DashboardView, { DashboardViewHandle } from "./DashboardView"; // Import DashboardViewHandle
 import SchemaExplorer from "./SchemaExplorer";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
 import schemaSampleData from "../data/sampleSchemaData";
 import DashboardError from "./DashboardError";
 import PreviousQuestionsModal from "./PreviousQuestionModal";
+import html2canvas from "html2canvas"; // Import html2canvas
 
 import {
   ListChecks,
@@ -36,6 +38,7 @@ import {
   Layers,
   PlusCircle,
   FileText,
+  ScanEye, // Import ScanEye for summarize graph button
 } from "lucide-react"; // Corrected import syntax
 
 export type ChatInterfaceHandle = {
@@ -154,6 +157,8 @@ const ChatInterface = memo(
 
       // Ref for the connections dropdown to detect outside clicks
       const connectionDropdownRef = useRef<HTMLDivElement>(null);
+      // Ref for the DashboardView component
+      const dashboardViewRef = useRef<DashboardViewHandle>(null);
 
       const {
         connections,
@@ -182,6 +187,8 @@ const ChatInterface = memo(
       const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
         null
       );
+      // New state for summarized graph text
+      const [graphSummary, setGraphSummary] = useState<string | null>(null);
 
       // Memoized initial dashboard state to prevent infinite loop
       const initialDashboardState = useMemo(
@@ -463,6 +470,7 @@ const ChatInterface = memo(
         setDashboardHistory([initialDashboardState]);
         setCurrentHistoryIndex(0);
         setCurrentMainViewType("table");
+        setGraphSummary(null); // Clear graph summary on new chat
         localStorage.removeItem("currentDashboardQuestionId"); // Clear stored question on new chat
       }, [clearSession, initialDashboardState]);
 
@@ -521,6 +529,7 @@ const ChatInterface = memo(
           });
 
           setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
+          setGraphSummary(null); // Clear previous graph summary on new question
 
           let currentSessionId = sessionId;
 
@@ -1075,16 +1084,121 @@ const ChatInterface = memo(
         []
       );
 
-      const PdfIcon = (props: React.SVGProps<SVGSVGElement>) => (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          {...props}
-        >
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 0l6 6v2H14zM16 13c0 .55-.45 1-1 1h-2v2c0 .55-.45 1-1 1H9c-.55 0-1-.45-1-1v-2H6c-.55 0-1-.45-1-1V9c0-.55.45-1 1-1h2V6c0-.55.45-1 1-1h2c.55 0 1 .45 1 1v2h2c.55 0 1 .45 1 1v4z" />
-        </svg>
-      );
+      const handleSummarizeGraph = useCallback(async () => {
+        if (!dashboardViewRef.current) {
+          toast.error("Graph component not ready for summarization.");
+          return;
+        }
+
+        const graphElement = dashboardViewRef.current.getGraphContainer();
+
+        if (!graphElement) {
+          toast.error("No graph visible to summarize.");
+          return;
+        }
+
+        setIsSubmitting(true);
+        setGraphSummary(null); // Clear previous summary
+        toast.info("Summarizing graph...", { autoClose: false });
+
+        try {
+          // Temporarily hide other elements in dashboard-view to capture only graph
+          // This is a simple approach; for more complex layouts, consider cloning the element
+          // and rendering it off-screen, then capturing.
+          const kpiSection = graphElement
+            .closest(".flex")
+            ?.querySelector(".grid.m-2");
+          const viewToggleSection = graphElement
+            .closest(".flex")
+            ?.querySelector(".flex-row.self-start");
+          const originalKPIDisplay = kpiSection ? kpiSection.style.display : "";
+          const originalViewToggleDisplay = viewToggleSection
+            ? viewToggleSection.style.display
+            : "";
+
+          if (kpiSection) kpiSection.style.display = "none";
+          if (viewToggleSection) viewToggleSection.style.display = "none";
+
+          const canvas = await html2canvas(graphElement, {
+            scale: 2, // High resolution capture
+            useCORS: true,
+            logging: false,
+            backgroundColor: theme.colors.surface, // Ensure consistent background
+          });
+          const imageData = canvas.toDataURL("image/png"); // Base64 image
+
+          // Restore original display
+          if (kpiSection) kpiSection.style.display = originalKPIDisplay;
+          if (viewToggleSection)
+            viewToggleSection.style.display = originalViewToggleDisplay;
+
+          const prompt = `Summarize the key insights from this graph image. Consider the current question: "${
+            currentDashboardView.question
+          }". Also, note the dashboard's current state: Kpi data: ${JSON.stringify(
+            currentDashboardView.kpiData
+          )}, Main View Data Query: ${
+            currentDashboardView.mainViewData.queryData
+          }. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
+          const apiKey = ""; // Canvas will provide this automatically
+
+          const payload = {
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
+                  {
+                    inlineData: {
+                      mimeType: "image/png",
+                      data: imageData.split(",")[1], // Remove "data:image/png;base64," prefix
+                    },
+                  },
+                ],
+              },
+            ],
+          };
+
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+          // Post the image data and prompt to the Gemini API for summarization
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const result = await response.json();
+          let summaryText = "No summary could be generated.";
+
+          if (
+            result.candidates &&
+            result.candidates.length > 0 &&
+            result.candidates[0].content &&
+            result.candidates[0].content.parts &&
+            result.candidates[0].content.parts.length > 0
+          ) {
+            summaryText = result.candidates[0].content.parts[0].text;
+            setGraphSummary(summaryText); // Set the summarized text
+          } else {
+            console.error("Unexpected Gemini API response structure:", result);
+            toast.error(
+              "Failed to get summary from AI due to unexpected response."
+            );
+            setGraphSummary("Error: Failed to get summary from AI.");
+          }
+
+          toast.dismiss();
+          toast.success("Graph summarized successfully!");
+        } catch (error) {
+          console.error("Error summarizing graph:", error);
+          toast.dismiss(); // Dismiss the loading toast
+          const errorMessage = getErrorMessage(error);
+          toast.error(`Failed to summarize graph: ${errorMessage}`);
+          setGraphSummary(`Error: ${errorMessage}`);
+        } finally {
+          setIsSubmitting(false);
+        }
+      }, [currentDashboardView, theme.colors.surface]);
 
       const handleSelectPrevQuestion = useCallback(
         async (messageId: string) => {
@@ -1098,6 +1212,7 @@ const ChatInterface = memo(
 
           setInput("");
           setShowPrevQuestionsModal(false);
+          setGraphSummary(null); // Clear graph summary when selecting previous question
 
           // Find the user message in the session messages by its unique ID
           const selectedUserMessage = messages.find(
@@ -1243,6 +1358,7 @@ const ChatInterface = memo(
           }
           setCurrentHistoryIndex(newIndex);
           setCurrentMainViewType("table");
+          setGraphSummary(null); // Clear graph summary on navigation
           // Save the current question's ID when navigating history
           if (dashboardHistory[newIndex]?.questionMessageId) {
             localStorage.setItem(
@@ -1368,6 +1484,7 @@ const ChatInterface = memo(
                   />
                 ) : (
                   <DashboardView
+                    ref={dashboardViewRef} // Pass the ref to DashboardView
                     dashboardItem={currentDashboardView}
                     theme={theme}
                     isSubmitting={isSubmitting}
@@ -1378,6 +1495,7 @@ const ChatInterface = memo(
                     historyLength={dashboardHistory.length}
                     onToggleFavorite={handleToggleFavorite} // Pass the new handler
                     currentConnection={selectedConnection || ""} // Pass the current selected connection
+                    graphSummary={graphSummary} // Pass the graph summary
                   />
                 )
               ) : (
@@ -1632,6 +1750,28 @@ const ChatInterface = memo(
                   <ListChecks size={20} />
                 </button>
               </CustomTooltip>
+              {/* New Summarize Graph Button */}
+              {showDashboardContent &&
+                !isErrorState &&
+                currentDashboardView.mainViewData.chartData.length > 0 && (
+                  <CustomTooltip title="Summarize Graph" position="top">
+                    <button
+                      type="button"
+                      onClick={handleSummarizeGraph}
+                      disabled={
+                        isSubmitting ||
+                        currentDashboardView.mainViewData.chartData.length === 0
+                      }
+                      className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
+                      style={{
+                        background: theme.colors.surface,
+                        color: theme.colors.accent,
+                      }}
+                    >
+                      <ScanEye size={20} />
+                    </button>
+                  </CustomTooltip>
+                )}
             </div>
           </footer>
 
