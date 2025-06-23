@@ -7,11 +7,19 @@ import {
   Table,
   TrendingUp,
   Heart, // Import Star icon for favoriting
+  ScatterChartIcon as ScatterChartIconLucide, // Import ScatterChartIcon
+  AreaChart as AreaChartIconLucide, // Import AreaChartIcon
+  Snowflake as RadarChartIconLucide, // Import RadarChartIcon
+  List as FunnelChartIconLucide, // Import FunnelChartIcon (using List for now)
 } from "lucide-react";
 import KPICard from "./KPICard";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
 import DynamicLineGraph from "./Graphs/DynamicLineGraph";
 import DynamicPieGraph from "./Graphs/DynamicPieGraph";
+import DynamicScatterGraph from "./Graphs/DynamicScatterGraph"; // Import DynamicScatterGraph
+import DynamicAreaGraph from "./Graphs/DynamicAreaGraph"; // Import DynamicAreaGraph
+import DynamicRadarGraph from "./Graphs/DynamicRadarGraph"; // Import DynamicRadarGraph
+import DynamicFunnelGraph from "./Graphs/DynamicFunnelGraph"; // Import DynamicFunnelGraph
 import DataTable from "./DataTable";
 import QueryDisplay from "./QueryDisplay";
 import { Theme } from "../types";
@@ -128,6 +136,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       );
     });
   };
+
+  const getValidCategoricalKeys = (data: any[]) => {
+    if (!data || data.length === 0) return [];
+    const keys = Object.keys(data[0]);
+    return keys.filter((key) => {
+      const sampleVal = data.find(
+        (d) => d[key] !== null && d[key] !== undefined
+      )?.[key];
+      return (
+        !isKeyExcluded(key) &&
+        (typeof sampleVal === "string" || typeof sampleVal === "boolean")
+      );
+    });
+  }
 
   // Function to auto-detect the best key to group by
   const autoDetectBestGroupBy = (
@@ -266,7 +288,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Select Dropdown for Graph Type */}
 
             {/* Conditionally render filters if groupBy is available */}
-            {groupBy && (
+            {dashboardItem.mainViewData.chartData && dashboardItem.mainViewData.chartData.length > 0 && (
               <>
                 <div className="p-2 flex items-center gap-2">
                   <label
@@ -290,94 +312,313 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   >
                     <option value="bar">Bar</option>
                     <option value="line">Line</option>
+                    <option value="area">Area</option>
                     <option value="pie">Pie</option>
-                    {/* Add more graph types here if needed, e.g., <option value="scatter">Scatter</option> */}
+                    <option value="scatter">Scatter</option>
+                    <option value="radar">Radar</option>
+                    <option value="funnel">Funnel</option> {/* Added Funnel option */}
                   </select>
                 </div>
-                {/* Group By */}
-                <div className="flex items-center gap-2">
-                  <label
-                    className="font-semibold text-sm"
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    Group By:
-                  </label>
-                  <select
-                    className="px-2 py-1 rounded-md border shadow-sm"
-                    value={groupBy || ""}
-                    onChange={(e) => setGroupBy(e.target.value)}
-                    style={{
-                      backgroundColor: theme.colors.surface,
-                      color: theme.colors.text,
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.borderRadius.default,
-                    }}
-                  >
-                    {Object.keys(dashboardItem.mainViewData.chartData[0] || {})
-                      .filter((key) => !isKeyExcluded(key))
-                      .map((key) => (
-                        <option key={key} value={key}>
-                          {key.replace(/_/g, " ")}
-                        </option>
-                      ))}
-                  </select>
-                </div>
+                {/* Group By and Aggregate are not typically used for scatter/radar/funnel,
+                    but we'll keep them visible for other graph types. */}
+                {(graphType !== "scatter" && graphType !== "radar" && graphType !== "funnel") && groupBy && (
+                  <>
+                    {/* Group By */}
+                    <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Group By:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={groupBy || ""}
+                        onChange={(e) => setGroupBy(e.target.value)}
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        {Object.keys(dashboardItem.mainViewData.chartData[0] || {})
+                          .filter((key) => !isKeyExcluded(key))
+                          .map((key) => (
+                            <option key={key} value={key}>
+                              {key.replace(/_/g, " ")}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
 
-                {/* Aggregate */}
-                <div className="flex items-center gap-2">
-                  <label
-                    className="font-semibold text-sm"
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    Aggregate:
-                  </label>
-                  <select
-                    className="px-2 py-1 rounded-md border shadow-sm"
-                    value={aggregate}
-                    onChange={(e) =>
-                      setAggregate(e.target.value as "sum" | "count")
-                    }
-                    style={{
-                      backgroundColor: theme.colors.surface,
-                      color: theme.colors.text,
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.borderRadius.default,
-                    }}
-                  >
-                    <option value="count">Count</option>
-                    <option value="sum">Sum</option>
-                  </select>
-                </div>
+                    {/* Aggregate */}
+                    <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Aggregate:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={aggregate}
+                        onChange={(e) =>
+                          setAggregate(e.target.value as "sum" | "count")
+                        }
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        <option value="count">Count</option>
+                        <option value="sum">Sum</option>
+                      </select>
+                    </div>
 
-                {/* Value Key — only if "sum" is selected */}
-                {aggregate === "sum" && (
-                  <div className="flex items-center gap-2">
-                    <label
-                      className="font-semibold text-sm"
-                      style={{ color: theme.colors.textSecondary }}
-                    >
-                      Value Key:
-                    </label>
-                    <select
-                      className="px-2 py-1 rounded-md border shadow-sm"
-                      value={valueKey || ""}
-                      onChange={(e) => setValueKey(e.target.value)}
-                      style={{
-                        backgroundColor: theme.colors.surface,
-                        color: theme.colors.text,
-                        borderColor: theme.colors.border,
-                        borderRadius: theme.borderRadius.default,
-                      }}
-                    >
-                      {getValidValueKeys(
-                        dashboardItem.mainViewData.chartData
-                      ).map((key) => (
-                        <option key={key} value={key}>
-                          {key.replace(/_/g, " ")}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    {/* Value Key — only if "sum" is selected */}
+                    {aggregate === "sum" && (
+                      <div className="flex items-center gap-2">
+                        <label
+                          className="font-semibold text-sm"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          Value Key:
+                        </label>
+                        <select
+                          className="px-2 py-1 rounded-md border shadow-sm"
+                          value={valueKey || ""}
+                          onChange={(e) => setValueKey(e.target.value)}
+                          style={{
+                            backgroundColor: theme.colors.surface,
+                            color: theme.colors.text,
+                            borderColor: theme.colors.border,
+                            borderRadius: theme.borderRadius.default,
+                          }}
+                        >
+                          {getValidValueKeys(
+                            dashboardItem.mainViewData.chartData
+                          ).map((key) => (
+                            <option key={key} value={key}>
+                              {key.replace(/_/g, " ")}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                )}
+                {graphType === "scatter" && (
+                  <>
+                     <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        X-Axis:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={groupBy || ""} // Reusing groupBy state for X-axis for simplicity
+                        onChange={(e) => setGroupBy(e.target.value)}
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        {getValidValueKeys(dashboardItem.mainViewData.chartData).map((key) => (
+                          <option key={key} value={key}>
+                            {key.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                     <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Y-Axis:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={valueKey || ""} // Reusing valueKey state for Y-axis for simplicity
+                        onChange={(e) => setValueKey(e.target.value)}
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        {getValidValueKeys(dashboardItem.mainViewData.chartData).map((key) => (
+                          <option key={key} value={key}>
+                            {key.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+                 {graphType === "radar" && (
+                  <>
+                     <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Category By:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={groupBy || ""}
+                        onChange={(e) => setGroupBy(e.target.value)}
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        {getValidCategoricalKeys(dashboardItem.mainViewData.chartData).map((key) => (
+                          <option key={key} value={key}>
+                            {key.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                     <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Value:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={valueKey || ""}
+                        onChange={(e) => setValueKey(e.target.value)}
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        {getValidValueKeys(dashboardItem.mainViewData.chartData).map((key) => (
+                          <option key={key} value={key}>
+                            {key.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                     <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Aggregate:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={aggregate}
+                        onChange={(e) =>
+                          setAggregate(e.target.value as "sum" | "count")
+                        }
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        <option value="count">Count</option>
+                        <option value="sum">Sum</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                 {graphType === "funnel" && (
+                  <>
+                     <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Stage By:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={groupBy || ""}
+                        onChange={(e) => setGroupBy(e.target.value)}
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        {getValidCategoricalKeys(dashboardItem.mainViewData.chartData).map((key) => (
+                          <option key={key} value={key}>
+                            {key.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                     <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Value:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={valueKey || ""}
+                        onChange={(e) => setValueKey(e.target.value)}
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        {getValidValueKeys(dashboardItem.mainViewData.chartData).map((key) => (
+                          <option key={key} value={key}>
+                            {key.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                     <div className="flex items-center gap-2">
+                      <label
+                        className="font-semibold text-sm"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Aggregate:
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded-md border shadow-sm"
+                        value={aggregate}
+                        onChange={(e) =>
+                          setAggregate(e.target.value as "sum" | "count")
+                        }
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.borderRadius.default,
+                        }}
+                      >
+                        <option value="count">Count</option>
+                        <option value="sum">Sum</option>
+                      </select>
+                    </div>
+                  </>
                 )}
               </>
             )}
@@ -407,6 +648,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 setValueKey={setValueKey}
               />
             )}
+            {graphType === "area" && (
+              <DynamicAreaGraph
+                data={dashboardItem.mainViewData.chartData}
+                groupBy={groupBy}
+                setGroupBy={setGroupBy}
+                aggregate={aggregate}
+                setAggregate={setAggregate}
+                valueKey={valueKey}
+                setValueKey={setValueKey}
+              />
+            )}
             {graphType === "pie" && (
               <DynamicPieGraph
                 data={dashboardItem.mainViewData.chartData}
@@ -415,6 +667,39 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 aggregate={aggregate}
                 setAggregate={setAggregate}
                 valueKey={valueKey}
+                setValueKey={setValueKey}
+              />
+            )}
+            {graphType === "scatter" && (
+              <DynamicScatterGraph
+                data={dashboardItem.mainViewData.chartData}
+                groupBy={groupBy}
+                setGroupBy={setGroupBy}
+                aggregate={aggregate}
+                setAggregate={setAggregate}
+                valueKey={valueKey}
+                setValueKey={setValueKey}
+              />
+            )}
+            {graphType === "radar" && (
+              <DynamicRadarGraph
+                data={dashboardItem.mainViewData.chartData}
+                groupBy={groupBy}
+                setGroupBy={setGroupBy}
+                aggregate={aggregate}
+                setAggregate={setAggregate}
+                valueKey={valueKey}
+                setValueKey={setValueKey}
+              />
+            )}
+            {graphType === "funnel" && (
+              <DynamicFunnelGraph
+                data={dashboardItem.mainViewData.chartData}
+                groupBy={groupBy} // Used as stage name
+                setGroupBy={setGroupBy}
+                aggregate={aggregate}
+                setAggregate={setAggregate}
+                valueKey={valueKey} // Used as stage value
                 setValueKey={setValueKey}
               />
             )}
