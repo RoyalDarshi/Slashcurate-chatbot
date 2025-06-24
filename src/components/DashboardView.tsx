@@ -756,7 +756,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           {/* Right Section: KPI Cards + Table/Query */}
           <div className="flex flex-col lg:w-[40%] w-full overflow-hidden">
             {/* KPI Cards */}
-            <div className="grid m-2 grid-cols-3 gap-2">
+            {/* <div className="grid m-2 grid-cols-3 gap-2">
               <KPICard
                 title={dashboardItem.kpiData.kpi1.label}
                 value={dashboardItem.kpiData.kpi1.value}
@@ -793,7 +793,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 }
                 theme={theme}
               />
-            </div>
+            </div> */}
 
             {/* Table/Query Section */}
             <div
@@ -822,7 +822,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             {/* Summarized Graph Text Section */}
             {graphSummary && (
               <div
-                className="mt-4 p-4 mx-2 rounded-xl shadow-md"
+                className="mt-2 p-2 mx-2 rounded-xl shadow-md"
                 style={{
                   backgroundColor: theme.colors.surface,
                   color: theme.colors.text,

@@ -1139,7 +1139,7 @@ const ChatInterface = memo(
           )}, Main View Data Query: ${
             currentDashboardView.mainViewData.queryData
           }. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
-          const apiKey = ""; // Canvas will provide this automatically
+          const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA"; // Canvas will provide this automatically
 
           const payload = {
             contents: [
