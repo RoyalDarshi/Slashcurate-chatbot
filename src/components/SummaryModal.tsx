@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface SummaryModalProps {
   summaryText: string;
@@ -8,27 +8,49 @@ interface SummaryModalProps {
 
 const SummaryModal: React.FC<SummaryModalProps> = ({ summaryText, onClose, theme }) => {
   const [displayedText, setDisplayedText] = useState('');
+  // useRef to hold the interval ID, ensuring it's stable across renders
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  console.log('SummaryModal rendered with summaryText:', summaryText);
 
   useEffect(() => {
-    // Reset displayed text when summaryText changes
-    setDisplayedText('');
-
-    if (summaryText) {
-      let currentIdx = 0;
-      const typingInterval = setInterval(() => {
-        if (currentIdx < summaryText.length) {
-          setDisplayedText((prev) => prev + summaryText[currentIdx]);
-          currentIdx += 1;
-        } else {
-          // All characters displayed, clear the interval
-          clearInterval(typingInterval);
-        }
-      }, 5); // Typing speed made faster: changed from 30ms to 5ms
-
-      // Cleanup function to clear interval on unmount or if summaryText changes
-      return () => clearInterval(typingInterval);
+    // Clear any existing interval when summaryText changes or component unmounts
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null; // Reset the ref
     }
-  }, [summaryText]); // Depend only on summaryText to restart animation when content changes
+
+    setDisplayedText(''); // Always reset displayed text when summaryText changes
+
+    // Ensure summaryText is a valid string before starting the animation
+    if (!summaryText || typeof summaryText !== 'string') {
+      return;
+    }
+
+    let currentIdx = 0;
+    // Store the new interval ID in the ref
+    intervalRef.current = setInterval(() => {
+      // Only append if there are still characters left in the summaryText
+      if (currentIdx < summaryText.length) {
+        setDisplayedText((prev) => prev + summaryText[currentIdx]);
+        currentIdx += 1;
+      } else {
+        // All characters displayed, clear the interval and reset the ref
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }
+    }, 5); // Typing speed: 10 milliseconds per character (faster)
+
+    // Cleanup function: This runs when the component unmounts OR when summaryText changes
+    // It ensures that the current interval is cleared properly.
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [summaryText]); // Re-run effect only when summaryText changes
 
   return (
     <div
