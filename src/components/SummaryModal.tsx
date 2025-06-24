@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface SummaryModalProps {
   summaryText: string;
@@ -7,6 +7,29 @@ interface SummaryModalProps {
 }
 
 const SummaryModal: React.FC<SummaryModalProps> = ({ summaryText, onClose, theme }) => {
+  const [displayedText, setDisplayedText] = useState('');
+
+  useEffect(() => {
+    // Reset displayed text when summaryText changes
+    setDisplayedText('');
+
+    if (summaryText) {
+      let currentIdx = 0;
+      const typingInterval = setInterval(() => {
+        if (currentIdx < summaryText.length) {
+          setDisplayedText((prev) => prev + summaryText[currentIdx]);
+          currentIdx += 1;
+        } else {
+          // All characters displayed, clear the interval
+          clearInterval(typingInterval);
+        }
+      }, 5); // Typing speed made faster: changed from 30ms to 5ms
+
+      // Cleanup function to clear interval on unmount or if summaryText changes
+      return () => clearInterval(typingInterval);
+    }
+  }, [summaryText]); // Depend only on summaryText to restart animation when content changes
+
   return (
     <div
       className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4"
@@ -35,7 +58,7 @@ const SummaryModal: React.FC<SummaryModalProps> = ({ summaryText, onClose, theme
           Graph Summary
         </h2>
         <p className="text-base leading-relaxed whitespace-pre-wrap" style={{ color: theme.colors.text }}>
-          {summaryText}
+          {displayedText}
         </p>
       </div>
     </div>
