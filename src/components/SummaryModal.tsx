@@ -40,7 +40,7 @@ const SummaryModal: React.FC<SummaryModalProps> = ({ summaryText, onClose, theme
           intervalRef.current = null;
         }
       }
-    }, 5); // Typing speed: 10 milliseconds per character (faster)
+    }, 1); // Typing speed: 1 milliseconds per character (faster)
 
     // Cleanup function: This runs when the component unmounts OR when summaryText changes
     // It ensures that the current interval is cleared properly.

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import ChatInterface, { ChatInterfaceHandle } from "./components/ChatInterface";
+import ChatInterface, { ChatInterfaceHandle } from "./components/DashboardInterface";
 import LoginSignup from "./components/LoginSignup";
 import ResetPassword from "./components/ResetPassword";
 import ConnectionForm from "./components/ConnectionForm";

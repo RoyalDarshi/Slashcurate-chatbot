@@ -1,4 +1,4 @@
-// ChatInterface.tsx
+// DashboardInterface.tsx
 import React, {
   useState,
   useEffect,
@@ -16,7 +16,7 @@ import { ToastContainer, toast } from "react-toastify";
 // Importing external components, hooks, and types
 // Adjusted import paths assuming a flat directory structure where all files are siblings
 // or in direct sibling subdirectories (e.g., ./data/sampleSchemaData)
-import { Message, Connection, ChatInterfaceProps } from "../types";
+import { Message, Connection, DashboardInterfaceProps } from "../types";
 import { API_URL, CHATBOT_API_URL } from "../config";
 import ChatInput from "./ChatInput";
 import Loader from "./Loader";
@@ -41,7 +41,7 @@ import {
   ScanEye, // Import ScanEye for summarize graph button
 } from "lucide-react"; // Corrected import syntax
 
-export type ChatInterfaceHandle = {
+export type DashboardInterfaceHandle = {
   handleNewChat: () => void;
   handleAskFavoriteQuestion: (
     question: string,
@@ -148,9 +148,9 @@ const getErrorMessage = (error: any): string => {
   );
 };
 
-// Main ChatInterface Component
-const ChatInterface = memo(
-  forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
+// Main DashboardInterface Component
+const DashboardInterface = memo(
+  forwardRef<DashboardInterfaceHandle, DashboardInterfaceProps>(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
       const token = sessionStorage.getItem("token") ?? "";
@@ -1801,8 +1801,8 @@ const ChatInterface = memo(
 );
 
 const areEqual = (
-  prevProps: ChatInterfaceProps,
-  nextProps: ChatInterfaceProps
+  prevProps: DashboardInterfaceProps,
+  nextProps: DashboardInterfaceProps
 ) => {
   return (
     prevProps.onCreateConSelected === nextProps.onCreateConSelected &&
@@ -1814,4 +1814,4 @@ const areEqual = (
   );
 };
 
-export default memo(ChatInterface, areEqual);
+export default memo(DashboardInterface, areEqual);
