@@ -22,15 +22,15 @@ import KPICard from "./KPICard";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
 import DynamicLineGraph from "./Graphs/DynamicLineGraph";
 import DynamicPieGraph from "./Graphs/DynamicPieGraph";
-import DynamicScatterGraph from "./Graphs/DynamicScatterGraph"; // Import DynamicScatterGraph
-import DynamicAreaGraph from "./Graphs/DynamicAreaGraph"; // Import DynamicAreaGraph
-import DynamicRadarGraph from "./Graphs/DynamicRadarGraph"; // Import DynamicRadarGraph
-import DynamicFunnelGraph from "./Graphs/DynamicFunnelGraph"; // Import DynamicFunnelGraph
+import DynamicScatterGraph from "./Graphs/DynamicScatterGraph";
+import DynamicAreaGraph from "./Graphs/DynamicAreaGraph";
+import DynamicRadarGraph from "./Graphs/DynamicRadarGraph";
+import DynamicFunnelGraph from "./Graphs/DynamicFunnelGraph";
 import DataTable from "./DataTable";
 import QueryDisplay from "./QueryDisplay";
 import { Theme } from "../types";
 import { useTheme } from "../ThemeContext";
-import SummaryModal from "./SummaryModal"; // Import the new SummaryModal component
+import SummaryModal from "./SummaryModal";
 
 // Placeholder types (unchanged)
 declare function generateKpiData(): {
@@ -103,6 +103,13 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
 
     // Ref for the entire graph container (which holds the actual chart)
     const graphContainerRef = useRef<HTMLDivElement>(null);
+
+    // Effect to automatically show the SummaryModal when graphSummary is received
+    useEffect(() => {
+      if (graphSummary) {
+        setShowSummaryModal(true);
+      }
+    }, [graphSummary]);
 
     // Expose the graph container ref to the parent component
     useImperativeHandle(ref, () => ({
@@ -821,7 +828,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               )}
             </div>
 
-            {/* Summarized Graph Text Section */}
+            {/* Summarized Graph Text Section - No explicit button needed here
             {graphSummary && (
               <div
                 className="mt-2 p-2 mx-2 rounded-xl shadow-md"
@@ -841,20 +848,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 <p className="text-sm" style={{ color: theme.colors.text }}>
                   {graphSummary}
                 </p>
-                <button
-                  onClick={() => setShowSummaryModal(true)}
-                  className="mt-2 px-4 py-2 rounded-md font-semibold transition-colors duration-200"
-                  style={{
-                    backgroundColor: theme.colors.accent,
-                    color: "white",
-                    boxShadow: theme.shadow.sm,
-                    borderRadius: theme.borderRadius.default,
-                  }}
-                >
-                  View Full Summary
-                </button>
               </div>
-            )}
+            )} */}
           </div>
 
           {/* View Toggle Buttons */}
