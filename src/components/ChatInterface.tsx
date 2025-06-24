@@ -1214,8 +1214,7 @@ const ChatInterface = memo(
               position: "sticky",
               bottom: 0,
               background: theme.colors.background,
-              padding: theme.spacing.md,
-              paddingTop: theme.spacing.xs,
+              paddingBottom: theme.spacing.sm,
             }}
           >
             {userHasScrolledUp && (
@@ -1249,104 +1248,109 @@ const ChatInterface = memo(
                 </CustomTooltip>
               </div>
             )}
-            <div className="flex items-center gap-2 w-full">
-              <CustomTooltip
-                title="Change or create a connection"
-                position="top"
-              >
-                <button
-                  type="button"
-                  onClick={toggleConnectionDropdown}
-                  disabled={isSubmitting}
-                  className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
-                  style={{
-                    background: theme.colors.surface,
-                    color: theme.colors.accent,
-                  }}
+            <div className="max-w-4xl mx-auto flex items-center gap-2">
+              <div className="relative">
+                <CustomTooltip
+                  title="Change or create a connection"
+                  position="top"
                 >
-                  <Database size={20} />
-                </button>
-              </CustomTooltip>
-              {isConnectionDropdownOpen && (
-                <div
-                  className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2 w-64"
-                  style={{
-                    background: theme.colors.surface,
-                    border: `1px solid ${theme.colors.border}`,
-                    boxShadow: theme.shadow.md,
-                  }}
-                >
-                  {connections.length === 0 ? (
-                    <div
-                      className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
-                      style={{
-                        color: theme.colors.text,
-                        backgroundColor: `${theme.colors.surfaceGlass}`,
-                      }}
-                      onClick={() => handleSelect("create-con")}
-                    >
-                      <span className="truncate font-medium flex items-center">
-                        <PlusCircle size={16} className="inline-block mr-1" />
-                        Create New Connection
-                      </span>
-                    </div>
-                  ) : (
-                    <>
+                  <button
+                    type="button"
+                    onClick={toggleConnectionDropdown}
+                    disabled={isSubmitting}
+                    className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
+                    style={{
+                      background: theme.colors.surface,
+                      color: theme.colors.accent,
+                    }}
+                  >
+                    <Database size={20} />
+                  </button>
+                </CustomTooltip>
+                {isConnectionDropdownOpen && (
+                  <div
+                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2 w-64"
+                    style={{
+                      background: theme.colors.surface,
+                      border: `1px solid ${theme.colors.border}`,
+                      boxShadow: theme.shadow.md,
+                    }}
+                  >
+                    {connections.length === 0 ? (
                       <div
                         className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
                         style={{
                           color: theme.colors.text,
-                          backgroundColor: `${theme.colors.surface}`,
+                          backgroundColor: `${theme.colors.surfaceGlass}`,
                         }}
                         onClick={() => handleSelect("create-con")}
                       >
-                        <span className="truncate font-medium">
-                          <PlusCircle size={16} className="inline-block mr-2" />{" "}
+                        <span className="truncate font-medium flex items-center">
+                          <PlusCircle size={16} className="inline-block mr-1" />
                           Create New Connection
                         </span>
                       </div>
-                      {connections.map((connection: Connection) => (
+                    ) : (
+                      <>
                         <div
-                          key={connection.connectionName}
                           className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
                           style={{
                             color: theme.colors.text,
-                            background:
-                              selectedConnection === connection.connectionName
-                                ? `${theme.colors.accent}20`
-                                : "transparent",
+                            backgroundColor: `${theme.colors.surface}`,
                           }}
-                          onClick={() =>
-                            handleSelect(connection.connectionName)
-                          }
+                          onClick={() => handleSelect("create-con")}
                         >
-                          <span
-                            className="truncate font-medium"
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {connection.connectionName}
+                          <span className="truncate font-medium">
+                            <PlusCircle
+                              size={16}
+                              className="inline-block mr-2"
+                            />{" "}
+                            Create New Connection
                           </span>
-                          {connection.isAdmin && (
+                        </div>
+                        {connections.map((connection: Connection) => (
+                          <div
+                            key={connection.connectionName}
+                            className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
+                            style={{
+                              color: theme.colors.text,
+                              background:
+                                selectedConnection === connection.connectionName
+                                  ? `${theme.colors.accent}20`
+                                  : "transparent",
+                            }}
+                            onClick={() =>
+                              handleSelect(connection.connectionName)
+                            }
+                          >
                             <span
-                              className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold"
+                              className="truncate font-medium"
                               style={{
-                                backgroundColor: theme.colors.accent,
-                                color: theme.colors.surface,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
                               }}
                             >
-                              Default
+                              {connection.connectionName}
                             </span>
-                          )}
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
-              )}
+                            {connection.isAdmin && (
+                              <span
+                                className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold"
+                                style={{
+                                  backgroundColor: theme.colors.accent,
+                                  color: theme.colors.surface,
+                                }}
+                              >
+                                Default
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
               <CustomTooltip title="Explore Database Schema" position="top">
                 <button
                   type="button"
