@@ -16,9 +16,13 @@ import { ToastContainer, toast } from "react-toastify";
 // Importing external components, hooks, and types
 // Adjusted import paths assuming a flat directory structure where all files are siblings
 // or in direct sibling subdirectories (e.g., ./data/sampleSchemaData)
-import { Message, Connection, DashboardInterfaceProps } from "../types";
+import {
+  Message,
+  Connection,
+  ChatInterfaceProps as DashboardInterfaceProps,
+} from "../types";
 import { API_URL, CHATBOT_API_URL } from "../config";
-import ChatInput from "./ChatInput";
+import ChatInput from "./DashboardInput";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import RecommendedQuestions from "./RecommendedQuestions";

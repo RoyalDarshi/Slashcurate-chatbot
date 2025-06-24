@@ -53,7 +53,7 @@ export interface ChatMessageProps {
   onRetry?: (userMessageId: string) => void;
 }
 
-export interface DashboardInterfaceProps {
+export interface ChatInterfaceProps {
   onCreateConSelected: () => void;
   onSessionSelected?: (session: any) => void;
   initialQuestion?: { text: string; connection: string; query?: string } | null;

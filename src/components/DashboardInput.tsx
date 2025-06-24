@@ -13,7 +13,7 @@ import {
   Layers,
   Table2,
 } from "lucide-react";
-import { ChatInputProps, Connection, DatabaseSchema } from "../types";
+import { ChatInputProps as DashboardInputProps, Connection, DatabaseSchema } from "../types";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 import { FaFilePdf } from "react-icons/fa";
@@ -27,13 +27,13 @@ interface Table {
   sampleData?: { [key: string]: any }[];
 }
 
-// Extend ChatInputProps to include new props for controlling SchemaExplorer visibility
-interface ExtendedChatInputProps extends ChatInputProps {
+// Extend DashboardInputProps to include new props for controlling SchemaExplorer visibility
+interface ExtendedDashboardInputProps extends DashboardInputProps {
   isDbExplorerOpen: boolean;
   setIsDbExplorerOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const ChatInput: React.FC<ExtendedChatInputProps> = React.memo(
+const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
   ({
     input,
     isSubmitting,
@@ -74,7 +74,7 @@ const ChatInput: React.FC<ExtendedChatInputProps> = React.memo(
       <form
         onSubmit={onSubmit}
         style={{ background: theme.colors.background, width: "100%" }}
-        className="flex-grow" // Allow ChatInput to take available width
+        className="flex-grow" // Allow DashboardInput to take available width
       >
         <div className="w-full h-full flex flex-col">
           {/* Schema Explorer - Shown when open (positioned above the input) */}
@@ -194,8 +194,8 @@ const ChatInput: React.FC<ExtendedChatInputProps> = React.memo(
 );
 
 const areEqual = (
-  prevProps: ExtendedChatInputProps, // Use ExtendedChatInputProps for comparison
-  nextProps: ExtendedChatInputProps
+  prevProps: ExtendedDashboardInputProps, // Use ExtendedDashboardInputProps for comparison
+  nextProps: ExtendedDashboardInputProps
 ) => {
   return (
     prevProps.input === nextProps.input &&
@@ -210,4 +210,4 @@ const areEqual = (
   );
 };
 
-export default React.memo(ChatInput, areEqual);
+export default React.memo(DashboardInput, areEqual);
