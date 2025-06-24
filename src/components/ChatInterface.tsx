@@ -1588,11 +1588,10 @@ const ChatInterface = memo(
                         }}
                         onClick={() => handleSelect({ value: "create-con" })}
                       >
-                        <span className="truncate font-medium">
-                          <PlusCircle size={16} className="inline-block mr-2" />{" "}
+                        <span className="truncate font-medium flex items-center">
+                          <PlusCircle size={16} className="inline-block mr-1" />
                           Create New Connection
-                        </span>{" "}
-                        {/* Improved text and added icon */}
+                        </span>
                       </div>
                     ) : (
                       <>
