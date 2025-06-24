@@ -30,6 +30,7 @@ import DataTable from "./DataTable";
 import QueryDisplay from "./QueryDisplay";
 import { Theme } from "../types";
 import { useTheme } from "../ThemeContext";
+import SummaryModal from "./SummaryModal"; // Import the new SummaryModal component
 
 // Placeholder types (unchanged)
 declare function generateKpiData(): {
@@ -98,6 +99,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const [groupBy, setGroupBy] = useState<string | null>(null);
     const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
     const [valueKey, setValueKey] = useState<string | null>(null);
+    const [showSummaryModal, setShowSummaryModal] = useState(false); // New state for modal visibility
 
     // Ref for the entire graph container (which holds the actual chart)
     const graphContainerRef = useRef<HTMLDivElement>(null);
@@ -839,6 +841,18 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 <p className="text-sm" style={{ color: theme.colors.text }}>
                   {graphSummary}
                 </p>
+                <button
+                  onClick={() => setShowSummaryModal(true)}
+                  className="mt-2 px-4 py-2 rounded-md font-semibold transition-colors duration-200"
+                  style={{
+                    backgroundColor: theme.colors.accent,
+                    color: "white",
+                    boxShadow: theme.shadow.sm,
+                    borderRadius: theme.borderRadius.default,
+                  }}
+                >
+                  View Full Summary
+                </button>
               </div>
             )}
           </div>
@@ -871,6 +885,15 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             ))}
           </div>
         </div>
+
+        {/* Summary Modal */}
+        {showSummaryModal && graphSummary && (
+          <SummaryModal
+            summaryText={graphSummary}
+            onClose={() => setShowSummaryModal(false)}
+            theme={theme}
+          />
+        )}
       </div>
     );
   }
