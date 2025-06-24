@@ -14,7 +14,7 @@ import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, Database, Layers, PlusCircle } from "lucide-react";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
 import {
@@ -23,6 +23,8 @@ import {
   useRecommendedQuestions,
   useChatScroll,
 } from "../hooks";
+import SchemaExplorer from "./SchemaExplorer";
+import schemaSampleData from "../data/sampleSchemaData";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -33,45 +35,31 @@ export type ChatInterfaceHandle = {
   ) => void;
 };
 
-// Helper function to extract error messages
 const getErrorMessage = (error: any): string => {
-  let extractedErrorMessage = "Sorry, an error occurred. Please try again."; // Default
-
+  let extractedErrorMessage = "Sorry, an error occurred. Please try again.";
   if (axios.isAxiosError(error)) {
     if (error.response && error.response.data) {
       const data = error.response.data;
-      if (typeof data === "string" && data.trim().length > 0) {
+      if (typeof data === "string" && data.trim().length > 0)
         extractedErrorMessage = data;
-      } else if (
+      else if (
         data.detail &&
         typeof data.detail === "string" &&
         data.detail.trim().length > 0
-      ) {
+      )
         extractedErrorMessage = data.detail;
-      } else if (
+      else if (
         data.message &&
         typeof data.message === "string" &&
         data.message.trim().length > 0
-      ) {
+      )
         extractedErrorMessage = data.message;
-      } else if (error.message) {
-        // Fallback to Axios error message if data is not helpful
-        extractedErrorMessage = error.message;
-      }
-    } else if (error.message) {
-      // No response.data but error.message exists (e.g., network error)
-      extractedErrorMessage = error.message;
-    }
-  } else if (error instanceof Error && error.message) {
-    // Non-Axios error
+    } else if (error.message) extractedErrorMessage = error.message;
+  } else if (error instanceof Error && error.message)
     extractedErrorMessage = error.message;
-  }
-
-  // Ensure it's not an empty string
-  if (!extractedErrorMessage || extractedErrorMessage.trim() === "") {
-    extractedErrorMessage = "An unknown error occurred. Please try again.";
-  }
-  return extractedErrorMessage;
+  return (
+    extractedErrorMessage || "An unknown error occurred. Please try again."
+  );
 };
 
 const ChatInterface = memo(
@@ -99,7 +87,7 @@ const ChatInterface = memo(
       const {
         sessionId,
         messages,
-        dispatchMessages, // This is the dispatch from useSession's useReducer
+        dispatchMessages,
         sessionConnection,
         loadSession,
         clearSession,
@@ -122,8 +110,10 @@ const ChatInterface = memo(
       const [sessionConnectionError, setSessionConnectionError] = useState<
         string | null
       >(null);
+      const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
+        useState(false);
+      const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
 
-      // Poll for loading messages
       useEffect(() => {
         const loadingMessages = messages.filter(
           (msg) => msg.isBot && msg.content === "loading..."
@@ -134,27 +124,17 @@ const ChatInterface = memo(
         }
         setIsSubmitting(true);
         const interval = setInterval(async () => {
-          // console.log( // Kept for debugging if needed
-          //   "Polling for updates on loading messages:",
-          //   loadingMessages.map((msg) => msg.id)
-          // );
           try {
             for (const msg of loadingMessages) {
               const response = await axios.post(
                 `${API_URL}/api/getmessages/${msg.id}`,
                 { token },
-                {
-                  headers: { Authorization: `Bearer ${token}` },
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
               );
               if (response.data.content !== "loading...") {
-                // console.log( // Kept for debugging
-                //   `Updating message ${msg.id} with content:`,
-                //   response.data.content
-                // );
                 setIsSubmitting(false);
                 dispatchMessages({
-                  type: "UPDATE_MESSAGE", // Correctly uses SessionAction type
+                  type: "UPDATE_MESSAGE",
                   id: msg.id,
                   message: {
                     content: response.data.content,
@@ -168,31 +148,24 @@ const ChatInterface = memo(
             console.error("Error polling message updates:", error);
           }
         }, 2000);
-
         return () => clearInterval(interval);
       }, [messages, token, dispatchMessages]);
 
-      // Refresh session on tab visibility change with validation
       useEffect(() => {
         const handleVisibilityChange = async () => {
           if (document.visibilityState === "visible") {
             const storedSessionId = localStorage.getItem("currentSessionId");
             if (storedSessionId) {
-              // console.log("Tab visible, validating session:", storedSessionId); // Kept for debugging
               try {
-                // Validate session existence
                 await axios.get(`${API_URL}/api/sessions/${storedSessionId}`, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
-                // console.log("Session valid, loading:", storedSessionId); // Kept for debugging
                 loadSession(storedSessionId);
               } catch (error) {
                 console.error("Session validation failed:", error);
                 localStorage.removeItem("currentSessionId");
                 clearSession();
               }
-            } else {
-              // console.log("No stored session ID found on visibility change"); // Kept for debugging
             }
           }
         };
@@ -205,8 +178,7 @@ const ChatInterface = memo(
       }, [token, loadSession, clearSession]);
 
       const handleNewChat = useCallback(() => {
-        // console.log("Starting new chat, clearing session"); // Kept for debugging
-        clearSession(); // This dispatches CLEAR_SESSION to sessionReducer
+        clearSession();
         setInput("");
         setEditingMessageId(null);
         setSessionConnectionError(null);
@@ -225,7 +197,6 @@ const ChatInterface = memo(
           }
 
           let currentSessionId = sessionId;
-
           if (currentSessionId && !sessionConnection) {
             const currentSessionInfo = connections.find(
               (c) => c.connectionName === selectedConnection
@@ -241,7 +212,6 @@ const ChatInterface = memo(
           if (!currentSessionId) {
             const storedSessionId = localStorage.getItem("currentSessionId");
             if (storedSessionId) {
-              // console.log("Using stored session ID from localStorage (askQuestion):", storedSessionId); // Kept for debugging
               try {
                 await loadSession(storedSessionId);
                 currentSessionId = storedSessionId;
@@ -257,7 +227,6 @@ const ChatInterface = memo(
 
           if (!currentSessionId) {
             try {
-              // console.log("Creating new session for question:", question); // Kept for debugging
               const response = await axios.post(
                 `${API_URL}/api/sessions`,
                 {
@@ -275,7 +244,6 @@ const ChatInterface = memo(
                 messages: [],
                 connection: connection,
               });
-              // console.log("New session created and set in state:", currentSessionId); // Kept for debugging
             } catch (error) {
               console.error("Error creating session:", error);
               return;
@@ -295,7 +263,6 @@ const ChatInterface = memo(
           let botMessageId: string | null = null;
 
           try {
-            // console.log("Saving user message for session:", currentSessionId); // Kept for debugging
             const userResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -318,7 +285,6 @@ const ChatInterface = memo(
               message: finalUserMessage,
             });
 
-            // console.log("Creating bot loading message for user message:", finalUserMessage.id); // Kept for debugging
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -333,7 +299,6 @@ const ChatInterface = memo(
             );
             botMessageId = botLoadingResponse.data.id;
             const botLoadingMessage: Message = {
-              // Renamed to botLoadingMessage for clarity
               id: botMessageId,
               isBot: true,
               content: "loading...",
@@ -345,7 +310,7 @@ const ChatInterface = memo(
               type: "ADD_MESSAGE",
               message: botLoadingMessage,
             });
-            setTimeout(() => scrollToMessage(botMessageId!), 100); // Added non-null assertion as it's assigned above
+            setTimeout(() => scrollToMessage(botMessageId!), 100);
 
             try {
               const connectionObj = connections.find(
@@ -357,7 +322,6 @@ const ChatInterface = memo(
                 );
               }
 
-              // console.log("Sending question to chatbot API:", question); // Kept for debugging
               const payload = query
                 ? {
                     question,
@@ -375,9 +339,7 @@ const ChatInterface = memo(
                 payload
               );
               const botResponseContent = JSON.stringify(response.data, null, 2);
-              // console.log("Received bot response:", botResponseContent); // Kept for debugging
 
-              // console.log("Updating bot message on server:", botMessageId); // Kept for debugging
               await axios.put(
                 `${API_URL}/api/messages/${botMessageId}`,
                 {
@@ -394,17 +356,15 @@ const ChatInterface = memo(
               };
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
-                id: botMessageId!, // Added non-null assertion
+                id: botMessageId!,
                 message: updatedBotMessage,
               });
-              setTimeout(() => scrollToMessage(botMessageId!), 100); // Added non-null assertion
+              setTimeout(() => scrollToMessage(botMessageId!), 100);
             } catch (error) {
-              // Catch for CHATBOT_API_URL/ask
               console.error("Error getting bot response:", error);
               const errorContent =
                 "Sorry, an error occurred. Please try again.";
 
-              // console.log("Updating bot message to error on server:", botMessageId); // Kept for debugging
               if (botMessageId) {
                 await axios
                   .put(
@@ -434,10 +394,6 @@ const ChatInterface = memo(
                 });
                 setTimeout(() => scrollToMessage(botMessageId), 100);
               } else {
-                // This case should be rare if bot loading message was created
-                console.error(
-                  "botMessageId is null when trying to update with error for /ask"
-                );
                 const generalErrorMessage: Message = {
                   id: `error-${Date.now().toString()}`,
                   content: errorContent,
@@ -454,14 +410,11 @@ const ChatInterface = memo(
               }
             }
           } catch (error) {
-            // Catch for initial message saving or bot loading message creation
             console.error(
               "Error saving user message or creating bot loading message:",
               error
             );
             toast.error(`Failed to send message: ${getErrorMessage(error)}`);
-            // If user message failed to save, remove its temporary presence if added optimistically (not current setup)
-            // If bot loading message failed, the user message is there but no bot response will appear.
           }
         },
         [
@@ -489,23 +442,12 @@ const ChatInterface = memo(
           }
 
           if (sessionId && sessionConnection === connection) {
-            // console.log("Asking favorite question in existing session (same connection):", sessionId); // Kept for debugging
             await askQuestion(question, connection, true, query);
           } else {
-            // console.log(`Handling favorite question. Current session: ${sessionId}, current session connection: ${sessionConnection}, target connection: ${connection}`); // Kept for debugging
-            // console.log("Clearing current session and setting up for new connection:", connection); // Kept for debugging
-
             handleNewChat();
-
-            await new Promise<void>((resolve) => {
-              setTimeout(resolve, 0);
-            });
-
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
             setSelectedConnection(connection);
-            // console.log("New connection set in state:", connection); // Kept for debugging
-            // console.log("Asking favorite question, which will create/use a new session with connection:", connection); // Kept for debugging
             await askQuestion(question, connection, true, query);
-            // console.log("Favorite question processed with connection:", connection); // Kept for debugging
           }
         },
         [
@@ -520,9 +462,8 @@ const ChatInterface = memo(
 
       useEffect(() => {
         if (sessionConnection) {
-          if (selectedConnection !== sessionConnection) {
+          if (selectedConnection !== sessionConnection)
             setSelectedConnection(sessionConnection);
-          }
           setSessionConnectionError(null);
         } else if (sessionId && !sessionConnection) {
           setSessionConnectionError(
@@ -539,26 +480,18 @@ const ChatInterface = memo(
       useEffect(() => {
         const storedSessionId = localStorage.getItem("currentSessionId");
         if (storedSessionId) {
-          // console.log("Initial load, validating session from localStorage:", storedSessionId); // Kept for debugging
           axios
             .get(`${API_URL}/api/sessions/${storedSessionId}`, {
               headers: { Authorization: `Bearer ${token}` },
             })
-            .then(() => {
-              // Axios response object not directly used here, relies on loadSession
-              // console.log("Stored session valid, loading:", storedSessionId); // Kept for debugging
-              loadSession(storedSessionId);
-            })
+            .then(() => loadSession(storedSessionId))
             .catch((error) => {
               console.error("Stored session invalid or error loading:", error);
               localStorage.removeItem("currentSessionId");
               clearSession();
             });
-        } else {
-          // console.log("No stored session ID found on initial load, starting fresh."); // Kept for debugging
-          if (sessionId) {
-            clearSession();
-          }
+        } else if (sessionId) {
+          clearSession();
         }
       }, [loadSession, token, clearSession, sessionId]);
 
@@ -578,7 +511,6 @@ const ChatInterface = memo(
               return;
             }
           }
-
           handleAskFavoriteQuestion(
             initialQuestion.text,
             targetConnection,
@@ -599,24 +531,35 @@ const ChatInterface = memo(
       }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
 
       const handleSelect = useCallback(
-        (option: any) => {
-          if (option?.value === "create-con") {
+        (connection: string | null) => {
+          if (connection === "create-con") {
             onCreateConSelected();
             if (sessionId) handleNewChat();
             setSelectedConnection(null);
             localStorage.removeItem("selectedConnection");
-          } else if (option) {
-            const newSelectedConnection = option.value.connectionName;
-            if (selectedConnection !== newSelectedConnection || !sessionId) {
-              handleNewChat();
-              setSelectedConnection(newSelectedConnection);
-              localStorage.setItem("selectedConnection", newSelectedConnection);
-            }
           } else {
-            if (sessionId && selectedConnection) handleNewChat();
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
+            const selectedConnectionObj = connections.find(
+              (conn) => conn.connectionName === connection
+            );
+            if (selectedConnectionObj) {
+              if (
+                selectedConnection !== selectedConnectionObj.connectionName ||
+                !sessionId
+              ) {
+                handleNewChat();
+                setSelectedConnection(selectedConnectionObj.connectionName);
+                localStorage.setItem(
+                  "selectedConnection",
+                  selectedConnectionObj.connectionName
+                );
+              }
+            } else {
+              if (selectedConnection) handleNewChat();
+              setSelectedConnection(null);
+              localStorage.removeItem("selectedConnection");
+            }
           }
+          setIsConnectionDropdownOpen(false);
         },
         [
           onCreateConSelected,
@@ -656,7 +599,7 @@ const ChatInterface = memo(
             sessionConnection || selectedConnection;
           if (!token || !currentConnectionForAction) {
             toast.error(
-              "Cannot favorite message: Missing token or active connection for this action."
+              "Cannot favorite message: Missing token or active connection."
             );
             return;
           }
@@ -676,8 +619,8 @@ const ChatInterface = memo(
                 responseQuery:
                   responseMessage &&
                   responseMessage.content !== "loading..." &&
-                  !getErrorMessage(null).includes(responseMessage.content) // Basic check if it's not an error/loading
-                    ? JSON.parse(responseMessage.content).sql_query // This might fail if content is not JSON
+                  !getErrorMessage(null).includes(responseMessage.content)
+                    ? JSON.parse(responseMessage.content).sql_query
                     : null,
               },
               { headers: { "Content-Type": "application/json" } }
@@ -800,10 +743,9 @@ const ChatInterface = memo(
             return;
           }
 
-          const originalBotMessageId = botMessage.id; // Store before potential changes
+          const originalBotMessageId = botMessage.id;
 
           try {
-            // console.log("Retrying message, setting to loading:", originalBotMessageId); // Kept for debugging
             await axios.put(
               `${API_URL}/api/messages/${originalBotMessageId}`,
               {
@@ -822,7 +764,6 @@ const ChatInterface = memo(
               },
             });
 
-            // console.log("Sending retry request for question:", userMessage.content); // Kept for debugging
             const payload = {
               question: userMessage.content,
               connection: connectionObj,
@@ -833,7 +774,6 @@ const ChatInterface = memo(
               payload
             );
             const botResponseContent = JSON.stringify(response.data, null, 2);
-            // console.log("Retry response received:", botResponseContent); // Kept for debugging
 
             await axios.put(
               `${API_URL}/api/messages/${originalBotMessageId}`,
@@ -855,7 +795,6 @@ const ChatInterface = memo(
             setTimeout(() => scrollToMessage(originalBotMessageId), 100);
           } catch (error) {
             console.error("Error retrying message:", error);
-            // const errorContent = getErrorMessage(error);
             const errorContent = "Sorry, an error occurred. Please try again.";
 
             await axios
@@ -927,7 +866,6 @@ const ChatInterface = memo(
 
         let botMessageToUpdateId: string | null = null;
         const responseMessage = messages.find(
-          // Find existing bot response
           (msg) => msg.parentId === id && msg.isBot
         );
         if (responseMessage) {
@@ -935,7 +873,6 @@ const ChatInterface = memo(
         }
 
         try {
-          // console.log("Updating user message on server:", id, content); // Kept for debugging
           await axios.put(
             `${API_URL}/api/messages/${id}`,
             {
@@ -955,7 +892,6 @@ const ChatInterface = memo(
           });
 
           if (botMessageToUpdateId) {
-            // console.log("Updating existing bot message to loading for edited user message:", botMessageToUpdateId); // Kept for debugging
             await axios.put(
               `${API_URL}/api/messages/${botMessageToUpdateId}`,
               {
@@ -974,7 +910,6 @@ const ChatInterface = memo(
               },
             });
           } else {
-            // console.log("No existing bot message found, creating new bot loading message for edited user message:", id); // Kept for debugging
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -987,7 +922,7 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            botMessageToUpdateId = botLoadingResponse.data.id; // Assign new ID
+            botMessageToUpdateId = botLoadingResponse.data.id;
             const newBotLoadingMessage: Message = {
               id: botMessageToUpdateId,
               content: "loading...",
@@ -1003,15 +938,12 @@ const ChatInterface = memo(
           }
 
           if (!botMessageToUpdateId) {
-            // Should not happen if logic above is correct
             throw new Error(
               "Failed to obtain a bot message ID for update/creation."
             );
           }
 
           try {
-            // Inner try for the actual chatbot API call
-            // console.log("Sending edited question to chatbot API:", content); // Kept for debugging
             const payload = {
               question: content,
               connection: connectionObj,
@@ -1022,7 +954,6 @@ const ChatInterface = memo(
               payload
             );
             const botResponseContent = JSON.stringify(response.data, null, 2);
-            // console.log("Received bot response for edited message:", botResponseContent); // Kept for debugging
 
             await axios.put(
               `${API_URL}/api/messages/${botMessageToUpdateId}`,
@@ -1041,19 +972,17 @@ const ChatInterface = memo(
                 timestamp: new Date().toISOString(),
               },
             });
-            setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100); // Added non-null assertion
+            setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
           } catch (error) {
-            // Catch for CHATBOT_API_URL/ask
             console.error(
               "Error getting bot response for edited message:",
               error
             );
-            // const errorContent = getErrorMessage(error);
             const errorContent = "Sorry, an error occurred. Please try again.";
 
             await axios
               .put(
-                `${API_URL}/api/messages/${botMessageToUpdateId}`, // Use the ID obtained
+                `${API_URL}/api/messages/${botMessageToUpdateId}`,
                 {
                   token,
                   content: errorContent,
@@ -1069,16 +998,15 @@ const ChatInterface = memo(
               );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
-              id: botMessageToUpdateId, // Use the ID obtained
+              id: botMessageToUpdateId,
               message: {
                 content: errorContent,
                 timestamp: new Date().toISOString(),
               },
             });
-            setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100); // Added non-null assertion
+            setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
           }
         } catch (error) {
-          // Catch for outer operations (user message update, initial bot message update/creation)
           console.error("Error handling edit message (outer scope):", error);
           toast.error(`Failed to process edit: ${getErrorMessage(error)}`);
         }
@@ -1089,7 +1017,6 @@ const ChatInterface = memo(
         handleAskFavoriteQuestion,
       }));
 
-      // Determine response status for user messages based on their corresponding bot message
       const getMessageResponseStatus = (
         userMessageId: string
       ): "loading" | "success" | "error" | null => {
@@ -1098,34 +1025,34 @@ const ChatInterface = memo(
         );
         if (botResponse) {
           if (botResponse.content === "loading...") return "loading";
-
-          // Check if bot content IS an error message generated by getErrorMessage
-          // This is a heuristic. A dedicated `isError` flag on Message would be better.
           const potentialErrorMessages = [
             "Sorry, an error occurred. Please try again.",
             "An unknown error occurred. Please try again.",
-            // Add other known error strings if they are specific and not likely to be actual data
           ];
           if (
             potentialErrorMessages.includes(botResponse.content) ||
             (botResponse.content &&
               botResponse.content.startsWith("Request failed with status code"))
           ) {
-            // Common Axios error message
             return "error";
           }
-          // If backend consistently returns error details in a specific way that's not JSON (e.g. plain text error)
-          // and successful responses are always JSON, we could try to parse JSON:
           try {
-            JSON.parse(botResponse.content); // If it's valid JSON, assume success (or successful empty)
+            JSON.parse(botResponse.content);
             return "success";
           } catch (e) {
-            // If it's not "loading..." and not valid JSON, it's likely a plain text error message.
             return "error";
           }
         }
-        return null; // No bot response yet or not applicable
+        return null;
       };
+
+      const toggleConnectionDropdown = useCallback(() => {
+        setIsConnectionDropdownOpen((prev) => !prev);
+      }, []);
+
+      const toggleDbExplorer = useCallback(() => {
+        setIsDbExplorerOpen((prev) => !prev);
+      }, []);
 
       return (
         <div
@@ -1187,7 +1114,6 @@ const ChatInterface = memo(
             className="flex-1 overflow-y-auto"
             style={{
               padding: theme.spacing.lg,
-              maxHeight: "calc(100vh - 150px)", // Adjusted maxHeight for better visibility of input
             }}
           >
             {connectionsLoading ? (
@@ -1272,7 +1198,7 @@ const ChatInterface = memo(
                         onFavorite={handleFavoriteMessage}
                         onUnfavorite={handleUnfavoriteMessage}
                         isFavorited={message.isFavorited || false}
-                        responseStatus={responseStatus} // Pass the determined status
+                        responseStatus={responseStatus}
                         disabled={!!sessionConnectionError && message.isBot}
                         onRetry={handleRetry}
                       />
@@ -1289,7 +1215,7 @@ const ChatInterface = memo(
               bottom: 0,
               background: theme.colors.background,
               padding: theme.spacing.md,
-              paddingTop: theme.spacing.xs, // Added small top padding
+              paddingTop: theme.spacing.xs,
             }}
           >
             {userHasScrolledUp && (
@@ -1297,8 +1223,8 @@ const ChatInterface = memo(
                 className="flex justify-end"
                 style={{
                   position: "absolute",
-                  bottom: "80px", // Adjusted based on typical input height + padding
-                  right: "30px", // Adjusted for better placement
+                  bottom: "80px",
+                  right: "30px",
                   zIndex: 1000,
                 }}
               >
@@ -1323,18 +1249,162 @@ const ChatInterface = memo(
                 </CustomTooltip>
               </div>
             )}
-            <ChatInput
-              input={input}
-              isSubmitting={isSubmitting}
-              onInputChange={setInput}
-              onSubmit={handleSubmit}
-              connections={connections}
-              selectedConnection={selectedConnection}
-              onSelect={handleSelect}
-              onNewChat={handleNewChat}
-              disabled={!!sessionConnectionError && !selectedConnection}
-            />
+            <div className="flex items-center gap-2 w-full">
+              <CustomTooltip
+                title="Change or create a connection"
+                position="top"
+              >
+                <button
+                  type="button"
+                  onClick={toggleConnectionDropdown}
+                  disabled={isSubmitting}
+                  className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
+                  style={{
+                    background: theme.colors.surface,
+                    color: theme.colors.accent,
+                  }}
+                >
+                  <Database size={20} />
+                </button>
+              </CustomTooltip>
+              {isConnectionDropdownOpen && (
+                <div
+                  className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2 w-64"
+                  style={{
+                    background: theme.colors.surface,
+                    border: `1px solid ${theme.colors.border}`,
+                    boxShadow: theme.shadow.md,
+                  }}
+                >
+                  {connections.length === 0 ? (
+                    <div
+                      className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
+                      style={{
+                        color: theme.colors.text,
+                        backgroundColor: `${theme.colors.surfaceGlass}`,
+                      }}
+                      onClick={() => handleSelect("create-con")}
+                    >
+                      <span className="truncate font-medium flex items-center">
+                        <PlusCircle size={16} className="inline-block mr-1" />
+                        Create New Connection
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div
+                        className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
+                        style={{
+                          color: theme.colors.text,
+                          backgroundColor: `${theme.colors.surface}`,
+                        }}
+                        onClick={() => handleSelect("create-con")}
+                      >
+                        <span className="truncate font-medium">
+                          <PlusCircle size={16} className="inline-block mr-2" />{" "}
+                          Create New Connection
+                        </span>
+                      </div>
+                      {connections.map((connection: Connection) => (
+                        <div
+                          key={connection.connectionName}
+                          className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
+                          style={{
+                            color: theme.colors.text,
+                            background:
+                              selectedConnection === connection.connectionName
+                                ? `${theme.colors.accent}20`
+                                : "transparent",
+                          }}
+                          onClick={() =>
+                            handleSelect(connection.connectionName)
+                          }
+                        >
+                          <span
+                            className="truncate font-medium"
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {connection.connectionName}
+                          </span>
+                          {connection.isAdmin && (
+                            <span
+                              className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold"
+                              style={{
+                                backgroundColor: theme.colors.accent,
+                                color: theme.colors.surface,
+                              }}
+                            >
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+              <CustomTooltip title="Explore Database Schema" position="top">
+                <button
+                  type="button"
+                  onClick={toggleDbExplorer}
+                  disabled={isSubmitting || !selectedConnection}
+                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
+                    isDbExplorerOpen ? "schema-active" : ""
+                  }`}
+                  style={{
+                    background: theme.colors.surface,
+                    color: theme.colors.accent,
+                  }}
+                >
+                  <Layers
+                    size={20}
+                    style={{
+                      transform: isDbExplorerOpen
+                        ? "rotate(180deg)"
+                        : "rotate(0deg)",
+                      transition: "transform 0.3s ease",
+                    }}
+                  />
+                </button>
+              </CustomTooltip>
+              <CustomTooltip title="Create a new session" position="top">
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  disabled={isSubmitting}
+                  className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
+                  style={{
+                    background: theme.colors.surface,
+                    color: theme.colors.accent,
+                  }}
+                >
+                  <PlusCircle size={20} />
+                </button>
+              </CustomTooltip>
+              <ChatInput
+                input={input}
+                isSubmitting={isSubmitting}
+                onInputChange={setInput}
+                onSubmit={handleSubmit}
+                disabled={!!sessionConnectionError && !selectedConnection}
+              />
+            </div>
           </div>
+          {isDbExplorerOpen && selectedConnection && (
+            <div className="w-3/4 backdrop-blur-lg self-center absolute bottom-16 z-50 flex items-center justify-center">
+              <SchemaExplorer
+                schemas={schemaSampleData}
+                onClose={() => setIsDbExplorerOpen(false)}
+                theme={theme}
+                onColumnClick={() => console.log("Column clicked")}
+                selectedConnection={selectedConnection}
+              />
+            </div>
+          )}
           {connectionError && (
             <div
               className="text-center"
