@@ -9,6 +9,8 @@ const Settings = () => {
     setChatFontSize,
     notificationsEnabled,
     setNotificationsEnabled,
+    currentView, // Get currentView from settings context
+    setCurrentView, // Get setCurrentView from settings context
   } = useSettings();
   const [autoSaveChats, setAutoSaveChats] = useState(true);
 
@@ -20,7 +22,12 @@ const Settings = () => {
     setChatFontSize(e.target.value as "small" | "medium" | "large");
   };
 
-  const renderApearanceSection = () => (
+  // Handler for view preference change
+  const handleViewChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setCurrentView(e.target.value as "chat" | "dashboard");
+  };
+
+  const renderAppearanceSection = () => (
     <div className="space-y-4 mb-6">
       <h3
         className="text-lg font-semibold"
@@ -100,43 +107,32 @@ const Settings = () => {
         </h2>
 
         {/* Appearance Section */}
-        {renderApearanceSection()}
+        {renderAppearanceSection()}
 
-        {/* Chat Preferences Section */}
+        {/* View Preference Section - New */}
         <div className="space-y-4 mb-6">
           <h3
             className="text-lg font-semibold"
             style={{ color: theme.colors.text }}
           >
-            Chat Preferences
+            View Preference
           </h3>
           <div className="flex items-center justify-between">
-            <p style={{ color: theme.colors.textSecondary }}>Auto-Save Chats</p>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only"
-                onChange={() => setAutoSaveChats(!autoSaveChats)}
-                checked={autoSaveChats}
-                aria-label="Toggle auto-save chats"
-              />
-              <span
-                className="w-10 h-5 rounded-full transition-colors duration-200 ease-in-out"
-                style={{
-                  backgroundColor: autoSaveChats
-                    ? theme.colors.accent
-                    : `${theme.colors.text}40`,
-                }}
-              ></span>
-              <span
-                className="absolute w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out top-0.5 left-0.5"
-                style={{
-                  transform: autoSaveChats
-                    ? "translateX(20px)"
-                    : "translateX(0)",
-                }}
-              ></span>
-            </label>
+            <p style={{ color: theme.colors.textSecondary }}>Default View</p>
+            <select
+              value={currentView}
+              onChange={handleViewChange}
+              className="p-2 rounded-md focus:outline-none"
+              style={{
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.text}20`,
+                borderRadius: theme.borderRadius.default,
+              }}
+            >
+              <option value="chat">Chat View</option>
+              <option value="dashboard">Dashboard View</option>
+            </select>
           </div>
         </div>
 
@@ -196,22 +192,12 @@ const Settings = () => {
               borderRadius: theme.borderRadius.default,
               boxShadow: `0 4px 6px ${theme.colors.text}20`,
             }}
-            onClick={() => alert("Change Password functionality coming soon!")}
+            onClick={() => {
+              /* Replaced alert with custom modal logic if needed later */
+            }}
           >
             Change Password
           </button>
-          {/* <button
-            className="w-full p-2 rounded-md hover:opacity-90 transition-all font-medium shadow-md"
-            style={{
-              backgroundColor: `${theme.colors.text}20`,
-              color: theme.colors.text,
-              borderRadius: theme.borderRadius.default,
-              boxShadow: `0 4px 6px ${theme.colors.text}20`,
-            }}
-            onClick={() => alert("Delete Account functionality coming soon!")}
-          >
-            Delete Account
-          </button> */}
         </div>
       </div>
     </div>

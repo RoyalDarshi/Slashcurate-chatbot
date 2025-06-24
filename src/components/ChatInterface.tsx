@@ -10,7 +10,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import { Message, Connection, ChatInterfaceProps } from "../types";
 import { API_URL, CHATBOT_API_URL } from "../config";
-import ChatInput from "./DashboardInput";
+import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";

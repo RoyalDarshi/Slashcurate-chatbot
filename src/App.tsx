@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import ChatInterface, { ChatInterfaceHandle } from "./components/DashboardInterface";
+import ChatInterface, { ChatInterfaceHandle } from "./components/ChatInterface";
+import DashboardInterface, {
+  DashboardInterfaceHandle,
+} from "./components/DashboardInterface";
 import LoginSignup from "./components/LoginSignup";
 import ResetPassword from "./components/ResetPassword";
 import ConnectionForm from "./components/ConnectionForm";
@@ -35,10 +38,15 @@ function App() {
   } | null>(null);
   const [showTip, setShowTip] = useState<boolean>(false);
   const chatRef = useRef<ChatInterfaceHandle>(null);
+  const dashboardRef = useRef<DashboardInterfaceHandle>(null); // New ref for DashboardInterface
 
   const triggerChatFunction = () => {
     if (chatRef.current) {
       chatRef.current.handleNewChat();
+    }
+    if (dashboardRef.current) {
+      // Also trigger for dashboard
+      dashboardRef.current.handleNewChat();
     }
   };
 
@@ -74,6 +82,7 @@ function App() {
   const handleNewChat = () => {
     triggerChatFunction();
     localStorage.removeItem("currentSessionId");
+    localStorage.removeItem("currentDashboardQuestionId"); // Clear dashboard question ID
     handleHomePage();
   };
   const handleUserLogout = () => {
@@ -116,6 +125,7 @@ function App() {
                   onLoginSuccess={handleLoginSuccess}
                   onLogout={handleUserLogout}
                   chatRef={chatRef}
+                  dashboardRef={dashboardRef} // Pass dashboard ref
                   onCreateConSelected={handleCreateConSelected}
                   onHomePage={handleHomePage}
                   onNewChat={handleNewChat}
@@ -158,6 +168,7 @@ const AppContent: React.FC<{
   onCreateConSelected: () => void;
   onHomePage: () => void;
   chatRef: React.RefObject<ChatInterfaceHandle>;
+  dashboardRef: React.RefObject<DashboardInterfaceHandle>; // New prop for dashboard ref
   questionToAsk: { text: string; connection: string; query?: string } | null;
   setQuestionToAsk: (
     question: { text: string; connection: string; query?: string } | null
@@ -174,6 +185,7 @@ const AppContent: React.FC<{
   onCreateConSelected,
   onHomePage,
   chatRef,
+  dashboardRef, // Destructure dashboardRef
   questionToAsk,
   setQuestionToAsk,
   showTip,
@@ -181,7 +193,7 @@ const AppContent: React.FC<{
   onNewChat,
 }) => {
   const { theme } = useTheme();
-  const { notificationsEnabled } = useSettings();
+  const { notificationsEnabled, currentView } = useSettings(); // Get currentView from settings
   const userToken = sessionStorage.getItem("token") || "";
 
   const handleSessionClicked = () => {
@@ -240,14 +252,22 @@ const AppContent: React.FC<{
                 setShowTip(false);
               }}
             />
-            {activeMenu === "home" && (
-              <ChatInterface
-                ref={chatRef}
-                onCreateConSelected={onCreateConSelected}
-                initialQuestion={questionToAsk}
-                onQuestionAsked={() => setQuestionToAsk(null)}
-              />
-            )}
+            {activeMenu === "home" &&
+              (currentView === "chat" ? ( // Conditionally render based on currentView
+                <ChatInterface
+                  ref={chatRef}
+                  onCreateConSelected={onCreateConSelected}
+                  initialQuestion={questionToAsk}
+                  onQuestionAsked={() => setQuestionToAsk(null)}
+                />
+              ) : (
+                <DashboardInterface
+                  ref={dashboardRef} // Pass ref to DashboardInterface
+                  onCreateConSelected={onCreateConSelected}
+                  initialQuestion={questionToAsk}
+                  onQuestionAsked={() => setQuestionToAsk(null)}
+                />
+              ))}
             {activeMenu === "new-connection" && (
               <ConnectionForm
                 token={userToken}

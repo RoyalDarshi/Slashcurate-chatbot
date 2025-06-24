@@ -12,12 +12,14 @@ import { API_URL } from "./config";
 interface Settings {
   chatFontSize: "small" | "medium" | "large";
   notificationsEnabled: boolean;
+  currentView: "chat" | "dashboard"; // Added new setting for view preference
 }
 
 // Define the context type, including setters
 interface SettingsContextType extends Settings {
   setChatFontSize: (size: Settings["chatFontSize"]) => void;
   setNotificationsEnabled: (on: boolean) => void;
+  setCurrentView: (view: Settings["currentView"]) => void; // Setter for currentView
 }
 
 // Create the context with an initial undefined value
@@ -35,6 +37,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   const [settings, setSettings] = useState<Settings>({
     chatFontSize: "medium",
     notificationsEnabled: true,
+    currentView: "chat", // Default to chat view
   });
 
   // Fetch user settings from the server on mount
@@ -42,13 +45,14 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     const loadSettings = async () => {
       try {
         const token = sessionStorage.getItem("token");
-        const res = await axios.post(
-          `${API_URL}/api/user/settings`,
-          {token},
-        );
+        const res = await axios.post(`${API_URL}/api/user/settings`, { token });
         setSettings({
-          chatFontSize: res.data.chatFontSize,
-          notificationsEnabled: res.data.notificationsEnabled,
+          chatFontSize: res.data.chatFontSize || "medium", // Provide fallback
+          notificationsEnabled:
+            res.data.notificationsEnabled !== undefined
+              ? res.data.notificationsEnabled
+              : true, // Provide fallback
+          currentView: res.data.currentView || "chat", // Provide fallback
         });
       } catch (error) {
         console.error("Failed to load settings", error);
@@ -61,10 +65,10 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   const persistSettings = async (newSettings: Partial<Settings>) => {
     try {
       const token = sessionStorage.getItem("token");
-      await axios.post(
-        `${API_URL}/api/user/createsettings`,
-        { settings: newSettings, token },
-      );
+      await axios.post(`${API_URL}/api/user/createsettings`, {
+        settings: newSettings,
+        token,
+      });
     } catch (error) {
       console.error("Failed to save settings", error);
     }
@@ -82,9 +86,20 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     persistSettings({ notificationsEnabled });
   };
 
+  // Setter for currentView
+  const setCurrentView = (currentView: Settings["currentView"]) => {
+    setSettings((prev) => ({ ...prev, currentView }));
+    persistSettings({ currentView });
+  };
+
   return (
     <SettingsContext.Provider
-      value={{ ...settings, setChatFontSize, setNotificationsEnabled }}
+      value={{
+        ...settings,
+        setChatFontSize,
+        setNotificationsEnabled,
+        setCurrentView, // Add new setter to context value
+      }}
     >
       {children}
     </SettingsContext.Provider>

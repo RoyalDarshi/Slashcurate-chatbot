@@ -19,9 +19,9 @@ import {
   BsHandThumbsUpFill,
 } from "react-icons/bs";
 import { ChatMessageProps } from "../types";
-import DataTable from "./DataTable";
+import DataTable from "./ChatDataTable";
 import CustomTooltip from "./CustomTooltip";
-import DynamicBarGraph from "./Graphs/DynamicBarGraph";
+import DynamicBarGraph from "./ChatGraphs/DynamicBarGraph";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import html2canvas from "html2canvas";
@@ -30,7 +30,7 @@ import EditableMessage from "./EditableMessage";
 import { motion } from "framer-motion";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
-import QueryDisplay from "./QueryDisplay";
+import QueryDisplay from "./ChatQueryDisplay";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { API_URL } from "../config";
