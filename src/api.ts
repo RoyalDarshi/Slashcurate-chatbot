@@ -62,10 +62,10 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-const testApi = axios.create({
-  baseURL: DBCON_API_URL,
-  headers: { "Content-Type": "application/json" },
-});
+// const testApi = axios.create({
+//   baseURL: DBCON_API_URL,
+//   headers: { "Content-Type": "application/json" },
+// });
 
 const chatbotApi = axios.create({
   baseURL: CHATBOT_CON_DETAILS_API_URL,
@@ -108,7 +108,7 @@ export const createAdminConnection = async (
 export const testConnection = async (
   connectionDetails: ConnectionDetails
 ): Promise<AxiosResponse<ApiResponse>> =>
-  testApi.post("/testdbcon", { connectionDetails });
+  api.post("/testdbcon", { connectionDetails });
 
 export const getUserConnections = async (
   token: string

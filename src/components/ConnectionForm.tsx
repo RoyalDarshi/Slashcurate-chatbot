@@ -31,7 +31,6 @@ import {
   testConnection,
 } from "../api";
 import { API_URL, CHATBOT_API_URL } from "../config";
-import { connect } from "http2";
 
 // Define interfaces for type safety
 interface FormData {
