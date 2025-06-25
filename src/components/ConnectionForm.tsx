@@ -30,7 +30,7 @@ import {
   createUserConnection,
   testConnection,
 } from "../api";
-import { API_URL, CHATBOT_API_URL } from "../config";
+import { CHATBOT_API_URL } from "../config";
 
 // Define interfaces for type safety
 interface FormData {
