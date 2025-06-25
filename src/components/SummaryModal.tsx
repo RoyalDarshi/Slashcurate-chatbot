@@ -11,38 +11,67 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
   onClose,
   theme,
 }) => {
-  const [displayedText, setDisplayedText] = useState("");
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isTypingComplete, setIsTypingComplete] = useState(false);
+  const [displayedText, setDisplayedText] = useState<string>("");
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [isVisible, setIsVisible] = useState<boolean>(false);
+  const [isTypingComplete, setIsTypingComplete] = useState<boolean>(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  console.log("SummaryModal rendered with summaryText:", summaryText);
+  // Preprocess text for typing animation to remove Markdown syntax and ensure clean text
+  const cleanTextForTyping = (text: string): string => {
+    if (!text || typeof text !== "string") return "";
+    return text
+      .replace(/\*\*([^**]*?)\*\*/g, "$1") // Remove **bold** markers, keep content
+      .replace(/^\*\s+/gm, "• ") // Replace * with bullet symbol for list items
+      .replace(/\n\s*\n/g, "\n") // Normalize multiple newlines to single
+      .replace(/[^\w\s.,:;•\n-]/g, "") // Remove stray special characters
+      .trim(); // Remove leading/trailing whitespace
+  };
 
   useEffect(() => {
     setIsVisible(true);
+    // Clear any existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    // Reset state
     setDisplayedText("");
     setIsTypingComplete(false);
-    if (!summaryText || typeof summaryText !== "string") {
+
+    // Validate input
+    if (
+      !summaryText ||
+      typeof summaryText !== "string" ||
+      summaryText.trim() === ""
+    ) {
+      setIsTypingComplete(true);
       return;
     }
+
+    const cleanedText = cleanTextForTyping(summaryText);
+    if (!cleanedText) {
+      setIsTypingComplete(true);
+      return;
+    }
+
     let currentIdx = 0;
     intervalRef.current = setInterval(() => {
-      if (currentIdx < summaryText.length) {
-        setDisplayedText((prev) => prev + summaryText[currentIdx]);
+      if (currentIdx < cleanedText.length) {
+        const nextChar = cleanedText[currentIdx] || ""; // Ensure no undefined
+        setDisplayedText((prev) => prev + nextChar);
         currentIdx += 1;
       } else {
+        // Stop interval and mark typing complete
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
         setIsTypingComplete(true);
       }
-    }, 0);
+    }, 5);
+
+    // Cleanup on unmount or summaryText change
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -68,7 +97,7 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
     );
   };
 
-  // Render summary text as paragraphs and lists
+  // Render summary text as paragraphs and lists for final display
   const renderSummary = (text: string) => {
     const lines = text.split("\n");
     const elements: React.ReactNode[] = [];
@@ -93,7 +122,6 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
           currentList = null;
         }
         if (line.trim()) {
-          // Only add non-empty paragraphs
           elements.push(<p key={`p-${index}`}>{parseText(line)}</p>);
         }
       }
@@ -189,7 +217,8 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
                   style={{ color: theme.colors.text }}
                 >
                   {displayedText}
-                  {displayedText.length < summaryText.length && (
+                  {displayedText.length <
+                    cleanTextForTyping(summaryText).length && (
                     <span className="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse align-middle"></span>
                   )}
                 </div>
@@ -198,13 +227,15 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
           </div>
 
           {/* Progress indicator */}
-          {displayedText.length < summaryText.length && (
+          {displayedText.length < cleanTextForTyping(summaryText).length && (
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200/30 rounded-b-2xl overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-100 ease-out"
                 style={{
                   width: `${
-                    (displayedText.length / summaryText.length) * 100
+                    (displayedText.length /
+                      cleanTextForTyping(summaryText).length) *
+                    100
                   }%`,
                 }}
               ></div>
@@ -212,23 +243,24 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
           )}
 
           {/* Floating action button when minimized */}
-          {!isExpanded && displayedText.length >= summaryText.length && (
-            <button
-              onClick={toggleExpanded}
-              className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center text-sm font-medium"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+          {/* {!isExpanded &&
+            displayedText.length >= cleanTextForTyping(summaryText).length && (
+              <button
+                onClick={toggleExpanded}
+                className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center text-sm font-medium"
               >
-                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-              </svg>
-            </button>
-          )}
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
+              </button>
+            )} */}
         </div>
       </div>
 
