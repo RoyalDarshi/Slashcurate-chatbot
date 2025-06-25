@@ -12,14 +12,14 @@ import { API_URL } from "./config";
 interface Settings {
   chatFontSize: "small" | "medium" | "large";
   notificationsEnabled: boolean;
-  currentView: "chat" | "dashboard"; // Added new setting for view preference
+  currentView: "chat" | "dashboard";
 }
 
 // Define the context type, including setters
 interface SettingsContextType extends Settings {
   setChatFontSize: (size: Settings["chatFontSize"]) => void;
   setNotificationsEnabled: (on: boolean) => void;
-  setCurrentView: (view: Settings["currentView"]) => void; // Setter for currentView
+  setCurrentView: (view: Settings["currentView"]) => void;
 }
 
 // Create the context with an initial undefined value
@@ -27,33 +27,33 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
   undefined
 );
 
-// PropsWithChildren gives us the `children` prop
-type SettingsProviderProps = PropsWithChildren<{}>;
-
 // SettingsProvider component
-export const SettingsProvider: React.FC<SettingsProviderProps> = ({
+export const SettingsProvider: React.FC<PropsWithChildren<{}>> = ({
   children,
 }) => {
-  const [settings, setSettings] = useState<Settings>({
-    chatFontSize: "medium",
-    notificationsEnabled: true,
-    currentView: "chat", // Default to chat view
+  const [settings, setSettings] = useState<Settings>(() => {
+    const localView = localStorage.getItem("currentView");
+    return {
+      chatFontSize: "medium",
+      notificationsEnabled: true,
+      currentView: localView ? (localView as "chat" | "dashboard") : "chat",
+    };
   });
 
-  // Fetch user settings from the server on mount
+  // Fetch user settings from the server on mount, excluding currentView
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const token = sessionStorage.getItem("token");
         const res = await axios.post(`${API_URL}/api/user/settings`, { token });
-        setSettings({
-          chatFontSize: res.data.chatFontSize || "medium", // Provide fallback
+        setSettings((prev) => ({
+          ...prev,
+          chatFontSize: res.data.chatFontSize || "medium",
           notificationsEnabled:
             res.data.notificationsEnabled !== undefined
               ? res.data.notificationsEnabled
-              : true, // Provide fallback
-          currentView: res.data.currentView || "chat", // Provide fallback
-        });
+              : true,
+        }));
       } catch (error) {
         console.error("Failed to load settings", error);
       }
@@ -86,10 +86,10 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     persistSettings({ notificationsEnabled });
   };
 
-  // Setter for currentView
+  // Setter for currentView (updates state and localStorage only)
   const setCurrentView = (currentView: Settings["currentView"]) => {
     setSettings((prev) => ({ ...prev, currentView }));
-    persistSettings({ currentView });
+    localStorage.setItem("currentView", currentView);
   };
 
   return (
@@ -98,7 +98,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
         ...settings,
         setChatFontSize,
         setNotificationsEnabled,
-        setCurrentView, // Add new setter to context value
+        setCurrentView,
       }}
     >
       {children}
