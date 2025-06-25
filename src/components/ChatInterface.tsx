@@ -25,6 +25,8 @@ import {
 } from "../hooks";
 import SchemaExplorer from "./SchemaExplorer";
 import schemaSampleData from "../data/sampleSchemaData";
+import html2canvas from "html2canvas";
+import SummaryModal from "./SummaryModal";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -113,6 +115,80 @@ const ChatInterface = memo(
       const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
         useState(false);
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
+      const [graphSummary, setGraphSummary] = useState<string | null>(null);
+      const [showSummaryModal, setShowSummaryModal] = useState(false);
+
+      const summarizeGraph = useCallback(
+        async (graphElement: HTMLElement, botMessageId: string) => {
+          if (!graphElement) {
+            toast.error("No graph element to summarize.");
+            return;
+          }
+          const botMessage = messages.find((m) => m.id === botMessageId);
+          if (!botMessage || !botMessage.parentId) {
+            toast.error("Cannot find associated question for this graph.");
+            return;
+          }
+          const userMessage = messages.find(
+            (m) => m.id === botMessage.parentId
+          );
+          const question = userMessage
+            ? userMessage.content
+            : "Unknown question";
+
+          setIsSubmitting(true);
+          try {
+            const canvas = await html2canvas(graphElement, { scale: 2 });
+            const imageData = canvas.toDataURL("image/png");
+            const prompt = `Summarize the key insights from this graph image for the question: "${question}".`;
+            const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA"; // Replace with your actual API key
+            const payload = {
+              contents: [
+                {
+                  role: "user",
+                  parts: [
+                    { text: prompt },
+                    {
+                      inlineData: {
+                        mimeType: "image/png",
+                        data: imageData.split(",")[1],
+                      },
+                    },
+                  ],
+                },
+              ],
+            };
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const result = await response.json();
+            let summaryText = "No summary could be generated.";
+            if (
+              result.candidates &&
+              result.candidates.length > 0 &&
+              result.candidates[0].content &&
+              result.candidates[0].content.parts &&
+              result.candidates[0].content.parts.length > 0
+            ) {
+              summaryText = result.candidates[0].content.parts[0].text;
+              setGraphSummary(summaryText);
+              setShowSummaryModal(true);
+            } else {
+              console.error("Unexpected API response:", result);
+              toast.error("Failed to get summary from AI.");
+            }
+          } catch (error) {
+            console.error("Error summarizing graph:", error);
+            toast.error("Failed to summarize graph.");
+          } finally {
+            setIsSubmitting(false);
+          }
+        },
+        [messages]
+      );
 
       useEffect(() => {
         const loadingMessages = messages.filter(
@@ -182,6 +258,8 @@ const ChatInterface = memo(
         setInput("");
         setEditingMessageId(null);
         setSessionConnectionError(null);
+        setGraphSummary(null);
+        setShowSummaryModal(false);
       }, [clearSession]);
 
       const askQuestion = useCallback(
@@ -1201,6 +1279,8 @@ const ChatInterface = memo(
                         responseStatus={responseStatus}
                         disabled={!!sessionConnectionError && message.isBot}
                         onRetry={handleRetry}
+                        onSummarizeGraph={summarizeGraph}
+                        isSubmitting={isSubmitting}
                       />
                     </div>
                   );
@@ -1416,6 +1496,13 @@ const ChatInterface = memo(
             >
               {connectionError}
             </div>
+          )}
+          {showSummaryModal && graphSummary && (
+            <SummaryModal
+              summaryText={graphSummary}
+              onClose={() => setShowSummaryModal(false)}
+              theme={theme}
+            />
           )}
         </div>
       );

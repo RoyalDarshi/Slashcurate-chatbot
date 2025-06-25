@@ -11,6 +11,7 @@ import {
   Check,
   Heart,
   RefreshCw,
+  ScanEye,
 } from "lucide-react";
 import {
   BsHandThumbsDown,
@@ -47,6 +48,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     responseStatus,
     disabled,
     onRetry,
+    onSummarizeGraph,
+    isSubmitting,
   }) => {
     const { theme } = useTheme();
     const [csvData, setCsvData] = useState<any[]>([]);
@@ -102,13 +105,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             const parsedData = JSON.parse(message.content);
             let tableData = [];
 
-            // Handle cases where parsedData is a single object or has an answer property
             if (parsedData?.answer) {
               tableData = Array.isArray(parsedData.answer)
                 ? parsedData.answer
                 : [parsedData.answer];
             } else if (Object.keys(parsedData).length > 0) {
-              // Handle single object case like { count: 0 }
               tableData = [parsedData];
             }
 
@@ -713,6 +714,33 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                             )}
                           </div>
                         )}
+                        {currentView === "graph" &&
+                          hasNumericData &&
+                          onSummarizeGraph && (
+                            <CustomTooltip
+                              title="Summarize Graph"
+                              position="top"
+                            >
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() =>
+                                  onSummarizeGraph(
+                                    graphRef.current!,
+                                    message.id
+                                  )
+                                }
+                                disabled={isSubmitting}
+                                className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85 disabled:opacity-50"
+                                style={{ background: theme.colors.surface }}
+                              >
+                                <ScanEye
+                                  size={20}
+                                  style={{ color: theme.colors.accent }}
+                                />
+                              </motion.button>
+                            </CustomTooltip>
+                          )}
                         {currentView === "query" && parsedData?.sql_query && (
                           <CustomTooltip title={copyTooltipTxt} position="top">
                             <motion.button
@@ -1079,7 +1107,9 @@ const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
     prevProps.isFavorited === nextProps.isFavorited &&
     prevProps.responseStatus === nextProps.responseStatus &&
     prevProps.disabled === nextProps.disabled &&
-    prevProps.onRetry === nextProps.onRetry
+    prevProps.onRetry === nextProps.onRetry &&
+    prevProps.onSummarizeGraph === nextProps.onSummarizeGraph &&
+    prevProps.isSubmitting === nextProps.isSubmitting
   );
 };
 
