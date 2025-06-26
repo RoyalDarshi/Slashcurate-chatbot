@@ -111,6 +111,35 @@ function formatKey(key: string): string {
     .trim();
 }
 
+// Custom Bar Component with top-only radius
+const CustomBar = ({ bar }: any) => {
+  const { x, y, width, height, color } = bar;
+  const borderRadius = 6;
+
+  if (height <= 0) return null;
+
+  // Create path for rounded top corners only
+  const path = `
+    M ${x} ${y + borderRadius}
+    Q ${x} ${y} ${x + borderRadius} ${y}
+    L ${x + width - borderRadius} ${y}
+    Q ${x + width} ${y} ${x + width} ${y + borderRadius}
+    L ${x + width} ${y + height}
+    L ${x} ${y + height}
+    Z
+  `;
+
+  return (
+    <path
+      d={path}
+      fill={color}
+      style={{
+        filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
+      }}
+    />
+  );
+};
+
 const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
   ({ data, isValidGraph }) => {
     const { theme } = useTheme();
@@ -368,8 +397,59 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             indexScale={{ type: "band", round: true }}
             groupMode={"stacked"}
             colors={theme.colors.barColors}
-            borderRadius={4}
+            borderRadius={0} // Set to 0 since we're using custom bars
             borderWidth={0}
+            layers={[
+              "grid",
+              "axes",
+              ({ bars }: any) => {
+                // Group bars by index to determine which is the topmost in each stack
+                const groupedBars = bars.reduce((acc: any, bar: any) => {
+                  const index = bar.data.indexValue;
+                  if (!acc[index]) acc[index] = [];
+                  acc[index].push(bar);
+                  return acc;
+                }, {});
+
+                return Object.values(groupedBars).flatMap((barGroup: any) => {
+                  // Sort bars by their y position (topmost has smallest y value)
+                  const sortedBars = barGroup.sort(
+                    (a: any, b: any) => a.y - b.y
+                  );
+
+                  return sortedBars.map((bar: any, index: number) => {
+                    const isTopmost = index === 0 && bar.height > 0; // First bar after sorting is topmost
+
+                    if (isTopmost) {
+                      // Render top bar with rounded corners
+                      return (
+                        <CustomBar
+                          key={`${bar.data.indexValue}-${bar.key}`}
+                          bar={bar}
+                        />
+                      );
+                    } else {
+                      // Render regular rectangle for non-top bars
+                      return (
+                        <rect
+                          key={`${bar.data.indexValue}-${bar.key}`}
+                          x={bar.x}
+                          y={bar.y}
+                          width={bar.width}
+                          height={bar.height}
+                          fill={bar.color}
+                          style={{
+                            filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.05))",
+                          }}
+                        />
+                      );
+                    }
+                  });
+                });
+              },
+              "markers",
+              "legends",
+            ]}
             defs={[
               {
                 id: "barGradient",
