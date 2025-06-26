@@ -22,7 +22,7 @@ import {
 import { ChatMessageProps } from "../types";
 import DataTable from "./ChatDataTable";
 import CustomTooltip from "./CustomTooltip";
-import DynamicBarGraph from "./ChatGraphs/DynamicBarGraph";
+import DynamicBarGraph from "./ChatGraphs/ChatDynamicBarGraph";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import html2canvas from "html2canvas";
