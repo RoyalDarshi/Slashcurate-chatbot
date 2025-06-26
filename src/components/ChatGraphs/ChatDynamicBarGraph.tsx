@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -7,8 +7,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
-import { BarChart3, TrendingUp, Download } from "lucide-react";
+import { BarChart3, TrendingUp } from "lucide-react";
 import { useTheme } from "../../ThemeContext";
 
 interface DynamicBarGraphProps {
@@ -423,13 +424,9 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             style={{
               color: theme.colors.textSecondary,
               fontSize: "18px",
-              textAlign: "center",
-              margin: 0,
-              fontFamily: theme.typography.fontFamily,
-              lineHeight: 1.6,
             }}
           >
-            Insufficient Genereate a valid dataset to create stunning
+            Insufficient Generate a valid dataset to create stunning
             visualizations
           </p>
         </div>
@@ -450,10 +447,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
           transition: "all 0.4s ease",
         }}
       >
-        <div
-          ref={containerRef}
-          style={{ height: "60vh", width: "100%", minHeight: "300px" }}
-        >
+        <div ref={containerRef} style={{ height: "60vh", width: "100%" }}>
           <div
             ref={graphRef}
             style={{
@@ -464,7 +458,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             }}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={graphData} barCategoryGap="25%" barGap={6}>
+              <BarChart data={graphData} barCategoryGap="5%" barGap={6}>
                 <defs>
                   <linearGradient
                     id="gridGradient"
@@ -531,6 +525,45 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                     radius: 8,
                   }}
                   content={<ModernTooltip theme={theme} />}
+                />
+                <Legend
+                  layout="horizontal"
+                  align="center"
+                  verticalAlign="bottom"
+                  wrapperStyle={{
+                    fontSize: "13px",
+                    fontFamily: theme.typography.fontFamily,
+                    fontWeight: theme.typography.weight.medium,
+                    color: theme.colors.text,
+                  }}
+                  iconType="circle"
+                  iconSize={14}
+                  formatter={(value) => formatKey(value)}
+                  // onMouseEnter={(e) => {
+                  //   // Optional: Add hover effect
+                  //   const legendItems = document.querySelectorAll(
+                  //     `.recharts-legend-item`
+                  //   );
+                  //   legendItems.forEach((item) => {
+                  //     if (item.getAttribute("data-key") === e.dataKey) {
+                  //       item.setAttribute(
+                  //         "style",
+                  //         `opacity: 1; transform: scale(1.1); transition: all 0.2s ease;`
+                  //       );
+                  //     }
+                  //   });
+                  // }}
+                  // onMouseLeave={() => {
+                  //   const legendItems = document.querySelectorAll(
+                  //     `.recharts-legend-item`
+                  //   );
+                  //   legendItems.forEach((item) => {
+                  //     item.setAttribute(
+                  //       "style",
+                  //       `opacity: 0.85; transform: scale(1); transition: all 0.2s ease;`
+                  //     );
+                  //   });
+                  // }}
                 />
                 {yKeys.map((key, keyIndex) => (
                   <Bar
