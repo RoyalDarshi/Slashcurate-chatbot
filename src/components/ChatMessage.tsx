@@ -448,7 +448,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               </>
             )}
             {currentView === "graph" && hasNumericData && (
-              <div ref={graphRef} style={{ width: "100%", minHeight: '400px', height: '60vh' }}> {/* Added minHeight and height */}
+              <div ref={graphRef} style={{ width: "100%" }}>
+                {" "}
+                {/* Added minHeight and height */}
                 <DynamicBarGraph
                   data={csvData}
                   isValidGraph={setHasNumericData}

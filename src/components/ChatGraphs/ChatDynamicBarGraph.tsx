@@ -447,7 +447,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
           transition: "all 0.4s ease",
         }}
       >
-        <div ref={containerRef} style={{ height: "60vh", width: "100%" }}>
+        <div ref={containerRef} style={{ height: "65vh", width: "100%" }}>
           <div
             ref={graphRef}
             style={{
