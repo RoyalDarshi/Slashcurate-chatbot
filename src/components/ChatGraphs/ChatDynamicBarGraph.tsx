@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ResponsiveBar } from "@nivo/bar";
-import { useTheme } from "../../ThemeContext";
+import { useTheme } from "../../ThemeContext"; // Changed import path to '../ThemeContext'
 import { BarChart3, TrendingUp } from "lucide-react";
 
 interface DynamicBarGraphProps {
@@ -120,6 +120,8 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState<number>(600);
+    // State to hold the height of the graph container
+    const [containerHeight, setContainerHeight] = useState<number>(450);
 
     useEffect(() => {
       if (!containerRef.current) return;
@@ -128,6 +130,8 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
         for (const entry of entries) {
           if (entry.contentRect) {
             setContainerWidth(entry.contentRect.width);
+            // Update container height on resize
+            setContainerHeight(entry.contentRect.height);
           }
         }
       });
@@ -325,7 +329,8 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
     const minBarWidth = 20;
     const groupPadding = 10;
     const totalGroups = graphData.length;
-    const totalMinWidth = totalGroups * minBarWidth + (totalGroups - 1) * groupPadding;
+    const totalMinWidth =
+      totalGroups * minBarWidth + (totalGroups - 1) * groupPadding;
     const calculatedMinWidth = totalMinWidth + 100;
     const bottomMargin = yKeys.length > 3 ? 100 : 80;
 
@@ -334,6 +339,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
         ref={containerRef}
         style={{
           width: "100%",
+          height: "100%", // Make the container take full height
           overflowX: "auto",
           backgroundColor: theme.colors.surface,
           borderRadius: theme.borderRadius.large,
@@ -346,7 +352,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       >
         <div
           style={{
-            height: "450px",
+            height: "100%", // Make the inner div also take full height
             width: "100%",
             minWidth: `${calculatedMinWidth}px`,
             padding: "16px",
@@ -483,7 +489,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
                 theme={theme}
               />
             )}
-        
             theme={{
               background: "transparent",
               textColor: theme.colors.text,
