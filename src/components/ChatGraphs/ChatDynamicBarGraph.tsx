@@ -339,7 +339,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
         ref={containerRef}
         style={{
           width: "100%",
-          height: "100%", // Make the container take full height
+          height: "95%", // Make the container take full height
           overflowX: "auto",
           backgroundColor: theme.colors.surface,
           borderRadius: theme.borderRadius.large,

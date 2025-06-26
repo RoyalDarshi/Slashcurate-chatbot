@@ -501,17 +501,20 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
         {message.isBot ? (
           <div
-            className="flex w-full items-start"
-            style={{ gap: theme.spacing.md }}
+            // Conditionally apply max-width or full-width based on currentView
+            className={`flex w-full items-start ${
+              currentView === "graph" ? "max-w-[75%]" : "w-max"
+            } gap-2`}
+            style={{ position: "relative" }}
           >
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+              className="flex p-2.5 items-center justify-center rounded-full shadow-md"
               style={{ background: theme.colors.accent }}
             >
               <Bot size={20} style={{ color: "white" }} />
             </div>
             <div
-              className="max-w-[75%] flex flex-col gap-2"
+              className="w-full flex flex-col gap-2" // Ensure this div always takes full width of its parent
               style={{ position: "relative" }}
             >
               <div className="relative">

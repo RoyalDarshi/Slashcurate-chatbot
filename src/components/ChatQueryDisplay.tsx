@@ -456,7 +456,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
     }, [formattedQuery, language, theme.colors]);
 
     return (
-      <div style={{ backgroundColor: theme.colors.surface }}>
+      <div className="w-min" style={{ backgroundColor: theme.colors.surface }}>
         {formattedQuery ? (
           <div className="query-content">
             {title && (
