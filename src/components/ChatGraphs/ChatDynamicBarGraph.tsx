@@ -1,110 +1,214 @@
-import React, { useState, useEffect, useRef } from "react";
-import { ResponsiveBar } from "@nivo/bar";
-import { useTheme } from "../../ThemeContext"; // Changed import path to '../ThemeContext'
-import { BarChart3, TrendingUp } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { BarChart3, TrendingUp, Download } from "lucide-react";
+import { useTheme } from "../../ThemeContext";
 
 interface DynamicBarGraphProps {
   data: any[];
   isValidGraph: (validData: boolean) => void;
 }
 
-const CustomTooltip = ({ id, value, color, indexValue, theme }: any) => {
-  return (
-    <div
-      style={{
-        padding: theme.spacing.lg,
-        background: theme.colors.surface,
-        backdropFilter: "blur(20px) saturate(180%)",
-        WebkitBackdropFilter: "blur(20px) saturate(180%)",
-        color: theme.colors.text,
-        fontSize: "14px",
-        borderRadius: theme.borderRadius.large,
-        boxShadow: theme.shadow.lg,
-        border: `1px solid ${theme.colors.border}`,
-        fontFamily: theme.typography.fontFamily,
-        minWidth: "200px",
-        maxWidth: "280px",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "3px",
-          background: theme.gradients.primary,
-        }}
-      />
-      <div
-        style={{
-          marginBottom: theme.spacing.md,
-          fontWeight: theme.typography.weight.bold,
-          color: theme.colors.text,
-          fontSize: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: theme.spacing.sm,
-        }}
-      >
-        <TrendingUp size={16} style={{ color: theme.colors.accent }} />
-        {indexValue}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: theme.spacing.md,
-          borderRadius: theme.borderRadius.default,
-          background: `${color}15`,
-          border: `1px solid ${color}30`,
-          transition: "all 0.2s ease",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div
-            style={{
-              width: "14px",
-              height: "14px",
-              background: color,
-              borderRadius: "50%",
-              marginRight: theme.spacing.md,
-              boxShadow: theme.shadow.sm,
-              border: `2px solid ${theme.colors.surface}`,
-            }}
-          />
-          <span
-            style={{
-              fontWeight: theme.typography.weight.medium,
-              fontSize: "14px",
-            }}
-          >
-            {formatKey(id.toString())}
-          </span>
-        </div>
-        <span
+// Modern Bar Shape with rounded top bars and gradients
+const ModernBarShape = (props: any) => {
+  const { theme } = useTheme();
+  const {
+    x,
+    y,
+    width,
+    height,
+    dataKey,
+    payload,
+    yKeys,
+    index: groupIndex,
+    keyIndex,
+  } = props;
+
+  const radius = Math.min(6, width / 3);
+  const value = Number(payload[dataKey]);
+  const topMostKey = [...yKeys]
+    .reverse()
+    .find((key) => Number(payload[key]) > 0);
+  const isTopBar = dataKey === topMostKey;
+  const colorIndex = keyIndex % theme.colors.barColors.length;
+  const solidColor = theme.colors.barColors[colorIndex];
+  const gradientId = `gradient-${groupIndex}-${keyIndex}`;
+
+  if (value <= 0) return null;
+
+  if (isTopBar) {
+    const pathData = `M ${x}, ${y + radius}
+                      A ${radius}, ${radius}, 0, 0, 1, ${x + radius}, ${y}
+                      L ${x + width - radius}, ${y}
+                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${
+      y + radius
+    }
+                      L ${x + width}, ${y + height}
+                      L ${x}, ${y + height}
+                      Z`;
+
+    return (
+      <g>
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={solidColor} stopOpacity="1" />
+            <stop offset="100%" stopColor={solidColor} stopOpacity="0.7" />
+          </linearGradient>
+        </defs>
+        <path
+          d={pathData}
+          fill={`url(#${gradientId})`}
+          stroke={theme.colors.surfaceGlass}
+          strokeWidth="1"
           style={{
-            fontWeight: theme.typography.weight.bold,
-            color: theme.colors.text,
-            fontSize: "15px",
-            background: theme.gradients.primary,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
+            transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+            transformOrigin: "center bottom",
           }}
-        >
-          {value.toLocaleString()}
-        </span>
-      </div>
-    </div>
-  );
+        />
+      </g>
+    );
+  } else {
+    return (
+      <g>
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={solidColor} stopOpacity="1" />
+            <stop offset="100%" stopColor={solidColor} stopOpacity="0.7" />
+          </linearGradient>
+        </defs>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill={`url(#${gradientId})`}
+          stroke={theme.colors.surfaceGlass}
+          strokeWidth="1"
+          style={{
+            transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+            transformOrigin: "center bottom",
+          }}
+        />
+      </g>
+    );
+  }
 };
 
-function formatKey(key: string): string {
-  return key
+// Modern Tooltip with glassmorphism
+const ModernTooltip = ({ active, payload, label, theme }: any) => {
+  if (active && payload && payload.length) {
+    const accentColor = payload[0]?.color || theme.colors.accent;
+    return (
+      <div
+        style={{
+          padding: theme.spacing.lg,
+          background: theme.colors.surface,
+          backdropFilter: "blur(20px) saturate(180%)",
+          WebkitBackdropFilter: "blur(20px) saturate(180%)",
+          color: theme.colors.text,
+          fontSize: "14px",
+          borderRadius: theme.borderRadius.large,
+          boxShadow: theme.shadow.lg,
+          border: `1px solid ${theme.colors.border}`,
+          fontFamily: theme.typography.fontFamily,
+          minWidth: "200px",
+          maxWidth: "280px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "3px",
+            background: theme.gradients.primary,
+          }}
+        />
+        <div
+          style={{
+            marginBottom: theme.spacing.md,
+            fontWeight: theme.typography.weight.bold,
+            color: theme.colors.text,
+            fontSize: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: theme.spacing.sm,
+          }}
+        >
+          <TrendingUp size={16} style={{ color: theme.colors.accent }} />
+          {formatKey(label)}
+        </div>
+        {payload.map((entry: any, index: number) => (
+          <div
+            key={`item-${index}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: index < payload.length - 1 ? theme.spacing.md : 0,
+              padding: theme.spacing.md,
+              borderRadius: theme.borderRadius.default,
+              background: `${entry.color}15`,
+              border: `1px solid ${entry.color}30`,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <div
+                style={{
+                  width: "14px",
+                  height: "14px",
+                  background: entry.color,
+                  borderRadius: "50%",
+                  marginRight: theme.spacing.md,
+                  boxShadow: theme.shadow.sm,
+                  border: `2px solid ${theme.colors.surface}`,
+                }}
+              />
+              <span
+                style={{
+                  fontWeight: theme.typography.weight.medium,
+                  fontSize: "14px",
+                }}
+              >
+                {formatKey(entry.name)}
+              </span>
+            </div>
+            <span
+              style={{
+                fontWeight: theme.typography.weight.bold,
+                color: theme.colors.text,
+                fontSize: "15px",
+                background: theme.gradients.primary,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              {entry.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+function formatKey(key: any): string {
+  if (key === null || key === undefined) return "";
+  const stringKey = String(key);
+  return stringKey
     .replace(/_/g, " ")
     .replace(/([A-Z])/g, " $1")
     .replace(/^./, (str) => str.toUpperCase())
@@ -119,25 +223,40 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
     const [yKeys, setYKeys] = useState<string[]>([]);
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [containerWidth, setContainerWidth] = useState<number>(600);
-    // State to hold the height of the graph container
-    const [containerHeight, setContainerHeight] = useState<number>(450);
+    const graphRef = useRef<HTMLDivElement>(null);
+    const [showResolutionOptions, setShowResolutionOptions] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // Close resolution options on outside click
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          showResolutionOptions &&
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target as Node)
+        ) {
+          setShowResolutionOptions(false);
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [showResolutionOptions]);
+
+    // Resize observer for container
     useEffect(() => {
       if (!containerRef.current) return;
 
       const observer = new ResizeObserver((entries) => {
         for (const entry of entries) {
           if (entry.contentRect) {
-            setContainerWidth(entry.contentRect.width);
-            // Update container height on resize
-            setContainerHeight(entry.contentRect.height);
+            // Update dimensions if needed
           }
         }
       });
 
       observer.observe(containerRef.current);
-
       return () => {
         if (containerRef.current) observer.unobserve(containerRef.current);
       };
@@ -157,7 +276,8 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       });
 
       if (numericKeys.length === 0) {
-        throw new Error("No numeric value key found in dataset.");
+        setIsValidGraphData(false);
+        return { data: [], keys: [], indexBy: "" };
       }
 
       const valueKey = numericKeys[0];
@@ -178,7 +298,8 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
       const indexByKey = stringKeys.find((k) => k !== groupKey);
 
       if (!indexByKey) {
-        throw new Error("Could not determine indexBy (x-axis) key.");
+        setIsValidGraphData(false);
+        return { data: [], keys: [], indexBy: "" };
       }
 
       if (!groupKey) {
@@ -308,272 +429,145 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
               lineHeight: 1.6,
             }}
           >
-            Insufficient numeric data for visualization.
+            Insufficient Genereate a valid dataset to create stunning
+            visualizations
           </p>
         </div>
       );
     }
 
-    const xGridValues = graphData.map((item) => item[xKey]);
-    const yValues = graphData.flatMap((item) =>
-      yKeys.map((key) => Number(item[key]))
-    );
-    const minY = 0;
-    const maxY = Math.ceil(Math.max(...yValues) * 1.1);
-    const step = Math.max(1, Math.round((maxY - minY) / 5));
-    const yGridValues = Array.from(
-      { length: Math.ceil((maxY - minY) / step) + 1 },
-      (_, i) => minY + i * step
-    );
-
-    const minBarWidth = 20;
-    const groupPadding = 10;
-    const totalGroups = graphData.length;
-    const totalMinWidth =
-      totalGroups * minBarWidth + (totalGroups - 1) * groupPadding;
-    const calculatedMinWidth = totalMinWidth + 100;
-    const bottomMargin = yKeys.length > 3 ? 100 : 80;
+    const xTickRotation = graphData.length > 8 ? -45 : 0;
+    const xTickAnchor = graphData.length > 8 ? "end" : "middle";
 
     return (
       <div
-        ref={containerRef}
+        className="flex flex-col"
         style={{
-          width: "100%",
-          height: "95%", // Make the container take full height
-          overflowX: "auto",
-          backgroundColor: theme.colors.surface,
-          borderRadius: theme.borderRadius.large,
-          scrollbarWidth: "thin",
-          scrollbarColor: `${theme.colors.textSecondary}40 transparent`,
+          background: theme.colors.surface,
           backdropFilter: "blur(20px) saturate(180%)",
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
+          overflow: "hidden",
           transition: "all 0.4s ease",
         }}
       >
         <div
-          style={{
-            height: "100%", // Make the inner div also take full height
-            width: "100%",
-            minWidth: `${calculatedMinWidth}px`,
-            padding: "16px",
-          }}
+          ref={containerRef}
+          style={{ height: "60vh", width: "100%", minHeight: "300px" }}
         >
-          <ResponsiveBar
-            data={graphData}
-            keys={yKeys}
-            indexBy={xKey}
-            margin={{ top: 20, right: 20, bottom: bottomMargin, left: 80 }}
-            padding={0.1}
-            valueScale={{ type: "linear" }}
-            indexScale={{ type: "band", round: true }}
-            groupMode={"stacked"}
-            colors={theme.colors.barColors}
-            borderRadius={4}
-            borderWidth={0}
-            defs={[
-              {
-                id: "barGradient",
-                type: "linearGradient",
-                colors: [
-                  { offset: 0, color: "inherit", opacity: 1 },
-                  { offset: 100, color: "inherit", opacity: 0.7 },
-                ],
-              },
-            ]}
-            fill={[{ match: "*", id: "barGradient" }]}
-            axisTop={null}
-            axisRight={null}
-            axisBottom={{
-              tickSize: 5,
-              tickPadding: 8,
-              tickRotation: xGridValues.length > 8 ? -45 : 0,
-              legendPosition: "middle",
-              legendOffset: 50,
-              truncateTickAt: 0,
-              renderTick: (tick) => {
-                return (
-                  <g transform={`translate(${tick.x},${tick.y})`}>
-                    <line y2="6" stroke={theme.colors.border} />
-                    <text
-                      textAnchor={xGridValues.length > 8 ? "end" : "middle"}
-                      dominantBaseline="text-before-edge"
-                      transform={
-                        xGridValues.length > 8
-                          ? "rotate(-45) translate(-10,0)"
-                          : ""
-                      }
-                      style={{
-                        fontSize: "12px",
-                        fill: theme.colors.textSecondary,
-                        fontWeight: theme.typography.weight.medium,
-                        fontFamily: theme.typography.fontFamily,
-                      }}
-                    >
-                      {tick.value}
-                    </text>
-                  </g>
-                );
-              },
+          <div
+            ref={graphRef}
+            style={{
+              height: "100%",
+              width: "100%",
+              position: "relative",
+              transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
             }}
-            axisLeft={{
-              tickSize: 5,
-              tickPadding: 8,
-              tickRotation: 0,
-              legendPosition: "middle",
-              legendOffset: -56,
-              truncateTickAt: 0,
-              tickValues: yGridValues,
-              renderTick: (tick) => {
-                return (
-                  <g transform={`translate(${tick.x},${tick.y})`}>
-                    <line x2="-6" stroke={theme.colors.border} />
-                    <text
-                      textAnchor="end"
-                      dominantBaseline="middle"
-                      style={{
-                        fontSize: "12px",
-                        fill: theme.colors.textSecondary,
-                        fontWeight: theme.typography.weight.medium,
-                        fontFamily: theme.typography.fontFamily,
-                      }}
-                    >
-                      {tick.value}
-                    </text>
-                  </g>
-                );
-              },
-            }}
-            gridXValues={
-              xGridValues.length > 10
-                ? xGridValues.filter((_, i) => i % 2 === 0)
-                : xGridValues
-            }
-            gridYValues={yGridValues}
-            enableLabel={false}
-            labelSkipWidth={12}
-            labelSkipHeight={12}
-            legends={[
-              {
-                dataFrom: "keys",
-                anchor: "bottom",
-                direction: "row",
-                justify: false,
-                translateX: 0,
-                translateY: yKeys.length > 3 ? 80 : 60,
-                itemsSpacing: 18,
-                itemWidth: 110,
-                itemHeight: -12,
-                itemDirection: "left-to-right",
-                itemOpacity: 0.85,
-                symbolSize: 14,
-                symbolShape: "circle",
-                symbolBorderWidth: 0,
-                effects: [
-                  {
-                    on: "hover",
-                    style: {
-                      itemOpacity: 1,
-                      symbolSize: 16,
-                    },
-                  },
-                ],
-                itemTextColor: theme.colors.text,
-              },
-            ]}
-            tooltip={({ id, value, color, indexValue }) => (
-              <CustomTooltip
-                id={id}
-                value={value}
-                color={color}
-                indexValue={indexValue}
-                theme={theme}
-              />
-            )}
-            theme={{
-              background: "transparent",
-              textColor: theme.colors.text,
-              fontSize: 12,
-              fontFamily: theme.typography.fontFamily,
-              axis: {
-                domain: {
-                  line: {
-                    stroke: theme.colors.border,
-                    strokeWidth: 1,
-                  },
-                },
-                ticks: {
-                  line: {
-                    stroke: theme.colors.border,
-                    strokeWidth: 1,
-                  },
-                  text: {
-                    fill: theme.colors.textSecondary,
-                    fontSize: 12,
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={graphData} barCategoryGap="25%" barGap={6}>
+                <defs>
+                  <linearGradient
+                    id="gridGradient"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="0%"
+                  >
+                    <stop offset="0%" stopColor={`${theme.colors.accent}1A`} />
+                    <stop offset="50%" stopColor={`${theme.colors.accent}0D`} />
+                    <stop
+                      offset="100%"
+                      stopColor={`${theme.colors.accent}1A`}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 6"
+                  vertical={false}
+                  stroke={`${theme.colors.accent}33`}
+                  opacity={0.8}
+                />
+                <XAxis
+                  dataKey={xKey}
+                  tickLine={false}
+                  axisLine={{
+                    stroke: `${theme.colors.accent}4D`,
+                    strokeWidth: 2,
+                  }}
+                  angle={xTickRotation}
+                  textAnchor={xTickAnchor}
+                  height={xTickRotation === -45 ? 100 : 60}
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: theme.typography.weight.medium,
                     fontFamily: theme.typography.fontFamily,
-                    fontWeight: theme.typography.weight.medium,
-                  },
-                },
-                legend: {
-                  text: {
                     fill: theme.colors.textSecondary,
-                    fontSize: 14,
+                  }}
+                  tickFormatter={(value) =>
+                    value.length > 14
+                      ? value.slice(0, 12) + "…"
+                      : formatKey(value)
+                  }
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={{
+                    stroke: `${theme.colors.accent}4D`,
+                    strokeWidth: 2,
+                  }}
+                  style={{
+                    fontSize: "13px",
                     fontWeight: theme.typography.weight.medium,
-                  },
-                },
-              },
-              grid: {
-                line: {
-                  stroke: `${theme.colors.border}40`,
-                  strokeWidth: 1,
-                  strokeDasharray: "5 5",
-                },
-              },
-              legends: {
-                text: {
-                  fill: theme.colors.text,
-                  fontSize: 13,
-                  fontFamily: theme.typography.fontFamily,
-                  fontWeight: theme.typography.weight.medium,
-                },
-              },
-              tooltip: {
-                container: {
-                  background: theme.colors.surface,
-                  color: theme.colors.text,
-                  fontSize: 13,
-                  fontFamily: theme.typography.fontFamily,
-                  borderRadius: theme.borderRadius.default,
-                  boxShadow: `0 4px 20px ${theme.colors.text}15`,
-                  padding: "14px 18px",
-                },
-              },
-            }}
-            animate={true}
-            motionConfig={{
-              mass: 1,
-              tension: 180,
-              friction: 26,
-              clamp: false,
-              precision: 0.01,
-              velocity: 0,
-            }}
-            role="application"
-            ariaLabel={`Bar chart showing ${formatKey(xKey)} vs values`}
-          />
+                    fontFamily: theme.typography.fontFamily,
+                    fill: theme.colors.textSecondary,
+                  }}
+                  domain={["auto", "auto"]}
+                />
+                <Tooltip
+                  cursor={{
+                    fill: `${theme.colors.accent}1A`,
+                    stroke: `${theme.colors.accent}4D`,
+                    strokeWidth: 2,
+                    radius: 8,
+                  }}
+                  content={<ModernTooltip theme={theme} />}
+                />
+                {yKeys.map((key, keyIndex) => (
+                  <Bar
+                    key={key}
+                    dataKey={key}
+                    stackId="a"
+                    fill={
+                      theme.colors.barColors[
+                        keyIndex % theme.colors.barColors.length
+                      ]
+                    }
+                    shape={(props) => (
+                      <ModernBarShape
+                        {...props}
+                        yKeys={yKeys}
+                        dataKey={key}
+                        keyIndex={keyIndex}
+                      />
+                    )}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    animationBegin={keyIndex * 150}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.data === nextProps.data &&
+      prevProps.isValidGraph === nextProps.isValidGraph
     );
   }
 );
 
-const areEqual = (
-  prevProps: DynamicBarGraphProps,
-  nextProps: DynamicBarGraphProps
-) => {
-  return (
-    prevProps.data === nextProps.data &&
-    prevProps.isValidGraph === nextProps.isValidGraph
-  );
-};
-
-export default React.memo(DynamicBarGraph, areEqual);
+export default DynamicBarGraph;
