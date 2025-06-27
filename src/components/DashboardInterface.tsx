@@ -29,7 +29,7 @@ import schemaSampleData from "../data/sampleSchemaData";
 import DashboardError from "./DashboardError";
 import PreviousQuestionsModal from "./PreviousQuestionModal";
 import html2canvas from "html2canvas";
-import { FaFilePdf } from "react-icons/fa"; // Added import
+import { FaFilePdf } from "react-icons/fa";
 import {
   ListChecks,
   Database,
@@ -47,7 +47,6 @@ export type DashboardInterfaceHandle = {
   ) => void;
 };
 
-// Define the expected structure for KPI and Main View Data
 interface KpiData {
   kpi1: { label: string; value: string | number | null; change: number };
   kpi2: { label: string; value: string | number | null; change: number };
@@ -185,8 +184,12 @@ const DashboardInterface = memo(
         ...connections.map((connection: Connection) => ({
           value: connection.connectionName,
           label: connection.connectionName,
-          isAdmin: connection.isAdmin,
-        })),
+          isReading: {
+            value: connection.connectionName,
+            label: connection.connectionName,
+            isAdmin: connection.isAdmin,
+          }
+})),
       ];
 
       const initialDashboardState = useMemo(
@@ -873,6 +876,157 @@ const DashboardInterface = memo(
         ]
       );
 
+      const handleEditQuestion = useCallback(
+        async (questionMessageId: string, newQuestion: string) => {
+          if (!sessionId) {
+            toast.error("No active session to edit the question.");
+            return;
+          }
+
+          const dashboardItemIndex = dashboardHistory.findIndex(
+            (item) => item.questionMessageId === questionMessageId
+          );
+          if (dashboardItemIndex === -1) {
+            toast.error("Dashboard item not found for the given question.");
+            return;
+          }
+
+          try {
+            await axios.put(
+              `${API_URL}/api/messages/${questionMessageId}`,
+              {
+                token,
+                content: newQuestion,
+                timestamp: new Date().toISOString(),
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: questionMessageId,
+              message: { content: newQuestion, timestamp: new Date().toISOString() },
+            });
+
+            const botMessage = messages.find(
+              (msg) => msg.isBot && msg.parentId === questionMessageId
+            );
+
+            if (botMessage) {
+              await axios.put(
+                `${API_URL}/api/messages/${botMessage.id}`,
+                {
+                  token,
+                  content: "loading...",
+                  timestamp: new Date().toISOString(),
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessage.id,
+                message: { content: "loading...", timestamp: new Date().toISOString() },
+              });
+
+              try {
+                const connectionObj = connections.find(
+                  (conn) => conn.connectionName === selectedConnection
+                );
+                if (!connectionObj) {
+                  throw new Error("Selected connection not found.");
+                }
+
+                const payload = {
+                  question: newQuestion,
+                  connection: connectionObj,
+                  sessionId,
+                };
+                const response = await axios.post(`${CHATBOT_API_URL}/ask`, payload);
+                const botResponseData = response.data;
+
+                const actualKpiData = botResponseData.kpiData || initialEmptyKpiData;
+                const actualMainViewData = {
+                  chartData: Array.isArray(botResponseData.answer) ? botResponseData.answer : [],
+                  tableData: Array.isArray(botResponseData.answer) ? botResponseData.answer : [],
+                  queryData: typeof botResponseData.sql_query === "string" ? botResponseData.sql_query : "No query available.",
+                };
+                const actualTextualSummary = botResponseData.textualSummary || "Here is the analysis for the updated question.";
+
+                const botResponseContent = JSON.stringify(botResponseData, null, 2);
+                await axios.put(
+                  `${API_URL}/api/messages/${botMessage.id}`,
+                  {
+                    token,
+                    content: botResponseContent,
+                    timestamp: new Date().toISOString(),
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessage.id,
+                  message: { content: botResponseContent, timestamp: new Date().toISOString() },
+                });
+
+                setDashboardHistory((prev) =>
+                  prev.map((item, index) =>
+                    index === dashboardItemIndex
+                      ? {
+                          ...item,
+                          question: newQuestion,
+                          kpiData: actualKpiData,
+                          mainViewData: actualMainViewData,
+                          textualSummary: actualTextualSummary,
+                        }
+                      : item
+                  )
+                );
+              } catch (error) {
+                console.error("Error getting bot response for edited question:", error);
+                const errorContent = getErrorMessage(error);
+
+                await axios.put(
+                  `${API_URL}/api/messages/${botMessage.id}`,
+                  {
+                    token,
+                    content: `Error: ${errorContent}`,
+                    timestamp: new Date().toISOString(),
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessage.id,
+                  message: { content: `Error: ${errorContent}`, timestamp: new Date().toISOString() },
+                });
+
+                setDashboardHistory((prev) =>
+                  prev.map((item, index) =>
+                    index === dashboardItemIndex
+                      ? {
+                          ...item,
+                          question: newQuestion,
+                          ...getDashboardErrorState(newQuestion, errorContent),
+                          textualSummary: `Error: ${errorContent}`,
+                        }
+                      : item
+                  )
+                );
+              }
+            } else {
+              toast.error("No corresponding bot response found for the question.");
+            }
+          } catch (error) {
+            console.error("Error updating user message:", error);
+            toast.error(`Failed to update message: ${getErrorMessage(error)}`);
+          }
+        },
+        [sessionId, dashboardHistory, token, connections, selectedConnection, dispatchMessages, setDashboardHistory]
+      );
+
       const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
           e.preventDefault();
@@ -1425,6 +1579,7 @@ const DashboardInterface = memo(
                     onToggleFavorite={handleToggleFavorite}
                     currentConnection={selectedConnection || ""}
                     graphSummary={graphSummary}
+                    onEditQuestion={handleEditQuestion}
                   />
                 )
               ) : (

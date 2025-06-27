@@ -12,11 +12,11 @@ import {
   PieChartIcon as PieChartIconLucide,
   Table,
   TrendingUp,
-  Heart, // Import Star icon for favoriting
-  ScatterChartIcon as ScatterChartIconLucide, // Import ScatterChartIcon
-  AreaChart as AreaChartIconLucide, // Import AreaChartIcon
-  Snowflake as RadarChartIconLucide, // Import RadarChartIcon
-  List as FunnelChartIconLucide, // Import FunnelChartIcon (using List for now)
+  Heart,
+  ScatterChartIcon as ScatterChartIconLucide,
+  AreaChart as AreaChartIconLucide,
+  Snowflake as RadarChartIconLucide,
+  List as FunnelChartIconLucide,
 } from "lucide-react";
 import KPICard from "./KPICard";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
@@ -32,7 +32,6 @@ import { Theme } from "../types";
 import { useTheme } from "../ThemeContext";
 import SummaryModal from "./SummaryModal";
 
-// Placeholder types (unchanged)
 declare function generateKpiData(): {
   kpi1: { label: string; value: string | number; change: string };
   kpi2: { label: string; value: string | number; change: string };
@@ -44,22 +43,21 @@ declare function generateMainViewData(): {
   queryData: string;
 };
 
-// Define the handle interface for DashboardView
 export interface DashboardViewHandle {
   getGraphContainer: () => HTMLDivElement | null;
 }
 
 interface DashboardViewProps {
   dashboardItem: {
-    id: string; // Dashboard item's unique ID
+    id: string;
     question: string;
     kpiData: ReturnType<typeof generateKpiData>;
     mainViewData: ReturnType<typeof generateMainViewData>;
     textualSummary: string;
     lastViewType?: "graph" | "table" | "query";
-    isFavorited: boolean; // Indicates if the question message for this item is favorited
-    questionMessageId: string; // The actual message ID from the backend
-    connectionName: string; // The connection associated with this dashboard item
+    isFavorited: boolean;
+    questionMessageId: string;
+    connectionName: string;
   } | null;
   theme: Theme;
   isSubmitting: boolean;
@@ -68,16 +66,16 @@ interface DashboardViewProps {
   onNavigateHistory: (direction: "prev" | "next") => void;
   historyIndex: number;
   historyLength: number;
-  // New prop for handling favorite toggle
   onToggleFavorite: (
-    questionMessageId: string, // Pass the actual message ID
+    questionMessageId: string,
     questionContent: string,
     responseQuery: string,
     currentConnection: string,
     isCurrentlyFavorited: boolean
   ) => Promise<void>;
-  currentConnection: string; // Current active connection name
-  graphSummary: string | null; // New prop to receive summarized graph text
+  currentConnection: string;
+  graphSummary: string | null;
+  onEditQuestion: (questionMessageId: string, newQuestion: string) => Promise<void>;
 }
 
 const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
@@ -90,31 +88,38 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       onViewTypeChange,
       onToggleFavorite,
       currentConnection,
-      graphSummary, // Destructure the new prop
+      graphSummary,
+      onEditQuestion,
     },
     ref
   ) => {
-    // Add state for graph type, defaulting to 'bar'
     const [graphType, setGraphType] = useState("bar");
     const [groupBy, setGroupBy] = useState<string | null>(null);
     const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
     const [valueKey, setValueKey] = useState<string | null>(null);
-    const [showSummaryModal, setShowSummaryModal] = useState(false); // New state for modal visibility
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedQuestion, setEditedQuestion] = useState(
+      dashboardItem?.question || ""
+    );
 
-    // Ref for the entire graph container (which holds the actual chart)
     const graphContainerRef = useRef<HTMLDivElement>(null);
 
-    // Effect to automatically show the SummaryModal when graphSummary is received
     useEffect(() => {
       if (graphSummary) {
         setShowSummaryModal(true);
       }
     }, [graphSummary]);
 
-    // Expose the graph container ref to the parent component
     useImperativeHandle(ref, () => ({
       getGraphContainer: () => graphContainerRef.current,
     }));
+
+    useEffect(() => {
+      if (dashboardItem) {
+        setEditedQuestion(dashboardItem.question);
+      }
+    }, [dashboardItem]);
 
     if (!dashboardItem) {
       return (
@@ -185,7 +190,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       });
     };
 
-    // Function to auto-detect the best key to group by
     const autoDetectBestGroupBy = (
       rows: any[],
       excludeFn: (key: string) => boolean
@@ -204,21 +208,19 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         const values = sample.map((row) => row[key]).filter(Boolean);
         const uniqueCount = new Set(values).size;
 
-        // Skip if mostly unique or mostly same
         if (uniqueCount <= 1 || uniqueCount > sampleSize * 0.6) return;
 
         const nullCount =
           values.length < sampleSize ? sampleSize - values.length : 0;
         const nullPenalty = nullCount / sampleSize;
 
-        scores[key] = 1 / (uniqueCount + nullPenalty * 10); // lower uniqueCount is better
+        scores[key] = 1 / (uniqueCount + nullPenalty * 10);
       });
 
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
       return sorted.length ? sorted[0][0] : null;
     };
 
-    // Effect to reset groupBy and valueKey when dashboardItem.mainViewData.chartData changes
     useEffect(() => {
       const chartData = dashboardItem.mainViewData.chartData;
       if (chartData && chartData.length > 0) {
@@ -226,14 +228,14 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         setGroupBy(bestGroupBy || null);
 
         const validKeysForValue = getValidValueKeys(chartData);
-        setValueKey(validKeysForValue.length > 0 ? validKeysForValue[0] : null); // Reset valueKey to a suitable default
+        setValueKey(validKeysForValue.length > 0 ? validKeysForValue[0] : null);
       } else {
         setGroupBy(null);
         setValueKey(null);
       }
-      setAggregate("sum"); // Reset aggregate as well if needed, or keep it sticky
-      setGraphType("bar"); // Reset graph type to default
-    }, [dashboardItem.mainViewData.chartData]); // Depend on chartData changing
+      setAggregate("sum");
+      setGraphType("bar");
+    }, [dashboardItem.mainViewData.chartData]);
 
     useEffect(() => {
       if (aggregate === "sum" && !valueKey && dashboardItem) {
@@ -249,10 +251,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         className="flex flex-col flex-grow h-full min-h-[500px] p-2"
         style={{ backgroundColor: theme.colors.background }}
       >
-        {/* Top section: Current Question and KPI Cards */}
         <div className="lg:flex-row items-start">
           <div
-            className="w-full p-2 mb-2 rounded-xl shadow-md flex items-center justify-between" // Added flex and justify-between for button
+            className="w-full p-2 mb-2 rounded-xl shadow-md flex items-center justify-between"
             style={{
               backgroundColor: theme.colors.surface,
               color: theme.colors.text,
@@ -260,71 +261,127 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               borderRadius: theme.borderRadius.large,
             }}
           >
-            <h3
-              className="text-xl font-bold text-center flex-grow" // flex-grow to center text
-              style={{ color: theme.colors.text }}
-            >
-              Question: {dashboardItem.question}
-            </h3>
-            {/* Favorite Button */}
-            {dashboardItem.questionMessageId && ( // Only show if we have a message ID to favorite
-              <button
-                onClick={() =>
-                  onToggleFavorite(
-                    dashboardItem.questionMessageId, // Pass the actual message ID
-                    dashboardItem.question,
-                    dashboardItem.mainViewData.queryData,
-                    dashboardItem.connectionName, // Use connectionName from dashboardItem
-                    dashboardItem.isFavorited
-                  )
-                }
-                title={
-                  dashboardItem.isFavorited
-                    ? "Remove from Favorites"
-                    : "Add to Favorites"
-                }
-                className="px-1 rounded-full transition-colors duration-200"
-                style={{
-                  color: dashboardItem.isFavorited
-                    ? theme.colors.accent
-                    : theme.colors.textSecondary,
-                  backgroundColor: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-                disabled={isSubmitting} // Disable during submission
-              >
-                {dashboardItem.isFavorited ? (
-                  <Heart size={24} fill={theme.colors.accent} />
-                ) : (
-                  <Heart size={24} />
+            {isEditing ? (
+              <div className="flex-grow">
+                <input
+                  type="text"
+                  value={editedQuestion}
+                  onChange={(e) => setEditedQuestion(e.target.value)}
+                  className="w-full p-2 rounded-md"
+                  style={{
+                    backgroundColor: theme.colors.background,
+                    color: theme.colors.text,
+                  }}
+                />
+                <div className="flex justify-end mt-2">
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditedQuestion(dashboardItem.question);
+                    }}
+                    className="px-2 py-1 mr-2 rounded-md"
+                    style={{
+                      backgroundColor: theme.colors.error,
+                      color: "white",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (editedQuestion.trim()) {
+                        onEditQuestion(
+                          dashboardItem.questionMessageId,
+                          editedQuestion
+                        );
+                        setIsEditing(false);
+                      }
+                    }}
+                    className="px-2 py-1 rounded-md"
+                    style={{
+                      backgroundColor: theme.colors.accent,
+                      color: "white",
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h3
+                  className="text-xl font-bold text-center flex-grow"
+                  style={{ color: theme.colors.text }}
+                >
+                  Question: {dashboardItem.question}
+                </h3>
+                {dashboardItem.questionMessageId && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    disabled={isSubmitting}
+                    className="px-2 py-1 rounded-md"
+                    style={{
+                      backgroundColor: theme.colors.accent,
+                      color: "white",
+                    }}
+                  >
+                    Edit
+                  </button>
                 )}
-              </button>
+                {dashboardItem.questionMessageId && (
+                  <button
+                    onClick={() =>
+                      onToggleFavorite(
+                        dashboardItem.questionMessageId,
+                        dashboardItem.question,
+                        dashboardItem.mainViewData.queryData,
+                        dashboardItem.connectionName,
+                        dashboardItem.isFavorited
+                      )
+                    }
+                    title={
+                      dashboardItem.isFavorited
+                        ? "Remove from Favorites"
+                        : "Add to Favorites"
+                    }
+                    className="px-1 rounded-full transition-colors duration-200 ml-2"
+                    style={{
+                      color: dashboardItem.isFavorited
+                        ? theme.colors.accent
+                        : theme.colors.textSecondary,
+                      backgroundColor: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    {dashboardItem.isFavorited ? (
+                      <Heart size={24} fill={theme.colors.accent} />
+                    ) : (
+                      <Heart size={24} />
+                    )}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* Main Content Area: Graph on left, Table/Query on right */}
-        <div className="flex  flex-grow">
-          {/* Graph Section */}
+        <div className="flex flex-grow">
           <div
-            ref={graphContainerRef} // Assign ref here to the main graph container
+            ref={graphContainerRef}
             className="flex-1 rounded-xl flex flex-col overflow-hidden"
             style={{
               backgroundColor: theme.colors.surface,
               boxShadow: theme.shadow.md,
               borderRadius: theme.borderRadius.large,
-              minHeight: "300px", // Ensure some visible base
-              maxHeight: "calc(100vh - 130px)", // Prevent overflow
+              minHeight: "300px",
+              maxHeight: "calc(100vh - 130px)",
               display: "flex",
               flexDirection: "column",
             }}
           >
-            {/* Shared Filters Panel */}
             <div className="p-2 flex flex-wrap gap-3 items-center">
-              {/* Select Dropdown for Graph Type */}
-
-              {/* Conditionally render filters if groupBy is available */}
               {dashboardItem.mainViewData.chartData &&
                 dashboardItem.mainViewData.chartData.length > 0 && (
                   <>
@@ -354,18 +411,14 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         <option value="pie">Pie</option>
                         <option value="scatter">Scatter</option>
                         <option value="radar">Radar</option>
-                        <option value="funnel">Funnel</option>{" "}
-                        {/* Added Funnel option */}
+                        <option value="funnel">Funnel</option>
                       </select>
                     </div>
-                    {/* Group By and Aggregate are not typically used for scatter/radar/funnel,
-                      but we'll keep them visible for other graph types. */}
                     {graphType !== "scatter" &&
                       graphType !== "radar" &&
                       graphType !== "funnel" &&
                       groupBy && (
                         <>
-                          {/* Group By */}
                           <div className="flex items-center gap-2">
                             <label
                               className="font-semibold text-sm"
@@ -395,8 +448,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                 ))}
                             </select>
                           </div>
-
-                          {/* Aggregate */}
                           <div className="flex items-center gap-2">
                             <label
                               className="font-semibold text-sm"
@@ -421,8 +472,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               <option value="sum">Sum</option>
                             </select>
                           </div>
-
-                          {/* Value Key — only if "sum" is selected */}
                           {aggregate === "sum" && (
                             <div className="flex items-center gap-2">
                               <label
@@ -465,7 +514,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                           </label>
                           <select
                             className="px-2 py-1 rounded-md border shadow-sm"
-                            value={groupBy || ""} // Reusing groupBy state for X-axis for simplicity
+                            value={groupBy || ""}
                             onChange={(e) => setGroupBy(e.target.value)}
                             style={{
                               backgroundColor: theme.colors.surface,
@@ -492,7 +541,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                           </label>
                           <select
                             className="px-2 py-1 rounded-md border shadow-sm"
-                            value={valueKey || ""} // Reusing valueKey state for Y-axis for simplicity
+                            value={valueKey || ""}
                             onChange={(e) => setValueKey(e.target.value)}
                             style={{
                               backgroundColor: theme.colors.surface,
@@ -680,7 +729,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 )}
             </div>
 
-            {/* Graph Rendering */}
             <div className="flex flex-col flex-1 min-h-[400px]">
               {graphType === "bar" && (
                 <DynamicBarGraph
@@ -751,68 +799,23 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               {graphType === "funnel" && (
                 <DynamicFunnelGraph
                   data={dashboardItem.mainViewData.chartData}
-                  groupBy={groupBy} // Used as stage name
+                  groupBy={groupBy}
                   setGroupBy={setGroupBy}
                   aggregate={aggregate}
                   setAggregate={setAggregate}
-                  valueKey={valueKey} // Used as stage value
+                  valueKey={valueKey}
                   setValueKey={setValueKey}
                 />
               )}
             </div>
           </div>
 
-          {/* Right Section: KPI Cards + Table/Query */}
           <div className="flex flex-col lg:w-[40%] w-full overflow-hidden">
-            {/* KPI Cards */}
-            {/* <div className="grid m-2 grid-cols-3 gap-2">
-              <KPICard
-                title={dashboardItem.kpiData.kpi1.label}
-                value={dashboardItem.kpiData.kpi1.value}
-                change={dashboardItem.kpiData.kpi1.change}
-                icon={
-                  <TrendingUp
-                    size={24}
-                    style={{ color: theme.colors.accent }}
-                  />
-                }
-                theme={theme}
-              />
-              <KPICard
-                title={dashboardItem.kpiData.kpi2.label}
-                value={dashboardItem.kpiData.kpi2.value}
-                change={dashboardItem.kpiData.kpi2.change}
-                icon={
-                  <BarChartIconLucide
-                    size={24}
-                    style={{ color: theme.colors.accent }}
-                  />
-                }
-                theme={theme}
-              />
-              <KPICard
-                title={dashboardItem.kpiData.kpi3.label}
-                value={dashboardItem.kpiData.kpi3.value}
-                change={dashboardItem.kpiData.kpi3.change}
-                icon={
-                  <PieChartIconLucide
-                    size={24}
-                    style={{ color: theme.colors.accent }}
-                  />
-                }
-                theme={theme}
-              />
-            </div> */}
-
-            {/* Table/Query Section */}
             <div
               className="flex-1 overflow-y-auto mx-2 rounded-xl"
               style={{
-                // backgroundColor: theme.colors.surface,
-                // boxShadow: theme.shadow.lg,
-                // borderRadius: theme.borderRadius.large,
-                minHeight: "300px", // optional min height
-                maxHeight: "100%", // limits table height
+                minHeight: "300px",
+                maxHeight: "100%",
               }}
             >
               {activeViewType === "table" && (
@@ -827,32 +830,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               )}
             </div>
-
-            {/* Summarized Graph Text Section - No explicit button needed here
-            {graphSummary && (
-              <div
-                className="mt-2 p-2 mx-2 rounded-xl shadow-md"
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  color: theme.colors.text,
-                  boxShadow: theme.shadow.md,
-                  borderRadius: theme.borderRadius.large,
-                }}
-              >
-                <h4
-                  className="text-lg font-bold mb-2"
-                  style={{ color: theme.colors.text }}
-                >
-                  Graph Summary:
-                </h4>
-                <p className="text-sm" style={{ color: theme.colors.text }}>
-                  {graphSummary}
-                </p>
-              </div>
-            )} */}
           </div>
 
-          {/* View Toggle Buttons */}
           <div className="flex flex-row self-start lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 flex-shrink-0 mt-4 lg:mt-0 justify-center">
             {(["table", "query"] as const).map((viewType) => (
               <button
@@ -879,7 +858,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           </div>
         </div>
 
-        {/* Summary Modal */}
         {showSummaryModal && graphSummary && (
           <SummaryModal
             summaryText={graphSummary}
