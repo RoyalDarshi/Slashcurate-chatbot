@@ -384,7 +384,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
           style={{
             background: theme.colors.surface,
             backdropFilter: "blur(20px)",
-            boxShadow: theme.shadow.lg,
             borderRadius: theme.borderRadius.large,
             minHeight: "300px",
           }}

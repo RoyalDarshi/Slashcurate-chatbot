@@ -865,11 +865,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                   backgroundColor:
                     activeViewType === viewType
                       ? theme.colors.accent
-                      : theme.colors.bubbleBot,
+                      : theme.colors.surface,
                   color:
-                    activeViewType === viewType
-                      ? "white"
-                      : theme.colors.bubbleBotText,
+                    activeViewType === viewType ? "white" : theme.colors.accent,
                   boxShadow: theme.shadow.md,
                   borderRadius: theme.borderRadius.pill,
                 }}

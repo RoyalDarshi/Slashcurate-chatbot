@@ -527,7 +527,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         <div
           className="overflow-auto scrollbar-thin"
           style={{
-            height: "calc(100vh - 350px)", // Adjust height based on your layout
+            height: "calc(100vh - 235px)", // Adjust height based on your layout
             scrollbarColor: `${theme.colors.accent}40 ${theme.colors.surface}`,
           }}
         >
