@@ -5,6 +5,7 @@ import {
   memo,
   forwardRef,
   useImperativeHandle,
+  useRef,
 } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -106,6 +107,7 @@ const ChatInterface = memo(
       } = useChatScroll();
 
       const [input, setInput] = useState("");
+      const connectionDropdownRef = useRef<HTMLDivElement>(null);
       const [isSubmitting, setIsSubmitting] = useState(false);
       const [editingMessageId, setEditingMessageId] = useState<string | null>(
         null
@@ -240,6 +242,27 @@ const ChatInterface = memo(
         }, 2000);
         return () => clearInterval(interval);
       }, [messages, token, dispatchMessages]);
+
+      useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          if (
+            connectionDropdownRef.current &&
+            !connectionDropdownRef.current.contains(event.target as Node)
+          ) {
+            setIsConnectionDropdownOpen(false);
+          }
+        };
+
+        if (isConnectionDropdownOpen) {
+          document.addEventListener("mousedown", handleClickOutside);
+        } else {
+          document.removeEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => {
+          document.removeEventListener("mousedown", handleClickOutside);
+        };
+      }, [isConnectionDropdownOpen]);
 
       useEffect(() => {
         const handleVisibilityChange = async () => {
@@ -1168,6 +1191,9 @@ const ChatInterface = memo(
       };
 
       const toggleConnectionDropdown = useCallback(() => {
+        if (isDbExplorerOpen) {
+          setIsDbExplorerOpen(false);
+        }
         setIsConnectionDropdownOpen((prev) => !prev);
       }, []);
 
@@ -1372,7 +1398,7 @@ const ChatInterface = memo(
               </div>
             )}
             <div className="max-w-4xl mx-auto flex items-center gap-2">
-              <div className="relative">
+              <div className="relative" ref={connectionDropdownRef}>
                 <CustomTooltip
                   title="Change or create a connection"
                   position="top"
