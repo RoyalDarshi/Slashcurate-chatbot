@@ -188,8 +188,8 @@ const DashboardInterface = memo(
             value: connection.connectionName,
             label: connection.connectionName,
             isAdmin: connection.isAdmin,
-          }
-})),
+          },
+        })),
       ];
 
       const initialDashboardState = useMemo(
@@ -900,7 +900,6 @@ const DashboardInterface = memo(
             newQuestion,
           });
 
-          // Immediately set submitting and loading state
           setIsSubmitting(true);
           console.log("Set isSubmitting to true");
           setDashboardHistory((prev) => {
@@ -920,13 +919,11 @@ const DashboardInterface = memo(
             return newHistory;
           });
 
-          // Minimum delay to ensure skeleton is visible
           const minLoadingTime = new Promise((resolve) =>
             setTimeout(resolve, 500)
           );
 
           try {
-            // Update user message on server and in state
             await axios.put(
               `${API_URL}/api/messages/${questionMessageId}`,
               {
@@ -953,7 +950,6 @@ const DashboardInterface = memo(
             );
 
             if (botMessage) {
-              // Set bot message to loading
               await axios.put(
                 `${API_URL}/api/messages/${botMessage.id}`,
                 {
@@ -1039,7 +1035,6 @@ const DashboardInterface = memo(
                 });
                 console.log("Bot message updated with response in state");
 
-                // Update dashboard item with new data
                 setDashboardHistory((prev) => {
                   const newHistory = prev.map((item, index) =>
                     index === dashboardItemIndex
@@ -1069,20 +1064,6 @@ const DashboardInterface = memo(
                 ) {
                   errorContent = "Request timed out. Please try again.";
                 }
-                // setDashboardHistory((prev) =>
-                //   prev.map((item) =>
-                //     item.id === newLoadingEntryId
-                //       ? {
-                //           ...item,
-                //           ...getDashboardErrorState(newQuestion, errorContent),
-                //           textualSummary: `Error: ${errorContent}`,
-                //           isFavorited: item.isFavorited,
-                //           questionMessageId: item.questionMessageId,
-                //           connectionName: item.connectionName,
-                //         }
-                //       : item
-                //   )
-                // );
                 await axios.put(
                   `${API_URL}/api/messages/${botMessage.id}`,
                   {
@@ -1104,7 +1085,6 @@ const DashboardInterface = memo(
                 });
                 console.log("Bot message updated with error in state");
 
-                // Update dashboard item to error state
                 setDashboardHistory((prev) => {
                   const newHistory = prev.map((item, index) =>
                     index === dashboardItemIndex
@@ -1131,7 +1111,6 @@ const DashboardInterface = memo(
           } catch (error) {
             console.error("Error updating user message:", error);
             toast.error(`Failed to update message: ${getErrorMessage(error)}`);
-            // Update dashboard to error state
             setDashboardHistory((prev) => {
               const newHistory = prev.map((item, index) =>
                 index === dashboardItemIndex
@@ -1153,7 +1132,6 @@ const DashboardInterface = memo(
               return newHistory;
             });
           } finally {
-            // Ensure minimum loading time and reset submitting
             await minLoadingTime;
             setIsSubmitting(false);
             console.log("Set isSubmitting to false");
@@ -1165,6 +1143,174 @@ const DashboardInterface = memo(
           token,
           connections,
           selectedConnection,
+          dispatchMessages,
+        ]
+      );
+
+      const handleRetry = useCallback(
+        async (questionMessageId: string) => {
+          const dashboardItemIndex = dashboardHistory.findIndex(
+            (item) => item.questionMessageId === questionMessageId
+          );
+          if (dashboardItemIndex === -1) {
+            toast.error("Dashboard item not found for retry.");
+            return;
+          }
+          const dashboardItem = dashboardHistory[dashboardItemIndex];
+          const { question, connectionName } = dashboardItem;
+
+          const botMessage = messages.find(
+            (msg) => msg.isBot && msg.parentId === questionMessageId
+          );
+          if (!botMessage) {
+            toast.error("Bot response not found for retry.");
+            return;
+          }
+
+          const connectionObj = connections.find(
+            (conn) => conn.connectionName === connectionName
+          );
+          if (!connectionObj) {
+            toast.error("Connection details not found for retry.");
+            return;
+          }
+
+          if (!sessionId) {
+            toast.error("Session ID is missing, cannot retry.");
+            return;
+          }
+
+          setIsSubmitting(true);
+          setDashboardHistory((prev) =>
+            prev.map((item, index) =>
+              index === dashboardItemIndex
+                ? { ...item, ...getDashboardLoadingState() }
+                : item
+            )
+          );
+
+          try {
+            await axios.put(
+              `${API_URL}/api/messages/${botMessage.id}`,
+              {
+                token,
+                content: "loading...",
+                timestamp: new Date().toISOString(),
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessage.id,
+              message: {
+                content: "loading...",
+                timestamp: new Date().toISOString(),
+              },
+            });
+
+            const payload = {
+              question,
+              connection: connectionObj,
+              sessionId,
+            };
+            const response = await axios.post(
+              `${CHATBOT_API_URL}/ask`,
+              payload
+            );
+            const botResponseData = response.data;
+
+            const actualKpiData =
+              botResponseData.kpiData || initialEmptyKpiData;
+            const actualMainViewData = {
+              chartData: Array.isArray(botResponseData.answer)
+                ? botResponseData.answer
+                : [],
+              tableData: Array.isArray(botResponseData.answer)
+                ? botResponseData.answer
+                : [],
+              queryData:
+                typeof botResponseData.sql_query === "string"
+                  ? botResponseData.sql_query
+                  : "No query available.",
+            };
+            const actualTextualSummary =
+              botResponseData.textualSummary ||
+              `Here is the analysis for: "${question}"`;
+
+            setDashboardHistory((prev) =>
+              prev.map((item, index) =>
+                index === dashboardItemIndex
+                  ? {
+                      ...item,
+                      kpiData: actualKpiData,
+                      mainViewData: actualMainViewData,
+                      textualSummary: actualTextualSummary,
+                    }
+                  : item
+              )
+            );
+
+            const botResponseContent = JSON.stringify(botResponseData, null, 2);
+            await axios.put(
+              `${API_URL}/api/messages/${botMessage.id}`,
+              {
+                token,
+                content: botResponseContent,
+                timestamp: new Date().toISOString(),
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessage.id,
+              message: {
+                content: botResponseContent,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          } catch (error) {
+            console.error("Error during retry:", error);
+            const errorContent = getErrorMessage(error);
+
+            setDashboardHistory((prev) =>
+              prev.map((item, index) =>
+                index === dashboardItemIndex
+                  ? {
+                      ...item,
+                      ...getDashboardErrorState(question, errorContent),
+                      textualSummary: `Error: ${errorContent}`,
+                    }
+                  : item
+              )
+            );
+
+            await axios.put(
+              `${API_URL}/api/messages/${botMessage.id}`,
+              {
+                token,
+                content: `Error: ${errorContent}`,
+                timestamp: new Date().toISOString(),
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessage.id,
+              message: {
+                content: `Error: ${errorContent}`,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          } finally {
+            setIsSubmitting(false);
+          }
+        },
+        [
+          dashboardHistory,
+          messages,
+          connections,
+          sessionId,
+          token,
           dispatchMessages,
         ]
       );
@@ -1718,6 +1864,9 @@ const DashboardInterface = memo(
                             currentDashboardView.questionMessageId,
                             newQuestion
                           )
+                        }
+                        onRetry={() =>
+                          handleRetry(currentDashboardView.questionMessageId)
                         }
                       />
                     );
