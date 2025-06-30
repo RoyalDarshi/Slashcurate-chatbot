@@ -342,7 +342,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               background: theme.colors.surface,
               borderRadius: theme.borderRadius.large,
               borderTopLeftRadius: "0",
-              boxShadow: `0 2px 6px ${theme.colors.text}20`,
+              // boxShadow: `0 2px 6px ${theme.colors.text}20`,
             }}
           >
             <MiniLoader />
@@ -367,7 +367,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               background: theme.colors.surface,
               borderRadius: theme.borderRadius.large,
               borderTopLeftRadius: 0,
-              boxShadow: `0 2px 6px ${theme.colors.text}20`,
+              // boxShadow: `0 2px 6px ${theme.colors.text}20`,
             }}
           >
             <ReactMarkdown

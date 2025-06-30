@@ -1191,7 +1191,7 @@ const ChatInterface = memo(
           />
           {sessionConnectionError && (
             <div
-              className="flex items-center justify-between sticky top-0 z-20 mx-auto my-2 max-w-3xl animate-fade-in"
+              className="flex items-center justify-between sticky top-0 z-20 mx-auto max-w-3xl animate-fade-in"
               style={{
                 background: theme.colors.surface,
                 color: theme.colors.error,
@@ -1199,7 +1199,7 @@ const ChatInterface = memo(
                 borderRadius: theme.borderRadius.default,
                 boxShadow: theme.shadow.md,
                 padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                marginBottom: theme.spacing.md,
+                // marginBottom: theme.spacing.md,
               }}
             >
               <div className="flex items-center">
@@ -1221,11 +1221,11 @@ const ChatInterface = memo(
                 </svg>
                 <div>
                   <div className="font-medium">{sessionConnectionError}</div>
-                  <div className="text-sm opacity-75">
+                  {/* <div className="text-sm opacity-75">
                     You can view the chat history but cannot ask new questions
                     with this session. Start a new chat or select a valid
                     connection.
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
@@ -1320,7 +1320,7 @@ const ChatInterface = memo(
                         onUnfavorite={handleUnfavoriteMessage}
                         isFavorited={message.isFavorited || false}
                         responseStatus={responseStatus}
-                        disabled={!!sessionConnectionError && message.isBot}
+                        disabled={!!sessionConnectionError}
                         onRetry={handleRetry}
                         onSummarizeGraph={summarizeGraph}
                         isSubmitting={isSubmitting}
@@ -1380,7 +1380,7 @@ const ChatInterface = memo(
                   <button
                     type="button"
                     onClick={toggleConnectionDropdown}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !!sessionConnectionError}
                     className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
                     style={{
                       background: theme.colors.surface,
@@ -1476,7 +1476,11 @@ const ChatInterface = memo(
                 <button
                   type="button"
                   onClick={toggleDbExplorer}
-                  disabled={isSubmitting || !selectedConnection}
+                  disabled={
+                    isSubmitting ||
+                    !selectedConnection ||
+                    !!sessionConnectionError
+                  }
                   className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
                     isDbExplorerOpen ? "schema-active" : ""
                   }`}
@@ -1515,7 +1519,7 @@ const ChatInterface = memo(
                 isSubmitting={isSubmitting}
                 onInputChange={setInput}
                 onSubmit={handleSubmit}
-                disabled={!!sessionConnectionError && !selectedConnection}
+                disabled={!!sessionConnectionError}
               />
             </div>
           </div>
