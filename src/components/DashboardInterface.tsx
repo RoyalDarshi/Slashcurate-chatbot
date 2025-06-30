@@ -566,7 +566,10 @@ const DashboardInterface = memo(
 
           if (!currentSessionId) {
             try {
-              const newSessId = await startNewSession(connection, question);
+              const newSessId: string = await startNewSession(
+                connection,
+                question
+              );
               if (newSessId) {
                 currentSessionId = newSessId;
                 dispatchMessages({
@@ -627,8 +630,8 @@ const DashboardInterface = memo(
             parentId: null,
           };
 
-          let finalUserMessageId: string | null = null;
-          let botMessageId: string | null = null;
+          let finalUserMessageId: string = "";
+          let botMessageId: string = "";
 
           try {
             const userResponse = await axios.post(
@@ -685,7 +688,7 @@ const DashboardInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            botMessageId = botLoadingResponse.data.id;
+            botMessageId = botLoadingResponse?.data?.id;
             const botLoadingMessage: Message = {
               id: botMessageId,
               isBot: true,
@@ -891,7 +894,38 @@ const DashboardInterface = memo(
             return;
           }
 
+          console.log("Starting edit question:", {
+            questionMessageId,
+            newQuestion,
+          });
+
+          // Immediately set submitting and loading state
+          setIsSubmitting(true);
+          console.log("Set isSubmitting to true");
+          setDashboardHistory((prev) => {
+            const newHistory = prev.map((item, index) =>
+              index === dashboardItemIndex
+                ? {
+                    ...item,
+                    question: newQuestion,
+                    ...getDashboardLoadingState(),
+                  }
+                : item
+            );
+            console.log(
+              "Updated dashboardHistory to loading state:",
+              newHistory[dashboardItemIndex]
+            );
+            return newHistory;
+          });
+
+          // Minimum delay to ensure skeleton is visible
+          const minLoadingTime = new Promise((resolve) =>
+            setTimeout(resolve, 500)
+          );
+
           try {
+            // Update user message on server and in state
             await axios.put(
               `${API_URL}/api/messages/${questionMessageId}`,
               {
@@ -901,18 +935,24 @@ const DashboardInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
+            console.log("User message updated on server");
 
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: questionMessageId,
-              message: { content: newQuestion, timestamp: new Date().toISOString() },
+              message: {
+                content: newQuestion,
+                timestamp: new Date().toISOString(),
+              },
             });
+            console.log("User message updated in state");
 
             const botMessage = messages.find(
               (msg) => msg.isBot && msg.parentId === questionMessageId
             );
 
             if (botMessage) {
+              // Set bot message to loading
               await axios.put(
                 `${API_URL}/api/messages/${botMessage.id}`,
                 {
@@ -922,12 +962,17 @@ const DashboardInterface = memo(
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
+              console.log("Bot message set to loading on server");
 
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
                 id: botMessage.id,
-                message: { content: "loading...", timestamp: new Date().toISOString() },
+                message: {
+                  content: "loading...",
+                  timestamp: new Date().toISOString(),
+                },
               });
+              console.log("Bot message set to loading in state");
 
               try {
                 const connectionObj = connections.find(
@@ -942,18 +987,36 @@ const DashboardInterface = memo(
                   connection: connectionObj,
                   sessionId,
                 };
-                const response = await axios.post(`${CHATBOT_API_URL}/ask`, payload);
+                const response = await axios.post(
+                  `${CHATBOT_API_URL}/ask`,
+                  payload
+                );
+                console.log("Received bot response:", response.data);
                 const botResponseData = response.data;
 
-                const actualKpiData = botResponseData.kpiData || initialEmptyKpiData;
+                const actualKpiData =
+                  botResponseData.kpiData || initialEmptyKpiData;
                 const actualMainViewData = {
-                  chartData: Array.isArray(botResponseData.answer) ? botResponseData.answer : [],
-                  tableData: Array.isArray(botResponseData.answer) ? botResponseData.answer : [],
-                  queryData: typeof botResponseData.sql_query === "string" ? botResponseData.sql_query : "No query available.",
+                  chartData: Array.isArray(botResponseData.answer)
+                    ? botResponseData.answer
+                    : [],
+                  tableData: Array.isArray(botResponseData.answer)
+                    ? botResponseData.answer
+                    : [],
+                  queryData:
+                    typeof botResponseData.sql_query === "string"
+                      ? botResponseData.sql_query
+                      : "No query available.",
                 };
-                const actualTextualSummary = botResponseData.textualSummary || "Here is the analysis for the updated question.";
+                const actualTextualSummary =
+                  botResponseData.textualSummary ||
+                  "Here is the analysis for the updated question.";
 
-                const botResponseContent = JSON.stringify(botResponseData, null, 2);
+                const botResponseContent = JSON.stringify(
+                  botResponseData,
+                  null,
+                  2
+                );
                 await axios.put(
                   `${API_URL}/api/messages/${botMessage.id}`,
                   {
@@ -963,28 +1026,41 @@ const DashboardInterface = memo(
                   },
                   { headers: { "Content-Type": "application/json" } }
                 );
+                console.log("Bot message updated with response on server");
 
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
                   id: botMessage.id,
-                  message: { content: botResponseContent, timestamp: new Date().toISOString() },
+                  message: {
+                    content: botResponseContent,
+                    timestamp: new Date().toISOString(),
+                  },
                 });
+                console.log("Bot message updated with response in state");
 
-                setDashboardHistory((prev) =>
-                  prev.map((item, index) =>
+                // Update dashboard item with new data
+                setDashboardHistory((prev) => {
+                  const newHistory = prev.map((item, index) =>
                     index === dashboardItemIndex
                       ? {
                           ...item,
-                          question: newQuestion,
                           kpiData: actualKpiData,
                           mainViewData: actualMainViewData,
                           textualSummary: actualTextualSummary,
                         }
                       : item
-                  )
-                );
+                  );
+                  console.log(
+                    "Updated dashboardHistory with new data:",
+                    newHistory[dashboardItemIndex]
+                  );
+                  return newHistory;
+                });
               } catch (error) {
-                console.error("Error getting bot response for edited question:", error);
+                console.error(
+                  "Error getting bot response for edited question:",
+                  error
+                );
                 const errorContent = getErrorMessage(error);
 
                 await axios.put(
@@ -996,15 +1072,21 @@ const DashboardInterface = memo(
                   },
                   { headers: { "Content-Type": "application/json" } }
                 );
+                console.log("Bot message updated with error on server");
 
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
                   id: botMessage.id,
-                  message: { content: `Error: ${errorContent}`, timestamp: new Date().toISOString() },
+                  message: {
+                    content: `Error: ${errorContent}`,
+                    timestamp: new Date().toISOString(),
+                  },
                 });
+                console.log("Bot message updated with error in state");
 
-                setDashboardHistory((prev) =>
-                  prev.map((item, index) =>
+                // Update dashboard item to error state
+                setDashboardHistory((prev) => {
+                  const newHistory = prev.map((item, index) =>
                     index === dashboardItemIndex
                       ? {
                           ...item,
@@ -1013,18 +1095,58 @@ const DashboardInterface = memo(
                           textualSummary: `Error: ${errorContent}`,
                         }
                       : item
-                  )
-                );
+                  );
+                  console.log(
+                    "Updated dashboardHistory to error state:",
+                    newHistory[dashboardItemIndex]
+                  );
+                  return newHistory;
+                });
               }
             } else {
-              toast.error("No corresponding bot response found for the question.");
+              toast.error(
+                "No corresponding bot response found for the question."
+              );
             }
           } catch (error) {
             console.error("Error updating user message:", error);
             toast.error(`Failed to update message: ${getErrorMessage(error)}`);
+            // Update dashboard to error state
+            setDashboardHistory((prev) => {
+              const newHistory = prev.map((item, index) =>
+                index === dashboardItemIndex
+                  ? {
+                      ...item,
+                      question: newQuestion,
+                      ...getDashboardErrorState(
+                        newQuestion,
+                        getErrorMessage(error)
+                      ),
+                      textualSummary: `Error: ${getErrorMessage(error)}`,
+                    }
+                  : item
+              );
+              console.log(
+                "Updated dashboardHistory to error state (user message error):",
+                newHistory[dashboardItemIndex]
+              );
+              return newHistory;
+            });
+          } finally {
+            // Ensure minimum loading time and reset submitting
+            await minLoadingTime;
+            setIsSubmitting(false);
+            console.log("Set isSubmitting to false");
           }
         },
-        [sessionId, dashboardHistory, token, connections, selectedConnection, dispatchMessages, setDashboardHistory]
+        [
+          sessionId,
+          dashboardHistory,
+          token,
+          connections,
+          selectedConnection,
+          dispatchMessages,
+        ]
       );
 
       const handleSubmit = useCallback(
@@ -1201,8 +1323,6 @@ const DashboardInterface = memo(
           toast.error("No graph visible to summarize.");
           return;
         }
-
-        setIsSubmitting(true);
         setGraphSummary(null);
         toast.info("Summarizing graph...", { autoClose: false });
 
@@ -1516,98 +1636,117 @@ const DashboardInterface = memo(
 
           <main className="flex-grow flex flex-col items-center overflow-y-auto">
             <div className="w-full flex-grow flex flex-col">
-              {connectionsLoading ? (
-                <div className="flex justify-center items-center flex-grow">
-                  <Loader text="Loading connections..." />
-                </div>
-              ) : connections.length === 0 && !connectionsLoading ? (
-                <div className="flex flex-col items-center justify-center flex-grow text-center">
-                  <h1
-                    className={`text-2xl font-semibold mb-4`}
-                    style={{ color: theme.colors.text }}
-                  >
-                    No Data Connections
-                  </h1>
-                  <p
-                    className={`mb-6`}
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    Please create a data connection to start analyzing your
-                    data.
-                  </p>
-                  <button
-                    onClick={onCreateConSelected}
-                    className="px-6 py-2 font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
-                    style={{
-                      backgroundColor: theme.colors.accent,
-                      color: theme.colors.surface,
-                      boxShadow: theme.shadow.md,
-                      transition: theme.transition.default,
-                    }}
-                  >
-                    Create Connection
-                  </button>
-                </div>
-              ) : showDashboardContent ? (
-                isSubmitting &&
-                currentDashboardView.textualSummary ===
-                  "Processing your request..." ? (
-                  <DashboardSkeletonLoader
-                    question={currentDashboardView.question}
-                    theme={theme}
-                  />
-                ) : isErrorState ? (
-                  <DashboardError
-                    question={currentDashboardView.question}
-                    errorMessage={currentDashboardView.textualSummary.replace(
-                      "Error: ",
-                      ""
-                    )}
-                    theme={theme}
-                  />
-                ) : (
-                  <DashboardView
-                    ref={dashboardViewRef}
-                    dashboardItem={currentDashboardView}
-                    theme={theme}
-                    isSubmitting={isSubmitting}
-                    activeViewType={currentMainViewType}
-                    onViewTypeChange={handleViewTypeChange}
-                    onNavigateHistory={navigateDashboardHistory}
-                    historyIndex={currentHistoryIndex}
-                    historyLength={dashboardHistory.length}
-                    onToggleFavorite={handleToggleFavorite}
-                    currentConnection={selectedConnection || ""}
-                    graphSummary={graphSummary}
-                    onEditQuestion={handleEditQuestion}
-                  />
-                )
-              ) : (
-                <div className="flex flex-col items-center justify-start flex-grow text-center px-4 pt-12">
-                  <h1
-                    className={`text-3xl font-bold mb-4`}
-                    style={{ marginTop: "10vh", color: theme.colors.text }}
-                  >
-                    Hello there! How can I help you today?
-                  </h1>
-                  {!selectedConnection && connections.length > 0 && (
-                    <div className="flex flex-col items-center mb-6">
+              {(() => {
+                if (connectionsLoading) {
+                  return (
+                    <div className="flex justify-center items-center flex-grow">
+                      <Loader text="Loading connections..." />
+                    </div>
+                  );
+                }
+                if (connections.length === 0 && !connectionsLoading) {
+                  return (
+                    <div className="flex flex-col items-center justify-center flex-grow text-center">
+                      <h1
+                        className={`text-2xl font-semibold mb-4`}
+                        style={{ color: theme.colors.text }}
+                      >
+                        No Data Connections
+                      </h1>
                       <p
-                        className={`mb-4`}
+                        className={`mb-6`}
                         style={{ color: theme.colors.textSecondary }}
                       >
-                        You need to select a data connection first:
+                        Please create a data connection to start analyzing your
+                        data.
                       </p>
+                      <button
+                        onClick={onCreateConSelected}
+                        className="px-6 py-2 font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+                        style={{
+                          backgroundColor: theme.colors.accent,
+                          color: theme.colors.surface,
+                          boxShadow: theme.shadow.md,
+                          transition: theme.transition.default,
+                        }}
+                      >
+                        Create Connection
+                      </button>
                     </div>
-                  )}
-                  {selectedConnection && recommendedQuestions.length > 0 && (
-                    <RecommendedQuestions
-                      questions={recommendedQuestions}
-                      onQuestionClick={handleAskFavoriteQuestion}
+                  );
+                }
+                if (showDashboardContent) {
+                  if (isSubmitting) {
+                    return (
+                      <DashboardSkeletonLoader
+                        question={currentDashboardView.question}
+                        theme={theme}
+                      />
+                    );
+                  }
+                  if (isErrorState) {
+                    return (
+                      <DashboardError
+                        question={currentDashboardView.question}
+                        errorMessage={currentDashboardView.textualSummary.replace(
+                          "Error: ",
+                          ""
+                        )}
+                        theme={theme}
+                        onEditQuestion={(newQuestion) =>
+                          handleEditQuestion(
+                            currentDashboardView.questionMessageId,
+                            newQuestion
+                          )
+                        }
+                      />
+                    );
+                  }
+                  return (
+                    <DashboardView
+                      ref={dashboardViewRef}
+                      dashboardItem={currentDashboardView}
+                      theme={theme}
+                      isSubmitting={isSubmitting}
+                      activeViewType={currentMainViewType}
+                      onViewTypeChange={handleViewTypeChange}
+                      onNavigateHistory={navigateDashboardHistory}
+                      historyIndex={currentHistoryIndex}
+                      historyLength={dashboardHistory.length}
+                      onToggleFavorite={handleToggleFavorite}
+                      currentConnection={selectedConnection || ""}
+                      graphSummary={graphSummary}
+                      onEditQuestion={handleEditQuestion}
                     />
-                  )}
-                </div>
-              )}
+                  );
+                }
+                return (
+                  <div className="flex flex-col items-center justify-start flex-grow text-center px-4 pt-12">
+                    <h1
+                      className={`text-3xl font-bold mb-4`}
+                      style={{ marginTop: "10vh", color: theme.colors.text }}
+                    >
+                      Hello there! How can I help you today?
+                    </h1>
+                    {!selectedConnection && connections.length > 0 && (
+                      <div className="flex flex-col items-center mb-6">
+                        <p
+                          className={`mb-4`}
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          You need to select a data connection first:
+                        </p>
+                      </div>
+                    )}
+                    {selectedConnection && recommendedQuestions.length > 0 && (
+                      <RecommendedQuestions
+                        questions={recommendedQuestions}
+                        onQuestionClick={handleAskFavoriteQuestion}
+                      />
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </main>
 
