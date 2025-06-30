@@ -27,6 +27,7 @@ import SchemaExplorer from "./SchemaExplorer";
 import schemaSampleData from "../data/sampleSchemaData";
 import html2canvas from "html2canvas";
 import SummaryModal from "./SummaryModal";
+import { FaFilePdf } from "react-icons/fa";
 
 export type ChatInterfaceHandle = {
   handleNewChat: () => void;
@@ -117,6 +118,19 @@ const ChatInterface = memo(
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
       const [graphSummary, setGraphSummary] = useState<string | null>(null);
       const [showSummaryModal, setShowSummaryModal] = useState(false);
+
+      const options = [
+        {
+          value: "create-con",
+          label: "Create New Connection",
+          isAdmin: false,
+        },
+        ...connections.map((connection: Connection) => ({
+          value: connection.connectionName,
+          label: connection.connectionName,
+          isAdmin: connection.isAdmin,
+        })),
+      ];
 
       const summarizeGraph = useCallback(
         async (graphElement: HTMLElement, botMessageId: string) => {
@@ -289,7 +303,10 @@ const ChatInterface = memo(
 
           if (!currentSessionId) {
             const storedSessionId = localStorage.getItem("currentSessionId");
-            if (storedSessionId) {
+            if (
+              // @ts-ignore
+              storedSessionId
+            ) {
               try {
                 await loadSession(storedSessionId);
                 currentSessionId = storedSessionId;
@@ -357,7 +374,7 @@ const ChatInterface = memo(
               ...userMessage,
               id: userResponse.data.id,
             };
-            finalUserMessageId = finalUserMessage.id;
+            finalUserMessageId = userResponse.data.id;
             dispatchMessages({
               type: "ADD_MESSAGE",
               message: finalUserMessage,
@@ -608,7 +625,7 @@ const ChatInterface = memo(
         if (!userHasScrolledUp && !editingMessageId) scrollToBottom();
       }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
 
-      const handleSelect = useCallback(
+      const handleConnectionSelect = useCallback(
         (connection: string | null) => {
           if (connection === "create-con") {
             onCreateConSelected();
@@ -647,6 +664,32 @@ const ChatInterface = memo(
           sessionId,
           selectedConnection,
         ]
+      );
+
+      const handlePdfClick = useCallback(
+        async (connection: string, e: React.MouseEvent) => {
+          e.stopPropagation();
+          try {
+            const response = await axios.get(
+              `${API_URL}/api/data-atlas/${connection}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: "blob",
+              }
+            );
+            const pdfBlob = new Blob([response.data], {
+              type: "application/pdf",
+            });
+            const url = window.URL.createObjectURL(pdfBlob);
+            window.open(url, "_blank");
+            window.URL.revokeObjectURL(url);
+            toast.success(`Opened Data Atlas for ${connection}`);
+          } catch (error) {
+            console.error("Error fetching Data Atlas:", error);
+            toast.error(`Failed to open Data Atlas: ${getErrorMessage(error)}`);
+          }
+        },
+        [token]
       );
 
       const handleSubmit = useCallback(
@@ -1349,85 +1392,83 @@ const ChatInterface = memo(
                 </CustomTooltip>
                 {isConnectionDropdownOpen && (
                   <div
-                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2 w-64"
+                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2"
                     style={{
                       background: theme.colors.surface,
                       border: `1px solid ${theme.colors.border}`,
-                      boxShadow: theme.shadow.md,
+                      boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                      width: "min-content",
+                      maxWidth: "min-content",
                     }}
                   >
-                    {connections.length === 0 ? (
+                    {options.map((option) => (
                       <div
-                        className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
+                        key={option.value}
+                        className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
                         style={{
                           color: theme.colors.text,
-                          backgroundColor: `${theme.colors.surfaceGlass}`,
+                          background:
+                            selectedConnection === option.value
+                              ? `${theme.colors.accent}10`
+                              : "transparent",
                         }}
-                        onClick={() => handleSelect("create-con")}
+                        onClick={() => handleConnectionSelect(option.value)}
                       >
-                        <span className="truncate font-medium flex items-center">
-                          <PlusCircle size={16} className="inline-block mr-1" />
-                          Create New Connection
-                        </span>
-                      </div>
-                    ) : (
-                      <>
-                        <div
-                          className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
+                        <span
+                          className="truncate"
                           style={{
-                            color: theme.colors.text,
-                            backgroundColor: `${theme.colors.surface}`,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
-                          onClick={() => handleSelect("create-con")}
                         >
-                          <span className="truncate font-medium">
-                            <PlusCircle
-                              size={16}
-                              className="inline-block mr-2"
-                            />{" "}
-                            Create New Connection
-                          </span>
-                        </div>
-                        {connections.map((connection: Connection) => (
-                          <div
-                            key={connection.connectionName}
-                            className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200"
+                          {option.label}
+                        </span>
+                        {option.isAdmin && (
+                          <span
                             style={{
-                              color: theme.colors.text,
-                              background:
-                                selectedConnection === connection.connectionName
-                                  ? `${theme.colors.accent}20`
-                                  : "transparent",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              backgroundColor: theme.colors.background,
+                              color: theme.colors.accent,
+                              fontSize: theme.typography.size.sm,
+                              fontWeight: theme.typography.weight.normal,
+                              padding: `0 ${theme.spacing.sm}`,
+                              borderRadius: theme.borderRadius.default,
+                              marginLeft: theme.spacing.sm,
+                              textTransform: "lowercase",
                             }}
-                            onClick={() =>
-                              handleSelect(connection.connectionName)
-                            }
                           >
+                            Default
+                          </span>
+                        )}
+                        {option.value !== "create-con" && (
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={(e) => handlePdfClick(option.value, e)}
+                              className="p-1"
+                            >
+                              <FaFilePdf
+                                size={16}
+                                style={{ color: theme.colors.error }}
+                                className="hover:scale-105 transition-transform duration-300"
+                              />
+                            </button>
                             <span
-                              className="truncate font-medium"
+                              className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
                               style={{
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                background: theme.colors.accent,
+                                color: theme.colors.surface,
+                                boxShadow: `0 0 6px ${theme.colors.accent}40`,
                               }}
                             >
-                              {connection.connectionName}
+                              View Data Atlas
                             </span>
-                            {connection.isAdmin && (
-                              <span
-                                className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold"
-                                style={{
-                                  backgroundColor: theme.colors.accent,
-                                  color: theme.colors.surface,
-                                }}
-                              >
-                                Default
-                              </span>
-                            )}
                           </div>
-                        ))}
-                      </>
-                    )}
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

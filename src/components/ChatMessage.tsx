@@ -408,7 +408,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               background: theme.colors.surface,
               borderRadius: theme.borderRadius.large,
               borderTopLeftRadius: message.isBot ? "0" : undefined,
-              boxShadow: `0 2px 6px ${theme.colors.text}20`,
               width: "100%",
             }}
           >
@@ -505,7 +504,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
           <div
             // Conditionally apply max-width or full-width based on currentView
             className={`flex w-full items-start ${
-              currentView === "graph" ? "max-w-[75%]" : "w-max"
+              currentView === "graph" ? "max-w-[90%]" : "w-max"
             } gap-2`}
             style={{ position: "relative" }}
           >

@@ -1,4 +1,3 @@
-// DashboardInterface.tsx
 import React, {
   useState,
   useEffect,
@@ -7,15 +6,10 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useMemo,
-  useRef, // Import useRef
+  useRef,
 } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
-// Note: Typically, you'd import 'react-toastify/dist/ReactToastify.css' here for styles
-
-// Importing external components, hooks, and types
-// Adjusted import paths assuming a flat directory structure where all files are siblings
-// or in direct sibling subdirectories (e.g., ./data/sampleSchemaData)
 import {
   Message,
   Connection,
@@ -28,22 +22,21 @@ import { useTheme } from "../ThemeContext";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
 import { useConnections, useSession, useRecommendedQuestions } from "../hooks";
-import DashboardView, { DashboardViewHandle } from "./DashboardView"; // Import DashboardViewHandle
+import DashboardView, { DashboardViewHandle } from "./DashboardView";
 import SchemaExplorer from "./SchemaExplorer";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
 import schemaSampleData from "../data/sampleSchemaData";
 import DashboardError from "./DashboardError";
 import PreviousQuestionsModal from "./PreviousQuestionModal";
-import html2canvas from "html2canvas"; // Import html2canvas
-
+import html2canvas from "html2canvas";
+import { FaFilePdf } from "react-icons/fa";
 import {
   ListChecks,
   Database,
   Layers,
   PlusCircle,
-  FileText,
-  ScanEye, // Import ScanEye for summarize graph button
-} from "lucide-react"; // Corrected import syntax
+  ScanEye,
+} from "lucide-react";
 
 export type DashboardInterfaceHandle = {
   handleNewChat: () => void;
@@ -54,7 +47,6 @@ export type DashboardInterfaceHandle = {
   ) => void;
 };
 
-// Define the expected structure for KPI and Main View Data
 interface KpiData {
   kpi1: { label: string; value: string | number | null; change: number };
   kpi2: { label: string; value: string | number | null; change: number };
@@ -67,37 +59,32 @@ interface MainViewData {
   queryData: string;
 }
 
-// Define the DashboardItem interface
 interface DashboardItem {
-  id: string; // Dashboard item's unique ID
+  id: string;
   question: string;
   kpiData: KpiData;
   mainViewData: MainViewData;
   textualSummary: string;
   lastViewType: "graph" | "table" | "query";
-  isFavorited: boolean; // Indicates if the question message for this item is favorited
-  questionMessageId: string; // The actual message ID from the backend
-  connectionName: string; // The connection associated with this dashboard item
+  isFavorited: boolean;
+  questionMessageId: string;
+  connectionName: string;
 }
 
-// Data Generation Helpers
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-// Initial empty KPI data structure
 const initialEmptyKpiData: KpiData = {
   kpi1: { value: null, label: "No Data", change: 0 },
   kpi2: { value: null, label: "No Data", change: 0 },
   kpi3: { value: null, label: "No Data", change: 0 },
 };
 
-// Initial empty Main View Data structure
 const initialEmptyMainViewData: MainViewData = {
   chartData: [],
   tableData: [],
   queryData: "No query available.",
 };
 
-// Placeholder for loading/error states in the dashboard
 const getDashboardLoadingState = () => ({
   kpiData: {
     kpi1: { value: null, label: "Loading...", change: 0 },
@@ -109,7 +96,6 @@ const getDashboardLoadingState = () => ({
 });
 
 const getDashboardErrorState = (question: string, errorMsg: string) => ({
-  // Modified to accept question and error message
   kpiData: {
     kpi1: { value: null, label: "Error", change: 0 },
     kpi2: { value: null, label: "Error", change: 0 },
@@ -120,11 +106,10 @@ const getDashboardErrorState = (question: string, errorMsg: string) => ({
     tableData: [],
     queryData: "Error loading query.",
   },
-  textualSummary: `Error: ${errorMsg}`, // Store the specific error message
-  question: question, // Store the original question
+  textualSummary: `Error: ${errorMsg}`,
+  question: question,
 });
 
-// Helper function to extract error messages
 const getErrorMessage = (error: any): string => {
   let extractedErrorMessage = "Sorry, an error occurred. Please try again.";
   if (axios.isAxiosError(error)) {
@@ -152,16 +137,13 @@ const getErrorMessage = (error: any): string => {
   );
 };
 
-// Main DashboardInterface Component
 const DashboardInterface = memo(
   forwardRef<DashboardInterfaceHandle, DashboardInterfaceProps>(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
       const token = sessionStorage.getItem("token") ?? "";
 
-      // Ref for the connections dropdown to detect outside clicks
       const connectionDropdownRef = useRef<HTMLDivElement>(null);
-      // Ref for the DashboardView component
       const dashboardViewRef = useRef<DashboardViewHandle>(null);
 
       const {
@@ -191,10 +173,25 @@ const DashboardInterface = memo(
       const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
         null
       );
-      // New state for summarized graph text
       const [graphSummary, setGraphSummary] = useState<string | null>(null);
 
-      // Memoized initial dashboard state to prevent infinite loop
+      const options = [
+        {
+          value: "create-con",
+          label: "Create New Connection",
+          isAdmin: false,
+        },
+        ...connections.map((connection: Connection) => ({
+          value: connection.connectionName,
+          label: connection.connectionName,
+          isReading: {
+            value: connection.connectionName,
+            label: connection.connectionName,
+            isAdmin: connection.isAdmin,
+          }
+})),
+      ];
+
       const initialDashboardState = useMemo(
         (): DashboardItem => ({
           id: generateId(),
@@ -203,9 +200,9 @@ const DashboardInterface = memo(
           mainViewData: initialEmptyMainViewData,
           textualSummary: "Ask a question to get started.",
           lastViewType: "table",
-          isFavorited: false, // Default to false
-          questionMessageId: "", // Default empty
-          connectionName: "", // Default empty
+          isFavorited: false,
+          questionMessageId: "",
+          connectionName: "",
         }),
         []
       );
@@ -222,18 +219,15 @@ const DashboardInterface = memo(
 
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
-      // Determine if the current view is an error state
       const isErrorState =
         currentDashboardView.textualSummary.startsWith("Error:");
 
-      // Synchronize currentQuestionId with currentDashboardView
       useEffect(() => {
         if (currentDashboardView?.questionMessageId) {
           setCurrentQuestionId(currentDashboardView.questionMessageId);
         }
       }, [currentDashboardView]);
 
-      // Modified useEffect to stop loading on error or completion
       useEffect(() => {
         if (
           currentDashboardView?.textualSummary === "Processing your request..."
@@ -243,13 +237,10 @@ const DashboardInterface = memo(
           isSubmitting &&
           currentDashboardView?.textualSummary !== "Processing your request..."
         ) {
-          // If isSubmitting is true and the text is no longer 'Processing your request...', stop loading.
-          // This covers both successful responses and error states.
           setIsSubmitting(false);
         }
       }, [currentDashboardView, isSubmitting]);
 
-      // Effect to load session history when connections are ready or visibility changes
       useEffect(() => {
         const handleSessionLoad = async () => {
           const storedSessionId = localStorage.getItem("currentSessionId");
@@ -266,7 +257,7 @@ const DashboardInterface = memo(
                 }
               );
               const sessionData = response.data;
-              await loadSession(storedSessionId); // Load session messages into useSession hook
+              await loadSession(storedSessionId);
 
               const loadedDashboardHistory: DashboardItem[] = [];
               const userMessages = sessionData.messages
@@ -275,9 +266,9 @@ const DashboardInterface = memo(
                   (a: Message, b: Message) =>
                     new Date(a.timestamp).getTime() -
                     new Date(b.timestamp).getTime()
-                ); // Sort by timestamp to process chronologically
+                );
 
-              let restoredIndex = 0; // Default to the first question in the loaded history
+              let restoredIndex = 0;
 
               for (const userMessage of userMessages) {
                 const correspondingBotMessage = sessionData.messages
@@ -289,7 +280,7 @@ const DashboardInterface = memo(
                     (a: Message, b: Message) =>
                       new Date(b.timestamp).getTime() -
                       new Date(a.timestamp).getTime()
-                  )[0]; // Get the latest bot response for this user message
+                  )[0];
 
                 if (
                   correspondingBotMessage &&
@@ -299,7 +290,6 @@ const DashboardInterface = memo(
                     correspondingBotMessage.content.startsWith("Error:") ||
                     !correspondingBotMessage.content.trim().startsWith("{")
                   ) {
-                    // It's an error message
                     loadedDashboardHistory.push({
                       id: generateId(),
                       question: userMessage.content,
@@ -313,7 +303,6 @@ const DashboardInterface = memo(
                       connectionName: sessionData.connection,
                     });
                   } else {
-                    // Try to parse as JSON for a successful response
                     try {
                       const botResponseContent = JSON.parse(
                         correspondingBotMessage.content
@@ -342,7 +331,7 @@ const DashboardInterface = memo(
                         kpiData: actualKpiData,
                         mainViewData: actualMainViewData,
                         textualSummary: actualTextualSummary,
-                        lastViewType: "table", // Default to table view on load
+                        lastViewType: "table",
                         isFavorited: userMessage.isFavorited,
                         questionMessageId: userMessage.id,
                         connectionName: sessionData.connection,
@@ -352,7 +341,6 @@ const DashboardInterface = memo(
                         "Failed to parse bot response content from session:",
                         parseError
                       );
-                      // If parsing fails, treat as an error or skip, but don't break the app
                       loadedDashboardHistory.push({
                         id: generateId(),
                         question: userMessage.content,
@@ -368,11 +356,9 @@ const DashboardInterface = memo(
                     }
                   }
                 }
-                // If no corresponding bot message or it's still 'loading...', we skip this interaction as it's incomplete
               }
 
               if (loadedDashboardHistory.length > 0) {
-                // Find the index of the previously selected question
                 const foundIndex = loadedDashboardHistory.findIndex(
                   (item) => item.questionMessageId === storedCurrentQuestionId
                 );
@@ -380,7 +366,6 @@ const DashboardInterface = memo(
                 if (foundIndex !== -1) {
                   restoredIndex = foundIndex;
                 } else {
-                  // If the stored question is not found (e.g., new session, question deleted), default to the last one
                   restoredIndex = loadedDashboardHistory.length - 1;
                 }
 
@@ -394,7 +379,6 @@ const DashboardInterface = memo(
                 );
                 setInput("");
               } else {
-                // If no complete interactions found, revert to initial state
                 setDashboardHistory([initialDashboardState]);
                 setCurrentHistoryIndex(0);
                 setCurrentMainViewType("table");
@@ -403,7 +387,7 @@ const DashboardInterface = memo(
             } catch (error) {
               console.error("Session validation failed or no data:", error);
               localStorage.removeItem("currentSessionId");
-              localStorage.removeItem("currentDashboardQuestionId"); // Clear on error
+              localStorage.removeItem("currentDashboardQuestionId");
               clearSession();
               setDashboardHistory([initialDashboardState]);
               setCurrentHistoryIndex(0);
@@ -411,17 +395,17 @@ const DashboardInterface = memo(
             }
           } else if (!storedSessionId) {
             clearSession();
-            localStorage.removeItem("currentDashboardQuestionId"); // Clear if no session
+            localStorage.removeItem("currentDashboardQuestionId");
             setDashboardHistory([initialDashboardState]);
             setCurrentHistoryIndex(0);
             setCurrentMainViewType("table");
           }
         };
 
-        handleSessionLoad(); // Initial load
-        document.addEventListener("visibilitychange", handleSessionLoad); // Listen for tab visibility changes
+        handleSessionLoad();
+        document.addEventListener("visibilitychange", handleSessionLoad);
         return () =>
-          document.removeEventListener("visibilitychange", handleSessionLoad); // Clean up listener
+          document.removeEventListener("visibilitychange", handleSessionLoad);
       }, [
         token,
         loadSession,
@@ -430,7 +414,6 @@ const DashboardInterface = memo(
         connections,
       ]);
 
-      // Effect to save the current dashboard item's question ID to localStorage
       useEffect(() => {
         if (currentDashboardView?.questionMessageId) {
           localStorage.setItem(
@@ -441,12 +424,10 @@ const DashboardInterface = memo(
           dashboardHistory.length === 1 &&
           currentDashboardView.id === initialDashboardState.id
         ) {
-          // If it's the initial empty state, clear the stored ID
           localStorage.removeItem("currentDashboardQuestionId");
         }
       }, [currentDashboardView, dashboardHistory, initialDashboardState]);
 
-      // Effect to handle clicks outside the connection dropdown
       useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
           if (
@@ -474,8 +455,8 @@ const DashboardInterface = memo(
         setDashboardHistory([initialDashboardState]);
         setCurrentHistoryIndex(0);
         setCurrentMainViewType("table");
-        setGraphSummary(null); // Clear graph summary on new chat
-        localStorage.removeItem("currentDashboardQuestionId"); // Clear stored question on new chat
+        setGraphSummary(null);
+        localStorage.removeItem("currentDashboardQuestionId");
       }, [clearSession, initialDashboardState]);
 
       const startNewSession = useCallback(
@@ -492,7 +473,6 @@ const DashboardInterface = memo(
             );
             const newSessionId = response.data.id;
             localStorage.setItem("currentSessionId", newSessionId);
-            // On new session, clear any old question ID
             localStorage.removeItem("currentDashboardQuestionId");
             return newSessionId;
           } catch (error) {
@@ -517,11 +497,11 @@ const DashboardInterface = memo(
           const newLoadingEntry: DashboardItem = {
             id: newLoadingEntryId,
             question: question,
-            questionMessageId: "", // Will be set after the message is created
+            questionMessageId: "",
             connectionName: connection,
             ...getDashboardLoadingState(),
             lastViewType: "table",
-            isFavorited: false, // Newly asked questions are not favorited by default
+            isFavorited: false,
           };
 
           setDashboardHistory((prev) => {
@@ -533,7 +513,7 @@ const DashboardInterface = memo(
           });
 
           setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
-          setGraphSummary(null); // Clear previous graph summary on new question
+          setGraphSummary(null);
 
           let currentSessionId = sessionId;
 
@@ -556,7 +536,7 @@ const DashboardInterface = memo(
                         ),
                         textualSummary:
                           "Error: No valid session connection found.",
-                        isFavorited: false, // Ensure error state is unfavorited
+                        isFavorited: false,
                         questionMessageId: "",
                         connectionName: connection,
                       }
@@ -579,14 +559,17 @@ const DashboardInterface = memo(
                   error
                 );
                 localStorage.removeItem("currentSessionId");
-                localStorage.removeItem("currentDashboardQuestionId"); // Clear on error
+                localStorage.removeItem("currentDashboardQuestionId");
               }
             }
           }
 
           if (!currentSessionId) {
             try {
-              const newSessId = await startNewSession(connection, question);
+              const newSessId: string = await startNewSession(
+                connection,
+                question
+              );
               if (newSessId) {
                 currentSessionId = newSessId;
                 dispatchMessages({
@@ -606,7 +589,7 @@ const DashboardInterface = memo(
                             "Could not create session."
                           ),
                           textualSummary: "Error: Could not create session.",
-                          isFavorited: false, // Ensure error state is unfavorited
+                          isFavorited: false,
                           questionMessageId: "",
                           connectionName: connection,
                         }
@@ -625,9 +608,9 @@ const DashboardInterface = memo(
                         ...getDashboardErrorState(
                           question,
                           getErrorMessage(error)
-                        ), // Pass specific error message
+                        ),
                         textualSummary: `Error: ${getErrorMessage(error)}`,
-                        isFavorited: false, // Ensure error state is unfavorited
+                        isFavorited: false,
                         questionMessageId: "",
                         connectionName: connection,
                       }
@@ -639,16 +622,16 @@ const DashboardInterface = memo(
           }
 
           const userMessage: Message = {
-            id: Date.now().toString(), // Temp ID
+            id: Date.now().toString(),
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
-            isFavorited: false, // Will be set to false at creation in backend
+            isFavorited: false,
             parentId: null,
           };
 
-          let finalUserMessageId: string | null = null;
-          let botMessageId: string | null = null;
+          let finalUserMessageId: string = "";
+          let botMessageId: string = "";
 
           try {
             const userResponse = await axios.post(
@@ -665,7 +648,7 @@ const DashboardInterface = memo(
             const finalUserMessage = {
               ...userMessage,
               id: userResponse.data.id,
-              isFavorited: userResponse.data.isFavorited, // Get actual status from backend
+              isFavorited: userResponse.data.isFavorited,
             };
             finalUserMessageId = finalUserMessage.id;
             dispatchMessages({
@@ -673,7 +656,6 @@ const DashboardInterface = memo(
               message: finalUserMessage,
             });
 
-            // Update the dashboardHistory item with the real message ID and favorite status
             setDashboardHistory((prev) =>
               prev.map((item) =>
                 item.id === newLoadingEntryId
@@ -687,7 +669,6 @@ const DashboardInterface = memo(
               )
             );
 
-            // Update localStorage with the new question ID as it becomes the current
             if (finalUserMessageId) {
               localStorage.setItem(
                 "currentDashboardQuestionId",
@@ -707,7 +688,7 @@ const DashboardInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            botMessageId = botLoadingResponse.data.id;
+            botMessageId = botLoadingResponse?.data?.id;
             const botLoadingMessage: Message = {
               id: botMessageId,
               isBot: true,
@@ -778,7 +759,6 @@ const DashboardInterface = memo(
                         kpiData: actualKpiData,
                         mainViewData: actualMainViewData,
                         textualSummary: actualTextualSummary,
-                        // isFavorited and questionMessageId should already be set from userResponse.data
                       }
                     : item
                 )
@@ -811,18 +791,18 @@ const DashboardInterface = memo(
               });
             } catch (error) {
               console.error("Error getting bot response:", error);
-              const errorContent = getErrorMessage(error); // Get the specific error message
+              const errorContent = getErrorMessage(error);
 
               setDashboardHistory((prev) =>
                 prev.map((item) =>
                   item.id === newLoadingEntryId
                     ? {
                         ...item,
-                        ...getDashboardErrorState(question, errorContent), // Pass specific error message
+                        ...getDashboardErrorState(question, errorContent),
                         textualSummary: `Error: ${errorContent}`,
-                        isFavorited: item.isFavorited, // Preserve existing favorite status
-                        questionMessageId: item.questionMessageId, // Preserve existing message ID
-                        connectionName: item.connectionName, // Preserve existing connection
+                        isFavorited: item.isFavorited,
+                        questionMessageId: item.questionMessageId,
+                        connectionName: item.connectionName,
                       }
                     : item
                 )
@@ -880,7 +860,6 @@ const DashboardInterface = memo(
             );
             toast.error(`Failed to send message: ${getErrorMessage(error)}`);
 
-            // If an error occurred before message creation, filter out the loading entry
             setDashboardHistory((prev) =>
               prev.filter((item) => item.id !== newLoadingEntryId)
             );
@@ -897,6 +876,276 @@ const DashboardInterface = memo(
           selectedConnection,
           currentHistoryIndex,
           startNewSession,
+        ]
+      );
+
+      const handleEditQuestion = useCallback(
+        async (questionMessageId: string, newQuestion: string) => {
+          if (!sessionId) {
+            toast.error("No active session to edit the question.");
+            return;
+          }
+
+          const dashboardItemIndex = dashboardHistory.findIndex(
+            (item) => item.questionMessageId === questionMessageId
+          );
+          if (dashboardItemIndex === -1) {
+            toast.error("Dashboard item not found for the given question.");
+            return;
+          }
+
+          console.log("Starting edit question:", {
+            questionMessageId,
+            newQuestion,
+          });
+
+          // Immediately set submitting and loading state
+          setIsSubmitting(true);
+          console.log("Set isSubmitting to true");
+          setDashboardHistory((prev) => {
+            const newHistory = prev.map((item, index) =>
+              index === dashboardItemIndex
+                ? {
+                    ...item,
+                    question: newQuestion,
+                    ...getDashboardLoadingState(),
+                  }
+                : item
+            );
+            console.log(
+              "Updated dashboardHistory to loading state:",
+              newHistory[dashboardItemIndex]
+            );
+            return newHistory;
+          });
+
+          // Minimum delay to ensure skeleton is visible
+          const minLoadingTime = new Promise((resolve) =>
+            setTimeout(resolve, 500)
+          );
+
+          try {
+            // Update user message on server and in state
+            await axios.put(
+              `${API_URL}/api/messages/${questionMessageId}`,
+              {
+                token,
+                content: newQuestion,
+                timestamp: new Date().toISOString(),
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            console.log("User message updated on server");
+
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: questionMessageId,
+              message: {
+                content: newQuestion,
+                timestamp: new Date().toISOString(),
+              },
+            });
+            console.log("User message updated in state");
+
+            const botMessage = messages.find(
+              (msg) => msg.isBot && msg.parentId === questionMessageId
+            );
+
+            if (botMessage) {
+              // Set bot message to loading
+              await axios.put(
+                `${API_URL}/api/messages/${botMessage.id}`,
+                {
+                  token,
+                  content: "loading...",
+                  timestamp: new Date().toISOString(),
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+              console.log("Bot message set to loading on server");
+
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessage.id,
+                message: {
+                  content: "loading...",
+                  timestamp: new Date().toISOString(),
+                },
+              });
+              console.log("Bot message set to loading in state");
+
+              try {
+                const connectionObj = connections.find(
+                  (conn) => conn.connectionName === selectedConnection
+                );
+                if (!connectionObj) {
+                  throw new Error("Selected connection not found.");
+                }
+
+                const payload = {
+                  question: newQuestion,
+                  connection: connectionObj,
+                  sessionId,
+                };
+                const response = await axios.post(
+                  `${CHATBOT_API_URL}/ask`,
+                  payload
+                );
+                console.log("Received bot response:", response.data);
+                const botResponseData = response.data;
+
+                const actualKpiData =
+                  botResponseData.kpiData || initialEmptyKpiData;
+                const actualMainViewData = {
+                  chartData: Array.isArray(botResponseData.answer)
+                    ? botResponseData.answer
+                    : [],
+                  tableData: Array.isArray(botResponseData.answer)
+                    ? botResponseData.answer
+                    : [],
+                  queryData:
+                    typeof botResponseData.sql_query === "string"
+                      ? botResponseData.sql_query
+                      : "No query available.",
+                };
+                const actualTextualSummary =
+                  botResponseData.textualSummary ||
+                  "Here is the analysis for the updated question.";
+
+                const botResponseContent = JSON.stringify(
+                  botResponseData,
+                  null,
+                  2
+                );
+                await axios.put(
+                  `${API_URL}/api/messages/${botMessage.id}`,
+                  {
+                    token,
+                    content: botResponseContent,
+                    timestamp: new Date().toISOString(),
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+                console.log("Bot message updated with response on server");
+
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessage.id,
+                  message: {
+                    content: botResponseContent,
+                    timestamp: new Date().toISOString(),
+                  },
+                });
+                console.log("Bot message updated with response in state");
+
+                // Update dashboard item with new data
+                setDashboardHistory((prev) => {
+                  const newHistory = prev.map((item, index) =>
+                    index === dashboardItemIndex
+                      ? {
+                          ...item,
+                          kpiData: actualKpiData,
+                          mainViewData: actualMainViewData,
+                          textualSummary: actualTextualSummary,
+                        }
+                      : item
+                  );
+                  console.log(
+                    "Updated dashboardHistory with new data:",
+                    newHistory[dashboardItemIndex]
+                  );
+                  return newHistory;
+                });
+              } catch (error) {
+                console.error(
+                  "Error getting bot response for edited question:",
+                  error
+                );
+                const errorContent = getErrorMessage(error);
+
+                await axios.put(
+                  `${API_URL}/api/messages/${botMessage.id}`,
+                  {
+                    token,
+                    content: `Error: ${errorContent}`,
+                    timestamp: new Date().toISOString(),
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+                console.log("Bot message updated with error on server");
+
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessage.id,
+                  message: {
+                    content: `Error: ${errorContent}`,
+                    timestamp: new Date().toISOString(),
+                  },
+                });
+                console.log("Bot message updated with error in state");
+
+                // Update dashboard item to error state
+                setDashboardHistory((prev) => {
+                  const newHistory = prev.map((item, index) =>
+                    index === dashboardItemIndex
+                      ? {
+                          ...item,
+                          question: newQuestion,
+                          ...getDashboardErrorState(newQuestion, errorContent),
+                          textualSummary: `Error: ${errorContent}`,
+                        }
+                      : item
+                  );
+                  console.log(
+                    "Updated dashboardHistory to error state:",
+                    newHistory[dashboardItemIndex]
+                  );
+                  return newHistory;
+                });
+              }
+            } else {
+              toast.error(
+                "No corresponding bot response found for the question."
+              );
+            }
+          } catch (error) {
+            console.error("Error updating user message:", error);
+            toast.error(`Failed to update message: ${getErrorMessage(error)}`);
+            // Update dashboard to error state
+            setDashboardHistory((prev) => {
+              const newHistory = prev.map((item, index) =>
+                index === dashboardItemIndex
+                  ? {
+                      ...item,
+                      question: newQuestion,
+                      ...getDashboardErrorState(
+                        newQuestion,
+                        getErrorMessage(error)
+                      ),
+                      textualSummary: `Error: ${getErrorMessage(error)}`,
+                    }
+                  : item
+              );
+              console.log(
+                "Updated dashboardHistory to error state (user message error):",
+                newHistory[dashboardItemIndex]
+              );
+              return newHistory;
+            });
+          } finally {
+            // Ensure minimum loading time and reset submitting
+            await minLoadingTime;
+            setIsSubmitting(false);
+            console.log("Set isSubmitting to false");
+          }
+        },
+        [
+          sessionId,
+          dashboardHistory,
+          token,
+          connections,
+          selectedConnection,
+          dispatchMessages,
         ]
       );
 
@@ -954,7 +1203,7 @@ const DashboardInterface = memo(
                 `${API_URL}/unfavorite`,
                 {
                   questionId: questionMessageId,
-                  uid: "user1", // Hardcoded uid for now
+                  uid: "user1",
                   currentConnection,
                   questionContent,
                 },
@@ -968,13 +1217,12 @@ const DashboardInterface = memo(
                   questionContent,
                   responseQuery,
                   currentConnection,
-                  uid: "user1", // Hardcoded uid for now
+                  uid: "user1",
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
               );
             }
 
-            // Update the specific dashboard item's isFavorited status in history
             setDashboardHistory((prevHistory) =>
               prevHistory.map((item) =>
                 item.questionMessageId === questionMessageId
@@ -983,7 +1231,6 @@ const DashboardInterface = memo(
               )
             );
 
-            // Update the corresponding message in the messages state
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: questionMessageId,
@@ -997,77 +1244,36 @@ const DashboardInterface = memo(
         [token, dispatchMessages]
       );
 
-      useEffect(() => {
-        if (sessionConnection) {
-          if (selectedConnection !== sessionConnection)
-            setSelectedConnection(sessionConnection);
-        }
-      }, [sessionConnection, setSelectedConnection, selectedConnection]);
-
-      useEffect(() => {
-        if (initialQuestion && !connectionsLoading && connections.length > 0) {
-          let targetConnection = initialQuestion.connection;
-          if (!connections.some((c) => c.connectionName === targetConnection)) {
-            targetConnection = connections[0]?.connectionName;
-            if (!targetConnection) {
-              toast.error(
-                "No connections available to ask the initial question."
-              );
-              if (onQuestionAsked) onQuestionAsked();
-              return;
-            }
-          }
-          setSelectedConnection(targetConnection);
-          askQuestion(
-            initialQuestion.text,
-            targetConnection,
-            initialQuestion.query
-          );
-          if (onQuestionAsked) onQuestionAsked();
-        }
-      }, [
-        initialQuestion,
-        connections,
-        connectionsLoading,
-        askQuestion,
-        onQuestionAsked,
-        setSelectedConnection,
-      ]);
-
-      useEffect(() => {
-        if (
-          dashboardHistory.length > 0 &&
-          currentHistoryIndex >= dashboardHistory.length
-        ) {
-          setCurrentHistoryIndex(dashboardHistory.length - 1);
-        } else if (dashboardHistory.length === 0 && currentHistoryIndex !== 0) {
-          setCurrentHistoryIndex(0);
-          setDashboardHistory([initialDashboardState]);
-        }
-      }, [dashboardHistory, currentHistoryIndex, initialDashboardState]);
-
-      const handleSelect = useCallback(
-        (option: any) => {
-          if (option?.value === "create-con") {
+      const handleConnectionSelect = useCallback(
+        (connection: string | null) => {
+          if (connection === "create-con") {
             onCreateConSelected();
             if (sessionId) handleNewChat();
             setSelectedConnection(null);
             localStorage.removeItem("selectedConnection");
-          } else if (option) {
-            const newSelectedConnection = option.value.connectionName;
-            if (selectedConnection !== newSelectedConnection || !sessionId) {
-              handleNewChat();
-              setSelectedConnection(newSelectedConnection);
-              localStorage.setItem("selectedConnection", newSelectedConnection);
-            }
           } else {
-            if (selectedConnection) {
-              handleNewChat();
+            const selectedConnectionObj = connections.find(
+              (conn) => conn.connectionName === connection
+            );
+            if (selectedConnectionObj) {
+              if (
+                selectedConnection !== selectedConnectionObj.connectionName ||
+                !sessionId
+              ) {
+                handleNewChat();
+                setSelectedConnection(selectedConnectionObj.connectionName);
+                localStorage.setItem(
+                  "selectedConnection",
+                  selectedConnectionObj.connectionName
+                );
+              }
+            } else {
+              if (selectedConnection) handleNewChat();
+              setSelectedConnection(null);
+              localStorage.removeItem("selectedConnection");
             }
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
           }
-          setIsConnectionDropdownOpen(false); // Close dropdown after selection
+          setIsConnectionDropdownOpen(false);
         },
         [
           onCreateConSelected,
@@ -1075,17 +1281,34 @@ const DashboardInterface = memo(
           setSelectedConnection,
           sessionId,
           selectedConnection,
+          connections,
         ]
       );
 
       const handlePdfClick = useCallback(
-        (connectionName: string, e: React.MouseEvent) => {
+        async (connection: string, e: React.MouseEvent) => {
           e.stopPropagation();
-          toast.info(
-            `Generating Data Atlas for ${connectionName}... (Mock Action)`
-          );
+          try {
+            const response = await axios.get(
+              `${API_URL}/api/data-atlas/${connection}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: "blob",
+              }
+            );
+            const pdfBlob = new Blob([response.data], {
+              type: "application/pdf",
+            });
+            const url = window.URL.createObjectURL(pdfBlob);
+            window.open(url, "_blank");
+            window.URL.revokeObjectURL(url);
+            toast.success(`Opened Data Atlas for ${connection}`);
+          } catch (error) {
+            console.error("Error fetching Data Atlas:", error);
+            toast.error(`Failed to open Data Atlas: ${getErrorMessage(error)}`);
+          }
         },
-        []
+        [token]
       );
 
       const handleSummarizeGraph = useCallback(async () => {
@@ -1100,15 +1323,10 @@ const DashboardInterface = memo(
           toast.error("No graph visible to summarize.");
           return;
         }
-
-        setIsSubmitting(true);
-        setGraphSummary(null); // Clear previous summary
+        setGraphSummary(null);
         toast.info("Summarizing graph...", { autoClose: false });
 
         try {
-          // Temporarily hide other elements in dashboard-view to capture only graph
-          // This is a simple approach; for more complex layouts, consider cloning the element
-          // and rendering it off-screen, then capturing.
           const kpiSection = graphElement
             .closest(".flex")
             ?.querySelector(".grid.m-2");
@@ -1124,14 +1342,13 @@ const DashboardInterface = memo(
           if (viewToggleSection) viewToggleSection.style.display = "none";
 
           const canvas = await html2canvas(graphElement, {
-            scale: 2, // High resolution capture
+            scale: 2,
             useCORS: true,
             logging: false,
-            backgroundColor: theme.colors.surface, // Ensure consistent background
+            backgroundColor: theme.colors.surface,
           });
-          const imageData = canvas.toDataURL("image/png"); // Base64 image
+          const imageData = canvas.toDataURL("image/png");
 
-          // Restore original display
           if (kpiSection) kpiSection.style.display = originalKPIDisplay;
           if (viewToggleSection)
             viewToggleSection.style.display = originalViewToggleDisplay;
@@ -1143,7 +1360,7 @@ const DashboardInterface = memo(
           )}, Main View Data Query: ${
             currentDashboardView.mainViewData.queryData
           }. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
-          const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA"; // Canvas will provide this automatically
+          const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA";
 
           const payload = {
             contents: [
@@ -1154,7 +1371,7 @@ const DashboardInterface = memo(
                   {
                     inlineData: {
                       mimeType: "image/png",
-                      data: imageData.split(",")[1], // Remove "data:image/png;base64," prefix
+                      data: imageData.split(",")[1],
                     },
                   },
                 ],
@@ -1164,7 +1381,6 @@ const DashboardInterface = memo(
 
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
-          // Post the image data and prompt to the Gemini API for summarization
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1182,7 +1398,7 @@ const DashboardInterface = memo(
             result.candidates[0].content.parts.length > 0
           ) {
             summaryText = result.candidates[0].content.parts[0].text;
-            setGraphSummary(summaryText); // Set the summarized text
+            setGraphSummary(summaryText);
           } else {
             console.error("Unexpected Gemini API response structure:", result);
             toast.error(
@@ -1195,7 +1411,7 @@ const DashboardInterface = memo(
           toast.success("Graph summarized successfully!");
         } catch (error) {
           console.error("Error summarizing graph:", error);
-          toast.dismiss(); // Dismiss the loading toast
+          toast.dismiss();
           const errorMessage = getErrorMessage(error);
           toast.error(`Failed to summarize graph: ${errorMessage}`);
           setGraphSummary(`Error: ${errorMessage}`);
@@ -1206,7 +1422,6 @@ const DashboardInterface = memo(
 
       const handleSelectPrevQuestion = useCallback(
         async (messageId: string) => {
-          // Updated to accept messageId
           if (!selectedConnection) {
             toast.error(
               "No connection selected. Please select a connection first."
@@ -1216,15 +1431,13 @@ const DashboardInterface = memo(
 
           setInput("");
           setShowPrevQuestionsModal(false);
-          setGraphSummary(null); // Clear graph summary when selecting previous question
+          setGraphSummary(null);
 
-          // Find the user message in the session messages by its unique ID
           const selectedUserMessage = messages.find(
             (msg) => !msg.isBot && msg.id === messageId
           );
 
           if (selectedUserMessage) {
-            // Find the corresponding bot message
             const correspondingBotMessage = messages.find(
               (msg) => msg.isBot && msg.parentId === selectedUserMessage.id
             );
@@ -1233,22 +1446,21 @@ const DashboardInterface = memo(
               correspondingBotMessage &&
               correspondingBotMessage.content !== "loading..."
             ) {
-              // Check if the bot message content indicates an error
               if (
                 correspondingBotMessage.content.startsWith("Error:") ||
                 !correspondingBotMessage.content.trim().startsWith("{")
               ) {
                 const newEntry: DashboardItem = {
-                  id: generateId(), // Generate a new ID for this history entry
-                  question: selectedUserMessage.content, // Use content from the found message
+                  id: generateId(),
+                  question: selectedUserMessage.content,
                   ...getDashboardErrorState(
                     selectedUserMessage.content,
                     correspondingBotMessage.content.replace("Error: ", "")
                   ),
-                  lastViewType: "table", // Default to table view
-                  isFavorited: selectedUserMessage.isFavorited, // Get from the message, which is now correctly identified
-                  questionMessageId: selectedUserMessage.id, // Set the message ID
-                  connectionName: selectedConnection, // Use the currently selected connection
+                  lastViewType: "table",
+                  isFavorited: selectedUserMessage.isFavorited,
+                  questionMessageId: selectedUserMessage.id,
+                  connectionName: selectedConnection,
                 };
 
                 setDashboardHistory((prev) => {
@@ -1259,14 +1471,12 @@ const DashboardInterface = memo(
                   return newHistory;
                 });
                 setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
-                // Save the selected question's ID to localStorage
                 localStorage.setItem(
                   "currentDashboardQuestionId",
                   selectedUserMessage.id
                 );
               } else {
                 try {
-                  // Parse the bot's JSON content
                   const botResponseContent = JSON.parse(
                     correspondingBotMessage.content
                   );
@@ -1290,18 +1500,17 @@ const DashboardInterface = memo(
                     `Here is the analysis for: "${selectedUserMessage.content}"`;
 
                   const newEntry: DashboardItem = {
-                    id: generateId(), // Generate a new ID for this history entry
+                    id: generateId(),
                     question: selectedUserMessage.content,
                     kpiData: actualKpiData,
                     mainViewData: actualMainViewData,
                     textualSummary: actualTextualSummary,
-                    lastViewType: "table", // Default to table view
-                    isFavorited: selectedUserMessage.isFavorited, // Get from the message, which is now correctly identified
-                    questionMessageId: selectedUserMessage.id, // Set the message ID
-                    connectionName: selectedConnection, // Use the currently selected connection
+                    lastViewType: "table",
+                    isFavorited: selectedUserMessage.isFavorited,
+                    questionMessageId: selectedUserMessage.id,
+                    connectionName: selectedConnection,
                   };
 
-                  // Add the new entry to dashboard history and set it as current
                   setDashboardHistory((prev) => {
                     const newHistory =
                       currentHistoryIndex === prev.length - 1
@@ -1309,8 +1518,7 @@ const DashboardInterface = memo(
                         : [...prev.slice(0, currentHistoryIndex + 1), newEntry];
                     return newHistory;
                   });
-                  setCurrentHistoryIndex((prevIndex) => prevIndex + 1); // Move to the newly added entry
-                  // Save the selected question's ID to localStorage
+                  setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
                   localStorage.setItem(
                     "currentDashboardQuestionId",
                     selectedUserMessage.id
@@ -1321,7 +1529,6 @@ const DashboardInterface = memo(
                     "Failed to parse bot response content for previous question:",
                     parseError
                   );
-                  // Fallback: If parsing fails, re-ask the question.
                   await askQuestion(
                     selectedUserMessage.content,
                     selectedConnection
@@ -1329,16 +1536,12 @@ const DashboardInterface = memo(
                 }
               }
             } else {
-              // Fallback: If no corresponding bot message or it's still loading, re-ask the question.
               await askQuestion(
                 selectedUserMessage.content,
                 selectedConnection
               );
             }
           } else {
-            // Fallback: If the user message is not found in session messages by ID,
-            // this implies a state inconsistency or an issue with the message ID.
-            // For now, we will simply log an error.
             console.error(
               "User message not found in session by ID:",
               messageId
@@ -1362,8 +1565,7 @@ const DashboardInterface = memo(
           }
           setCurrentHistoryIndex(newIndex);
           setCurrentMainViewType("table");
-          setGraphSummary(null); // Clear graph summary on navigation
-          // Save the current question's ID when navigating history
+          setGraphSummary(null);
           if (dashboardHistory[newIndex]?.questionMessageId) {
             localStorage.setItem(
               "currentDashboardQuestionId",
@@ -1399,7 +1601,6 @@ const DashboardInterface = memo(
         .filter((msg) => !msg.isBot)
         .reverse();
 
-      // Determine if the dashboard view should be shown (i.e., an active session or some history exists)
       const showDashboardContent =
         sessionId ||
         messages.length > 0 ||
@@ -1435,101 +1636,117 @@ const DashboardInterface = memo(
 
           <main className="flex-grow flex flex-col items-center overflow-y-auto">
             <div className="w-full flex-grow flex flex-col">
-              {connectionsLoading ? (
-                <div className="flex justify-center items-center flex-grow">
-                  <Loader text="Loading connections..." />
-                </div>
-              ) : connections.length === 0 && !connectionsLoading ? (
-                // Scenario: No data connections at all
-                <div className="flex flex-col items-center justify-center flex-grow text-center">
-                  <h1
-                    className={`text-2xl font-semibold mb-4`}
-                    style={{ color: theme.colors.text }}
-                  >
-                    No Data Connections
-                  </h1>
-                  <p
-                    className={`mb-6`}
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    Please create a data connection to start analyzing your
-                    data.
-                  </p>
-                  <button
-                    onClick={onCreateConSelected}
-                    className="px-6 py-2 font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
-                    style={{
-                      backgroundColor: theme.colors.accent,
-                      color: theme.colors.surface,
-                      boxShadow: theme.shadow.md,
-                      transition: theme.transition.default,
-                    }}
-                  >
-                    Create Connection
-                  </button>
-                </div>
-              ) : showDashboardContent ? (
-                // Scenario: An active session exists or questions have been asked
-                isSubmitting &&
-                currentDashboardView.textualSummary ===
-                  "Processing your request..." ? (
-                  <DashboardSkeletonLoader
-                    question={currentDashboardView.question}
-                    theme={theme}
-                  />
-                ) : isErrorState ? (
-                  <DashboardError
-                    question={currentDashboardView.question}
-                    errorMessage={currentDashboardView.textualSummary.replace(
-                      "Error: ",
-                      ""
-                    )}
-                    theme={theme}
-                  />
-                ) : (
-                  <DashboardView
-                    ref={dashboardViewRef} // Pass the ref to DashboardView
-                    dashboardItem={currentDashboardView}
-                    theme={theme}
-                    isSubmitting={isSubmitting}
-                    activeViewType={currentMainViewType}
-                    onViewTypeChange={handleViewTypeChange}
-                    onNavigateHistory={navigateDashboardHistory}
-                    historyIndex={currentHistoryIndex}
-                    historyLength={dashboardHistory.length}
-                    onToggleFavorite={handleToggleFavorite} // Pass the new handler
-                    currentConnection={selectedConnection || ""} // Pass the current selected connection
-                    graphSummary={graphSummary} // Pass the graph summary
-                  />
-                )
-              ) : (
-                // Scenario: Initial state, no active session/questions, but connections are available
-                <div className="flex flex-col items-center justify-start flex-grow text-center px-4 pt-12">
-                  <h1
-                    className={`text-3xl font-bold mb-4`}
-                    style={{ marginTop: "10vh", color: theme.colors.text }}
-                  >
-                    Hello there! How can I help you today?
-                  </h1>
-                  {!selectedConnection && connections.length > 0 && (
-                    <div className="flex flex-col items-center mb-6">
+              {(() => {
+                if (connectionsLoading) {
+                  return (
+                    <div className="flex justify-center items-center flex-grow">
+                      <Loader text="Loading connections..." />
+                    </div>
+                  );
+                }
+                if (connections.length === 0 && !connectionsLoading) {
+                  return (
+                    <div className="flex flex-col items-center justify-center flex-grow text-center">
+                      <h1
+                        className={`text-2xl font-semibold mb-4`}
+                        style={{ color: theme.colors.text }}
+                      >
+                        No Data Connections
+                      </h1>
                       <p
-                        className={`mb-4`}
+                        className={`mb-6`}
                         style={{ color: theme.colors.textSecondary }}
                       >
-                        You need to select a data connection first:
+                        Please create a data connection to start analyzing your
+                        data.
                       </p>
-                      {/* You could optionally add a connection selection UI here or rely on the footer dropdown */}
+                      <button
+                        onClick={onCreateConSelected}
+                        className="px-6 py-2 font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+                        style={{
+                          backgroundColor: theme.colors.accent,
+                          color: theme.colors.surface,
+                          boxShadow: theme.shadow.md,
+                          transition: theme.transition.default,
+                        }}
+                      >
+                        Create Connection
+                      </button>
                     </div>
-                  )}
-                  {selectedConnection && recommendedQuestions.length > 0 && (
-                    <RecommendedQuestions
-                      questions={recommendedQuestions}
-                      onQuestionClick={handleAskFavoriteQuestion}
+                  );
+                }
+                if (showDashboardContent) {
+                  if (isSubmitting) {
+                    return (
+                      <DashboardSkeletonLoader
+                        question={currentDashboardView.question}
+                        theme={theme}
+                      />
+                    );
+                  }
+                  if (isErrorState) {
+                    return (
+                      <DashboardError
+                        question={currentDashboardView.question}
+                        errorMessage={currentDashboardView.textualSummary.replace(
+                          "Error: ",
+                          ""
+                        )}
+                        theme={theme}
+                        onEditQuestion={(newQuestion) =>
+                          handleEditQuestion(
+                            currentDashboardView.questionMessageId,
+                            newQuestion
+                          )
+                        }
+                      />
+                    );
+                  }
+                  return (
+                    <DashboardView
+                      ref={dashboardViewRef}
+                      dashboardItem={currentDashboardView}
+                      theme={theme}
+                      isSubmitting={isSubmitting}
+                      activeViewType={currentMainViewType}
+                      onViewTypeChange={handleViewTypeChange}
+                      onNavigateHistory={navigateDashboardHistory}
+                      historyIndex={currentHistoryIndex}
+                      historyLength={dashboardHistory.length}
+                      onToggleFavorite={handleToggleFavorite}
+                      currentConnection={selectedConnection || ""}
+                      graphSummary={graphSummary}
+                      onEditQuestion={handleEditQuestion}
                     />
-                  )}
-                </div>
-              )}
+                  );
+                }
+                return (
+                  <div className="flex flex-col items-center justify-start flex-grow text-center px-4 pt-12">
+                    <h1
+                      className={`text-3xl font-bold mb-4`}
+                      style={{ marginTop: "10vh", color: theme.colors.text }}
+                    >
+                      Hello there! How can I help you today?
+                    </h1>
+                    {!selectedConnection && connections.length > 0 && (
+                      <div className="flex flex-col items-center mb-6">
+                        <p
+                          className={`mb-4`}
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          You need to select a data connection first:
+                        </p>
+                      </div>
+                    )}
+                    {selectedConnection && recommendedQuestions.length > 0 && (
+                      <RecommendedQuestions
+                        questions={recommendedQuestions}
+                        onQuestionClick={handleAskFavoriteQuestion}
+                      />
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </main>
 
@@ -1576,110 +1793,83 @@ const DashboardInterface = memo(
 
                 {isConnectionDropdownOpen && (
                   <div
-                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2 w-64" // Removed overflow-hidden
+                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2"
                     style={{
                       background: theme.colors.surface,
                       border: `1px solid ${theme.colors.border}`,
-                      boxShadow: theme.shadow.md,
+                      boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                      width: "min-content",
+                      maxWidth: "min-content",
                     }}
                   >
-                    {connections.length === 0 ? (
+                    {options.map((option) => (
                       <div
-                        className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200" // Increased padding
+                        key={option.value}
+                        className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
                         style={{
                           color: theme.colors.text,
-                          backgroundColor: `${theme.colors.surfaceGlass}`,
+                          background:
+                            selectedConnection === option.value
+                              ? `${theme.colors.accent}10`
+                              : "transparent",
                         }}
-                        onClick={() => handleSelect({ value: "create-con" })}
+                        onClick={() => handleConnectionSelect(option.value)}
                       >
-                        <span className="truncate font-medium flex items-center">
-                          <PlusCircle size={16} className="inline-block mr-1" />
-                          Create New Connection
-                        </span>
-                      </div>
-                    ) : (
-                      <>
-                        <div
-                          className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200" // Increased padding
+                        <span
+                          className="truncate"
                           style={{
-                            color: theme.colors.text,
-                            backgroundColor: `${theme.colors.surface}`,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
-                          onClick={() => handleSelect({ value: "create-con" })}
                         >
-                          <span className="truncate font-medium">
-                            <PlusCircle
-                              size={16}
-                              className="inline-block mr-2"
-                            />{" "}
-                            Create New Connection
-                          </span>
-                        </div>
-                        {connections.map((connection: Connection) => (
-                          <div
-                            key={connection.connectionName}
-                            className="flex items-center justify-between px-4 py-3 hover:bg-opacity-10 cursor-pointer transition-colors duration-200" // Increased padding
+                          {option.label}
+                        </span>
+                        {option.isAdmin && (
+                          <span
                             style={{
-                              color: theme.colors.text,
-                              background:
-                                selectedConnection === connection.connectionName
-                                  ? `${theme.colors.accent}20`
-                                  : "transparent",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              backgroundColor: theme.colors.background,
+                              color: theme.colors.accent,
+                              fontSize: theme.typography.size.sm,
+                              fontWeight: theme.typography.weight.normal,
+                              padding: `0 ${theme.spacing.sm}`,
+                              borderRadius: theme.borderRadius.default,
+                              marginLeft: theme.spacing.sm,
+                              textTransform: "lowercase",
                             }}
-                            onClick={() => handleSelect({ value: connection })}
                           >
+                            Default
+                          </span>
+                        )}
+                        {option.value !== "create-con" && (
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={(e) => handlePdfClick(option.value, e)}
+                              className="p-1"
+                            >
+                              <FaFilePdf
+                                size={16}
+                                style={{ color: theme.colors.error }}
+                                className="hover:scale-105 transition-transform duration-300"
+                              />
+                            </button>
                             <span
-                              className="truncate font-medium" // Added font-medium
+                              className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
                               style={{
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                background: theme.colors.accent,
+                                color: theme.colors.surface,
+                                boxShadow: `0 0 6px ${theme.colors.accent}40`,
                               }}
                             >
-                              {connection.connectionName}
+                              View Data Atlas
                             </span>
-                            {connection.isAdmin && (
-                              <span
-                                className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold" // Styled admin badge
-                                style={{
-                                  backgroundColor: theme.colors.accent,
-                                  color: theme.colors.surface,
-                                }}
-                              >
-                                Default
-                              </span>
-                            )}
-                            {/* Replaced manual group-hover tooltip with CustomTooltip */}
-                            <CustomTooltip
-                              title="View Data Atlas"
-                              position="top"
-                            >
-                              <button
-                                type="button"
-                                onClick={(e) =>
-                                  handlePdfClick(connection.connectionName, e)
-                                }
-                                className="p-1 rounded-md"
-                                style={{ background: theme.colors.accentHover }}
-                                aria-label="View Data Atlas"
-                              >
-                                <p
-                                  className="flex items-center gap-1"
-                                  style={{ fontSize: theme.typography.size.sm }}
-                                >
-                                  <FileText
-                                    size={16}
-                                    style={{ color: "white" }}
-                                    className="hover:scale-105 transition-transform duration-300"
-                                  />
-                                  Data Atlas
-                                </p>
-                              </button>
-                            </CustomTooltip>
                           </div>
-                        ))}
-                      </>
-                    )}
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1731,7 +1921,7 @@ const DashboardInterface = memo(
                 onSubmit={handleSubmit}
                 connections={connections}
                 selectedConnection={selectedConnection}
-                onSelect={handleSelect}
+                onSelect={handleConnectionSelect}
                 onNewChat={handleNewChat}
                 disabled={
                   isSubmitting ||
@@ -1753,7 +1943,6 @@ const DashboardInterface = memo(
                   <ListChecks size={20} />
                 </button>
               </CustomTooltip>
-              {/* New Summarize Graph Button */}
               {showDashboardContent &&
                 !isErrorState &&
                 currentDashboardView.mainViewData.chartData.length > 0 && (

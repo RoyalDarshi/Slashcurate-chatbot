@@ -384,7 +384,6 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
           style={{
             background: theme.colors.surface,
             backdropFilter: "blur(20px)",
-            boxShadow: theme.shadow.lg,
             borderRadius: theme.borderRadius.large,
             minHeight: "300px",
           }}
@@ -458,7 +457,7 @@ const DynamicBarGraph: React.FC<DynamicBarGraphProps> = React.memo(
             }}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={graphData} barCategoryGap="5%" barGap={6}>
+              <BarChart data={graphData} barCategoryGap="10%" barGap={6}>
                 <defs>
                   <linearGradient
                     id="gridGradient"

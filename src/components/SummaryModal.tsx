@@ -140,6 +140,7 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
               : "translate-y-8 opacity-0 scale-95"
           } ${isExpanded ? "w-96 h-[500px]" : "w-80 h-64"}`}
           style={{
+            // background: theme.colors.surface,
             background: `linear-gradient(135deg, ${theme.colors.surface}f0 0%, ${theme.colors.surface}e0 100%)`,
             backdropFilter: "blur(20px)",
             border: `1px solid ${theme.colors.surface}40`,
