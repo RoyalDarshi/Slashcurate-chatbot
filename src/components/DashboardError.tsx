@@ -16,6 +16,7 @@ interface DashboardErrorProps {
   theme: Theme;
   onEditQuestion: (newQuestion: string) => void;
   onRetry: () => void;
+  sessionConErr?: boolean; // Optional prop for session connection error
 }
 
 const DashboardError: React.FC<DashboardErrorProps> = ({
@@ -24,6 +25,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
   theme,
   onEditQuestion,
   onRetry,
+  sessionConErr = false, // Default to false if not provided
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedQuestion, setEditedQuestion] = useState(question);
@@ -292,18 +294,20 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                       "{question}"
                     </blockquote>
 
-                    <button
-                      onClick={handleEditClick}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-md hover:shadow-lg"
-                      style={{
-                        backgroundColor: `${theme.colors.accent}12`,
-                        color: theme.colors.accent,
-                        border: `2px solid ${theme.colors.accent}30`,
-                      }}
-                    >
-                      <Edit3 size={16} />
-                      Edit Question
-                    </button>
+                    {!sessionConErr && (
+                      <button
+                        onClick={handleEditClick}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-md hover:shadow-lg"
+                        style={{
+                          backgroundColor: `${theme.colors.accent}12`,
+                          color: theme.colors.accent,
+                          border: `2px solid ${theme.colors.accent}30`,
+                        }}
+                      >
+                        <Edit3 size={16} />
+                        Edit Question
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -350,19 +354,21 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={onRetry}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all duration-300 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-lg hover:shadow-xl relative overflow-hidden"
-                        style={{
-                          backgroundColor: theme.colors.accent,
-                          color: "white",
-                          boxShadow: `0 8px 25px ${theme.colors.accent}40`,
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
-                        <RefreshCw size={16} />
-                        Retry
-                      </button>
+                      {!sessionConErr && (
+                        <button
+                          onClick={onRetry}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all duration-300 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-lg hover:shadow-xl relative overflow-hidden"
+                          style={{
+                            backgroundColor: theme.colors.accent,
+                            color: "white",
+                            boxShadow: `0 8px 25px ${theme.colors.accent}40`,
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                          <RefreshCw size={16} />
+                          Retry
+                        </button>
+                      )}
                     </div>
 
                     <div

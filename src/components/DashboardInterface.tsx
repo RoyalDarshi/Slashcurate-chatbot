@@ -174,6 +174,9 @@ const DashboardInterface = memo(
         null
       );
       const [graphSummary, setGraphSummary] = useState<string | null>(null);
+      const [sessionConnectionError, setSessionConnectionError] = useState<
+        string | null
+      >(null);
 
       const options = [
         {
@@ -240,6 +243,24 @@ const DashboardInterface = memo(
           setIsSubmitting(false);
         }
       }, [currentDashboardView, isSubmitting]);
+
+      // Monitor session connection status
+      useEffect(() => {
+        if (sessionConnection) {
+          if (selectedConnection !== sessionConnection)
+            setSelectedConnection(sessionConnection);
+          setSessionConnectionError(null);
+        } else if (sessionId && !sessionConnection) {
+          setSessionConnectionError(
+            "This session was loaded but has no associated connection. You can view history or start a new chat."
+          );
+        }
+      }, [
+        sessionConnection,
+        sessionId,
+        setSelectedConnection,
+        selectedConnection,
+      ]);
 
       useEffect(() => {
         const handleSessionLoad = async () => {
@@ -456,6 +477,7 @@ const DashboardInterface = memo(
         setCurrentHistoryIndex(0);
         setCurrentMainViewType("table");
         setGraphSummary(null);
+        setSessionConnectionError(null); // Reset error on new chat
         localStorage.removeItem("currentDashboardQuestionId");
       }, [clearSession, initialDashboardState]);
 
@@ -895,13 +917,7 @@ const DashboardInterface = memo(
             return;
           }
 
-          console.log("Starting edit question:", {
-            questionMessageId,
-            newQuestion,
-          });
-
           setIsSubmitting(true);
-          console.log("Set isSubmitting to true");
           setDashboardHistory((prev) => {
             const newHistory = prev.map((item, index) =>
               index === dashboardItemIndex
@@ -911,10 +927,6 @@ const DashboardInterface = memo(
                     ...getDashboardLoadingState(),
                   }
                 : item
-            );
-            console.log(
-              "Updated dashboardHistory to loading state:",
-              newHistory[dashboardItemIndex]
             );
             return newHistory;
           });
@@ -933,7 +945,6 @@ const DashboardInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            console.log("User message updated on server");
 
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -943,7 +954,6 @@ const DashboardInterface = memo(
                 timestamp: new Date().toISOString(),
               },
             });
-            console.log("User message updated in state");
 
             const botMessage = messages.find(
               (msg) => msg.isBot && msg.parentId === questionMessageId
@@ -959,7 +969,6 @@ const DashboardInterface = memo(
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
-              console.log("Bot message set to loading on server");
 
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
@@ -969,7 +978,6 @@ const DashboardInterface = memo(
                   timestamp: new Date().toISOString(),
                 },
               });
-              console.log("Bot message set to loading in state");
 
               try {
                 const connectionObj = connections.find(
@@ -988,7 +996,6 @@ const DashboardInterface = memo(
                   `${CHATBOT_API_URL}/ask`,
                   payload
                 );
-                console.log("Received bot response:", response.data);
                 const botResponseData = response.data;
 
                 const actualKpiData =
@@ -1023,7 +1030,6 @@ const DashboardInterface = memo(
                   },
                   { headers: { "Content-Type": "application/json" } }
                 );
-                console.log("Bot message updated with response on server");
 
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
@@ -1033,7 +1039,6 @@ const DashboardInterface = memo(
                     timestamp: new Date().toISOString(),
                   },
                 });
-                console.log("Bot message updated with response in state");
 
                 setDashboardHistory((prev) => {
                   const newHistory = prev.map((item, index) =>
@@ -1045,10 +1050,6 @@ const DashboardInterface = memo(
                           textualSummary: actualTextualSummary,
                         }
                       : item
-                  );
-                  console.log(
-                    "Updated dashboardHistory with new data:",
-                    newHistory[dashboardItemIndex]
                   );
                   return newHistory;
                 });
@@ -1073,7 +1074,6 @@ const DashboardInterface = memo(
                   },
                   { headers: { "Content-Type": "application/json" } }
                 );
-                console.log("Bot message updated with error on server");
 
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
@@ -1083,7 +1083,6 @@ const DashboardInterface = memo(
                     timestamp: new Date().toISOString(),
                   },
                 });
-                console.log("Bot message updated with error in state");
 
                 setDashboardHistory((prev) => {
                   const newHistory = prev.map((item, index) =>
@@ -1095,10 +1094,6 @@ const DashboardInterface = memo(
                           textualSummary: `Error: ${errorContent}`,
                         }
                       : item
-                  );
-                  console.log(
-                    "Updated dashboardHistory to error state:",
-                    newHistory[dashboardItemIndex]
                   );
                   return newHistory;
                 });
@@ -1125,16 +1120,11 @@ const DashboardInterface = memo(
                     }
                   : item
               );
-              console.log(
-                "Updated dashboardHistory to error state (user message error):",
-                newHistory[dashboardItemIndex]
-              );
               return newHistory;
             });
           } finally {
             await minLoadingTime;
             setIsSubmitting(false);
-            console.log("Set isSubmitting to false");
           }
         },
         [
@@ -1800,6 +1790,49 @@ const DashboardInterface = memo(
             }}
           />
 
+          {/* Display session connection error message */}
+          {sessionConnectionError && (
+            <div
+              className="flex items-center justify-between sticky top-0 z-20 mx-auto max-w-3xl animate-fade-in"
+              style={{
+                background: theme.colors.surface,
+                color: theme.colors.error,
+                borderLeft: `4px solid ${theme.colors.error}`,
+                borderRadius: theme.borderRadius.default,
+                boxShadow: theme.shadow.md,
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                // marginBottom: theme.spacing.md,
+              }}
+            >
+              <div className="flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ marginRight: theme.spacing.sm }}
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <div>
+                  <div className="font-medium">{sessionConnectionError}</div>
+                  {/* <div className="text-sm opacity-75">
+                    You can view the chat history but cannot ask new questions
+                    with this session. Start a new chat or select a valid
+                    connection.
+                  </div> */}
+                </div>
+              </div>
+            </div>
+          )}
+
           <main className="flex-grow flex flex-col items-center overflow-y-auto">
             <div className="w-full flex-grow flex flex-col">
               {(() => {
@@ -1865,6 +1898,7 @@ const DashboardInterface = memo(
                             newQuestion
                           )
                         }
+                        sessionConErr={!!sessionConnectionError}
                         onRetry={() =>
                           handleRetry(currentDashboardView.questionMessageId)
                         }
@@ -1883,7 +1917,7 @@ const DashboardInterface = memo(
                       historyIndex={currentHistoryIndex}
                       historyLength={dashboardHistory.length}
                       onToggleFavorite={handleToggleFavorite}
-                      currentConnection={selectedConnection || ""}
+                      sessionConErr={!!sessionConnectionError}
                       graphSummary={graphSummary}
                       onEditQuestion={handleEditQuestion}
                     />
@@ -1949,7 +1983,7 @@ const DashboardInterface = memo(
                       setIsConnectionDropdownOpen((prev) => !prev);
                       setIsDbExplorerOpen(false);
                     }}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !!sessionConnectionError}
                     className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
                     style={{
                       background: theme.colors.surface,
@@ -2049,7 +2083,11 @@ const DashboardInterface = memo(
                     setIsDbExplorerOpen((prev) => !prev);
                     setIsConnectionDropdownOpen(false);
                   }}
-                  disabled={isSubmitting || !selectedConnection}
+                  disabled={
+                    isSubmitting ||
+                    !selectedConnection ||
+                    !!sessionConnectionError
+                  }
                   className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
                     isDbExplorerOpen ? "schema-active" : ""
                   }`}
@@ -2094,6 +2132,7 @@ const DashboardInterface = memo(
                 onNewChat={handleNewChat}
                 disabled={
                   isSubmitting ||
+                  !!sessionConnectionError ||
                   (!selectedConnection && connections.length > 0)
                 }
               />

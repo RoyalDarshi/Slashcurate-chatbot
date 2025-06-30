@@ -74,9 +74,12 @@ interface DashboardViewProps {
     currentConnection: string,
     isCurrentlyFavorited: boolean
   ) => Promise<void>;
-  currentConnection: string;
+  sessionConErr: boolean;
   graphSummary: string | null;
-  onEditQuestion: (questionMessageId: string, newQuestion: string) => Promise<void>;
+  onEditQuestion: (
+    questionMessageId: string,
+    newQuestion: string
+  ) => Promise<void>;
 }
 
 const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
@@ -88,7 +91,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       activeViewType,
       onViewTypeChange,
       onToggleFavorite,
-      currentConnection,
+      sessionConErr,
       graphSummary,
       onEditQuestion,
     },
@@ -320,7 +323,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     >
                       Question: {dashboardItem.question}
                     </h3>
-                    {dashboardItem.questionMessageId && (
+                    {dashboardItem.questionMessageId && !sessionConErr && (
                       <button
                         onClick={() => setIsEditing(true)}
                         disabled={isSubmitting}
@@ -333,7 +336,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         Edit
                       </button>
                     )}
-                    {dashboardItem.questionMessageId && (
+                    {dashboardItem.questionMessageId && !sessionConErr && (
                       <button
                         onClick={() =>
                           onToggleFavorite(
