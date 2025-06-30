@@ -726,7 +726,8 @@ const DashboardInterface = memo(
                   };
               const response = await axios.post(
                 `${CHATBOT_API_URL}/ask`,
-                payload
+                payload,
+                { timeout: 30000 }
               );
 
               const botResponseData = response.data;
@@ -1061,8 +1062,27 @@ const DashboardInterface = memo(
                   "Error getting bot response for edited question:",
                   error
                 );
-                const errorContent = getErrorMessage(error);
-
+                let errorContent = getErrorMessage(error);
+                if (
+                  axios.isAxiosError(error) &&
+                  error.code === "ECONNABORTED"
+                ) {
+                  errorContent = "Request timed out. Please try again.";
+                }
+                // setDashboardHistory((prev) =>
+                //   prev.map((item) =>
+                //     item.id === newLoadingEntryId
+                //       ? {
+                //           ...item,
+                //           ...getDashboardErrorState(newQuestion, errorContent),
+                //           textualSummary: `Error: ${errorContent}`,
+                //           isFavorited: item.isFavorited,
+                //           questionMessageId: item.questionMessageId,
+                //           connectionName: item.connectionName,
+                //         }
+                //       : item
+                //   )
+                // );
                 await axios.put(
                   `${API_URL}/api/messages/${botMessage.id}`,
                   {
@@ -1930,6 +1950,7 @@ const DashboardInterface = memo(
               />
               <CustomTooltip title="View Previous Questions" position="top">
                 <button
+                  title="View Previous Questions"
                   onClick={() => setShowPrevQuestionsModal(true)}
                   disabled={
                     isSubmitting || userQuestionsFromSession.length === 0
@@ -1949,6 +1970,7 @@ const DashboardInterface = memo(
                   <CustomTooltip title="Summarize Graph" position="top">
                     <button
                       type="button"
+                      title="Summarize Graph"
                       onClick={handleSummarizeGraph}
                       disabled={
                         isSubmitting ||

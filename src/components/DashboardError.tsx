@@ -59,7 +59,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
 
   return (
     <div
-      className="fixed inset-0 w-full h-full overflow-hidden"
+      className=" h-full"
       style={{
         background: `linear-gradient(135deg, ${theme.colors.background}20, ${theme.colors.surface}40, ${theme.colors.background}20)`,
       }}
