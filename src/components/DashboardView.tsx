@@ -18,6 +18,12 @@ import {
   Snowflake as RadarChartIconLucide,
   List as FunnelChartIconLucide,
 } from "lucide-react";
+import {
+  BsHandThumbsDown,
+  BsHandThumbsDownFill,
+  BsHandThumbsUp,
+  BsHandThumbsUpFill,
+} from "react-icons/bs"; // Import these
 import KPICard from "./KPICard";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
 import DynamicLineGraph from "./Graphs/DynamicLineGraph";
@@ -32,6 +38,10 @@ import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
 import { Theme } from "../types";
 import { useTheme } from "../ThemeContext";
 import SummaryModal from "./SummaryModal";
+import CustomTooltip from "./CustomTooltip"; // Import CustomTooltip
+import { toast } from "react-toastify"; // Assuming toast is available for notifications
+import axios from "axios"; // Assuming axios for API calls
+import { API_URL } from "../config"; // Assuming API_URL is configured
 
 declare function generateKpiData(): {
   kpi1: { label: string; value: string | number; change: string };
@@ -59,6 +69,8 @@ interface DashboardViewProps {
     isFavorited: boolean;
     questionMessageId: string;
     connectionName: string;
+    reaction: "like" | "dislike" | null; // Add reaction type
+    dislike_reason: string | null; // Add dislike_reason
   } | null;
   theme: Theme;
   isSubmitting: boolean;
@@ -106,8 +118,21 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const [editedQuestion, setEditedQuestion] = useState(
       dashboardItem?.question || ""
     );
+    // New states for like/dislike
+
+    const [isLiked, setIsLiked] = useState(dashboardItem?.reaction === "like");
+    const [isDisliked, setIsDisliked] = useState(
+      dashboardItem?.reaction === "dislike"
+    );
+    const [dislikeReason, setDislikeReason] = useState(
+      dashboardItem?.dislike_reason || null
+    );
+    const [showDislikeOptions, setShowDislikeOptions] = useState(false);
+    const [showCustomInput, setShowCustomInput] = useState(false);
+    const [customReason, setCustomReason] = useState("");
 
     const graphContainerRef = useRef<HTMLDivElement>(null);
+    const dislikeRef = useRef<HTMLDivElement>(null); // Ref for dislike options
 
     useEffect(() => {
       if (graphSummary) {
@@ -122,8 +147,104 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     useEffect(() => {
       if (dashboardItem) {
         setEditedQuestion(dashboardItem.question);
+        setIsLiked(dashboardItem.reaction === "like");
+        setIsDisliked(dashboardItem.reaction === "dislike");
+        setDislikeReason(dashboardItem.dislike_reason);
       }
     }, [dashboardItem]);
+
+    // Close dislike options when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          dislikeRef.current &&
+          !dislikeRef.current.contains(event.target as Node)
+        ) {
+          setShowDislikeOptions(false);
+          setShowCustomInput(false);
+        }
+      };
+
+      if (showDislikeOptions) {
+        document.addEventListener("mousedown", handleClickOutside);
+      }
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }, [showDislikeOptions]);
+
+    const handleLike = async () => {
+      if (!dashboardItem) return;
+      try {
+        const newReaction = isLiked ? null : "like";
+        console.log(dashboardItem);
+        await axios.post(
+          `${API_URL}/api/messages/${dashboardItem.questionMessageId}/reaction`,
+          {
+            token: sessionStorage.getItem("token"),
+            reaction: newReaction,
+            dislike_reason: null,
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
+        setIsLiked(!isLiked);
+        setIsDisliked(false);
+        setDislikeReason(null);
+        setShowDislikeOptions(false);
+        setShowCustomInput(false);
+      } catch (error) {
+        console.error("Error setting like reaction:", error);
+        toast.error("Failed to set like reaction.");
+      }
+    };
+
+    const handleDislike = async () => {
+      if (!dashboardItem) return;
+      if (isDisliked) {
+        try {
+          await axios.post(
+            `${API_URL}/api/messages/${dashboardItem.questionMessageId}/reaction`,
+            {
+              token: sessionStorage.getItem("token"),
+              reaction: null,
+              dislike_reason: null,
+            },
+            { headers: { "Content-Type": "application/json" } }
+          );
+          setIsDisliked(false);
+          setDislikeReason(null);
+          setShowDislikeOptions(false);
+          setShowCustomInput(false);
+        } catch (error) {
+          console.error("Error removing dislike reaction:", error);
+          toast.error("Failed to remove dislike reaction.");
+        }
+      } else {
+        setShowDislikeOptions(true);
+      }
+    };
+
+    const handleDislikeOption = async (reason: string) => {
+      if (!dashboardItem) return;
+      try {
+        await axios.post(
+          `${API_URL}/api/messages/${dashboardItem.questionMessageId}/reaction`,
+          {
+            token: sessionStorage.getItem("token"),
+            reaction: "dislike",
+            dislike_reason: reason,
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
+        setDislikeReason(reason);
+        setIsDisliked(true);
+        setShowDislikeOptions(false);
+        setShowCustomInput(false);
+        setIsLiked(false);
+      } catch (error) {
+        console.error("Error setting dislike reaction:", error);
+        toast.error("Failed to set dislike reaction.");
+      }
+    };
 
     if (!dashboardItem) {
       return (
@@ -256,7 +377,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           <DashboardSkeletonLoader />
         ) : (
           <div
-            className="flex flex-col flex-grow h-full min-h-[500px] p-2"
+            className="flex flex-col flex-grow h-full min-h-[500px] px-2 pt-2"
             style={{ backgroundColor: theme.colors.background }}
           >
             <div className="lg:flex-row items-start">
@@ -323,53 +444,205 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     >
                       Question: {dashboardItem.question}
                     </h3>
-                    {dashboardItem.questionMessageId && !sessionConErr && (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        disabled={isSubmitting}
-                        className="px-2 py-1 rounded-md"
-                        style={{
-                          backgroundColor: theme.colors.accent,
-                          color: "white",
-                        }}
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {dashboardItem.questionMessageId && !sessionConErr && (
-                      <button
-                        onClick={() =>
-                          onToggleFavorite(
-                            dashboardItem.questionMessageId,
-                            dashboardItem.question,
-                            dashboardItem.mainViewData.queryData,
-                            dashboardItem.connectionName,
+                    <div className="flex items-center gap-2">
+                      {dashboardItem.questionMessageId && !sessionConErr && (
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          disabled={isSubmitting}
+                          className="px-2 py-1 rounded-md"
+                          style={{
+                            backgroundColor: theme.colors.accent,
+                            color: "white",
+                          }}
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {dashboardItem.questionMessageId && !sessionConErr && (
+                        <button
+                          onClick={() =>
+                            onToggleFavorite(
+                              dashboardItem.questionMessageId,
+                              dashboardItem.question,
+                              dashboardItem.mainViewData.queryData,
+                              dashboardItem.connectionName,
+                              dashboardItem.isFavorited
+                            )
+                          }
+                          title={
                             dashboardItem.isFavorited
-                          )
-                        }
-                        title={
-                          dashboardItem.isFavorited
-                            ? "Remove from Favorites"
-                            : "Add to Favorites"
-                        }
-                        className="px-1 rounded-full transition-colors duration-200 ml-2"
-                        style={{
-                          color: dashboardItem.isFavorited
-                            ? theme.colors.accent
-                            : theme.colors.textSecondary,
-                          backgroundColor: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                        disabled={isSubmitting}
-                      >
-                        {dashboardItem.isFavorited ? (
-                          <Heart size={24} fill={theme.colors.accent} />
-                        ) : (
-                          <Heart size={24} />
-                        )}
-                      </button>
-                    )}
+                              ? "Remove from Favorites"
+                              : "Add to Favorites"
+                          }
+                          className="px-1 rounded-full transition-colors duration-200"
+                          style={{
+                            color: dashboardItem.isFavorited
+                              ? theme.colors.accent
+                              : theme.colors.textSecondary,
+                            backgroundColor: "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                          disabled={isSubmitting}
+                        >
+                          {dashboardItem.isFavorited ? (
+                            <Heart size={24} fill={theme.colors.accent} />
+                          ) : (
+                            <Heart size={24} />
+                          )}
+                        </button>
+                      )}
+                      {/* Like/Dislike buttons */}
+                      {dashboardItem.questionMessageId && !sessionConErr && (
+                        <CustomTooltip
+                          title={isLiked ? "Remove like" : "Like this response"}
+                          position="bottom"
+                        >
+                          <button
+                            onClick={handleLike}
+                            className="rounded-md transition-colors duration-200"
+                            disabled={isSubmitting}
+                          >
+                            {isLiked ? (
+                              <BsHandThumbsUpFill
+                                size={20}
+                                style={{ color: theme.colors.textSecondary }}
+                              />
+                            ) : (
+                              <BsHandThumbsUp
+                                size={20}
+                                style={{ color: theme.colors.textSecondary }}
+                              />
+                            )}
+                          </button>
+                        </CustomTooltip>
+                      )}
+                      {dashboardItem.questionMessageId && !sessionConErr && (
+                        <div className="relative" ref={dislikeRef}>
+                          <CustomTooltip
+                            title={
+                              isDisliked
+                                ? "Remove dislike"
+                                : "Dislike this response"
+                            }
+                            position="bottom"
+                          >
+                            <button
+                              onClick={handleDislike}
+                              className="pt-2 pr-2 rounded-md transition-colors duration-200"
+                              disabled={isSubmitting}
+                            >
+                              {isDisliked ? (
+                                <BsHandThumbsDownFill
+                                  size={20}
+                                  style={{ color: theme.colors.textSecondary }}
+                                />
+                              ) : (
+                                <BsHandThumbsDown
+                                  size={20}
+                                  style={{ color: theme.colors.textSecondary }}
+                                />
+                              )}
+                            </button>
+                          </CustomTooltip>
+                          {showDislikeOptions && (
+                            <div
+                              className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                              style={{
+                                background: theme.colors.surface,
+                                border: `1px solid ${theme.colors.border}`,
+                                boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                              }}
+                            >
+                              {showCustomInput ? (
+                                <div className="px-3 py-2">
+                                  <textarea
+                                    value={customReason}
+                                    onChange={(e) =>
+                                      setCustomReason(e.target.value)
+                                    }
+                                    placeholder="Enter your reason"
+                                    rows={3}
+                                    autoFocus={true}
+                                    className="w-full p-2 rounded resize-none focus:outline-none focus:ring-2 focus:ring-accent"
+                                    style={{
+                                      background: theme.colors.background,
+                                      color: theme.colors.text,
+                                      border: `1px solid ${theme.colors.border}`,
+                                    }}
+                                  />
+                                  <div className="flex justify-end mt-2 gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setShowCustomInput(false);
+                                        setCustomReason("");
+                                      }}
+                                      className="px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                                      style={{
+                                        background: theme.colors.surface,
+                                        color: theme.colors.text,
+                                      }}
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (customReason.trim()) {
+                                          handleDislikeOption(customReason);
+                                          setCustomReason("");
+                                        }
+                                      }}
+                                      className="px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                                      style={{
+                                        background: theme.colors.accent,
+                                        color: "white",
+                                      }}
+                                    >
+                                      Submit
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  {[
+                                    "Incorrect data",
+                                    "Takes too long",
+                                    "Irrelevant response",
+                                    "Confusing answer",
+                                    "Other",
+                                  ].map((reason) => (
+                                    <button
+                                      key={reason}
+                                      onClick={() => {
+                                        if (reason === "Other") {
+                                          setShowCustomInput(true);
+                                        } else {
+                                          handleDislikeOption(reason);
+                                        }
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
+                                      style={{
+                                        color: theme.colors.text,
+                                        backgroundColor: "transparent",
+                                      }}
+                                      onMouseEnter={(e) =>
+                                        (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                                      }
+                                      onMouseLeave={(e) =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "transparent")
+                                      }
+                                    >
+                                      {reason}
+                                    </button>
+                                  ))}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
               </div>

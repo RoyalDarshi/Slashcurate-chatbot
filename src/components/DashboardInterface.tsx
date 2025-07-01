@@ -69,6 +69,8 @@ interface DashboardItem {
   isFavorited: boolean;
   questionMessageId: string;
   connectionName: string;
+  reaction: "like" | "dislike" | null; // Added reaction
+  dislike_reason: string | null; // Added dislike_reason
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -108,6 +110,8 @@ const getDashboardErrorState = (question: string, errorMsg: string) => ({
   },
   textualSummary: `Error: ${errorMsg}`,
   question: question,
+  reaction: null,
+  dislike_reason: null,
 });
 
 const getErrorMessage = (error: any): string => {
@@ -206,6 +210,8 @@ const DashboardInterface = memo(
           isFavorited: false,
           questionMessageId: "",
           connectionName: "",
+          reaction: null,
+          dislike_reason: null,
         }),
         []
       );
@@ -278,6 +284,7 @@ const DashboardInterface = memo(
                 }
               );
               const sessionData = response.data;
+              // console.log("Loaded session data:", sessionData);
               await loadSession(storedSessionId);
 
               const loadedDashboardHistory: DashboardItem[] = [];
@@ -322,6 +329,8 @@ const DashboardInterface = memo(
                       isFavorited: userMessage.isFavorited,
                       questionMessageId: userMessage.id,
                       connectionName: sessionData.connection,
+                      reaction: correspondingBotMessage.reaction,
+                      dislike_reason: correspondingBotMessage.dislike_reason,
                     });
                   } else {
                     try {
@@ -356,6 +365,8 @@ const DashboardInterface = memo(
                         isFavorited: userMessage.isFavorited,
                         questionMessageId: userMessage.id,
                         connectionName: sessionData.connection,
+                        reaction: correspondingBotMessage.reaction,
+                        dislike_reason: correspondingBotMessage.dislike_reason,
                       });
                     } catch (parseError) {
                       console.error(
@@ -373,6 +384,8 @@ const DashboardInterface = memo(
                         isFavorited: userMessage.isFavorited,
                         questionMessageId: userMessage.id,
                         connectionName: sessionData.connection,
+                        reaction: correspondingBotMessage.reaction,
+                        dislike_reason: correspondingBotMessage.dislike_reason,
                       });
                     }
                   }
@@ -524,6 +537,8 @@ const DashboardInterface = memo(
             ...getDashboardLoadingState(),
             lastViewType: "table",
             isFavorited: false,
+            reaction: null,
+            dislike_reason: null,
           };
 
           setDashboardHistory((prev) => {
@@ -1617,6 +1632,8 @@ const DashboardInterface = memo(
                   isFavorited: selectedUserMessage.isFavorited,
                   questionMessageId: selectedUserMessage.id,
                   connectionName: selectedConnection,
+                  reaction: null,
+                  dislike_reason: null,
                 };
 
                 setDashboardHistory((prev) => {
@@ -1665,6 +1682,8 @@ const DashboardInterface = memo(
                     isFavorited: selectedUserMessage.isFavorited,
                     questionMessageId: selectedUserMessage.id,
                     connectionName: selectedConnection,
+                    reaction: null,
+                    dislike_reason: null,
                   };
 
                   setDashboardHistory((prev) => {
