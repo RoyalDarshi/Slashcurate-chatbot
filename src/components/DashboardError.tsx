@@ -193,7 +193,9 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
               Oops! Something went wrong
             </h1>
             <p
-              className="text-sm sm:text-base md:text-lg leading-relaxed max-w-sm md:max-w-lg mx-auto opacity-80 font-medium"
+              className="text-sm sm:text-base md:text-lg leading-relaxed max-w-sm
+
+System: md:max-w-lg mx-auto opacity-80 font-medium"
               style={{ color: theme.colors.textSecondary }}
             >
               Don't worry! Let's refine your question or give it another try to
@@ -201,7 +203,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
             </p>
           </div>
 
-          <div className="p-3 flex-1 overflow-y-auto">
+          <div className="p-3 flex-1">
             {isEditing ? (
               <div className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-8 duration-500">
                 <div
@@ -297,9 +299,9 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <div
-                  className="group relative p-2 rounded-2xl transition-all duration-500 hover:shadow-2xl overflow-hidden"
+                  className="group p-2 rounded-2xl transition-all duration-500 hover:shadow-2xl"
                   style={{
                     backgroundColor: `${theme.colors.background}90`,
                     border: `2px solid ${theme.colors.accent}25`,
@@ -318,7 +320,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                       background: `radial-gradient(circle at center, ${theme.colors.accent}, transparent)`,
                     }}
                   />
-                  <div className="relative z-10">
+                  <div>
                     <div className="flex items-start gap-2 mb-2">
                       <div
                         className="p-3 rounded-xl flex-shrink-0 shadow-lg"
@@ -356,7 +358,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                     >
                       "{question}"
                     </blockquote>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-2 relative">
                       {!sessionConErr && (
                         <>
                           <button
@@ -373,9 +375,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                           </button>
                           <CustomTooltip
                             title={
-                              isLiked
-                                ? "Remove like"
-                                : "Like    Like this response"
+                              isLiked ? "Remove like" : "Like this response"
                             }
                             position="bottom"
                           >
@@ -428,7 +428,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                             </CustomTooltip>
                             {showDislikeOptions && (
                               <div
-                                className="absolute bottom-full left-0 mb-2 rounded-md shadow-lg min-w-[180px]"
+                                className="absolute z-[100] bottom-full left-0 mb-2 rounded-md shadow-lg min-w-[180px]"
                                 style={{
                                   background: theme.colors.surface,
                                   border: `1px solid ${theme.colors.border}`,
@@ -498,15 +498,8 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                                             setShowCustomInput(true);
                                           else handleDislikeOption(reason);
                                         }}
-                                        className="w-full text-left px-3 py-2 text-sm"
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-[theme.colors.accent]20"
                                         style={{ color: theme.colors.text }}
-                                        onMouseEnter={(e) =>
-                                          (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-                                        }
-                                        onMouseLeave={(e) =>
-                                          (e.currentTarget.style.backgroundColor =
-                                            "transparent")
-                                        }
                                       >
                                         {reason}
                                       </button>
@@ -523,7 +516,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                 </div>
 
                 <div
-                  className="relative p-2 rounded-2xl transition-all duration-500 hover:shadow-2xl overflow-hidden"
+                  className="relative p-2 rounded-2xl transition-all duration-500 hover:shadow-2xl"
                   style={{
                     backgroundColor: `${theme.colors.error}06`,
                     border: `2px solid ${theme.colors.error}25`,
@@ -535,7 +528,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                       background: `radial-gradient(circle at top right, ${theme.colors.error}20, transparent)`,
                     }}
                   />
-                  <div className="relative z-10">
+                  <div className="relative">
                     <div className="flex items-start justify-between mb-5">
                       <div className="flex items-start gap-2">
                         <div
