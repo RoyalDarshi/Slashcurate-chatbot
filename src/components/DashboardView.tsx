@@ -57,11 +57,6 @@ interface DashboardViewProps {
     questionMessageId: string,
     newQuestion: string
   ) => Promise<void>;
-  onUpdateReaction: (
-    questionMessageId: string,
-    reaction: "like" | "dislike" | null,
-    dislike_reason: string | null
-  ) => void;
 }
 
 const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
@@ -76,11 +71,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       sessionConErr,
       graphSummary,
       onEditQuestion,
-      onUpdateReaction,
     },
     ref
   ) => {
-    console.log("Rendering DashboardView with item:", dashboardItem);
     const [graphType, setGraphType] = useState("bar");
     const [groupBy, setGroupBy] = useState<string | null>(null);
     const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
@@ -149,7 +142,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         );
         setIsLiked(!isLiked);
         setIsDisliked(false);
-        onUpdateReaction(dashboardItem.botResponseId, newReaction, null);
       } catch (error) {
         console.error("Error setting like reaction:", error);
         toast.error("Failed to set like reaction.");
@@ -170,7 +162,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           );
           setIsDisliked(!isDisliked);
           setIsLiked(false);
-          onUpdateReaction(dashboardItem.botResponseId, null, null);
           setShowDislikeOptions(false);
           setShowCustomInput(false);
         } catch (error) {
@@ -195,7 +186,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         );
         setIsDisliked(true);
         setIsLiked(false);
-        onUpdateReaction(dashboardItem.botResponseId, "dislike", reason);
         setShowDislikeOptions(false);
         setShowCustomInput(false);
       } catch (error) {
@@ -543,7 +533,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                 />
                               ) : (
                                 <BsHandThumbsDown
-                                  size={20}
+                                        size={20}
+                                        
                                   style={{ color: theme.colors.textSecondary }}
                                 />
                               )}

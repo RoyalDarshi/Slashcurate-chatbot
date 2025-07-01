@@ -1521,49 +1521,49 @@ const DashboardInterface = memo(
         [token, dispatchMessages]
       );
 
-      const handleUpdateReaction = useCallback(
-        (
-          questionMessageId: string,
-          reaction: "like" | "dislike" | null,
-          dislike_reason: string | null
-        ) => {
-          setDashboardHistory((prevHistory) =>
-            prevHistory.map((item) =>
-              item.questionMessageId === questionMessageId
-                ? { ...item, reaction, dislike_reason }
-                : item
-            )
-          );
+      // const handleUpdateReaction = useCallback(
+      //   (
+      //     questionMessageId: string,
+      //     reaction: "like" | "dislike" | null,
+      //     dislike_reason: string | null
+      //   ) => {
+      //     setDashboardHistory((prevHistory) =>
+      //       prevHistory.map((item) =>
+      //         item.questionMessageId === questionMessageId
+      //           ? { ...item, reaction, dislike_reason }
+      //           : item
+      //       )
+      //     );
 
-          const botMessage = messages.find(
-            (msg) => msg.isBot && msg.parentId === questionMessageId
-          );
-          if (botMessage) {
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessage.id,
-              message: { reaction, dislike_reason },
-            });
+      //     const botMessage = messages.find(
+      //       (msg) => msg.isBot && msg.parentId === questionMessageId
+      //     );
+      //     if (botMessage) {
+      //       dispatchMessages({
+      //         type: "UPDATE_MESSAGE",
+      //         id: botMessage.id,
+      //         message: { reaction, dislike_reason },
+      //       });
 
-            // Also update on the server
-            axios
-              .put(
-                `${API_URL}/api/messages/${botMessage.id}`,
-                {
-                  token: sessionStorage.getItem("token"),
-                  reaction: reaction,
-                  dislike_reason: dislike_reason,
-                },
-                { headers: { "Content-Type": "application/json" } }
-              )
-              .catch((error) => {
-                console.error("Error updating reaction on server:", error);
-                toast.error("Failed to save reaction.");
-              });
-          }
-        },
-        [messages, dispatchMessages]
-      );
+      //       // Also update on the server
+      //       axios
+      //         .put(
+      //           `${API_URL}/api/messages/${botMessage.id}`,
+      //           {
+      //             token: sessionStorage.getItem("token"),
+      //             reaction: reaction,
+      //             dislike_reason: dislike_reason,
+      //           },
+      //           { headers: { "Content-Type": "application/json" } }
+      //         )
+      //         .catch((error) => {
+      //           console.error("Error updating reaction on server:", error);
+      //           toast.error("Failed to save reaction.");
+      //         });
+      //     }
+      //   },
+      //   [messages, dispatchMessages]
+      // );
 
       const handleConnectionSelect = useCallback(
         (connection: string | null) => {
@@ -2066,10 +2066,19 @@ const DashboardInterface = memo(
                             newQuestion
                           )
                         }
-                        sessionConErr={!!sessionConnectionError}
                         onRetry={() =>
                           handleRetry(currentDashboardView.questionMessageId)
                         }
+                        sessionConErr={!!sessionConnectionError}
+                        botResponseId={currentDashboardView.botResponseId}
+                        initialReaction={currentDashboardView.reaction}
+                        // onReactionChange={(reaction, dislike_reason) =>
+                        //   handleUpdateReaction(
+                        //     currentDashboardView.questionMessageId,
+                        //     reaction,
+                        //     dislike_reason
+                        //   )
+                        // }
                       />
                     );
                   }
@@ -2088,7 +2097,7 @@ const DashboardInterface = memo(
                       sessionConErr={!!sessionConnectionError}
                       graphSummary={graphSummary}
                       onEditQuestion={handleEditQuestion}
-                      onUpdateReaction={handleUpdateReaction}
+                      // onUpdateReaction={handleUpdateReaction}
                     />
                   );
                 }
