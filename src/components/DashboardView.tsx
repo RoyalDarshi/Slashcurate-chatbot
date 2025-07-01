@@ -5,25 +5,13 @@ import React, {
   useImperativeHandle,
   useRef,
 } from "react";
-import {
-  BarChartIcon as BarChartIconLucide,
-  Database,
-  HelpCircle,
-  PieChartIcon as PieChartIconLucide,
-  Table,
-  TrendingUp,
-  Heart,
-  ScatterChartIcon as ScatterChartIconLucide,
-  AreaChart as AreaChartIconLucide,
-  Snowflake as RadarChartIconLucide,
-  List as FunnelChartIconLucide,
-} from "lucide-react";
+import { HelpCircle, Heart, Database, Table } from "lucide-react";
 import {
   BsHandThumbsDown,
   BsHandThumbsDownFill,
   BsHandThumbsUp,
   BsHandThumbsUpFill,
-} from "react-icons/bs"; // Import these
+} from "react-icons/bs";
 import KPICard from "./KPICard";
 import DynamicBarGraph from "./Graphs/DynamicBarGraph";
 import DynamicLineGraph from "./Graphs/DynamicLineGraph";
@@ -36,42 +24,19 @@ import DataTable from "./DataTable";
 import QueryDisplay from "./QueryDisplay";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
 import { Theme } from "../types";
-import { useTheme } from "../ThemeContext";
+import { DashboardItem } from "./DashboardInterface";
 import SummaryModal from "./SummaryModal";
-import CustomTooltip from "./CustomTooltip"; // Import CustomTooltip
-import { toast } from "react-toastify"; // Assuming toast is available for notifications
-import axios from "axios"; // Assuming axios for API calls
-import { API_URL } from "../config"; // Assuming API_URL is configured
-
-declare function generateKpiData(): {
-  kpi1: { label: string; value: string | number; change: string };
-  kpi2: { label: string; value: string | number; change: string };
-  kpi3: { label: string; value: string | number; change: string };
-};
-declare function generateMainViewData(): {
-  chartData: any;
-  tableData: any;
-  queryData: string;
-};
+import CustomTooltip from "./CustomTooltip";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { API_URL } from "../config";
 
 export interface DashboardViewHandle {
   getGraphContainer: () => HTMLDivElement | null;
 }
 
 interface DashboardViewProps {
-  dashboardItem: {
-    id: string;
-    question: string;
-    kpiData: ReturnType<typeof generateKpiData>;
-    mainViewData: ReturnType<typeof generateMainViewData>;
-    textualSummary: string;
-    lastViewType?: "graph" | "table" | "query";
-    isFavorited: boolean;
-    questionMessageId: string;
-    connectionName: string;
-    reaction: "like" | "dislike" | null; // Add reaction type
-    dislike_reason: string | null; // Add dislike_reason
-  } | null;
+  dashboardItem: DashboardItem | null;
   theme: Theme;
   isSubmitting: boolean;
   activeViewType: "graph" | "table" | "query";
@@ -92,6 +57,11 @@ interface DashboardViewProps {
     questionMessageId: string,
     newQuestion: string
   ) => Promise<void>;
+  onUpdateReaction: (
+    questionMessageId: string,
+    reaction: "like" | "dislike" | null,
+    dislike_reason: string | null
+  ) => void;
 }
 
 const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
@@ -106,9 +76,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       sessionConErr,
       graphSummary,
       onEditQuestion,
+      onUpdateReaction,
     },
     ref
   ) => {
+    console.log("Rendering DashboardView with item:", dashboardItem);
     const [graphType, setGraphType] = useState("bar");
     const [groupBy, setGroupBy] = useState<string | null>(null);
     const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
@@ -118,26 +90,19 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const [editedQuestion, setEditedQuestion] = useState(
       dashboardItem?.question || ""
     );
-    // New states for like/dislike
 
-    const [isLiked, setIsLiked] = useState(dashboardItem?.reaction === "like");
-    const [isDisliked, setIsDisliked] = useState(
-      dashboardItem?.reaction === "dislike"
-    );
-    const [dislikeReason, setDislikeReason] = useState(
-      dashboardItem?.dislike_reason || null
-    );
     const [showDislikeOptions, setShowDislikeOptions] = useState(false);
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customReason, setCustomReason] = useState("");
 
     const graphContainerRef = useRef<HTMLDivElement>(null);
-    const dislikeRef = useRef<HTMLDivElement>(null); // Ref for dislike options
+    const dislikeRef = useRef<HTMLDivElement>(null);
+
+    const isLiked = dashboardItem?.reaction === "like";
+    const isDisliked = dashboardItem?.reaction === "dislike";
 
     useEffect(() => {
-      if (graphSummary) {
-        setShowSummaryModal(true);
-      }
+      if (graphSummary) setShowSummaryModal(true);
     }, [graphSummary]);
 
     useImperativeHandle(ref, () => ({
@@ -147,13 +112,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     useEffect(() => {
       if (dashboardItem) {
         setEditedQuestion(dashboardItem.question);
-        setIsLiked(dashboardItem.reaction === "like");
-        setIsDisliked(dashboardItem.reaction === "dislike");
-        setDislikeReason(dashboardItem.dislike_reason);
       }
     }, [dashboardItem]);
 
-    // Close dislike options when clicking outside
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -164,7 +125,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           setShowCustomInput(false);
         }
       };
-
       if (showDislikeOptions) {
         document.addEventListener("mousedown", handleClickOutside);
       }
@@ -174,23 +134,17 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
 
     const handleLike = async () => {
       if (!dashboardItem) return;
+      const newReaction = isLiked ? null : "like";
       try {
-        const newReaction = isLiked ? null : "like";
-        console.log(dashboardItem);
         await axios.post(
-          `${API_URL}/api/messages/${dashboardItem.questionMessageId}/reaction`,
+          `${API_URL}/api/messages/${dashboardItem.botResponseId}/reaction`,
           {
             token: sessionStorage.getItem("token"),
             reaction: newReaction,
             dislike_reason: null,
-          },
-          { headers: { "Content-Type": "application/json" } }
+          }
         );
-        setIsLiked(!isLiked);
-        setIsDisliked(false);
-        setDislikeReason(null);
-        setShowDislikeOptions(false);
-        setShowCustomInput(false);
+        onUpdateReaction(dashboardItem.botResponseId, newReaction, null);
       } catch (error) {
         console.error("Error setting like reaction:", error);
         toast.error("Failed to set like reaction.");
@@ -202,16 +156,14 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       if (isDisliked) {
         try {
           await axios.post(
-            `${API_URL}/api/messages/${dashboardItem.questionMessageId}/reaction`,
+            `${API_URL}/api/messages/${dashboardItem.botResponseId}/reaction`,
             {
               token: sessionStorage.getItem("token"),
               reaction: null,
               dislike_reason: null,
-            },
-            { headers: { "Content-Type": "application/json" } }
+            }
           );
-          setIsDisliked(false);
-          setDislikeReason(null);
+          onUpdateReaction(dashboardItem.botResponseId, null, null);
           setShowDislikeOptions(false);
           setShowCustomInput(false);
         } catch (error) {
@@ -227,19 +179,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       if (!dashboardItem) return;
       try {
         await axios.post(
-          `${API_URL}/api/messages/${dashboardItem.questionMessageId}/reaction`,
+          `${API_URL}/api/messages/${dashboardItem.botResponseId}/reaction`,
           {
             token: sessionStorage.getItem("token"),
             reaction: "dislike",
             dislike_reason: reason,
-          },
-          { headers: { "Content-Type": "application/json" } }
+          }
         );
-        setDislikeReason(reason);
-        setIsDisliked(true);
+        onUpdateReaction(dashboardItem.botResponseId, "dislike", reason);
         setShowDislikeOptions(false);
         setShowCustomInput(false);
-        setIsLiked(false);
       } catch (error) {
         console.error("Error setting dislike reaction:", error);
         toast.error("Failed to set dislike reaction.");
@@ -273,6 +222,104 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     }
 
+    const isErrorState = dashboardItem.textualSummary.startsWith("Error:");
+    if (isErrorState) {
+      return (
+        <div
+          className="flex flex-col items-center justify-center h-full p-4"
+          style={{ backgroundColor: theme.colors.background }}
+        >
+          <HelpCircle
+            size={48}
+            style={{ color: theme.colors.error }}
+            className="mb-3"
+          />
+          <h2
+            className="text-xl font-semibold"
+            style={{ color: theme.colors.text }}
+          >
+            Error: {dashboardItem.question}
+          </h2>
+          <p className="mt-1 text-center" style={{ color: theme.colors.error }}>
+            {dashboardItem.textualSummary.replace("Error: ", "")}
+          </p>
+          {!sessionConErr && (
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 rounded-md"
+                style={{ backgroundColor: theme.colors.accent, color: "white" }}
+              >
+                Edit Question
+              </button>
+              <button
+                onClick={() =>
+                  onEditQuestion(
+                    dashboardItem.questionMessageId,
+                    dashboardItem.question
+                  )
+                }
+                className="px-4 py-2 rounded-md"
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  color: "white",
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {isEditing && (
+            <div className="mt-4 w-full max-w-md">
+              <input
+                type="text"
+                value={editedQuestion}
+                onChange={(e) => setEditedQuestion(e.target.value)}
+                className="w-full p-2 rounded-md"
+                style={{
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                }}
+              />
+              <div className="flex justify-end mt-2 gap-2">
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditedQuestion(dashboardItem.question);
+                  }}
+                  className="px-4 py-2 rounded-md"
+                  style={{
+                    backgroundColor: theme.colors.error,
+                    color: "white",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (editedQuestion.trim()) {
+                      onEditQuestion(
+                        dashboardItem.questionMessageId,
+                        editedQuestion
+                      );
+                      setIsEditing(false);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-md"
+                  style={{
+                    backgroundColor: theme.colors.accent,
+                    color: "white",
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const isKeyExcluded = (key: string): boolean => {
       const lowerKey = key.toLowerCase();
       return (
@@ -287,169 +334,119 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     };
 
-    const getValidValueKeys = (data: any[]) => {
+    const getValidValueKeys = (data: any[]): string[] => {
       if (!data || data.length === 0) return [];
-      const keys = Object.keys(data[0]);
-      return keys.filter((key) => {
-        const sampleVal = data.find(
-          (d) => d[key] !== null && d[key] !== undefined
-        )?.[key];
-        return (
-          !isKeyExcluded(key) &&
-          (typeof sampleVal === "number" || !isNaN(Number(sampleVal)))
-        );
-      });
+      return Object.keys(data[0]).filter(
+        (key) => !isKeyExcluded(key) && typeof data[0][key] === "number"
+      );
     };
 
-    const getValidCategoricalKeys = (data: any[]) => {
+    const getValidCategoricalKeys = (data: any[]): string[] => {
       if (!data || data.length === 0) return [];
-      const keys = Object.keys(data[0]);
-      return keys.filter((key) => {
-        const sampleVal = data.find(
-          (d) => d[key] !== null && d[key] !== undefined
-        )?.[key];
-        return (
+      return Object.keys(data[0]).filter(
+        (key) =>
           !isKeyExcluded(key) &&
-          (typeof sampleVal === "string" || typeof sampleVal === "boolean")
-        );
-      });
-    };
-
-    const autoDetectBestGroupBy = (
-      rows: any[],
-      excludeFn: (key: string) => boolean
-    ): string | null => {
-      if (!rows.length) return null;
-
-      const sampleSize = Math.min(100, rows.length);
-      const sample = rows.slice(0, sampleSize);
-      const scores: Record<string, number> = {};
-
-      const keys = Object.keys(sample[0]);
-
-      keys.forEach((key) => {
-        if (excludeFn(key)) return;
-
-        const values = sample.map((row) => row[key]).filter(Boolean);
-        const uniqueCount = new Set(values).size;
-
-        if (uniqueCount <= 1 || uniqueCount > sampleSize * 0.6) return;
-
-        const nullCount =
-          values.length < sampleSize ? sampleSize - values.length : 0;
-        const nullPenalty = nullCount / sampleSize;
-
-        scores[key] = 1 / (uniqueCount + nullPenalty * 10);
-      });
-
-      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-      return sorted.length ? sorted[0][0] : null;
+          (typeof data[0][key] === "string" ||
+            typeof data[0][key] === "boolean")
+      );
     };
 
     useEffect(() => {
       const chartData = dashboardItem.mainViewData.chartData;
       if (chartData && chartData.length > 0) {
-        const bestGroupBy = autoDetectBestGroupBy(chartData, isKeyExcluded);
-        setGroupBy(bestGroupBy || null);
-
-        const validKeysForValue = getValidValueKeys(chartData);
-        setValueKey(validKeysForValue.length > 0 ? validKeysForValue[0] : null);
+        const validKeys = getValidValueKeys(chartData);
+        setGroupBy(getValidCategoricalKeys(chartData)[0] || null);
+        setValueKey(validKeys[0] || null);
+        setAggregate("sum");
+        setGraphType("bar");
       } else {
         setGroupBy(null);
         setValueKey(null);
       }
-      setAggregate("sum");
-      setGraphType("bar");
     }, [dashboardItem.mainViewData.chartData]);
-
-    useEffect(() => {
-      if (aggregate === "sum" && !valueKey && dashboardItem) {
-        const validKeys = getValidValueKeys(
-          dashboardItem.mainViewData.chartData
-        );
-        if (validKeys.length > 0) setValueKey(validKeys[0]);
-      }
-    }, [aggregate, dashboardItem?.mainViewData.chartData, valueKey]);
 
     return (
       <div>
         {isSubmitting ? (
-          <DashboardSkeletonLoader />
+          <DashboardSkeletonLoader
+            theme={theme}
+            question={dashboardItem.question}
+          />
         ) : (
           <div
             className="flex flex-col flex-grow h-full min-h-[500px] px-2 pt-2"
             style={{ backgroundColor: theme.colors.background }}
           >
-            <div className="lg:flex-row items-start">
-              <div
-                className="w-full p-2 mb-2 rounded-xl shadow-md flex items-center justify-between"
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  color: theme.colors.text,
-                  boxShadow: theme.shadow.md,
-                  borderRadius: theme.borderRadius.large,
-                }}
-              >
-                {isEditing ? (
-                  <div className="flex-grow">
-                    <input
-                      type="text"
-                      value={editedQuestion}
-                      onChange={(e) => setEditedQuestion(e.target.value)}
-                      className="w-full p-2 rounded-md"
-                      style={{
-                        backgroundColor: theme.colors.background,
-                        color: theme.colors.text,
+            <div
+              className="w-full p-2 mb-2 rounded-xl shadow-md flex items-center justify-between"
+              style={{
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                boxShadow: theme.shadow.md,
+                borderRadius: theme.borderRadius.large,
+              }}
+            >
+              {isEditing ? (
+                <div className="flex-grow">
+                  <input
+                    type="text"
+                    value={editedQuestion}
+                    onChange={(e) => setEditedQuestion(e.target.value)}
+                    className="w-full p-2 rounded-md"
+                    style={{
+                      backgroundColor: theme.colors.background,
+                      color: theme.colors.text,
+                    }}
+                  />
+                  <div className="flex justify-end mt-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditedQuestion(dashboardItem.question);
                       }}
-                    />
-                    <div className="flex justify-end mt-2">
-                      <button
-                        onClick={() => {
-                          setIsEditing(false);
-                          setEditedQuestion(dashboardItem.question);
-                        }}
-                        className="px-2 py-1 mr-2 rounded-md"
-                        style={{
-                          backgroundColor: theme.colors.error,
-                          color: "white",
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (editedQuestion.trim()) {
-                            onEditQuestion(
-                              dashboardItem.questionMessageId,
-                              editedQuestion
-                            );
-                            setIsEditing(false);
-                          }
-                        }}
-                        className="px-2 py-1 rounded-md"
-                        style={{
-                          backgroundColor: theme.colors.accent,
-                          color: "white",
-                        }}
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <h3
-                      className="text-xl font-bold text-center flex-grow"
-                      style={{ color: theme.colors.text }}
+                      className="px-4 py-2 rounded-md"
+                      style={{
+                        backgroundColor: theme.colors.error,
+                        color: "white",
+                      }}
                     >
-                      Question: {dashboardItem.question}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      {dashboardItem.questionMessageId && !sessionConErr && (
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (editedQuestion.trim()) {
+                          onEditQuestion(
+                            dashboardItem.questionMessageId,
+                            editedQuestion
+                          );
+                          setIsEditing(false);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-md"
+                      style={{
+                        backgroundColor: theme.colors.accent,
+                        color: "white",
+                      }}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h3
+                    className="text-xl font-bold flex-grow"
+                    style={{ color: theme.colors.text }}
+                  >
+                    Question: {dashboardItem.question}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {!sessionConErr && (
+                      <>
                         <button
                           onClick={() => setIsEditing(true)}
                           disabled={isSubmitting}
-                          className="px-2 py-1 rounded-md"
+                          className="px-4 py-2 rounded-md"
                           style={{
                             backgroundColor: theme.colors.accent,
                             color: "white",
@@ -457,51 +454,51 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         >
                           Edit
                         </button>
-                      )}
-                      {dashboardItem.questionMessageId && !sessionConErr && (
-                        <button
-                          onClick={() =>
-                            onToggleFavorite(
-                              dashboardItem.questionMessageId,
-                              dashboardItem.question,
-                              dashboardItem.mainViewData.queryData,
-                              dashboardItem.connectionName,
-                              dashboardItem.isFavorited
-                            )
-                          }
+                        <CustomTooltip
                           title={
                             dashboardItem.isFavorited
                               ? "Remove from Favorites"
                               : "Add to Favorites"
                           }
-                          className="px-1 rounded-full transition-colors duration-200"
-                          style={{
-                            color: dashboardItem.isFavorited
-                              ? theme.colors.accent
-                              : theme.colors.textSecondary,
-                            backgroundColor: "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                          disabled={isSubmitting}
+                          position="bottom"
                         >
-                          {dashboardItem.isFavorited ? (
-                            <Heart size={24} fill={theme.colors.accent} />
-                          ) : (
-                            <Heart size={24} />
-                          )}
-                        </button>
-                      )}
-                      {/* Like/Dislike buttons */}
-                      {dashboardItem.questionMessageId && !sessionConErr && (
+                          <button
+                            onClick={() =>
+                              onToggleFavorite(
+                                dashboardItem.questionMessageId,
+                                dashboardItem.question,
+                                dashboardItem.mainViewData.queryData,
+                                dashboardItem.connectionName,
+                                dashboardItem.isFavorited
+                              )
+                            }
+                            disabled={isSubmitting}
+                            className="p-2 rounded-full"
+                            style={{
+                              color: dashboardItem.isFavorited
+                                ? theme.colors.accent
+                                : theme.colors.textSecondary,
+                              backgroundColor: "transparent",
+                            }}
+                          >
+                            <Heart
+                              size={24}
+                              fill={
+                                dashboardItem.isFavorited
+                                  ? theme.colors.accent
+                                  : "none"
+                              }
+                            />
+                          </button>
+                        </CustomTooltip>
                         <CustomTooltip
                           title={isLiked ? "Remove like" : "Like this response"}
                           position="bottom"
                         >
                           <button
                             onClick={handleLike}
-                            className="rounded-md transition-colors duration-200"
                             disabled={isSubmitting}
+                            className="p-2 rounded-md"
                           >
                             {isLiked ? (
                               <BsHandThumbsUpFill
@@ -516,8 +513,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             )}
                           </button>
                         </CustomTooltip>
-                      )}
-                      {dashboardItem.questionMessageId && !sessionConErr && (
                         <div className="relative" ref={dislikeRef}>
                           <CustomTooltip
                             title={
@@ -529,8 +524,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                           >
                             <button
                               onClick={handleDislike}
-                              className="pt-2 pr-2 rounded-md transition-colors duration-200"
                               disabled={isSubmitting}
+                              className="p-2 rounded-md"
                             >
                               {isDisliked ? (
                                 <BsHandThumbsDownFill
@@ -551,11 +546,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               style={{
                                 background: theme.colors.surface,
                                 border: `1px solid ${theme.colors.border}`,
-                                boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                                boxShadow: theme.shadow.md,
                               }}
                             >
                               {showCustomInput ? (
-                                <div className="px-3 py-2">
+                                <div className="p-3">
                                   <textarea
                                     value={customReason}
                                     onChange={(e) =>
@@ -563,8 +558,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                     }
                                     placeholder="Enter your reason"
                                     rows={3}
-                                    autoFocus={true}
-                                    className="w-full p-2 rounded resize-none focus:outline-none focus:ring-2 focus:ring-accent"
+                                    className="w-full p-2 rounded resize-none focus:outline-none"
                                     style={{
                                       background: theme.colors.background,
                                       color: theme.colors.text,
@@ -577,7 +571,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                         setShowCustomInput(false);
                                         setCustomReason("");
                                       }}
-                                      className="px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                                      className="px-2 py-1 rounded"
                                       style={{
                                         background: theme.colors.surface,
                                         color: theme.colors.text,
@@ -592,7 +586,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                           setCustomReason("");
                                         }
                                       }}
-                                      className="px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                                      className="px-2 py-1 rounded"
                                       style={{
                                         background: theme.colors.accent,
                                         color: "white",
@@ -614,17 +608,12 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                     <button
                                       key={reason}
                                       onClick={() => {
-                                        if (reason === "Other") {
+                                        if (reason === "Other")
                                           setShowCustomInput(true);
-                                        } else {
-                                          handleDislikeOption(reason);
-                                        }
+                                        else handleDislikeOption(reason);
                                       }}
-                                      className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
-                                      style={{
-                                        color: theme.colors.text,
-                                        backgroundColor: "transparent",
-                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm"
+                                      style={{ color: theme.colors.text }}
                                       onMouseEnter={(e) =>
                                         (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
                                       }
@@ -641,11 +630,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex flex-grow">
@@ -657,371 +646,241 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                   boxShadow: theme.shadow.md,
                   borderRadius: theme.borderRadius.large,
                   minHeight: "300px",
-                  maxHeight: "calc(100vh - 130px)",
-                  display: "flex",
-                  flexDirection: "column",
                 }}
               >
-                <div className="p-2 flex flex-wrap gap-3 items-center">
-                  {dashboardItem.mainViewData.chartData &&
-                    dashboardItem.mainViewData.chartData.length > 0 && (
+                {dashboardItem.mainViewData.chartData?.length > 0 && (
+                  <div className="p-2 flex flex-wrap gap-3">
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor="graph-type-select"
+                        style={{ color: theme.colors.textSecondary }}
+                      >
+                        Graph Type:
+                      </label>
+                      <select
+                        id="graph-type-select"
+                        value={graphType}
+                        onChange={(e) => setGraphType(e.target.value)}
+                        className="px-2 py-1 rounded-md border"
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: theme.colors.border,
+                        }}
+                      >
+                        <option value="bar">Bar</option>
+                        <option value="line">Line</option>
+                        <option value="area">Area</option>
+                        <option value="pie">Pie</option>
+                        <option value="scatter">Scatter</option>
+                        <option value="radar">Radar</option>
+                        <option value="funnel">Funnel</option>
+                      </select>
+                    </div>
+                    {["bar", "line", "area", "pie"].includes(graphType) &&
+                      groupBy && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <label
+                              style={{ color: theme.colors.textSecondary }}
+                            >
+                              Group By:
+                            </label>
+                            <select
+                              value={groupBy || ""}
+                              onChange={(e) => setGroupBy(e.target.value)}
+                              className="px-2 py-1 rounded-md border"
+                              style={{
+                                backgroundColor: theme.colors.surface,
+                                color: theme.colors.text,
+                                borderColor: theme.colors.border,
+                              }}
+                            >
+                              {getValidCategoricalKeys(
+                                dashboardItem.mainViewData.chartData
+                              ).map((key) => (
+                                <option key={key} value={key}>
+                                  {key.replace(/_/g, " ")}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label
+                              style={{ color: theme.colors.textSecondary }}
+                            >
+                              Aggregate:
+                            </label>
+                            <select
+                              value={aggregate}
+                              onChange={(e) =>
+                                setAggregate(e.target.value as "sum" | "count")
+                              }
+                              className="px-2 py-1 rounded-md border"
+                              style={{
+                                backgroundColor: theme.colors.surface,
+                                color: theme.colors.text,
+                                borderColor: theme.colors.border,
+                              }}
+                            >
+                              <option value="count">Count</option>
+                              <option value="sum">Sum</option>
+                            </select>
+                          </div>
+                          {aggregate === "sum" && (
+                            <div className="flex items-center gap-2">
+                              <label
+                                style={{ color: theme.colors.textSecondary }}
+                              >
+                                Value Key:
+                              </label>
+                              <select
+                                value={valueKey || ""}
+                                onChange={(e) => setValueKey(e.target.value)}
+                                className="px-2 py-1 rounded-md border"
+                                style={{
+                                  backgroundColor: theme.colors.surface,
+                                  color: theme.colors.text,
+                                  borderColor: theme.colors.border,
+                                }}
+                              >
+                                {getValidValueKeys(
+                                  dashboardItem.mainViewData.chartData
+                                ).map((key) => (
+                                  <option key={key} value={key}>
+                                    {key.replace(/_/g, " ")}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    {graphType === "scatter" && (
                       <>
-                        <div className="p-2 flex items-center gap-2">
-                          <label
-                            htmlFor="graph-type-select"
-                            className="font-semibold text-sm"
-                            style={{ color: theme.colors.textSecondary }}
-                          >
-                            Graph Type:
+                        <div className="flex items-center gap-2">
+                          <label style={{ color: theme.colors.textSecondary }}>
+                            X-Axis:
                           </label>
                           <select
-                            id="graph-type-select"
-                            value={graphType}
-                            onChange={(e) => setGraphType(e.target.value)}
-                            className="px-2 py-1 rounded-md border shadow-sm"
+                            value={groupBy || ""}
+                            onChange={(e) => setGroupBy(e.target.value)}
+                            className="px-2 py-1 rounded-md border"
                             style={{
                               backgroundColor: theme.colors.surface,
                               color: theme.colors.text,
                               borderColor: theme.colors.border,
-                              borderRadius: theme.borderRadius.default,
                             }}
                           >
-                            <option value="bar">Bar</option>
-                            <option value="line">Line</option>
-                            <option value="area">Area</option>
-                            <option value="pie">Pie</option>
-                            <option value="scatter">Scatter</option>
-                            <option value="radar">Radar</option>
-                            <option value="funnel">Funnel</option>
+                            {getValidValueKeys(
+                              dashboardItem.mainViewData.chartData
+                            ).map((key) => (
+                              <option key={key} value={key}>
+                                {key.replace(/_/g, " ")}
+                              </option>
+                            ))}
                           </select>
                         </div>
-                        {graphType !== "scatter" &&
-                          graphType !== "radar" &&
-                          graphType !== "funnel" &&
-                          groupBy && (
-                            <>
-                              <div className="flex items-center gap-2">
-                                <label
-                                  className="font-semibold text-sm"
-                                  style={{ color: theme.colors.textSecondary }}
-                                >
-                                  Group By:
-                                </label>
-                                <select
-                                  className="px-2 py-1 rounded-md border shadow-sm"
-                                  value={groupBy || ""}
-                                  onChange={(e) => setGroupBy(e.target.value)}
-                                  style={{
-                                    backgroundColor: theme.colors.surface,
-                                    color: theme.colors.text,
-                                    borderColor: theme.colors.border,
-                                    borderRadius: theme.borderRadius.default,
-                                  }}
-                                >
-                                  {Object.keys(
-                                    dashboardItem.mainViewData.chartData[0] ||
-                                      {}
-                                  )
-                                    .filter((key) => !isKeyExcluded(key))
-                                    .map((key) => (
-                                      <option key={key} value={key}>
-                                        {key.replace(/_/g, " ")}
-                                      </option>
-                                    ))}
-                                </select>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <label
-                                  className="font-semibold text-sm"
-                                  style={{ color: theme.colors.textSecondary }}
-                                >
-                                  Aggregate:
-                                </label>
-                                <select
-                                  className="px-2 py-1 rounded-md border shadow-sm"
-                                  value={aggregate}
-                                  onChange={(e) =>
-                                    setAggregate(
-                                      e.target.value as "sum" | "count"
-                                    )
-                                  }
-                                  style={{
-                                    backgroundColor: theme.colors.surface,
-                                    color: theme.colors.text,
-                                    borderColor: theme.colors.border,
-                                    borderRadius: theme.borderRadius.default,
-                                  }}
-                                >
-                                  <option value="count">Count</option>
-                                  <option value="sum">Sum</option>
-                                </select>
-                              </div>
-                              {aggregate === "sum" && (
-                                <div className="flex items-center gap-2">
-                                  <label
-                                    className="font-semibold text-sm"
-                                    style={{
-                                      color: theme.colors.textSecondary,
-                                    }}
-                                  >
-                                    Value Key:
-                                  </label>
-                                  <select
-                                    className="px-2 py-1 rounded-md border shadow-sm"
-                                    value={valueKey || ""}
-                                    onChange={(e) =>
-                                      setValueKey(e.target.value)
-                                    }
-                                    style={{
-                                      backgroundColor: theme.colors.surface,
-                                      color: theme.colors.text,
-                                      borderColor: theme.colors.border,
-                                      borderRadius: theme.borderRadius.default,
-                                    }}
-                                  >
-                                    {getValidValueKeys(
-                                      dashboardItem.mainViewData.chartData
-                                    ).map((key) => (
-                                      <option key={key} value={key}>
-                                        {key.replace(/_/g, " ")}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        {graphType === "scatter" && (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <label
-                                className="font-semibold text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                X-Axis:
-                              </label>
-                              <select
-                                className="px-2 py-1 rounded-md border shadow-sm"
-                                value={groupBy || ""}
-                                onChange={(e) => setGroupBy(e.target.value)}
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                  borderRadius: theme.borderRadius.default,
-                                }}
-                              >
-                                {getValidValueKeys(
-                                  dashboardItem.mainViewData.chartData
-                                ).map((key) => (
-                                  <option key={key} value={key}>
-                                    {key.replace(/_/g, " ")}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label
-                                className="font-semibold text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Y-Axis:
-                              </label>
-                              <select
-                                className="px-2 py-1 rounded-md border shadow-sm"
-                                value={valueKey || ""}
-                                onChange={(e) => setValueKey(e.target.value)}
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                  borderRadius: theme.borderRadius.default,
-                                }}
-                              >
-                                {getValidValueKeys(
-                                  dashboardItem.mainViewData.chartData
-                                ).map((key) => (
-                                  <option key={key} value={key}>
-                                    {key.replace(/_/g, " ")}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </>
-                        )}
-                        {graphType === "radar" && (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <label
-                                className="font-semibold text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Category By:
-                              </label>
-                              <select
-                                className="px-2 py-1 rounded-md border shadow-sm"
-                                value={groupBy || ""}
-                                onChange={(e) => setGroupBy(e.target.value)}
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                  borderRadius: theme.borderRadius.default,
-                                }}
-                              >
-                                {getValidCategoricalKeys(
-                                  dashboardItem.mainViewData.chartData
-                                ).map((key) => (
-                                  <option key={key} value={key}>
-                                    {key.replace(/_/g, " ")}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label
-                                className="font-semibold text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Value:
-                              </label>
-                              <select
-                                className="px-2 py-1 rounded-md border shadow-sm"
-                                value={valueKey || ""}
-                                onChange={(e) => setValueKey(e.target.value)}
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                  borderRadius: theme.borderRadius.default,
-                                }}
-                              >
-                                {getValidValueKeys(
-                                  dashboardItem.mainViewData.chartData
-                                ).map((key) => (
-                                  <option key={key} value={key}>
-                                    {key.replace(/_/g, " ")}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label
-                                className="font-semibold text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Aggregate:
-                              </label>
-                              <select
-                                className="px-2 py-1 rounded-md border shadow-sm"
-                                value={aggregate}
-                                onChange={(e) =>
-                                  setAggregate(
-                                    e.target.value as "sum" | "count"
-                                  )
-                                }
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                  borderRadius: theme.borderRadius.default,
-                                }}
-                              >
-                                <option value="count">Count</option>
-                                <option value="sum">Sum</option>
-                              </select>
-                            </div>
-                          </>
-                        )}
-                        {graphType === "funnel" && (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <label
-                                className="font-semibold text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Stage By:
-                              </label>
-                              <select
-                                className="px-2 py-1 rounded-md border shadow-sm"
-                                value={groupBy || ""}
-                                onChange={(e) => setGroupBy(e.target.value)}
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                  borderRadius: theme.borderRadius.default,
-                                }}
-                              >
-                                {getValidCategoricalKeys(
-                                  dashboardItem.mainViewData.chartData
-                                ).map((key) => (
-                                  <option key={key} value={key}>
-                                    {key.replace(/_/g, " ")}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label
-                                className="font-semibold text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Value:
-                              </label>
-                              <select
-                                className="px-2 py-1 rounded-md border shadow-sm"
-                                value={valueKey || ""}
-                                onChange={(e) => setValueKey(e.target.value)}
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                  borderRadius: theme.borderRadius.default,
-                                }}
-                              >
-                                {getValidValueKeys(
-                                  dashboardItem.mainViewData.chartData
-                                ).map((key) => (
-                                  <option key={key} value={key}>
-                                    {key.replace(/_/g, " ")}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label
-                                className="font-semibold text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Aggregate:
-                              </label>
-                              <select
-                                className="px-2 py-1 rounded-md border shadow-sm"
-                                value={aggregate}
-                                onChange={(e) =>
-                                  setAggregate(
-                                    e.target.value as "sum" | "count"
-                                  )
-                                }
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                  borderRadius: theme.borderRadius.default,
-                                }}
-                              >
-                                <option value="count">Count</option>
-                                <option value="sum">Sum</option>
-                              </select>
-                            </div>
-                          </>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <label style={{ color: theme.colors.textSecondary }}>
+                            Y-Axis:
+                          </label>
+                          <select
+                            value={valueKey || ""}
+                            onChange={(e) => setValueKey(e.target.value)}
+                            className="px-2 py-1 rounded-md border"
+                            style={{
+                              backgroundColor: theme.colors.surface,
+                              color: theme.colors.text,
+                              borderColor: theme.colors.border,
+                            }}
+                          >
+                            {getValidValueKeys(
+                              dashboardItem.mainViewData.chartData
+                            ).map((key) => (
+                              <option key={key} value={key}>
+                                {key.replace(/_/g, " ")}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </>
                     )}
-                </div>
-
-                <div className="flex flex-col flex-1 min-h-[400px]">
+                    {["radar", "funnel"].includes(graphType) && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <label style={{ color: theme.colors.textSecondary }}>
+                            {graphType === "radar"
+                              ? "Category By:"
+                              : "Stage By:"}
+                          </label>
+                          <select
+                            value={groupBy || ""}
+                            onChange={(e) => setGroupBy(e.target.value)}
+                            className="px-2 py-1 rounded-md border"
+                            style={{
+                              backgroundColor: theme.colors.surface,
+                              color: theme.colors.text,
+                              borderColor: theme.colors.border,
+                            }}
+                          >
+                            {getValidCategoricalKeys(
+                              dashboardItem.mainViewData.chartData
+                            ).map((key) => (
+                              <option key={key} value={key}>
+                                {key.replace(/_/g, " ")}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label style={{ color: theme.colors.textSecondary }}>
+                            Value:
+                          </label>
+                          <select
+                            value={valueKey || ""}
+                            onChange={(e) => setValueKey(e.target.value)}
+                            className="px-2 py-1 rounded-md border"
+                            style={{
+                              backgroundColor: theme.colors.surface,
+                              color: theme.colors.text,
+                              borderColor: theme.colors.border,
+                            }}
+                          >
+                            {getValidValueKeys(
+                              dashboardItem.mainViewData.chartData
+                            ).map((key) => (
+                              <option key={key} value={key}>
+                                {key.replace(/_/g, " ")}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label style={{ color: theme.colors.textSecondary }}>
+                            Aggregate:
+                          </label>
+                          <select
+                            value={aggregate}
+                            onChange={(e) =>
+                              setAggregate(e.target.value as "sum" | "count")
+                            }
+                            className="px-2 py-1 rounded-md border"
+                            style={{
+                              backgroundColor: theme.colors.surface,
+                              color: theme.colors.text,
+                              borderColor: theme.colors.border,
+                            }}
+                          >
+                            <option value="count">Count</option>
+                            <option value="sum">Sum</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                <div className="flex-1">
                   {graphType === "bar" && (
                     <DynamicBarGraph
                       data={dashboardItem.mainViewData.chartData}
@@ -1102,26 +961,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               </div>
 
-              <div className="flex flex-col lg:w-[40%] w-full overflow-hidden">
-                <div
-                  className="flex-1 overflow-y-auto mx-2 rounded-xl"
-                  style={{
-                    minHeight: "300px",
-                    maxHeight: "100%",
-                  }}
-                >
-                  {activeViewType === "table" && (
-                    <DataTable data={dashboardItem.mainViewData.tableData} />
-                  )}
-                  {activeViewType === "query" && (
-                    <div className="flex justify-center items-center relative">
-                      <QueryDisplay
-                        query={dashboardItem.mainViewData.queryData}
-                        fontSize="text-base"
-                      />
-                    </div>
-                  )}
-                </div>
+              <div className="lg:w-[40%] w-full mx-2 rounded-xl overflow-hidden">
+                {activeViewType === "table" && (
+                  <DataTable data={dashboardItem.mainViewData.tableData} />
+                )}
+                {activeViewType === "query" && (
+                  <QueryDisplay
+                    query={dashboardItem.mainViewData.queryData}
+                    fontSize="text-base"
+                  />
+                )}
               </div>
 
               <div className="flex flex-row self-start lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 flex-shrink-0 mt-4 lg:mt-0 justify-center">
@@ -1131,7 +980,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     onClick={() => onViewTypeChange(viewType)}
                     disabled={isSubmitting}
                     title={viewType.charAt(0).toUpperCase() + viewType.slice(1)}
-                    className="p-2 transition-all duration-200 ease-in-out disabled:opacity-60"
+                    className="p-2 transition-all rounded-full duration-200 ease-in-out disabled:opacity-60"
                     style={{
                       backgroundColor:
                         activeViewType === viewType
@@ -1141,8 +990,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         activeViewType === viewType
                           ? "white"
                           : theme.colors.accent,
-                      boxShadow: theme.shadow.md,
-                      borderRadius: theme.borderRadius.pill,
                     }}
                   >
                     {viewType === "table" && <Table size={24} />}

@@ -14,6 +14,7 @@ import {
   Message,
   Connection,
   ChatInterfaceProps as DashboardInterfaceProps,
+  Theme,
 } from "../types";
 import { API_URL, CHATBOT_API_URL } from "../config";
 import ChatInput from "./DashboardInput";
@@ -59,7 +60,7 @@ interface MainViewData {
   queryData: string;
 }
 
-interface DashboardItem {
+export interface DashboardItem {
   id: string;
   question: string;
   kpiData: KpiData;
@@ -69,8 +70,9 @@ interface DashboardItem {
   isFavorited: boolean;
   questionMessageId: string;
   connectionName: string;
-  reaction: "like" | "dislike" | null; // Added reaction
-  dislike_reason: string | null; // Added dislike_reason
+  reaction: "like" | "dislike" | null;
+  dislike_reason: string | null;
+  botResponseId: string;
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -139,6 +141,93 @@ const getErrorMessage = (error: any): string => {
   return (
     extractedErrorMessage || "An unknown error occurred. Please try again."
   );
+};
+
+const sanitizeReaction = (reaction: any): "like" | "dislike" | null => {
+  return reaction === "like" || reaction === "dislike" ? reaction : null;
+};
+
+const createDashboardItemFromMessages = (
+  userMessage: Message,
+  botMessage: Message | undefined,
+  connectionName: string
+): DashboardItem | null => {
+  if (!botMessage || botMessage.content === "loading...") {
+    return null;
+  }
+
+  const baseItem = {
+    id: generateId(),
+    question: userMessage.content,
+    lastViewType: "table" as const,
+    isFavorited: userMessage.isFavorited,
+    questionMessageId: userMessage.id,
+    connectionName: connectionName,
+    reaction: sanitizeReaction(botMessage.reaction),
+    dislike_reason: botMessage.dislike_reason ?? null,
+    botResponseId: botMessage.id,
+  };
+
+  if (
+    botMessage.content.startsWith("Error:") ||
+    !botMessage.content.trim().startsWith("{")
+  ) {
+    return {
+      ...baseItem,
+      ...getDashboardErrorState(
+        userMessage.content,
+        botMessage.content.replace("Error: ", "")
+      ),
+      reaction: sanitizeReaction(botMessage.reaction),
+      dislike_reason: botMessage.dislike_reason ?? null,
+      botResponseId: botMessage.id,
+    };
+  } else {
+    try {
+      const botResponseContent = JSON.parse(botMessage.content);
+      const actualKpiData = botResponseContent.kpiData || initialEmptyKpiData;
+      const actualMainViewData = {
+        chartData: Array.isArray(botResponseContent.answer)
+          ? botResponseContent.answer
+          : [],
+        tableData: Array.isArray(botResponseContent.answer)
+          ? botResponseContent.answer
+          : [],
+        queryData:
+          typeof botResponseContent.sql_query === "string"
+            ? botResponseContent.sql_query
+            : "No query available.",
+      };
+      const actualTextualSummary =
+        botResponseContent.textualSummary ||
+        `Here is the analysis for: "${userMessage.content}"`;
+
+      return {
+        ...baseItem,
+        kpiData: actualKpiData,
+        mainViewData: actualMainViewData,
+        textualSummary: actualTextualSummary,
+        reaction: sanitizeReaction(botMessage.reaction),
+        dislike_reason: botMessage.dislike_reason ?? null,
+        botResponseId: botMessage.id,
+      };
+    } catch (parseError) {
+      console.error(
+        "Failed to parse bot response content from session:",
+        parseError
+      );
+      return {
+        ...baseItem,
+        ...getDashboardErrorState(
+          userMessage.content,
+          "Failed to parse bot response."
+        ),
+        reaction: sanitizeReaction(botMessage.reaction),
+        dislike_reason: botMessage.dislike_reason ?? null,
+        botResponseId: botMessage.id,
+      };
+    }
+  }
 };
 
 const DashboardInterface = memo(
@@ -212,6 +301,7 @@ const DashboardInterface = memo(
           connectionName: "",
           reaction: null,
           dislike_reason: null,
+          botResponseId: "",
         }),
         []
       );
@@ -284,10 +374,9 @@ const DashboardInterface = memo(
                 }
               );
               const sessionData = response.data;
-              // console.log("Loaded session data:", sessionData);
+              console.log(sessionData);
               await loadSession(storedSessionId);
 
-              const loadedDashboardHistory: DashboardItem[] = [];
               const userMessages = sessionData.messages
                 .filter((msg: Message) => !msg.isBot)
                 .sort(
@@ -296,99 +385,35 @@ const DashboardInterface = memo(
                     new Date(b.timestamp).getTime()
                 );
 
-              let restoredIndex = 0;
+              const botMessagesByParentId = new Map<string, Message[]>();
+              sessionData.messages
+                .filter((msg: Message) => msg.isBot && msg.parentId)
+                .forEach((msg: Message) => {
+                  if (!botMessagesByParentId.has(msg.parentId!)) {
+                    botMessagesByParentId.set(msg.parentId!, []);
+                  }
+                  botMessagesByParentId.get(msg.parentId!)!.push(msg);
+                });
+
+              const loadedDashboardHistory: DashboardItem[] = [];
 
               for (const userMessage of userMessages) {
-                const correspondingBotMessage = sessionData.messages
-                  .filter(
-                    (msg: Message) =>
-                      msg.isBot && msg.parentId === userMessage.id
-                  )
-                  .sort(
-                    (a: Message, b: Message) =>
-                      new Date(b.timestamp).getTime() -
-                      new Date(a.timestamp).getTime()
-                  )[0];
+                const correspondingBotMessages = botMessagesByParentId.get(
+                  userMessage.id
+                );
+                const latestBotMessage = correspondingBotMessages?.sort(
+                  (a: Message, b: Message) =>
+                    new Date(b.timestamp).getTime() -
+                    new Date(a.timestamp).getTime()
+                )[0];
 
-                if (
-                  correspondingBotMessage &&
-                  correspondingBotMessage.content !== "loading..."
-                ) {
-                  if (
-                    correspondingBotMessage.content.startsWith("Error:") ||
-                    !correspondingBotMessage.content.trim().startsWith("{")
-                  ) {
-                    loadedDashboardHistory.push({
-                      id: generateId(),
-                      question: userMessage.content,
-                      ...getDashboardErrorState(
-                        userMessage.content,
-                        correspondingBotMessage.content.replace("Error: ", "")
-                      ),
-                      lastViewType: "table",
-                      isFavorited: userMessage.isFavorited,
-                      questionMessageId: userMessage.id,
-                      connectionName: sessionData.connection,
-                      reaction: correspondingBotMessage.reaction,
-                      dislike_reason: correspondingBotMessage.dislike_reason,
-                    });
-                  } else {
-                    try {
-                      const botResponseContent = JSON.parse(
-                        correspondingBotMessage.content
-                      );
-                      const actualKpiData =
-                        botResponseContent.kpiData || initialEmptyKpiData;
-                      const actualMainViewData = {
-                        chartData: Array.isArray(botResponseContent.answer)
-                          ? botResponseContent.answer
-                          : [],
-                        tableData: Array.isArray(botResponseContent.answer)
-                          ? botResponseContent.answer
-                          : [],
-                        queryData:
-                          typeof botResponseContent.sql_query === "string"
-                            ? botResponseContent.sql_query
-                            : "No query available.",
-                      };
-                      const actualTextualSummary =
-                        botResponseContent.textualSummary ||
-                        `Here is the analysis for: "${userMessage.content}"`;
-
-                      loadedDashboardHistory.push({
-                        id: generateId(),
-                        question: userMessage.content,
-                        kpiData: actualKpiData,
-                        mainViewData: actualMainViewData,
-                        textualSummary: actualTextualSummary,
-                        lastViewType: "table",
-                        isFavorited: userMessage.isFavorited,
-                        questionMessageId: userMessage.id,
-                        connectionName: sessionData.connection,
-                        reaction: correspondingBotMessage.reaction,
-                        dislike_reason: correspondingBotMessage.dislike_reason,
-                      });
-                    } catch (parseError) {
-                      console.error(
-                        "Failed to parse bot response content from session:",
-                        parseError
-                      );
-                      loadedDashboardHistory.push({
-                        id: generateId(),
-                        question: userMessage.content,
-                        ...getDashboardErrorState(
-                          userMessage.content,
-                          "Failed to parse bot response."
-                        ),
-                        lastViewType: "table",
-                        isFavorited: userMessage.isFavorited,
-                        questionMessageId: userMessage.id,
-                        connectionName: sessionData.connection,
-                        reaction: correspondingBotMessage.reaction,
-                        dislike_reason: correspondingBotMessage.dislike_reason,
-                      });
-                    }
-                  }
+                const dashboardItem = createDashboardItemFromMessages(
+                  userMessage,
+                  latestBotMessage,
+                  sessionData.connection
+                );
+                if (dashboardItem) {
+                  loadedDashboardHistory.push(dashboardItem);
                 }
               }
 
@@ -397,11 +422,10 @@ const DashboardInterface = memo(
                   (item) => item.questionMessageId === storedCurrentQuestionId
                 );
 
-                if (foundIndex !== -1) {
-                  restoredIndex = foundIndex;
-                } else {
-                  restoredIndex = loadedDashboardHistory.length - 1;
-                }
+                const restoredIndex =
+                  foundIndex !== -1
+                    ? foundIndex
+                    : loadedDashboardHistory.length - 1;
 
                 setDashboardHistory(loadedDashboardHistory);
                 setCurrentHistoryIndex(restoredIndex);
@@ -539,6 +563,7 @@ const DashboardInterface = memo(
             isFavorited: false,
             reaction: null,
             dislike_reason: null,
+            botResponseId: "",
           };
 
           setDashboardHistory((prev) => {
@@ -576,6 +601,9 @@ const DashboardInterface = memo(
                         isFavorited: false,
                         questionMessageId: "",
                         connectionName: connection,
+                        reaction: null,
+                        dislike_reason: null,
+                        botResponseId: "",
                       }
                     : item
                 )
@@ -629,6 +657,9 @@ const DashboardInterface = memo(
                           isFavorited: false,
                           questionMessageId: "",
                           connectionName: connection,
+                          reaction: null,
+                          dislike_reason: null,
+                          botResponseId: "",
                         }
                       : item
                   )
@@ -650,6 +681,9 @@ const DashboardInterface = memo(
                         isFavorited: false,
                         questionMessageId: "",
                         connectionName: connection,
+                        reaction: null,
+                        dislike_reason: null,
+                        botResponseId: "",
                       }
                     : item
                 )
@@ -701,6 +735,11 @@ const DashboardInterface = memo(
                       questionMessageId: finalUserMessageId,
                       isFavorited: finalUserMessage.isFavorited,
                       connectionName: connection,
+                      reaction: sanitizeReaction(finalUserMessage.reaction),
+                      dislike_reason: sanitizeReaction(
+                        finalUserMessage.dislike_reason
+                      ),
+                      botResponseId: finalUserMessage.id,
                     }
                   : item
               )
@@ -797,6 +836,11 @@ const DashboardInterface = memo(
                         kpiData: actualKpiData,
                         mainViewData: actualMainViewData,
                         textualSummary: actualTextualSummary,
+                        reaction: sanitizeReaction(botResponseData.reaction),
+                        dislike_reason: sanitizeReaction(
+                          botResponseData.dislike_reason
+                        ),
+                        botResponseId: botResponseData.id,
                       }
                     : item
                 )
@@ -841,6 +885,9 @@ const DashboardInterface = memo(
                         isFavorited: item.isFavorited,
                         questionMessageId: item.questionMessageId,
                         connectionName: item.connectionName,
+                        reaction: null,
+                        dislike_reason: null,
+                        botResponseId: "",
                       }
                     : item
                 )
@@ -1063,6 +1110,11 @@ const DashboardInterface = memo(
                           kpiData: actualKpiData,
                           mainViewData: actualMainViewData,
                           textualSummary: actualTextualSummary,
+                          reaction: sanitizeReaction(botResponseData.reaction),
+                          dislike_reason: sanitizeReaction(
+                            botResponseData.dislike_reason
+                          ),
+                          botResponseId: botResponseData.id,
                         }
                       : item
                   );
@@ -1107,6 +1159,9 @@ const DashboardInterface = memo(
                           question: newQuestion,
                           ...getDashboardErrorState(newQuestion, errorContent),
                           textualSummary: `Error: ${errorContent}`,
+                          reaction: null,
+                          dislike_reason: null,
+                          botResponseId: "",
                         }
                       : item
                   );
@@ -1132,6 +1187,9 @@ const DashboardInterface = memo(
                         getErrorMessage(error)
                       ),
                       textualSummary: `Error: ${getErrorMessage(error)}`,
+                      reaction: null,
+                      dislike_reason: null,
+                      botResponseId: "",
                     }
                   : item
               );
@@ -1250,6 +1308,11 @@ const DashboardInterface = memo(
                       kpiData: actualKpiData,
                       mainViewData: actualMainViewData,
                       textualSummary: actualTextualSummary,
+                      reaction: sanitizeReaction(botResponseData.reaction),
+                      dislike_reason: sanitizeReaction(
+                        botResponseData.dislike_reason
+                      ),
+                      botResponseId: botResponseData.id,
                     }
                   : item
               )
@@ -1284,6 +1347,9 @@ const DashboardInterface = memo(
                       ...item,
                       ...getDashboardErrorState(question, errorContent),
                       textualSummary: `Error: ${errorContent}`,
+                      reaction: null,
+                      dislike_reason: null,
+                      botResponseId: "",
                     }
                   : item
               )
@@ -1413,6 +1479,34 @@ const DashboardInterface = memo(
           }
         },
         [token, dispatchMessages]
+      );
+
+      const handleUpdateReaction = useCallback(
+        (
+          questionMessageId: string,
+          reaction: "like" | "dislike" | null,
+          dislike_reason: string | null
+        ) => {
+          setDashboardHistory((prevHistory) =>
+            prevHistory.map((item) =>
+              item.questionMessageId === questionMessageId
+                ? { ...item, reaction, dislike_reason }
+                : item
+            )
+          );
+
+          const botMessage = messages.find(
+            (msg) => msg.isBot && msg.parentId === questionMessageId
+          );
+          if (botMessage) {
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: botMessage.id,
+              message: { reaction, dislike_reason },
+            });
+          }
+        },
+        [messages, dispatchMessages]
       );
 
       const handleConnectionSelect = useCallback(
@@ -1634,6 +1728,7 @@ const DashboardInterface = memo(
                   connectionName: selectedConnection,
                   reaction: null,
                   dislike_reason: null,
+                  botResponseId: "",
                 };
 
                 setDashboardHistory((prev) => {
@@ -1684,6 +1779,7 @@ const DashboardInterface = memo(
                     connectionName: selectedConnection,
                     reaction: null,
                     dislike_reason: null,
+                    botResponseId: "",
                   };
 
                   setDashboardHistory((prev) => {
@@ -1809,7 +1905,6 @@ const DashboardInterface = memo(
             }}
           />
 
-          {/* Display session connection error message */}
           {sessionConnectionError && (
             <div
               className="flex items-center justify-between sticky top-0 z-20 mx-auto max-w-3xl animate-fade-in"
@@ -1820,7 +1915,6 @@ const DashboardInterface = memo(
                 borderRadius: theme.borderRadius.default,
                 boxShadow: theme.shadow.md,
                 padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                // marginBottom: theme.spacing.md,
               }}
             >
               <div className="flex items-center">
@@ -1842,11 +1936,6 @@ const DashboardInterface = memo(
                 </svg>
                 <div>
                   <div className="font-medium">{sessionConnectionError}</div>
-                  {/* <div className="text-sm opacity-75">
-                    You can view the chat history but cannot ask new questions
-                    with this session. Start a new chat or select a valid
-                    connection.
-                  </div> */}
                 </div>
               </div>
             </div>
@@ -1939,6 +2028,7 @@ const DashboardInterface = memo(
                       sessionConErr={!!sessionConnectionError}
                       graphSummary={graphSummary}
                       onEditQuestion={handleEditQuestion}
+                      onUpdateReaction={handleUpdateReaction}
                     />
                   );
                 }
