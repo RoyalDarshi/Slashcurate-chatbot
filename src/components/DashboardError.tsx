@@ -428,7 +428,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                             </CustomTooltip>
                             {showDislikeOptions && (
                               <div
-                                className="absolute left-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                                className="absolute bottom-full left-0 mb-2 rounded-md shadow-lg min-w-[180px]"
                                 style={{
                                   background: theme.colors.surface,
                                   border: `1px solid ${theme.colors.border}`,
