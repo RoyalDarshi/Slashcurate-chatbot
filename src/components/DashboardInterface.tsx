@@ -561,9 +561,9 @@ const DashboardInterface = memo(
             ...getDashboardLoadingState(),
             lastViewType: "table",
             isFavorited: false,
-            reaction: null,
-            dislike_reason: null,
-            botResponseId: "",
+            reaction: null, // Initial loading state, no reaction yet
+            dislike_reason: null, // Initial loading state, no dislike reason yet
+            botResponseId: "", // Initial loading state, no bot response ID yet
           };
 
           setDashboardHistory((prev) => {
@@ -705,6 +705,7 @@ const DashboardInterface = memo(
           let botMessageId: string = "";
 
           try {
+            // 1. Save User Message
             const userResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -727,6 +728,8 @@ const DashboardInterface = memo(
               message: finalUserMessage,
             });
 
+            // Update dashboard history with the actual user message ID.
+            // Do NOT set botResponseId or reaction here, as they belong to the bot's response.
             setDashboardHistory((prev) =>
               prev.map((item) =>
                 item.id === newLoadingEntryId
@@ -735,11 +738,6 @@ const DashboardInterface = memo(
                       questionMessageId: finalUserMessageId,
                       isFavorited: finalUserMessage.isFavorited,
                       connectionName: connection,
-                      reaction: sanitizeReaction(finalUserMessage.reaction),
-                      dislike_reason: sanitizeReaction(
-                        finalUserMessage.dislike_reason
-                      ),
-                      botResponseId: finalUserMessage.id,
                     }
                   : item
               )
@@ -752,6 +750,7 @@ const DashboardInterface = memo(
               );
             }
 
+            // 2. Create Bot Loading Message
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -778,6 +777,19 @@ const DashboardInterface = memo(
               message: botLoadingMessage,
             });
 
+            // Now that we have the botMessageId, update the dashboard item's botResponseId.
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.id === newLoadingEntryId
+                  ? {
+                      ...item,
+                      botResponseId: botMessageId, // Correctly set bot's message ID
+                    }
+                  : item
+              )
+            );
+
+            // 3. Call Chatbot API for actual response
             try {
               const connectionObj = connections.find(
                 (conn) => conn.connectionName === connection
@@ -837,10 +849,8 @@ const DashboardInterface = memo(
                         mainViewData: actualMainViewData,
                         textualSummary: actualTextualSummary,
                         reaction: sanitizeReaction(botResponseData.reaction),
-                        dislike_reason: sanitizeReaction(
-                          botResponseData.dislike_reason
-                        ),
-                        botResponseId: botResponseData.id,
+                        dislike_reason: botResponseData.dislike_reason ?? null,
+                        botResponseId: botMessageId,
                       }
                     : item
                 )
@@ -858,6 +868,8 @@ const DashboardInterface = memo(
                   token,
                   content: botResponseContent,
                   timestamp: new Date().toISOString(),
+                  reaction: sanitizeReaction(botResponseData.reaction),
+                  dislike_reason: botResponseData.dislike_reason ?? null,
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
@@ -865,6 +877,8 @@ const DashboardInterface = memo(
               const updatedBotMessage: Partial<Message> = {
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                reaction: sanitizeReaction(botResponseData.reaction),
+                dislike_reason: botResponseData.dislike_reason ?? null,
               };
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
@@ -887,7 +901,7 @@ const DashboardInterface = memo(
                         connectionName: item.connectionName,
                         reaction: null,
                         dislike_reason: null,
-                        botResponseId: "",
+                        botResponseId: botMessageId,
                       }
                     : item
                 )
@@ -899,8 +913,10 @@ const DashboardInterface = memo(
                     `${API_URL}/api/messages/${botMessageId}`,
                     {
                       token,
-                      content: errorContent,
+                      content: `Error: ${errorContent}`,
                       timestamp: new Date().toISOString(),
+                      reaction: null,
+                      dislike_reason: null,
                     },
                     { headers: { "Content-Type": "application/json" } }
                   )
@@ -912,8 +928,10 @@ const DashboardInterface = memo(
                   );
 
                 const errorMessageUpdate: Partial<Message> = {
-                  content: errorContent,
+                  content: `Error: ${errorContent}`,
                   timestamp: new Date().toISOString(),
+                  reaction: null,
+                  dislike_reason: null,
                 };
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
@@ -1028,6 +1046,8 @@ const DashboardInterface = memo(
                   token,
                   content: "loading...",
                   timestamp: new Date().toISOString(),
+                  reaction: null, // Reset reaction on edit
+                  dislike_reason: null, // Reset dislike_reason on edit
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
@@ -1038,6 +1058,8 @@ const DashboardInterface = memo(
                 message: {
                   content: "loading...",
                   timestamp: new Date().toISOString(),
+                  reaction: null,
+                  dislike_reason: null,
                 },
               });
 
@@ -1089,6 +1111,8 @@ const DashboardInterface = memo(
                     token,
                     content: botResponseContent,
                     timestamp: new Date().toISOString(),
+                    reaction: sanitizeReaction(botResponseData.reaction),
+                    dislike_reason: botResponseData.dislike_reason ?? null,
                   },
                   { headers: { "Content-Type": "application/json" } }
                 );
@@ -1099,6 +1123,8 @@ const DashboardInterface = memo(
                   message: {
                     content: botResponseContent,
                     timestamp: new Date().toISOString(),
+                    reaction: sanitizeReaction(botResponseData.reaction),
+                    dislike_reason: botResponseData.dislike_reason ?? null,
                   },
                 });
 
@@ -1111,10 +1137,9 @@ const DashboardInterface = memo(
                           mainViewData: actualMainViewData,
                           textualSummary: actualTextualSummary,
                           reaction: sanitizeReaction(botResponseData.reaction),
-                          dislike_reason: sanitizeReaction(
-                            botResponseData.dislike_reason
-                          ),
-                          botResponseId: botResponseData.id,
+                          dislike_reason:
+                            botResponseData.dislike_reason ?? null,
+                          botResponseId: botMessage.id,
                         }
                       : item
                   );
@@ -1138,6 +1163,8 @@ const DashboardInterface = memo(
                     token,
                     content: `Error: ${errorContent}`,
                     timestamp: new Date().toISOString(),
+                    reaction: null,
+                    dislike_reason: null,
                   },
                   { headers: { "Content-Type": "application/json" } }
                 );
@@ -1148,6 +1175,8 @@ const DashboardInterface = memo(
                   message: {
                     content: `Error: ${errorContent}`,
                     timestamp: new Date().toISOString(),
+                    reaction: null,
+                    dislike_reason: null,
                   },
                 });
 
@@ -1161,7 +1190,7 @@ const DashboardInterface = memo(
                           textualSummary: `Error: ${errorContent}`,
                           reaction: null,
                           dislike_reason: null,
-                          botResponseId: "",
+                          botResponseId: botMessage.id,
                         }
                       : item
                   );
@@ -1207,6 +1236,7 @@ const DashboardInterface = memo(
           connections,
           selectedConnection,
           dispatchMessages,
+          messages,
         ]
       );
 
@@ -1259,6 +1289,8 @@ const DashboardInterface = memo(
                 token,
                 content: "loading...",
                 timestamp: new Date().toISOString(),
+                reaction: null, // Reset reaction on retry
+                dislike_reason: null, // Reset dislike_reason on retry
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1268,6 +1300,8 @@ const DashboardInterface = memo(
               message: {
                 content: "loading...",
                 timestamp: new Date().toISOString(),
+                reaction: null,
+                dislike_reason: null,
               },
             });
 
@@ -1309,10 +1343,8 @@ const DashboardInterface = memo(
                       mainViewData: actualMainViewData,
                       textualSummary: actualTextualSummary,
                       reaction: sanitizeReaction(botResponseData.reaction),
-                      dislike_reason: sanitizeReaction(
-                        botResponseData.dislike_reason
-                      ),
-                      botResponseId: botResponseData.id,
+                      dislike_reason: botResponseData.dislike_reason ?? null,
+                      botResponseId: botMessage.id,
                     }
                   : item
               )
@@ -1325,6 +1357,8 @@ const DashboardInterface = memo(
                 token,
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                reaction: sanitizeReaction(botResponseData.reaction),
+                dislike_reason: botResponseData.dislike_reason ?? null,
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1334,6 +1368,8 @@ const DashboardInterface = memo(
               message: {
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                reaction: sanitizeReaction(botResponseData.reaction),
+                dislike_reason: botResponseData.dislike_reason ?? null,
               },
             });
           } catch (error) {
@@ -1349,7 +1385,7 @@ const DashboardInterface = memo(
                       textualSummary: `Error: ${errorContent}`,
                       reaction: null,
                       dislike_reason: null,
-                      botResponseId: "",
+                      botResponseId: botMessage.id,
                     }
                   : item
               )
@@ -1361,6 +1397,8 @@ const DashboardInterface = memo(
                 token,
                 content: `Error: ${errorContent}`,
                 timestamp: new Date().toISOString(),
+                reaction: null,
+                dislike_reason: null,
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1370,6 +1408,8 @@ const DashboardInterface = memo(
               message: {
                 content: `Error: ${errorContent}`,
                 timestamp: new Date().toISOString(),
+                reaction: null,
+                dislike_reason: null,
               },
             });
           } finally {
@@ -1504,6 +1544,22 @@ const DashboardInterface = memo(
               id: botMessage.id,
               message: { reaction, dislike_reason },
             });
+
+            // Also update on the server
+            axios
+              .put(
+                `${API_URL}/api/messages/${botMessage.id}`,
+                {
+                  token: sessionStorage.getItem("token"),
+                  reaction: reaction,
+                  dislike_reason: dislike_reason,
+                },
+                { headers: { "Content-Type": "application/json" } }
+              )
+              .catch((error) => {
+                console.error("Error updating reaction on server:", error);
+                toast.error("Failed to save reaction.");
+              });
           }
         },
         [messages, dispatchMessages]
@@ -1726,9 +1782,10 @@ const DashboardInterface = memo(
                   isFavorited: selectedUserMessage.isFavorited,
                   questionMessageId: selectedUserMessage.id,
                   connectionName: selectedConnection,
-                  reaction: null,
-                  dislike_reason: null,
-                  botResponseId: "",
+                  reaction: sanitizeReaction(correspondingBotMessage.reaction),
+                  dislike_reason:
+                    correspondingBotMessage.dislike_reason ?? null,
+                  botResponseId: correspondingBotMessage.id,
                 };
 
                 setDashboardHistory((prev) => {
@@ -1777,9 +1834,12 @@ const DashboardInterface = memo(
                     isFavorited: selectedUserMessage.isFavorited,
                     questionMessageId: selectedUserMessage.id,
                     connectionName: selectedConnection,
-                    reaction: null,
-                    dislike_reason: null,
-                    botResponseId: "",
+                    reaction: sanitizeReaction(
+                      correspondingBotMessage.reaction
+                    ),
+                    dislike_reason:
+                      correspondingBotMessage.dislike_reason ?? null,
+                    botResponseId: correspondingBotMessage.id,
                   };
 
                   setDashboardHistory((prev) => {

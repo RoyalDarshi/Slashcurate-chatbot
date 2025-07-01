@@ -98,9 +98,12 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const graphContainerRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
 
-    const isLiked = dashboardItem?.reaction === "like";
-    const isDisliked = dashboardItem?.reaction === "dislike";
-
+    const [isLiked, setIsLiked] = useState<boolean>(
+      dashboardItem?.reaction === "like"
+    );
+    const [isDisliked, setIsDisliked] = useState<boolean>(
+      dashboardItem?.reaction === "dislike"
+    );
     useEffect(() => {
       if (graphSummary) setShowSummaryModal(true);
     }, [graphSummary]);
@@ -144,6 +147,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             dislike_reason: null,
           }
         );
+        setIsLiked(!isLiked);
+        setIsDisliked(false);
         onUpdateReaction(dashboardItem.botResponseId, newReaction, null);
       } catch (error) {
         console.error("Error setting like reaction:", error);
@@ -163,6 +168,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               dislike_reason: null,
             }
           );
+          setIsDisliked(!isDisliked);
+          setIsLiked(false);
           onUpdateReaction(dashboardItem.botResponseId, null, null);
           setShowDislikeOptions(false);
           setShowCustomInput(false);
@@ -186,6 +193,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             dislike_reason: reason,
           }
         );
+        setIsDisliked(true);
+        setIsLiked(false);
         onUpdateReaction(dashboardItem.botResponseId, "dislike", reason);
         setShowDislikeOptions(false);
         setShowCustomInput(false);
@@ -261,7 +270,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 }
                 className="px-4 py-2 rounded-md"
                 style={{
-                  backgroundColor: theme.colors.primary,
+                  backgroundColor: theme.colors.accent,
                   color: "white",
                 }}
               >
@@ -542,7 +551,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                           </CustomTooltip>
                           {showDislikeOptions && (
                             <div
-                              className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                              className="absolute right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
                               style={{
                                 background: theme.colors.surface,
                                 border: `1px solid ${theme.colors.border}`,
