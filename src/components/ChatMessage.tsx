@@ -22,7 +22,7 @@ import {
 import { ChatMessageProps } from "../types";
 import DataTable from "./ChatDataTable";
 import CustomTooltip from "./CustomTooltip";
-import DynamicBarGraph from "./ChatGraphs/ChatDynamicBarGraph";
+import DynamicGraph, { formatKey } from "./ChatGraphs/ChatDynamicGraph";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import html2canvas from "html2canvas";
@@ -73,10 +73,18 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [canCopy, setCanCopy] = useState(true);
     const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
     const [copyTooltipTxt, setCopyTooltipTxt] = useState("Copy SQL Query");
+    const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
+    const [groupBy, setGroupBy] = useState<string | null>(null);
+    const [aggregate, setAggregate] = useState<
+      "sum" | "count" | "avg" | "min" | "max" | null
+    >(null);
+    const [valueKey, setValueKey] = useState<string | null>(null);
+    const [showChartOptions, setShowChartOptions] = useState(false);
 
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
     const resolutionRef = useRef<HTMLDivElement>(null);
+    const chartOptionsRef = useRef<HTMLDivElement>(null);
     const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
     const { chatFontSize } = useSettings();
 
@@ -147,8 +155,26 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               );
             setHasNumericData(hasGraphicalData);
 
-            if (tableData.length > 0) {
-              setCurrentView(hasGraphicalData ? "graph" : "table");
+            // Set default visualization parameters
+            if (hasGraphicalData && tableData.length > 0) {
+              const sample = tableData[0];
+              const keys = Object.keys(sample);
+              const numericKeys = keys.filter(
+                (k) =>
+                  typeof sample[k] === "number" ||
+                  (typeof sample[k] === "string" &&
+                    /^\d+(\.\d+)?$/.test(sample[k].replace(/,/g, "").trim()))
+              );
+              const stringKeys = keys.filter(
+                (k) => typeof sample[k] === "string" && !numericKeys.includes(k)
+              );
+
+              setValueKey(numericKeys[0] || null);
+              setGroupBy(stringKeys[1] || stringKeys[0] || null);
+              setAggregate("sum");
+              setCurrentView("graph");
+            } else if (tableData.length > 0) {
+              setCurrentView("table");
             } else {
               setCurrentView("text");
             }
@@ -177,14 +203,21 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         ) {
           setShowResolutionOptions(false);
         }
+
+        if (
+          chartOptionsRef.current &&
+          !chartOptionsRef.current.contains(event.target as Node)
+        ) {
+          setShowChartOptions(false);
+        }
       };
 
-      if (showDislikeOptions || showResolutionOptions) {
+      if (showDislikeOptions || showResolutionOptions || showChartOptions) {
         document.addEventListener("mousedown", handleClickOutside);
       }
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
-    }, [showDislikeOptions, showResolutionOptions]);
+    }, [showDislikeOptions, showResolutionOptions, showChartOptions]);
 
     const handleEdit = () => setIsEditing(true);
 
@@ -333,6 +366,19 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       setShowResolutionOptions(false);
     };
 
+    const availableKeys = React.useMemo(() => {
+      if (csvData.length === 0) return { stringKeys: [], numericKeys: [] };
+      const sample = csvData[0];
+      const keys = Object.keys(sample);
+      return {
+        stringKeys: keys.filter((k) => typeof sample[k] === "string"),
+        numericKeys: keys.filter((k) => {
+          const val = sample[k];
+          return val !== null && val !== "" && !isNaN(Number(val));
+        }),
+      };
+    }, [csvData]);
+
     const renderContent = () => {
       if (message.isBot && message.content === "loading...") {
         return (
@@ -342,7 +388,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               background: theme.colors.surface,
               borderRadius: theme.borderRadius.large,
               borderTopLeftRadius: "0",
-              // boxShadow: `0 2px 6px ${theme.colors.text}20`,
             }}
           >
             <MiniLoader />
@@ -367,7 +412,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               background: theme.colors.surface,
               borderRadius: theme.borderRadius.large,
               borderTopLeftRadius: 0,
-              // boxShadow: `0 2px 6px ${theme.colors.text}20`,
             }}
           >
             <ReactMarkdown
@@ -448,11 +492,84 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             )}
             {currentView === "graph" && hasNumericData && (
               <div ref={graphRef} style={{ width: "100%" }}>
-                {" "}
-                {/* Added minHeight and height */}
-                <DynamicBarGraph
+                <div className="flex gap-2 mb-2">
+                  <select
+                    value={chartType}
+                    onChange={(e) => setChartType(e.target.value as any)}
+                    style={{
+                      background: theme.colors.surface,
+                      color: theme.colors.text,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.default,
+                      padding: theme.spacing.sm,
+                    }}
+                  >
+                    <option value="bar">Bar Chart</option>
+                    <option value="line">Line Chart</option>
+                    <option value="pie">Pie Chart</option>
+                  </select>
+                  <select
+                    value={groupBy || ""}
+                    onChange={(e) => setGroupBy(e.target.value || null)}
+                    style={{
+                      background: theme.colors.surface,
+                      color: theme.colors.text,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.default,
+                      padding: theme.spacing.sm,
+                    }}
+                  >
+                    <option value="">Select Group By</option>
+                    {availableKeys.stringKeys.map((key) => (
+                      <option key={key} value={key}>
+                        {formatKey(key)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={aggregate || ""}
+                    onChange={(e) => setAggregate(e.target.value as any)}
+                    style={{
+                      background: theme.colors.surface,
+                      color: theme.colors.text,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.default,
+                      padding: theme.spacing.sm,
+                    }}
+                  >
+                    <option value="">Select Aggregate</option>
+                    <option value="sum">Sum</option>
+                    <option value="count">Count</option>
+                    <option value="avg">Average</option>
+                    <option value="min">Minimum</option>
+                    <option value="max">Maximum</option>
+                  </select>
+                  <select
+                    value={valueKey || ""}
+                    onChange={(e) => setValueKey(e.target.value || null)}
+                    style={{
+                      background: theme.colors.surface,
+                      color: theme.colors.text,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.default,
+                      padding: theme.spacing.sm,
+                    }}
+                  >
+                    <option value="">Select Value Key</option>
+                    {availableKeys.numericKeys.map((key) => (
+                      <option key={key} value={key}>
+                        {formatKey(key)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <DynamicGraph
                   data={csvData}
                   isValidGraph={setHasNumericData}
+                  chartType={chartType}
+                  groupBy={groupBy}
+                  aggregate={aggregate}
+                  valueKey={valueKey}
                 />
                 <div
                   className="mt-2 mr-2 text-right text-xs"
@@ -502,7 +619,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
       <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
         {message.isBot ? (
           <div
-            // Conditionally apply max-width or full-width based on currentView
             className={`flex w-full items-start ${
               currentView === "graph" ? "max-w-[90%]" : "w-max"
             } gap-2`}
@@ -515,7 +631,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               <Bot size={20} style={{ color: "white" }} />
             </div>
             <div
-              className="w-full flex flex-col gap-2" // Ensure this div always takes full width of its parent
+              className="w-full flex flex-col gap-2"
               style={{ position: "relative" }}
             >
               <div className="relative">
