@@ -514,7 +514,7 @@ const ChatDataTable: React.FC<ChatDataTableProps> = React.memo(({ data }) => {
       )}
 
       {/* Table content - Enhanced styling for better visibility */}
-      <div className="w-full flex justify-center py-2">
+      <div className="max-w-3xl flex justify-center py-2">
         <div
           className="overflow-auto max-h-96 scrollbar-thin"
           style={{
