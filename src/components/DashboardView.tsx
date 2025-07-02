@@ -57,6 +57,11 @@ interface DashboardViewProps {
     questionMessageId: string,
     newQuestion: string
   ) => Promise<void>;
+  onUpdateReaction: (
+    questionMessageId: string,
+    reaction: "like" | "dislike" | null,
+    dislike_reason: string | null
+  ) => void;
 }
 
 const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
@@ -71,6 +76,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       sessionConErr,
       graphSummary,
       onEditQuestion,
+      onUpdateReaction,
     },
     ref
   ) => {
@@ -91,12 +97,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const graphContainerRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
 
-    const [isLiked, setIsLiked] = useState<boolean>(
-      dashboardItem?.reaction === "like"
-    );
-    const [isDisliked, setIsDisliked] = useState<boolean>(
-      dashboardItem?.reaction === "dislike"
-    );
     useEffect(() => {
       if (graphSummary) setShowSummaryModal(true);
     }, [graphSummary]);
@@ -128,6 +128,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         document.removeEventListener("mousedown", handleClickOutside);
     }, [showDislikeOptions]);
 
+    const isLiked = dashboardItem?.reaction === "like";
+    const isDisliked = dashboardItem?.reaction === "dislike";
+
     const handleLike = async () => {
       if (!dashboardItem) return;
       const newReaction = isLiked ? null : "like";
@@ -140,8 +143,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             dislike_reason: null,
           }
         );
-        setIsLiked(!isLiked);
-        setIsDisliked(false);
+        onUpdateReaction(dashboardItem.questionMessageId, newReaction, null);
       } catch (error) {
         console.error("Error setting like reaction:", error);
         toast.error("Failed to set like reaction.");
@@ -160,10 +162,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               dislike_reason: null,
             }
           );
-          setIsDisliked(!isDisliked);
-          setIsLiked(false);
-          setShowDislikeOptions(false);
-          setShowCustomInput(false);
+          onUpdateReaction(dashboardItem.questionMessageId, null, null);
         } catch (error) {
           console.error("Error removing dislike reaction:", error);
           toast.error("Failed to remove dislike reaction.");
@@ -184,10 +183,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             dislike_reason: reason,
           }
         );
-        setIsDisliked(true);
-        setIsLiked(false);
-        setShowDislikeOptions(false);
-        setShowCustomInput(false);
+        onUpdateReaction(dashboardItem.questionMessageId, "dislike", reason);
       } catch (error) {
         console.error("Error setting dislike reaction:", error);
         toast.error("Failed to set dislike reaction.");

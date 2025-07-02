@@ -28,7 +28,13 @@ interface DashboardErrorProps {
   onRetry: () => void;
   sessionConErr?: boolean;
   botResponseId: string;
-  initialReaction: "like" | "dislike" | null;
+  questionMessageId: string;
+  reaction: "like" | "dislike" | null;
+  onUpdateReaction: (
+    questionMessageId: string,
+    reaction: "like" | "dislike" | null,
+    dislike_reason: string | null
+  ) => void;
 }
 
 const DashboardError: React.FC<DashboardErrorProps> = ({
@@ -39,27 +45,25 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
   onRetry,
   sessionConErr = false,
   botResponseId,
-  initialReaction,
+  questionMessageId,
+  reaction,
+  onUpdateReaction,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedQuestion, setEditedQuestion] = useState(question);
-  const [isLiked, setIsLiked] = useState(initialReaction === "like");
-  const [isDisliked, setIsDisliked] = useState(initialReaction === "dislike");
   const [showDislikeOptions, setShowDislikeOptions] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customReason, setCustomReason] = useState("");
   const dislikeRef = useRef<HTMLDivElement>(null);
+
+  const isLiked = reaction === "like";
+  const isDisliked = reaction === "dislike";
 
   useEffect(() => {
     if (!isEditing) {
       setEditedQuestion(question);
     }
   }, [question, isEditing]);
-
-  useEffect(() => {
-    setIsLiked(initialReaction === "like");
-    setIsDisliked(initialReaction === "dislike");
-  }, [initialReaction]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -111,8 +115,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
         reaction: newReaction,
         dislike_reason: null,
       });
-      setIsLiked(!isLiked);
-      setIsDisliked(false);
+      onUpdateReaction(questionMessageId, newReaction, null);
     } catch (error) {
       console.error("Error setting like reaction:", error);
       toast.error("Failed to set like reaction.");
@@ -127,10 +130,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
           reaction: null,
           dislike_reason: null,
         });
-        setIsDisliked(false);
-        setIsLiked(false);
-        setShowDislikeOptions(false);
-        setShowCustomInput(false);
+        onUpdateReaction(questionMessageId, null, null);
       } catch (error) {
         console.error("Error removing dislike reaction:", error);
         toast.error("Failed to remove dislike reaction.");
@@ -147,11 +147,12 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
         reaction: "dislike",
         dislike_reason: reason,
       });
-      setIsDisliked(true);
-      setIsLiked(false);
+      onUpdateReaction(questionMessageId, "dislike", reason);
       setShowDislikeOptions(false);
       setShowCustomInput(false);
     } catch (error) {
+      setShowDislikeOptions(false);
+      setShowCustomInput(false);
       console.error("Error setting dislike reaction:", error);
       toast.error("Failed to set dislike reaction.");
     }
@@ -193,9 +194,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
               Oops! Something went wrong
             </h1>
             <p
-              className="text-sm sm:text-base md:text-lg leading-relaxed max-w-sm
-
-System: md:max-w-lg mx-auto opacity-80 font-medium"
+              className="text-sm sm:text-base md:text-lg leading-relaxed max-w-sm md:max-w-lg mx-auto opacity-80 font-medium"
               style={{ color: theme.colors.textSecondary }}
             >
               Don't worry! Let's refine your question or give it another try to
@@ -363,7 +362,7 @@ System: md:max-w-lg mx-auto opacity-80 font-medium"
                         <>
                           <button
                             onClick={handleEditClick}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-md hover:shadow-lg"
+                            className="flex items-center mr-1 gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-md hover:shadow-lg"
                             style={{
                               backgroundColor: `${theme.colors.accent}12`,
                               color: theme.colors.accent,
@@ -379,18 +378,15 @@ System: md:max-w-lg mx-auto opacity-80 font-medium"
                             }
                             position="bottom"
                           >
-                            <button
-                              onClick={handleLike}
-                              className="p-2 rounded-md"
-                            >
+                            <button onClick={handleLike} className="rounded-md">
                               {isLiked ? (
                                 <BsHandThumbsUpFill
-                                  size={20}
-                                  style={{ color: theme.colors.textSecondary }}
+                                  size={26}
+                                  style={{ color: theme.colors.success }}
                                 />
                               ) : (
                                 <BsHandThumbsUp
-                                  size={20}
+                                  size={26}
                                   style={{ color: theme.colors.textSecondary }}
                                 />
                               )}
@@ -407,18 +403,18 @@ System: md:max-w-lg mx-auto opacity-80 font-medium"
                             >
                               <button
                                 onClick={handleDislike}
-                                className="p-2 rounded-md"
+                                className="pt-1 rounded-md"
                               >
                                 {isDisliked ? (
                                   <BsHandThumbsDownFill
-                                    size={20}
+                                    size={26}
                                     style={{
-                                      color: theme.colors.textSecondary,
+                                      color: theme.colors.error,
                                     }}
                                   />
                                 ) : (
                                   <BsHandThumbsDown
-                                    size={20}
+                                    size={26}
                                     style={{
                                       color: theme.colors.textSecondary,
                                     }}
