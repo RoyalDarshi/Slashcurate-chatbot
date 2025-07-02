@@ -682,7 +682,16 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               }}
               domain={["auto", "auto"]}
             />
-            <Tooltip content={<ModernTooltip theme={theme} />} />
+            <Tooltip
+              cursor={{
+                fill: `${theme.colors.accent}1A`,
+                stroke: `${theme.colors.accent}4D`,
+                strokeWidth: 2,
+                radius: 8,
+              }}
+              content={<ModernTooltip theme={theme} />}
+            />
+
             <Legend
               layout="horizontal"
               align="center"

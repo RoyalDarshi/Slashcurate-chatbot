@@ -97,12 +97,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     }, [message.content, message.isBot]);
 
     useEffect(() => {
-      console.log(
-        "Rendering ChatMessage:",
-        message.id,
-        "Content:",
-        message.content
-      );
       if (message.isBot) {
         if (message.content.includes("Sorry, an error occurred.")) {
           setCurrentView("error");
