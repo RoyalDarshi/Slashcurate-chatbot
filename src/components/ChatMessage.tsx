@@ -950,7 +950,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       {isLiked ? (
                         <BsHandThumbsUpFill
                           size={20}
-                          style={{ color: theme.colors.textSecondary }}
+                          style={{ color: theme.colors.success }}
                         />
                       ) : (
                         <BsHandThumbsUp
@@ -975,7 +975,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                         {isDisliked ? (
                           <BsHandThumbsDownFill
                             size={20}
-                            style={{ color: theme.colors.textSecondary }}
+                            style={{ color: theme.colors.error }}
                           />
                         ) : (
                           <BsHandThumbsDown
