@@ -549,7 +549,9 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       padding: theme.spacing.sm,
                     }}
                   >
-                    <option value="">Select Value Key</option>
+                    <option disabled value="">
+                      Select Value Key
+                    </option>
                     {availableKeys.numericKeys.map((key) => (
                       <option key={key} value={key}>
                         {formatKey(key)}

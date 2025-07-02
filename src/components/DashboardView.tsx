@@ -441,196 +441,17 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                   </h3>
                   <div className="flex items-center gap-2">
                     {!sessionConErr && (
-                      <>
-                        <button
-                          onClick={() => setIsEditing(true)}
-                          disabled={isSubmitting}
-                          className="px-4 py-2 rounded-md"
-                          style={{
-                            backgroundColor: theme.colors.accent,
-                            color: "white",
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <CustomTooltip
-                          title={
-                            dashboardItem.isFavorited
-                              ? "Remove from Favorites"
-                              : "Add to Favorites"
-                          }
-                          position="bottom"
-                        >
-                          <button
-                            onClick={() =>
-                              onToggleFavorite(
-                                dashboardItem.questionMessageId,
-                                dashboardItem.question,
-                                dashboardItem.mainViewData.queryData,
-                                dashboardItem.connectionName,
-                                dashboardItem.isFavorited
-                              )
-                            }
-                            disabled={isSubmitting}
-                            className="p-2 rounded-full"
-                            style={{
-                              color: dashboardItem.isFavorited
-                                ? theme.colors.accent
-                                : theme.colors.textSecondary,
-                              backgroundColor: "transparent",
-                            }}
-                          >
-                            <Heart
-                              size={24}
-                              fill={
-                                dashboardItem.isFavorited
-                                  ? theme.colors.accent
-                                  : "none"
-                              }
-                            />
-                          </button>
-                        </CustomTooltip>
-                        <CustomTooltip
-                          title={isLiked ? "Remove like" : "Like this response"}
-                          position="bottom"
-                        >
-                          <button
-                            onClick={handleLike}
-                            disabled={isSubmitting}
-                            className="p-2 rounded-md"
-                          >
-                            {isLiked ? (
-                              <BsHandThumbsUpFill
-                                size={20}
-                                style={{ color: theme.colors.textSecondary }}
-                              />
-                            ) : (
-                              <BsHandThumbsUp
-                                size={20}
-                                style={{ color: theme.colors.textSecondary }}
-                              />
-                            )}
-                          </button>
-                        </CustomTooltip>
-                        <div className="relative" ref={dislikeRef}>
-                          <CustomTooltip
-                            title={
-                              isDisliked
-                                ? "Remove dislike"
-                                : "Dislike this response"
-                            }
-                            position="bottom"
-                          >
-                            <button
-                              onClick={handleDislike}
-                              disabled={isSubmitting}
-                              className="p-2 rounded-md"
-                            >
-                              {isDisliked ? (
-                                <BsHandThumbsDownFill
-                                  size={20}
-                                  style={{ color: theme.colors.textSecondary }}
-                                />
-                              ) : (
-                                <BsHandThumbsDown
-                                        size={20}
-                                        
-                                  style={{ color: theme.colors.textSecondary }}
-                                />
-                              )}
-                            </button>
-                          </CustomTooltip>
-                          {showDislikeOptions && (
-                            <div
-                              className="absolute right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
-                              style={{
-                                background: theme.colors.surface,
-                                border: `1px solid ${theme.colors.border}`,
-                                boxShadow: theme.shadow.md,
-                              }}
-                            >
-                              {showCustomInput ? (
-                                <div className="p-3">
-                                  <textarea
-                                    value={customReason}
-                                    onChange={(e) =>
-                                      setCustomReason(e.target.value)
-                                    }
-                                    placeholder="Enter your reason"
-                                    rows={3}
-                                    className="w-full p-2 rounded resize-none focus:outline-none"
-                                    style={{
-                                      background: theme.colors.background,
-                                      color: theme.colors.text,
-                                      border: `1px solid ${theme.colors.border}`,
-                                    }}
-                                  />
-                                  <div className="flex justify-end mt-2 gap-2">
-                                    <button
-                                      onClick={() => {
-                                        setShowCustomInput(false);
-                                        setCustomReason("");
-                                      }}
-                                      className="px-2 py-1 rounded"
-                                      style={{
-                                        background: theme.colors.surface,
-                                        color: theme.colors.text,
-                                      }}
-                                    >
-                                      Cancel
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        if (customReason.trim()) {
-                                          handleDislikeOption(customReason);
-                                          setCustomReason("");
-                                        }
-                                      }}
-                                      className="px-2 py-1 rounded"
-                                      style={{
-                                        background: theme.colors.accent,
-                                        color: "white",
-                                      }}
-                                    >
-                                      Submit
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  {[
-                                    "Incorrect data",
-                                    "Takes too long",
-                                    "Irrelevant response",
-                                    "Confusing answer",
-                                    "Other",
-                                  ].map((reason) => (
-                                    <button
-                                      key={reason}
-                                      onClick={() => {
-                                        if (reason === "Other")
-                                          setShowCustomInput(true);
-                                        else handleDislikeOption(reason);
-                                      }}
-                                      className="w-full text-left px-3 py-2 text-sm"
-                                      style={{ color: theme.colors.text }}
-                                      onMouseEnter={(e) =>
-                                        (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-                                      }
-                                      onMouseLeave={(e) =>
-                                        (e.currentTarget.style.backgroundColor =
-                                          "transparent")
-                                      }
-                                    >
-                                      {reason}
-                                    </button>
-                                  ))}
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </>
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        disabled={isSubmitting}
+                        className="px-4 py-2 rounded-md"
+                        style={{
+                          backgroundColor: theme.colors.accent,
+                          color: "white",
+                        }}
+                      >
+                        Edit
+                      </button>
                     )}
                   </div>
                 </>
@@ -973,29 +794,214 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 )}
               </div>
 
-              <div className="flex flex-row self-start lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 flex-shrink-0 mt-4 lg:mt-0 justify-center">
-                {(["table", "query"] as const).map((viewType) => (
-                  <button
-                    key={viewType}
-                    onClick={() => onViewTypeChange(viewType)}
-                    disabled={isSubmitting}
-                    title={viewType.charAt(0).toUpperCase() + viewType.slice(1)}
-                    className="p-2 transition-all rounded-full duration-200 ease-in-out disabled:opacity-60"
-                    style={{
-                      backgroundColor:
-                        activeViewType === viewType
-                          ? theme.colors.accent
-                          : theme.colors.surface,
-                      color:
-                        activeViewType === viewType
-                          ? "white"
-                          : theme.colors.accent,
-                    }}
-                  >
-                    {viewType === "table" && <Table size={24} />}
-                    {viewType === "query" && <Database size={24} />}
-                  </button>
-                ))}
+              <div className="flex flex-col justify-between items-center flex-shrink-0 mt-4 lg:mt-0">
+                {/* Table and Query buttons at the top */}
+                <div className="flex flex-row lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2">
+                  {(["table", "query"] as const).map((viewType) => (
+                    <button
+                      key={viewType}
+                      onClick={() => onViewTypeChange(viewType)}
+                      disabled={isSubmitting}
+                      title={
+                        viewType.charAt(0).toUpperCase() + viewType.slice(1)
+                      }
+                      className="p-2 transition-all rounded-full duration-200 ease-in-out disabled:opacity-60"
+                      style={{
+                        backgroundColor:
+                          activeViewType === viewType
+                            ? theme.colors.accent
+                            : theme.colors.surface,
+                        color:
+                          activeViewType === viewType
+                            ? "white"
+                            : theme.colors.accent,
+                      }}
+                    >
+                      {viewType === "table" && <Table size={24} />}
+                      {viewType === "query" && <Database size={24} />}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Favorite, Like, and Dislike buttons at the bottom */}
+                {!sessionConErr && (
+                  <div className="flex flex-row lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 mt-4">
+                    <CustomTooltip
+                      title={
+                        dashboardItem.isFavorited
+                          ? "Remove from Favorites"
+                          : "Add to Favorites"
+                      }
+                      position="bottom"
+                    >
+                      <button
+                        onClick={() =>
+                          onToggleFavorite(
+                            dashboardItem.questionMessageId,
+                            dashboardItem.question,
+                            dashboardItem.mainViewData.queryData,
+                            dashboardItem.connectionName,
+                            dashboardItem.isFavorited
+                          )
+                        }
+                        disabled={isSubmitting}
+                        className="pl-2 pb-2 rounded-full"
+                        style={{
+                          color: dashboardItem.isFavorited
+                            ? "#FF4D4D"
+                            : theme.colors.textSecondary,
+                          backgroundColor: "transparent",
+                        }}
+                      >
+                        <Heart
+                          size={32}
+                          fill={
+                            dashboardItem.isFavorited ? "currentColor" : "none"
+                          }
+                        />
+                      </button>
+                    </CustomTooltip>
+                    <CustomTooltip
+                      title={isLiked ? "Remove like" : "Like this response"}
+                      position="bottom"
+                    >
+                      <button
+                        onClick={handleLike}
+                        disabled={isSubmitting}
+                        className="pl-2 pb-2 rounded-md"
+                      >
+                        {isLiked ? (
+                          <BsHandThumbsUpFill
+                            size={32}
+                            style={{ color: theme.colors.success }}
+                          />
+                        ) : (
+                          <BsHandThumbsUp
+                            size={32}
+                            style={{ color: theme.colors.textSecondary }}
+                          />
+                        )}
+                      </button>
+                    </CustomTooltip>
+                    <div className="relative" ref={dislikeRef}>
+                      <CustomTooltip
+                        title={
+                          isDisliked
+                            ? "Remove dislike"
+                            : "Dislike this response"
+                        }
+                        position="bottom"
+                      >
+                        <button
+                          onClick={handleDislike}
+                          disabled={isSubmitting}
+                          className="pl-2 rounded-md"
+                        >
+                          {isDisliked ? (
+                            <BsHandThumbsDownFill
+                              size={32}
+                              style={{ color: theme.colors.error }}
+                            />
+                          ) : (
+                            <BsHandThumbsDown
+                              size={32}
+                              style={{ color: theme.colors.textSecondary }}
+                            />
+                          )}
+                        </button>
+                      </CustomTooltip>
+                      {showDislikeOptions && (
+                        <div
+                          className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                          style={{
+                            background: theme.colors.surface,
+                            border: `1px solid ${theme.colors.border}`,
+                            boxShadow: theme.shadow.md,
+                          }}
+                        >
+                          {showCustomInput ? (
+                            <div className="p-3">
+                              <textarea
+                                value={customReason}
+                                onChange={(e) =>
+                                  setCustomReason(e.target.value)
+                                }
+                                placeholder="Enter your reason"
+                                rows={3}
+                                className="w-full p-2 rounded resize-none focus:outline-none"
+                                style={{
+                                  background: theme.colors.background,
+                                  color: theme.colors.text,
+                                  border: `1px solid ${theme.colors.border}`,
+                                }}
+                              />
+                              <div className="flex justify-end mt-2 gap-2">
+                                <button
+                                  onClick={() => {
+                                    setShowCustomInput(false);
+                                    setCustomReason("");
+                                  }}
+                                  className="px-2 py-1 rounded"
+                                  style={{
+                                    background: theme.colors.surface,
+                                    color: theme.colors.text,
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (customReason.trim()) {
+                                      handleDislikeOption(customReason);
+                                      setCustomReason("");
+                                    }
+                                  }}
+                                  className="px-2 py-1 rounded"
+                                  style={{
+                                    background: theme.colors.accent,
+                                    color: "white",
+                                  }}
+                                >
+                                  Submit
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {[
+                                "Incorrect data",
+                                "Takes too long",
+                                "Irrelevant response",
+                                "Confusing answer",
+                                "Other",
+                              ].map((reason) => (
+                                <button
+                                  key={reason}
+                                  onClick={() => {
+                                    if (reason === "Other")
+                                      setShowCustomInput(true);
+                                    else handleDislikeOption(reason);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm"
+                                  style={{ color: theme.colors.text }}
+                                  onMouseEnter={(e) =>
+                                    (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                                  }
+                                  onMouseLeave={(e) =>
+                                    (e.currentTarget.style.backgroundColor =
+                                      "transparent")
+                                  }
+                                >
+                                  {reason}
+                                </button>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
