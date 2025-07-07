@@ -430,7 +430,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               ) : (
                 <>
                   <h3
-                    className="text-xl font-bold flex-grow"
+                    className="text-xl font-bold w-full text-center"
                     style={{ color: theme.colors.text }}
                   >
                     Question: {dashboardItem.question}
@@ -467,36 +467,36 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               >
                 {dashboardItem.mainViewData.chartData?.length > 0 && (
                   <div className="p-2 flex flex-wrap gap-3">
-                    <div className="flex items-center gap-2">
-                      <label
-                        htmlFor="graph-type-select"
-                        style={{ color: theme.colors.textSecondary }}
-                      >
-                        Graph Type:
-                      </label>
-                      <select
-                        id="graph-type-select"
-                        value={graphType}
-                        onChange={(e) => setGraphType(e.target.value)}
-                        className="px-2 py-1 rounded-md border"
-                        style={{
-                          backgroundColor: theme.colors.surface,
-                          color: theme.colors.text,
-                          borderColor: theme.colors.border,
-                        }}
-                      >
-                        <option value="bar">Bar</option>
-                        <option value="line">Line</option>
-                        <option value="area">Area</option>
-                        <option value="pie">Pie</option>
-                        <option value="scatter">Scatter</option>
-                        <option value="radar">Radar</option>
-                        <option value="funnel">Funnel</option>
-                      </select>
-                    </div>
                     {["bar", "line", "area", "pie"].includes(graphType) &&
                       groupBy && (
                         <>
+                          <div className="flex items-center gap-2">
+                            <label
+                              htmlFor="graph-type-select"
+                              style={{ color: theme.colors.textSecondary }}
+                            >
+                              Graph Type:
+                            </label>
+                            <select
+                              id="graph-type-select"
+                              value={graphType}
+                              onChange={(e) => setGraphType(e.target.value)}
+                              className="px-2 py-1 rounded-md border"
+                              style={{
+                                backgroundColor: theme.colors.surface,
+                                color: theme.colors.text,
+                                borderColor: theme.colors.border,
+                              }}
+                            >
+                              <option value="bar">Bar</option>
+                              <option value="line">Line</option>
+                              <option value="area">Area</option>
+                              <option value="pie">Pie</option>
+                              <option value="scatter">Scatter</option>
+                              <option value="radar">Radar</option>
+                              <option value="funnel">Funnel</option>
+                            </select>
+                          </div>
                           <div className="flex items-center gap-2">
                             <label
                               style={{ color: theme.colors.textSecondary }}
