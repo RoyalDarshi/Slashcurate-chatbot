@@ -787,7 +787,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             <div
               ref={graphRef}
               style={{
-                height: "60vh",
+                height: "calc(100vh - 265px)",
                 width: "100%",
                 minHeight: "300px", // ✅ minimum visible height
                 flex: 1,

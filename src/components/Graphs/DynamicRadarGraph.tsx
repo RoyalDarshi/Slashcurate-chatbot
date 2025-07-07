@@ -510,7 +510,7 @@ const DynamicRadarGraph: React.FC<ModernRadarGraphProps> = React.memo(
             <div
               ref={graphRef}
               style={{
-                height: "60vh",
+                height: "calc(100vh - 265px)",
                 width: "100%",
                 minHeight: "300px",
                 flex: 1,
