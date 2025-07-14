@@ -51,6 +51,8 @@ export interface ChatMessageProps {
   responseStatus: "loading" | "success" | "error" | null;
   disabled: boolean;
   onRetry?: (userMessageId: string) => void;
+  onSummarizeGraph?: (graphElement: HTMLElement, botMessageId: string) => void;
+  isSubmitting?: boolean;
 }
 
 export interface ChatInterfaceProps {
