@@ -480,7 +480,9 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               />
               {formatKey(label)}
             </div>
-            {payload.map((entry: any, index: number) => (
+            {payload
+  .filter((entry: any) => entry?.value !== 0)
+  .map((entry: any, index: number) => (
               <div
                 key={`item-${index}`}
                 style={{

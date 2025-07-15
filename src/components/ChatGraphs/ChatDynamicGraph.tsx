@@ -158,7 +158,9 @@ const ModernTooltip = ({ active, payload, label, theme }: any) => {
           <TrendingUp size={16} style={{ color: theme.colors.accent }} />
           {formatKey(label)}
         </div>
-        {payload.map((entry: any, index: number) => (
+        {payload
+  .filter((entry: any) => entry?.value !== 0)
+  .map((entry: any, index: number) => (
           <div
             key={`item-${index}`}
             style={{
