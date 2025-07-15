@@ -34,7 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(() => {
     const savedState = localStorage.getItem("isDesktopSidebarOpen");
-    return savedState !== null ? savedState === "true" : true;
+    return savedState !== null ? savedState === "true" : false;
   });
   const [activeMenuItem, setActiveMenuItem] = useState<string>("home");
   const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
