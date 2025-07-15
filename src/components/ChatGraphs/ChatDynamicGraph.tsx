@@ -292,17 +292,21 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
       // Determine indexByKey and groupKey
       let indexByKey: string;
-      let effectiveGroupBy: string | null;
+      let effectiveGroupBy: string | null | undefined;
 
-      if (groupBy && stringKeys.includes(groupBy)) {
+      // Prefer branch_name as default grouping key if available
+      if (stringKeys.includes("branch_name")) {
+        indexByKey = "branch_name";
+        effectiveGroupBy = stringKeys.find((k) => k !== "branch_name") || null;
+      } else if (groupBy && stringKeys.includes(groupBy)) {
         indexByKey = groupBy;
         effectiveGroupBy = stringKeys.find((k) => k !== groupBy) || null;
       } else {
         indexByKey = stringKeys[0];
-        effectiveGroupBy = groupBy !== null && stringKeys.includes(groupBy)
-          ? groupBy
-          : (stringKeys.length > 1 ? stringKeys[1] : null);
+        effectiveGroupBy =
+          stringKeys.length > 1 ? stringKeys.find((k) => k !== indexByKey) : null;
       }
+
 
       if (!indexByKey) {
         setIsValidGraphData(false);
