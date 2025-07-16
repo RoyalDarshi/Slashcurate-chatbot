@@ -211,6 +211,58 @@ const ModernTooltip = ({ active, payload, label, theme }: any) => {
               </span>
             </div>
           ))}
+          .filter((entry: any) => entry?.value !== 0)
+          .map((entry: any, index: number) => (
+            <div
+              key={`item-${index}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: index < payload.length - 1 ? theme.spacing.md : 0,
+                padding: theme.spacing.md,
+                borderRadius: theme.borderRadius.default,
+                background: `${entry.color}15`,
+                border: `1px solid ${entry.color}30`,
+                transition: "all 0.2s ease",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <div
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    background: entry.color,
+                    borderRadius: "50%",
+                    marginRight: theme.spacing.md,
+                    boxShadow: theme.shadow.sm,
+                    border: `2px solid ${theme.colors.surface}`,
+                  }}
+                />
+                <span
+                  style={{
+                    fontWeight: theme.typography.weight.medium,
+                    fontSize: "14px",
+                  }}
+                >
+                  {formatKey(entry.name)}
+                </span>
+              </div>
+              <span
+                style={{
+                  fontWeight: theme.typography.weight.bold,
+                  color: theme.colors.text,
+                  fontSize: "15px",
+                  background: theme.gradients.primary,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
+                {entry.value.toLocaleString()}
+              </span>
+            </div>
+          ))}
       </div>
     );
   }
@@ -256,6 +308,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
     function transformDynamicData(rawData: any[]) {
       if (!rawData || rawData.length === 0) {
+      if (!rawData || rawData.length === 0) {
         return { data: [], keys: [], indexBy: "" };
       }
 
@@ -263,14 +316,14 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       const keys = Object.keys(sample);
 
       // Find numeric keys
+      // Find numeric keys
       const numericKeys = keys.filter((k) => {
         const val = sample[k];
         return val !== null && val !== "" && !isNaN(Number(val));
       });
 
-      const effectiveValueKey = valueKey && numericKeys.includes(valueKey)
-        ? valueKey
-        : numericKeys[0];
+      const effectiveValueKey =
+        valueKey && numericKeys.includes(valueKey) ? valueKey : numericKeys[0];
 
       if (!effectiveValueKey) {
         setIsValidGraphData(false);
@@ -278,7 +331,9 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       }
 
       // Find string keys for grouping and indexing
+      // Find string keys for grouping and indexing
       let stringKeys = keys.filter(
+        (k) => typeof sample[k] === "string" && k !== effectiveValueKey
         (k) => typeof sample[k] === "string" && k !== effectiveValueKey
       );
 
@@ -304,9 +359,10 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       } else {
         indexByKey = stringKeys[0];
         effectiveGroupBy =
-          stringKeys.length > 1 ? stringKeys.find((k) => k !== indexByKey) : null;
+          stringKeys.length > 1
+            ? stringKeys.find((k) => k !== indexByKey)
+            : null;
       }
-
 
       if (!indexByKey) {
         setIsValidGraphData(false);
@@ -316,6 +372,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       if (chartType === "pie") {
         const grouped = rawData.reduce((acc, row) => {
           const group = row[indexByKey];
+          const value = Number(row[effectiveValueKey]);
           const value = Number(row[effectiveValueKey]);
 
           if (!acc[group]) {
@@ -357,9 +414,15 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       const allGroupValues = effectiveGroupBy
         ? [...new Set(rawData.map((row) => row[effectiveGroupBy]))]
         : ["value"];
+      // For bar and line charts
+      const allGroupValues = effectiveGroupBy
+        ? [...new Set(rawData.map((row) => row[effectiveGroupBy]))]
+        : ["value"];
 
       const grouped = rawData.reduce((acc, row) => {
         const label = row[indexByKey];
+        const group = effectiveGroupBy ? row[effectiveGroupBy] : "value";
+        const value = Number(row[effectiveValueKey]);
         const group = effectiveGroupBy ? row[effectiveGroupBy] : "value";
         const value = Number(row[effectiveValueKey]);
 
