@@ -16,8 +16,8 @@ interface ModernBarGraphProps {
   data: any[];
   groupBy: string | null;
   setGroupBy: React.Dispatch<React.SetStateAction<string | null>>;
-  aggregate: "sum" | "count";
-  setAggregate: React.Dispatch<React.SetStateAction<"sum" | "count">>;
+  aggregate: "sum" | "count" | "avg" | "min" | "max";
+  setAggregate: React.Dispatch<React.SetStateAction<"sum" | "count" | "avg" | "min" | "max">>;
   valueKey: string | null;
   setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -45,20 +45,15 @@ const ModernBarShape = (props: any) => {
   const isTopBar = dataKey === topMostKey;
   const colorIndex = keyIndex % theme.colors.barColors.length;
   const solidColor = theme.colors.barColors[colorIndex];
-
   const gradientId = `gradient-${groupIndex}-${keyIndex}`;
 
   if (value <= 0) return null;
-
-  const barGradient = `linear-gradient(135deg, ${solidColor} 0%, ${solidColor}cc 100%)`;
 
   if (isTopBar) {
     const pathData = `M ${x}, ${y + radius}
                       A ${radius}, ${radius}, 0, 0, 1, ${x + radius}, ${y}
                       L ${x + width - radius}, ${y}
-                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${
-      y + radius
-    }
+                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${y + radius}
                       L ${x + width}, ${y + height}
                       L ${x}, ${y + height}
                       Z`;
@@ -123,7 +118,6 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     const { theme } = useTheme();
     const [isAnimating, setIsAnimating] = useState(false);
     const [showResolutionOptions, setShowResolutionOptions] = useState(false);
-
     const [graphData, setGraphData] = useState<any[]>([]);
     const [xKey, setXKey] = useState<string | null>(null);
     const [yKeys, setYKeys] = useState<string[]>([]);
@@ -133,11 +127,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const handleDownloadGraph = async (resolution: "low" | "high") => {
-      console.log("Resolution:", resolution);
-      console.log("Container Ref:", containerRef.current);
       if (containerRef.current) {
         try {
-          console.log("Inside handleDownloadGraph");
           const scale = resolution === "high" ? 2 : 1;
           const canvas = await html2canvas(containerRef.current, {
             scale,
@@ -180,11 +171,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           setShowResolutionOptions(false);
         }
       };
-
       document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [showResolutionOptions]);
 
     const formatKey = useCallback((key: any): string => {
@@ -198,17 +186,15 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     }, []);
 
     const dataKeys = data.length > 0 ? Object.keys(data[0]) : [];
-
-    const numericKeys = dataKeys.filter((key) => {
-      if (data.length === 0) return false;
-      return data.some((item) => {
+    const numericKeys = dataKeys.filter((key) =>
+      data.some((item) => {
         const val = item[key];
         return (
           typeof val === "number" ||
           (typeof val === "string" && !isNaN(parseFloat(val)))
         );
-      });
-    });
+      })
+    );
 
     const isKeyExcluded = (key: string) => {
       const lowerKey = key.toLowerCase();
@@ -231,25 +217,18 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       excludeFn: (key: string) => boolean
     ): string | null => {
       if (!rows.length) return null;
-
       const sampleSize = Math.min(100, rows.length);
       const sample = rows.slice(0, sampleSize);
       const scores: Record<string, number> = {};
-
       const keys = Object.keys(sample[0]);
 
       keys.forEach((key) => {
         if (excludeFn(key)) return;
-
         const values = sample.map((row) => row[key]).filter(Boolean);
         const uniqueCount = new Set(values).size;
-
         if (uniqueCount <= 1 || uniqueCount > sampleSize * 0.6) return;
-
-        const nullCount =
-          values.length < sampleSize ? sampleSize - values.length : 0;
+        const nullCount = values.length < sampleSize ? sampleSize - values.length : 0;
         const nullPenalty = nullCount / sampleSize;
-
         scores[key] = 1 / (uniqueCount + nullPenalty * 10);
       });
 
@@ -270,15 +249,9 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       if (dataKeys.length > 0) {
         const bestGroupBy = autoDetectBestGroupBy(data, isKeyExcluded);
         if (!groupBy) {
-          setGroupBy(
-            bestGroupBy || dataKeys.find((key) => !isKeyExcluded(key)) || null
-          );
+          setGroupBy(bestGroupBy || dataKeys.find((key) => !isKeyExcluded(key)) || null);
         }
-
-        if (
-          numericKeys.length > 0 &&
-          (!valueKey || !numericKeys.includes(valueKey))
-        ) {
+        if (numericKeys.length > 0 && (!valueKey || !numericKeys.includes(valueKey))) {
           setValueKey(numericKeys[0]);
         } else if (numericKeys.length === 0) {
           setValueKey(null);
@@ -287,120 +260,139 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         setGroupBy(null);
         setValueKey(null);
       }
-    }, [data, dataKeys, numericKeys]);
+    }, [data, dataKeys, numericKeys, groupBy, setGroupBy, setValueKey, valueKey]);
 
     useEffect(() => {
-      if (aggregate === "sum") {
+      if (aggregate !== "count") {
         if (!valueKey || !validValueKeys.includes(valueKey)) {
           setValueKey(validValueKeys.length > 0 ? validValueKeys[0] : null);
         }
-      } else if (aggregate === "count") {
+      } else {
         setValueKey(null);
       }
-    }, [aggregate, validValueKeys, valueKey]);
+    }, [aggregate, validValueKeys, valueKey, setValueKey]);
 
     function transformDynamicData(
       rawData: any[],
       selectedGroupBy: string | null,
-      selectedAggregate: "sum" | "count",
+      selectedAggregate: "sum" | "count" | "avg" | "min" | "max",
       selectedValueKey: string | null
     ) {
-      if (
-        !rawData ||
-        rawData.length === 0 ||
-        !selectedGroupBy ||
-        (selectedAggregate === "sum" && !selectedValueKey)
-      ) {
+      if (!rawData || rawData.length === 0) {
         return { data: [], keys: [], indexBy: "" };
       }
 
-      const valueKeyToUse = selectedValueKey;
-      const groupByToUse = selectedGroupBy;
+      const sample = rawData[0];
+      const keys = Object.keys(sample);
 
-      if (selectedAggregate === "sum" && !valueKeyToUse) {
-        console.warn("Aggregate is 'sum' but no valid valueKey is selected.");
+      // Find numeric keys
+      const numericKeys = keys.filter((k) => {
+        const val = sample[k];
+        return val !== null && val !== "" && !isNaN(Number(val));
+      });
+
+      const effectiveValueKey =
+        selectedValueKey && numericKeys.includes(selectedValueKey)
+          ? selectedValueKey
+          : numericKeys[0];
+
+      if (!effectiveValueKey && selectedAggregate !== "count") {
         return { data: [], keys: [], indexBy: "" };
       }
 
-      // Detect an additional string key for stacking (similar to effectiveGroupBy in ChatDynamicGraph)
-      const stringKeys = Object.keys(rawData[0] || {}).filter(
-        (k) =>
-          typeof rawData[0][k] === "string" &&
-          k !== selectedGroupBy &&
-          !isKeyExcluded(k)
+      // Find string keys for grouping and stacking
+      let stringKeys = keys.filter(
+        (k) => typeof sample[k] === "string" && k !== effectiveValueKey
       );
-      const stackBy = stringKeys.length > 0 ? stringKeys[0] : null;
 
-      if (selectedAggregate === "sum" && stackBy) {
-        // Stacked bar logic
-        const uniqueStackValues = [
-          ...new Set(rawData.map((row) => row[stackBy])),
-        ];
-
-        const groupedData = rawData.reduce((acc, row) => {
-          const group = row[groupByToUse];
-          const stack = row[stackBy];
-          const value = parseFloat(row[valueKeyToUse]) || 0;
-
-          if (!acc[group]) {
-            acc[group] = { [groupByToUse]: group };
-            uniqueStackValues.forEach((sVal) => (acc[group][sVal] = 0));
-          }
-
-          acc[group][stack] += value;
-
-          return acc;
-        }, {});
-
-        return {
-          data: Object.values(groupedData),
-          keys: uniqueStackValues,
-          indexBy: groupByToUse,
-        };
-      } else {
-        // Single series logic (for "count" or when no stackBy is available)
-        const groupedData = rawData.reduce((acc, row) => {
-          const group = row[groupByToUse];
-          const value = selectedAggregate === "sum" ? parseFloat(row[valueKeyToUse]) || 0 : 1;
-
-          if (!acc[group]) {
-            acc[group] = { [groupByToUse]: group, value: 0 };
-          }
-
-          acc[group].value += value;
-
-          return acc;
-        }, {});
-
-        return {
-          data: Object.values(groupedData),
-          keys: ["value"],
-          indexBy: groupByToUse,
-        };
+      if (stringKeys.length === 0) {
+        rawData = rawData.map((item, idx) => ({ ...item, label: `Item ${idx + 1}` }));
+        stringKeys = ["label"];
       }
+
+      // Determine indexByKey and stackByKey (mimicking ChatDynamicGraph.tsx logic)
+      let indexByKey: string;
+      let stackByKey: string | null;
+
+      if (selectedGroupBy && stringKeys.includes(selectedGroupBy)) {
+        indexByKey = selectedGroupBy;
+        stackByKey = stringKeys.find((k) => k !== selectedGroupBy) || null;
+      } else if (stringKeys.includes("branch_name")) {
+        indexByKey = "branch_name";
+        stackByKey = stringKeys.find((k) => k !== "branch_name") || null;
+      } else {
+        indexByKey = stringKeys[0];
+        stackByKey = stringKeys.length > 1 ? stringKeys[1] : null;
+      }
+
+      if (!indexByKey) {
+        return { data: [], keys: [], indexBy: "" };
+      }
+
+      // Get unique stack values
+      const allStackValues = stackByKey
+        ? [...new Set(rawData.map((row) => row[stackByKey]))].filter((v) => v !== undefined && v !== null)
+        : ["value"];
+
+      // Group and aggregate data
+      const grouped = rawData.reduce((acc, row) => {
+        const label = row[indexByKey];
+        const stack = stackByKey ? row[stackByKey] : "value";
+        const value = selectedAggregate === "count" ? 1 : Number(row[effectiveValueKey] || 0);
+
+        if (!acc[label]) {
+          acc[label] = { [indexByKey]: label };
+          allStackValues.forEach((type) => (acc[label][type] = 0));
+        }
+
+        if (selectedAggregate === "count") {
+          acc[label][stack] = (acc[label][stack] || 0) + 1;
+        } else if (selectedAggregate === "avg") {
+          acc[label][stack] = (acc[label][stack] || 0) + value;
+          acc[label][`${stack}_count`] = (acc[label][`${stack}_count`] || 0) + 1;
+        } else if (selectedAggregate === "min") {
+          acc[label][stack] = acc[label][stack] !== undefined ? Math.min(acc[label][stack], value) : value;
+        } else if (selectedAggregate === "max") {
+          acc[label][stack] = acc[label][stack] !== undefined ? Math.max(acc[label][stack], value) : value;
+        } else { // sum
+          acc[label][stack] = (acc[label][stack] || 0) + value;
+        }
+
+        return acc;
+      }, {});
+
+      // Finalize data (handle averages)
+      const finalData = Object.values(grouped).map((item: any) => {
+        const newItem = { ...item };
+        if (selectedAggregate === "avg") {
+          allStackValues.forEach((stack) => {
+            const count = newItem[`${stack}_count`] || 1;
+            newItem[stack] = newItem[stack] / count;
+            delete newItem[`${stack}_count`];
+          });
+        }
+        return newItem;
+      });
+
+      return {
+        data: finalData,
+        keys: allStackValues,
+        indexBy: indexByKey,
+      };
     }
 
     useEffect(() => {
-      if (
-        data &&
-        data.length > 0 &&
-        groupBy &&
-        (aggregate === "count" || (aggregate === "sum" && valueKey))
-      ) {
+      if (data && data.length > 0 && groupBy) {
         try {
-          const {
-            data: processedData,
-            keys: processedKeys,
-            indexBy,
-          } = transformDynamicData(data, groupBy, aggregate, valueKey);
+          const { data: processedData, keys: processedKeys, indexBy } = transformDynamicData(
+            data,
+            groupBy,
+            aggregate,
+            valueKey
+          );
 
           const hasValidNumericData = processedData.some((item) =>
-            processedKeys.some(
-              (key) =>
-                item.hasOwnProperty(key) &&
-                typeof item[key] === "number" &&
-                !isNaN(item[key])
-            )
+            processedKeys.some((key) => !isNaN(Number(item[key])) && item[key] !== 0)
           );
 
           if (!processedData.length || !indexBy || !hasValidNumericData) {
@@ -430,11 +422,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       }
     }, [data, groupBy, aggregate, valueKey]);
 
-    const groupByOptions = dataKeys.filter((key) => !isKeyExcluded(key));
-
     const ModernTooltip = ({ active, payload, label }: any) => {
       if (active && payload && payload.length) {
-        const accentColor = payload[0]?.color || theme.colors.accent;
         return (
           <div
             style={{
@@ -487,8 +476,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    marginBottom:
-                      index < payload.length - 1 ? theme.spacing.md : 0,
+                    marginBottom: index < payload.length - 1 ? theme.spacing.md : 0,
                     padding: theme.spacing.md,
                     borderRadius: theme.borderRadius.default,
                     background: `${entry.color}15`,
@@ -539,13 +527,13 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     };
 
     if (!xKey || yKeys.length === 0 || !graphData.length) {
-      console.log("No valid data for rendering");
       return (
         <div
           className="flex flex-col items-center justify-center h-full p-12"
           style={{
             background: theme.colors.surface,
             backdropFilter: "blur(20px)",
+            boxShadow: theme.shadow.lg,
           }}
         >
           <div
@@ -589,8 +577,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               lineHeight: 1.6,
             }}
           >
-            Configure your data grouping and aggregation settings to create
-            stunning visualizations
+            Configure your data grouping and aggregation settings to create stunning visualizations
           </p>
         </div>
       );
@@ -598,7 +585,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
     const xTickRotation = graphData.length > 8 ? -45 : 0;
     const xTickAnchor = graphData.length > 8 ? "end" : "middle";
-    console.log("Rendering graph with", { xKey, yKeys, graphData });
+
     return (
       <div>
         <div
@@ -611,15 +598,6 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             transition: "all 0.4s ease",
           }}
         >
-          <div
-            style={{
-              background: theme.gradients.glass,
-              backdropFilter: "blur(20px)",
-              borderBottom: `1px solid ${theme.colors.border}`,
-            }}
-          >
-          </div>
-
           <div className="flex justify-end mb-2">
             <div className="relative">
               <button
@@ -635,7 +613,6 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 <Download size={16} />
                 <span>Export</span>
               </button>
-
               {showResolutionOptions && (
                 <div
                   ref={dropdownRef}
@@ -664,7 +641,6 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               )}
             </div>
           </div>
-
           <div className="flex-1" ref={containerRef}>
             <div
               ref={graphRef}
@@ -682,13 +658,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={graphData} barCategoryGap="25%" barGap={6}>
                   <defs>
-                    <linearGradient
-                      id="gridGradient"
-                      x1="0%"
-                      y1="0%"
-                      x2="100%"
-                      y2="0%"
-                    >
+                    <linearGradient id="gridGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor={`${theme.colors.accent}1A`} />
                       <stop offset="50%" stopColor={`${theme.colors.accent}0D`} />
                       <stop offset="100%" stopColor={`${theme.colors.accent}1A`} />
@@ -703,10 +673,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   <XAxis
                     dataKey={xKey}
                     tickLine={false}
-                    axisLine={{
-                      stroke: `${theme.colors.accent}4D`,
-                      strokeWidth: 2,
-                    }}
+                    axisLine={{ stroke: `${theme.colors.accent}4D`, strokeWidth: 2 }}
                     angle={xTickRotation}
                     textAnchor={xTickAnchor}
                     height={xTickRotation === -45 ? 100 : 60}
@@ -717,17 +684,12 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                       fill: theme.colors.textSecondary,
                     }}
                     tickFormatter={(value) =>
-                      value.length > 14
-                        ? value.slice(0, 12) + "…"
-                        : formatKey(value)
+                      value.length > 14 ? value.slice(0, 12) + "…" : formatKey(value)
                     }
                   />
                   <YAxis
                     tickLine={false}
-                    axisLine={{
-                      stroke: `${theme.colors.accent}4D`,
-                      strokeWidth: 2,
-                    }}
+                    axisLine={{ stroke: `${theme.colors.accent}4D`, strokeWidth: 2 }}
                     style={{
                       fontSize: "13px",
                       fontWeight: theme.typography.weight.medium,
@@ -750,11 +712,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                       key={key}
                       dataKey={key}
                       stackId="a"
-                      fill={
-                        theme.colors.barColors[
-                          keyIndex % theme.colors.barColors.length
-                        ]
-                      }
+                      fill={theme.colors.barColors[keyIndex % theme.colors.barColors.length]}
                       shape={(props) => (
                         <ModernBarShape
                           {...props}
@@ -773,11 +731,9 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             </div>
           </div>
         </div>
-
         <style jsx>{`
           @keyframes pulse {
-            0%,
-            100% {
+            0%, 100% {
               transform: scale(1);
             }
             50% {
