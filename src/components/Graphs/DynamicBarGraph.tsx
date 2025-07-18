@@ -9,24 +9,22 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { BarChart3, TrendingUp, Download } from "lucide-react";
-import { useTheme } from "../../ThemeContext";
+import { useTheme } from "../../ThemeContext"; // Corrected import path
 import html2canvas from "html2canvas";
 
 interface ModernBarGraphProps {
-  graphKey?: string;
   data: any[];
   groupBy: string | null;
   setGroupBy: React.Dispatch<React.SetStateAction<string | null>>;
-  aggregate: "sum" | "count" | "avg" | "min" | "max";
-  setAggregate: React.Dispatch<
-    React.SetStateAction<"sum" | "count" | "avg" | "min" | "max">
-  >;
+  aggregate: "sum" | "count";
+  setAggregate: React.Dispatch<React.SetStateAction<"sum" | "count">>;
   valueKey: string | null;
   setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
+// Ultra-modern Custom Bar Shape with advanced gradients and animations
 const ModernBarShape = (props: any) => {
-  const { theme } = useTheme();
+  const { theme } = useTheme(); // Use theme from context
   const {
     x,
     y,
@@ -35,7 +33,7 @@ const ModernBarShape = (props: any) => {
     dataKey,
     payload,
     yKeys,
-    index: groupIndex,
+    index: groupIndex, // Renamed to avoid conflict
     keyIndex,
   } = props;
   const radius = Math.min(8, width / 3);
@@ -48,9 +46,14 @@ const ModernBarShape = (props: any) => {
   const isTopBar = dataKey === topMostKey;
   const colorIndex = keyIndex % theme.colors.barColors.length;
   const solidColor = theme.colors.barColors[colorIndex];
+
+  // FIX: Use unique ID based on groupIndex AND keyIndex
   const gradientId = `gradient-${groupIndex}-${keyIndex}`;
 
   if (value <= 0) return null;
+
+  // Define a simple gradient for the bars as `theme.gradients` might not have specific bar gradients
+  const barGradient = `linear-gradient(135deg, ${solidColor} 0%, ${solidColor}cc 100%)`; // Added opacity to the end color
 
   if (isTopBar) {
     const pathData = `M ${x}, ${y + radius}
@@ -74,7 +77,7 @@ const ModernBarShape = (props: any) => {
         <path
           d={pathData}
           fill={`url(#${gradientId})`}
-          stroke={theme.colors.surfaceGlass}
+          stroke={theme.colors.surfaceGlass} // Using surfaceGlass from theme
           strokeWidth="1"
           style={{
             transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
@@ -98,7 +101,7 @@ const ModernBarShape = (props: any) => {
           width={width}
           height={height}
           fill={`url(#${gradientId})`}
-          stroke={theme.colors.surfaceGlass}
+          stroke={theme.colors.surfaceGlass} // Using surfaceGlass from theme
           strokeWidth="1"
           style={{
             transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
@@ -112,7 +115,6 @@ const ModernBarShape = (props: any) => {
 
 const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
   ({
-    graphKey,
     data,
     groupBy,
     aggregate,
@@ -121,9 +123,10 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     setValueKey,
     valueKey,
   }) => {
-    const { theme } = useTheme();
+    const { theme } = useTheme(); // Use theme from context
     const [isAnimating, setIsAnimating] = useState(false);
     const [showResolutionOptions, setShowResolutionOptions] = useState(false);
+
     const [graphData, setGraphData] = useState<any[]>([]);
     const [xKey, setXKey] = useState<string | null>(null);
     const [yKeys, setYKeys] = useState<string[]>([]);
@@ -132,9 +135,13 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     const graphRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // Function to handle graph download
     const handleDownloadGraph = async (resolution: "low" | "high") => {
+      console.log("Resolution:", resolution);
+      console.log("Container Ref:", containerRef.current);
       if (containerRef.current) {
         try {
+          console.log("Inside handleDownloadGraph");
           const scale = resolution === "high" ? 2 : 1;
           const canvas = await html2canvas(containerRef.current, {
             scale,
@@ -142,6 +149,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             logging: false,
             backgroundColor: theme.colors.surface,
             onclone: (document, element) => {
+              // Make sure all SVG elements are properly rendered
               const svgElements = element.querySelectorAll("svg");
               svgElements.forEach((svg) => {
                 svg.setAttribute(
@@ -167,6 +175,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       setShowResolutionOptions(false);
     };
 
+    // Close resolution options when clicking outside
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -177,9 +186,11 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           setShowResolutionOptions(false);
         }
       };
+
       document.addEventListener("mousedown", handleClickOutside);
-      return () =>
+      return () => {
         document.removeEventListener("mousedown", handleClickOutside);
+      };
     }, [showResolutionOptions]);
 
     const formatKey = useCallback((key: any): string => {
@@ -193,15 +204,17 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     }, []);
 
     const dataKeys = data.length > 0 ? Object.keys(data[0]) : [];
-    const numericKeys = dataKeys.filter((key) =>
-      data.some((item) => {
+
+    const numericKeys = dataKeys.filter((key) => {
+      if (data.length === 0) return false;
+      return data.some((item) => {
         const val = item[key];
         return (
           typeof val === "number" ||
           (typeof val === "string" && !isNaN(parseFloat(val)))
         );
-      })
-    );
+      });
+    });
 
     const isKeyExcluded = (key: string) => {
       const lowerKey = key.toLowerCase();
@@ -212,8 +225,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         lowerKey.includes("address") ||
         lowerKey === "first_name" ||
         lowerKey === "last_name" ||
-        lowerKey === "name" ||
-        lowerKey.length < 3
+        lowerKey === "name" || // NEW: skip generic 'name'
+        lowerKey.length < 3 // NEW: avoid too-short keys
       );
     };
 
@@ -224,32 +237,40 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       excludeFn: (key: string) => boolean
     ): string | null => {
       if (!rows.length) return null;
+
       const sampleSize = Math.min(100, rows.length);
       const sample = rows.slice(0, sampleSize);
       const scores: Record<string, number> = {};
+
       const keys = Object.keys(sample[0]);
 
       keys.forEach((key) => {
         if (excludeFn(key)) return;
+
         const values = sample.map((row) => row[key]).filter(Boolean);
         const uniqueCount = new Set(values).size;
+
+        // Skip if mostly unique or mostly same
         if (uniqueCount <= 1 || uniqueCount > sampleSize * 0.6) return;
+
         const nullCount =
           values.length < sampleSize ? sampleSize - values.length : 0;
         const nullPenalty = nullCount / sampleSize;
-        scores[key] = 1 / (uniqueCount + nullPenalty * 10);
+
+        scores[key] = 1 / (uniqueCount + nullPenalty * 10); // lower uniqueCount is better
       });
 
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
       return sorted.length ? sorted[0][0] : null;
     };
 
+    // New useEffect to handle empty data immediately
     useEffect(() => {
       if (!data || data.length === 0) {
         setGraphData([]);
         setXKey(null);
         setYKeys([]);
-        setIsAnimating(false);
+        setIsAnimating(false); // Ensure animation state is off
       }
     }, [data]);
 
@@ -261,6 +282,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             bestGroupBy || dataKeys.find((key) => !isKeyExcluded(key)) || null
           );
         }
+
         if (
           numericKeys.length > 0 &&
           (!valueKey || !numericKeys.includes(valueKey))
@@ -273,25 +295,17 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         setGroupBy(null);
         setValueKey(null);
       }
-    }, [
-      data,
-      dataKeys,
-      numericKeys,
-      groupBy,
-      setGroupBy,
-      setValueKey,
-      valueKey,
-    ]);
+    }, [data, dataKeys, numericKeys]);
 
     useEffect(() => {
-      if (aggregate !== "count") {
+      if (aggregate === "sum") {
         if (!valueKey || !validValueKeys.includes(valueKey)) {
           setValueKey(validValueKeys.length > 0 ? validValueKeys[0] : null);
         }
-      } else {
+      } else if (aggregate === "count") {
         setValueKey(null);
       }
-    }, [aggregate, validValueKeys, valueKey, setValueKey]);
+    }, [aggregate, validValueKeys, valueKey]);
 
     function transformDynamicData(
       rawData: any[],
@@ -419,24 +433,46 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     }
 
     useEffect(() => {
-      if (data && data.length > 0 && groupBy) {
-        setIsAnimating(true);
+      if (
+        data &&
+        data.length > 0 &&
+        groupBy &&
+        (aggregate === "count" || (aggregate === "sum" && valueKey))
+      ) {
         try {
           const {
             data: processedData,
             keys: processedKeys,
             indexBy,
           } = transformDynamicData(data, groupBy, aggregate, valueKey);
-          setGraphData([...processedData]);
+
+          const hasValidNumericData = processedData.some((item) =>
+            processedKeys.some(
+              (key) =>
+                item.hasOwnProperty(key) &&
+                typeof item[key] === "number" &&
+                !isNaN(item[key])
+            )
+          );
+
+          if (!processedData.length || !indexBy || !hasValidNumericData) {
+            setGraphData([]);
+            setXKey(null);
+            setYKeys([]);
+            setIsAnimating(false);
+            return;
+          }
+
+          setGraphData(processedData);
           setXKey(indexBy);
           setYKeys(processedKeys);
-          setTimeout(() => setIsAnimating(false), 300);
+          setIsAnimating(false);
         } catch (error) {
           console.error("Data processing error:", error);
           setGraphData([]);
           setXKey(null);
           setYKeys([]);
-          setTimeout(() => setIsAnimating(false), 300);
+          setIsAnimating(false);
         }
       } else {
         setGraphData([]);
@@ -446,20 +482,25 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       }
     }, [data, groupBy, aggregate, valueKey]);
 
+    const groupByOptions = dataKeys.filter((key) => !isKeyExcluded(key));
+
+    // Ultra-modern Custom Tooltip with glassmorphism
     const ModernTooltip = ({ active, payload, label }: any) => {
       if (active && payload && payload.length) {
+        // Use the color of the first bar in the payload for the accent/border
+        const accentColor = payload[0]?.color || theme.colors.accent;
         return (
           <div
             style={{
               padding: theme.spacing.lg,
-              background: theme.colors.surface,
+              background: theme.colors.surface, // Use surface from theme
               backdropFilter: "blur(20px) saturate(180%)",
               WebkitBackdropFilter: "blur(20px) saturate(180%)",
               color: theme.colors.text,
               fontSize: "14px",
-              borderRadius: theme.borderRadius.large,
-              boxShadow: theme.shadow.lg,
-              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.borderRadius.large, // Use large from theme
+              boxShadow: theme.shadow.lg, // Use lg from theme
+              border: `1px solid ${theme.colors.border}`, // Use border from theme
               fontFamily: theme.typography.fontFamily,
               minWidth: "200px",
               maxWidth: "280px",
@@ -474,7 +515,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 left: 0,
                 right: 0,
                 height: "3px",
-                background: theme.gradients.primary,
+                background: theme.gradients.primary, // Use primary gradient from theme
               }}
             />
             <div
@@ -488,63 +529,64 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 gap: theme.spacing.sm,
               }}
             >
-              <TrendingUp size={16} style={{ color: theme.colors.accent }} />
+              <TrendingUp
+                size={16}
+                style={{ color: theme.colors.accent }} // Use accent from theme
+              />
               {formatKey(label)}
             </div>
-            {payload
-              .filter((entry: any) => entry?.value !== 0)
-              .map((entry: any, index: number) => (
-                <div
-                  key={`item-${index}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom:
-                      index < payload.length - 1 ? theme.spacing.md : 0,
-                    padding: theme.spacing.md,
-                    borderRadius: theme.borderRadius.default,
-                    background: `${entry.color}15`,
-                    border: `1px solid ${entry.color}30`,
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <div
-                      style={{
-                        width: "14px",
-                        height: "14px",
-                        background: entry.color,
-                        borderRadius: "50%",
-                        marginRight: theme.spacing.md,
-                        boxShadow: theme.shadow.sm,
-                        border: `2px solid ${theme.colors.surface}`,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontWeight: theme.typography.weight.medium,
-                        fontSize: "14px",
-                      }}
-                    >
-                      {formatKey(entry.name)}
-                    </span>
-                  </div>
+            {payload.map((entry: any, index: number) => (
+              <div
+                key={`item-${index}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom:
+                    index < payload.length - 1 ? theme.spacing.md : 0,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.borderRadius.default, // Use default from theme
+                  background: `${entry.color}15`, // Keep opacity suffix
+                  border: `1px solid ${entry.color}30`, // Keep opacity suffix
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <div
+                    style={{
+                      width: "14px",
+                      height: "14px",
+                      background: entry.color,
+                      borderRadius: "50%",
+                      marginRight: theme.spacing.md,
+                      boxShadow: theme.shadow.sm, // Use sm from theme
+                      border: `2px solid ${theme.colors.surface}`, // Use surface from theme
+                    }}
+                  />
                   <span
                     style={{
-                      fontWeight: theme.typography.weight.bold,
-                      color: theme.colors.text,
-                      fontSize: "15px",
-                      background: theme.gradients.primary,
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
+                      fontWeight: theme.typography.weight.medium,
+                      fontSize: "14px",
                     }}
                   >
-                    {entry.value.toLocaleString()}
+                    {formatKey(entry.name)}
                   </span>
                 </div>
-              ))}
+                <span
+                  style={{
+                    fontWeight: theme.typography.weight.bold,
+                    color: theme.colors.text,
+                    fontSize: "15px",
+                    background: theme.gradients.primary, // Use primary gradient from theme
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  {entry.value.toLocaleString()}
+                </span>
+              </div>
+            ))}
           </div>
         );
       }
@@ -552,39 +594,41 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
     };
 
     if (!xKey || yKeys.length === 0 || !graphData.length) {
+      console.log("No valid data for rendering");
       return (
         <div
           className="flex flex-col items-center justify-center h-full p-12"
           style={{
-            background: theme.colors.surface,
+            background: theme.colors.surface, // Use surface from theme
             backdropFilter: "blur(20px)",
-            boxShadow: theme.shadow.lg,
+            // border: `1px solid ${theme.colors.border}`, // Use border from theme
+            boxShadow: theme.shadow.lg, // Use lg from theme
           }}
         >
           <div
             style={{
               width: "100px",
               height: "100px",
-              background: theme.gradients.primary,
+              background: theme.gradients.primary, // Use primary gradient from theme
               borderRadius: "50%",
               margin: "0 auto 32px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: theme.shadow.md,
+              boxShadow: theme.shadow.md, // Use md from theme
             }}
           >
             <BarChart3 size={48} color="white" />
           </div>
           <h3
             style={{
-              color: theme.colors.text,
+              color: theme.colors.text, // Use text from theme
               fontSize: "28px",
               fontWeight: theme.typography.weight.bold,
               margin: "0 0 16px 0",
               textAlign: "center",
               fontFamily: theme.typography.fontFamily,
-              background: theme.gradients.primary,
+              background: theme.gradients.primary, // Use primary gradient from theme
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -594,7 +638,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           </h3>
           <p
             style={{
-              color: theme.colors.textSecondary,
+              color: theme.colors.textSecondary, // Use textSecondary from theme
               fontSize: "18px",
               textAlign: "center",
               margin: 0,
@@ -611,19 +655,143 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
     const xTickRotation = graphData.length > 8 ? -45 : 0;
     const xTickAnchor = graphData.length > 8 ? "end" : "middle";
-
+    console.log("Rendering graph with", { xKey, yKeys, graphData });
     return (
       <div>
         <div
           className="flex flex-col"
           style={{
-            background: theme.colors.surface,
+            // borderRadius: theme.borderRadius.large, // Use large from theme
+            background: theme.colors.surface, // Use surface from theme
             backdropFilter: "blur(20px) saturate(180%)",
             WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            // border: `1px solid ${theme.colors.border}`, // Use border from theme
             overflow: "hidden",
             transition: "all 0.4s ease",
           }}
         >
+          {/* Ultra-modern Header */}
+          <div
+            style={{
+              background: theme.gradients.glass, // Use glass gradient from theme
+              backdropFilter: "blur(20px)",
+              borderBottom: `1px solid ${theme.colors.border}`, // Use border from theme
+            }}
+          >
+            {/* Enhanced Control Panel */}
+            {/* Keeping the control panel commented out as it was in the original file,
+                but updating styles to use theme for future use if uncommented */}
+            {/* <div className="flex flex-wrap p-2 gap-3 items-center">
+              <div className="flex items-center gap-1">
+                 <Settings
+                  size={18}
+                  style={{ color: theme.colors.accent }}
+                />
+                <label
+                  htmlFor="groupBy"
+                  className="font-semibold text-sm"
+                  style={{ color: theme.colors.text }}
+                >
+                  Group By:
+                </label>
+                <select
+                  id="groupBy"
+                  className="px-2 py-2 w-28 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                  style={{
+                    background: theme.colors.surface,
+                    backdropFilter: "blur(10px)",
+                    color: theme.colors.text,
+                    fontFamily: theme.typography.fontFamily,
+                    fontWeight: theme.typography.weight.medium,
+                    minWidth: "140px",
+                    boxShadow: theme.shadow.sm,
+                  }}
+                  value={groupBy || ""}
+                  onChange={(e) => {
+                    const newGroupBy = e.target.value;
+                    setGroupBy(newGroupBy);
+                  }}
+                >
+                  {groupByOptions.length > 0 ? (
+                    groupByOptions.map((key) => (
+                      <option key={key} value={key}>
+                        {formatKey(key)}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No suitable groupBy options</option>
+                  )}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <label
+                  htmlFor="aggregate"
+                  className="font-semibold text-sm"
+                  style={{ color: theme.colors.text }}
+                >
+                  Aggregate:
+                </label>
+                <select
+                  id="aggregate"
+                  className="px-2 py-2 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                  style={{
+                    background: theme.colors.surface,
+                    backdropFilter: "blur(10px)",
+                    color: theme.colors.text,
+                    fontFamily: theme.typography.fontFamily,
+                    fontWeight: theme.typography.weight.medium,
+                    minWidth: "120px",
+                    boxShadow: theme.shadow.sm,
+                  }}
+                  value={aggregate}
+                  onChange={(e) =>
+                    setAggregate(e.target.value as "sum" | "count")
+                  }
+                >
+                  {validValueKeys.length > 0 && (
+                    <option value="sum">Sum</option>
+                  )}
+                  <option value="count">Count</option>
+                </select>
+              </div>
+
+              {aggregate === "sum" && validValueKeys.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <label
+                    htmlFor="valueKey"
+                    className="font-semibold text-sm"
+                    style={{ color: theme.colors.text }}
+                  >
+                    Value Key:
+                  </label>
+                  <select
+                    id="valueKey"
+                    className="px-2 py-2 w-28 text-sm border-0 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                    style={{
+                      background: theme.colors.surface,
+                      backdropFilter: "blur(10px)",
+                      color: theme.colors.text,
+                      fontFamily: theme.typography.fontFamily,
+                      fontWeight: theme.typography.weight.medium,
+                      minWidth: "140px",
+                      boxShadow: theme.shadow.sm,
+                    }}
+                    value={valueKey || ""}
+                    onChange={(e) => setValueKey(e.target.value)}
+                  >
+                    {validValueKeys.map((key) => (
+                      <option key={key} value={key}>
+                        {formatKey(key)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div> */}
+          </div>
+
+          {/* Export Button */}
           <div className="flex justify-end mb-2">
             <div className="relative">
               <button
@@ -639,9 +807,10 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 <Download size={16} />
                 <span>Export</span>
               </button>
+
               {showResolutionOptions && (
                 <div
-                  ref={dropdownRef}
+                  ref={dropdownRef} // ✅ HERE
                   className="absolute right-0 mt-1 py-1 rounded-lg shadow-lg z-10"
                   style={{
                     backgroundColor: theme.colors.surface,
@@ -667,13 +836,15 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               )}
             </div>
           </div>
+
+          {/* Enhanced Chart Container */}
           <div className="flex-1" ref={containerRef}>
             <div
               ref={graphRef}
               style={{
                 height: "calc(100vh - 265px)",
                 width: "100%",
-                minHeight: "300px",
+                minHeight: "300px", // ✅ minimum visible height
                 flex: 1,
                 position: "relative",
                 opacity: isAnimating ? 0.7 : 1,
@@ -681,7 +852,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
               }}
             >
-              <ResponsiveContainer key={graphKey} width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={graphData} barCategoryGap="25%" barGap={6}>
                   <defs>
                     <linearGradient
@@ -694,11 +865,13 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                       <stop
                         offset="0%"
                         stopColor={`${theme.colors.accent}1A`}
-                      />
+                      />{" "}
+                      {/* Accent with opacity */}
                       <stop
                         offset="50%"
                         stopColor={`${theme.colors.accent}0D`}
-                      />
+                      />{" "}
+                      {/* Accent with more opacity */}
                       <stop
                         offset="100%"
                         stopColor={`${theme.colors.accent}1A`}
@@ -708,14 +881,14 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   <CartesianGrid
                     strokeDasharray="3 6"
                     vertical={false}
-                    stroke={`${theme.colors.accent}33`}
+                    stroke={`${theme.colors.accent}33`} // Accent with opacity
                     opacity={0.8}
                   />
                   <XAxis
                     dataKey={xKey}
                     tickLine={false}
                     axisLine={{
-                      stroke: `${theme.colors.accent}4D`,
+                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
                       strokeWidth: 2,
                     }}
                     angle={xTickRotation}
@@ -736,7 +909,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   <YAxis
                     tickLine={false}
                     axisLine={{
-                      stroke: `${theme.colors.accent}4D`,
+                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
                       strokeWidth: 2,
                     }}
                     style={{
@@ -749,42 +922,47 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   />
                   <Tooltip
                     cursor={{
-                      fill: `${theme.colors.accent}1A`,
-                      stroke: `${theme.colors.accent}4D`,
+                      fill: `${theme.colors.accent}1A`, // Accent with opacity
+                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
                       strokeWidth: 2,
                       radius: 8,
                     }}
                     content={<ModernTooltip />}
                   />
-                  {yKeys.map((key, keyIndex) => (
-                    <Bar
-                      key={key}
-                      dataKey={key}
-                      stackId="a"
-                      fill={
-                        theme.colors.barColors[
-                          keyIndex % theme.colors.barColors.length
-                        ]
-                      }
-                      shape={(props) => (
-                        <ModernBarShape
-                          {...props}
-                          yKeys={yKeys}
-                          dataKey={key}
-                          keyIndex={keyIndex}
-                        />
-                      )}
-                      isAnimationActive={true}
-                      animationDuration={1200}
-                      animationEasing="ease-out"
-                      animationBegin={keyIndex * 150}
-                    />
-                  ))}
+                  {yKeys.map(
+                    (
+                      key,
+                      keyIndex // Added keyIndex
+                    ) => (
+                      <Bar
+                        key={key}
+                        dataKey={key}
+                        stackId="a"
+                        fill={
+                          theme.colors.barColors[
+                            keyIndex % theme.colors.barColors.length
+                          ]
+                        }
+                        shape={(props) => (
+                          <ModernBarShape
+                            {...props}
+                            yKeys={yKeys}
+                            dataKey={key}
+                            keyIndex={keyIndex} // Pass keyIndex to shape
+                          />
+                        )}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
+                        animationBegin={keyIndex * 150}
+                      />
+                    )
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
+
         <style jsx>{`
           @keyframes pulse {
             0%,

@@ -1645,7 +1645,7 @@ const DashboardInterface = memo(
           )}, Main View Data Query: ${
             currentDashboardView.mainViewData.queryData
           }. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
-          const apiKey = "YOUR_API_KEY_HERE"; // Replace with actual API key
+          const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA"; // Replace with actual API key
 
           const payload = {
             contents: [
