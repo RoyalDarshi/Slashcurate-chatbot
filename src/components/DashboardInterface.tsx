@@ -73,6 +73,7 @@ export interface DashboardItem {
   reaction: "like" | "dislike" | null;
   dislike_reason: string | null;
   botResponseId: string;
+  isError: boolean;
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -110,10 +111,11 @@ const getDashboardErrorState = (question: string, errorMsg: string) => ({
     tableData: [],
     queryData: "Error loading query.",
   },
-  textualSummary: `Error: ${errorMsg}`,
+  textualSummary: errorMsg,
   question: question,
   reaction: null,
   dislike_reason: null,
+  isError: true,
 });
 
 const getErrorMessage = (error: any): string => {
@@ -166,21 +168,17 @@ const createDashboardItemFromMessages = (
     reaction: sanitizeReaction(botMessage.reaction),
     dislike_reason: botMessage.dislike_reason ?? null,
     botResponseId: botMessage.id,
+    isError: false,
   };
 
-  if (
-    botMessage.content.startsWith("Error:") ||
-    !botMessage.content.trim().startsWith("{")
-  ) {
+  if (botMessage.content === "Sorry, an error occurred. Please try again.") {
     return {
       ...baseItem,
       ...getDashboardErrorState(
         userMessage.content,
-        botMessage.content.replace("Error: ", "")
+        "Sorry, an error occurred. Please try again."
       ),
-      reaction: sanitizeReaction(botMessage.reaction),
-      dislike_reason: botMessage.dislike_reason ?? null,
-      botResponseId: botMessage.id,
+      isError: true,
     };
   } else {
     try {
@@ -207,9 +205,7 @@ const createDashboardItemFromMessages = (
         kpiData: actualKpiData,
         mainViewData: actualMainViewData,
         textualSummary: actualTextualSummary,
-        reaction: sanitizeReaction(botMessage.reaction),
-        dislike_reason: botMessage.dislike_reason ?? null,
-        botResponseId: botMessage.id,
+        isError: false,
       };
     } catch (parseError) {
       console.error(
@@ -220,11 +216,9 @@ const createDashboardItemFromMessages = (
         ...baseItem,
         ...getDashboardErrorState(
           userMessage.content,
-          "Failed to parse bot response."
+          "Sorry, an error occurred. Please try again."
         ),
-        reaction: sanitizeReaction(botMessage.reaction),
-        dislike_reason: botMessage.dislike_reason ?? null,
-        botResponseId: botMessage.id,
+        isError: true,
       };
     }
   }
@@ -302,6 +296,7 @@ const DashboardInterface = memo(
           reaction: null,
           dislike_reason: null,
           botResponseId: "",
+          isError: false,
         }),
         []
       );
@@ -318,8 +313,7 @@ const DashboardInterface = memo(
 
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
-      const isErrorState =
-        currentDashboardView.textualSummary.startsWith("Error:");
+      const isErrorState = currentDashboardView.isError;
 
       useEffect(() => {
         if (currentDashboardView?.questionMessageId) {
@@ -340,7 +334,6 @@ const DashboardInterface = memo(
         }
       }, [currentDashboardView, isSubmitting]);
 
-      // Monitor session connection status
       useEffect(() => {
         if (sessionConnection) {
           if (selectedConnection !== sessionConnection)
@@ -514,7 +507,7 @@ const DashboardInterface = memo(
         setCurrentHistoryIndex(0);
         setCurrentMainViewType("table");
         setGraphSummary(null);
-        setSessionConnectionError(null); // Reset error on new chat
+        setSessionConnectionError(null);
         localStorage.removeItem("currentDashboardQuestionId");
       }, [clearSession, initialDashboardState]);
 
@@ -561,9 +554,10 @@ const DashboardInterface = memo(
             ...getDashboardLoadingState(),
             lastViewType: "table",
             isFavorited: false,
-            reaction: null, // Initial loading state, no reaction yet
-            dislike_reason: null, // Initial loading state, no dislike reason yet
-            botResponseId: "", // Initial loading state, no bot response ID yet
+            reaction: null,
+            dislike_reason: null,
+            botResponseId: "",
+            isError: false,
           };
 
           setDashboardHistory((prev) => {
@@ -596,14 +590,7 @@ const DashboardInterface = memo(
                           question,
                           "No valid session connection found."
                         ),
-                        textualSummary:
-                          "Error: No valid session connection found.",
-                        isFavorited: false,
-                        questionMessageId: "",
-                        connectionName: connection,
-                        reaction: null,
-                        dislike_reason: null,
-                        botResponseId: "",
+                        isError: true,
                       }
                     : item
                 )
@@ -653,13 +640,7 @@ const DashboardInterface = memo(
                             question,
                             "Could not create session."
                           ),
-                          textualSummary: "Error: Could not create session.",
-                          isFavorited: false,
-                          questionMessageId: "",
-                          connectionName: connection,
-                          reaction: null,
-                          dislike_reason: null,
-                          botResponseId: "",
+                          isError: true,
                         }
                       : item
                   )
@@ -677,13 +658,7 @@ const DashboardInterface = memo(
                           question,
                           getErrorMessage(error)
                         ),
-                        textualSummary: `Error: ${getErrorMessage(error)}`,
-                        isFavorited: false,
-                        questionMessageId: "",
-                        connectionName: connection,
-                        reaction: null,
-                        dislike_reason: null,
-                        botResponseId: "",
+                        isError: true,
                       }
                     : item
                 )
@@ -705,7 +680,6 @@ const DashboardInterface = memo(
           let botMessageId: string = "";
 
           try {
-            // 1. Save User Message
             const userResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -728,8 +702,6 @@ const DashboardInterface = memo(
               message: finalUserMessage,
             });
 
-            // Update dashboard history with the actual user message ID.
-            // Do NOT set botResponseId or reaction here, as they belong to the bot's response.
             setDashboardHistory((prev) =>
               prev.map((item) =>
                 item.id === newLoadingEntryId
@@ -750,7 +722,6 @@ const DashboardInterface = memo(
               );
             }
 
-            // 2. Create Bot Loading Message
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -777,19 +748,17 @@ const DashboardInterface = memo(
               message: botLoadingMessage,
             });
 
-            // Now that we have the botMessageId, update the dashboard item's botResponseId.
             setDashboardHistory((prev) =>
               prev.map((item) =>
                 item.id === newLoadingEntryId
                   ? {
                       ...item,
-                      botResponseId: botMessageId, // Correctly set bot's message ID
+                      botResponseId: botMessageId,
                     }
                   : item
               )
             );
 
-            // 3. Call Chatbot API for actual response
             try {
               const connectionObj = connections.find(
                 (conn) => conn.connectionName === connection
@@ -851,6 +820,7 @@ const DashboardInterface = memo(
                         reaction: sanitizeReaction(botResponseData.reaction),
                         dislike_reason: botResponseData.dislike_reason ?? null,
                         botResponseId: botMessageId,
+                        isError: false,
                       }
                     : item
                 )
@@ -887,7 +857,8 @@ const DashboardInterface = memo(
               });
             } catch (error) {
               console.error("Error getting bot response:", error);
-              const errorContent = getErrorMessage(error);
+              const errorContent =
+                "Sorry, an error occurred. Please try again.";
 
               setDashboardHistory((prev) =>
                 prev.map((item) =>
@@ -895,13 +866,14 @@ const DashboardInterface = memo(
                     ? {
                         ...item,
                         ...getDashboardErrorState(question, errorContent),
-                        textualSummary: `Error: ${errorContent}`,
+                        textualSummary: errorContent,
                         isFavorited: item.isFavorited,
                         questionMessageId: item.questionMessageId,
                         connectionName: item.connectionName,
                         reaction: null,
                         dislike_reason: null,
                         botResponseId: botMessageId,
+                        isError: true,
                       }
                     : item
                 )
@@ -913,7 +885,7 @@ const DashboardInterface = memo(
                     `${API_URL}/api/messages/${botMessageId}`,
                     {
                       token,
-                      content: `Error: ${errorContent}`,
+                      content: errorContent,
                       timestamp: new Date().toISOString(),
                       reaction: null,
                       dislike_reason: null,
@@ -928,7 +900,7 @@ const DashboardInterface = memo(
                   );
 
                 const errorMessageUpdate: Partial<Message> = {
-                  content: `Error: ${errorContent}`,
+                  content: errorContent,
                   timestamp: new Date().toISOString(),
                   reaction: null,
                   dislike_reason: null,
@@ -1005,6 +977,7 @@ const DashboardInterface = memo(
                     ...item,
                     question: newQuestion,
                     ...getDashboardLoadingState(),
+                    isError: false,
                   }
                 : item
             );
@@ -1046,8 +1019,8 @@ const DashboardInterface = memo(
                   token,
                   content: "loading...",
                   timestamp: new Date().toISOString(),
-                  reaction: null, // Reset reaction on edit
-                  dislike_reason: null, // Reset dislike_reason on edit
+                  reaction: null,
+                  dislike_reason: null,
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
@@ -1140,6 +1113,7 @@ const DashboardInterface = memo(
                           dislike_reason:
                             botResponseData.dislike_reason ?? null,
                           botResponseId: botMessage.id,
+                          isError: false,
                         }
                       : item
                   );
@@ -1150,7 +1124,8 @@ const DashboardInterface = memo(
                   "Error getting bot response for edited question:",
                   error
                 );
-                let errorContent = getErrorMessage(error);
+                let errorContent =
+                  "Sorry, an error occurred. Please try again.";
                 if (
                   axios.isAxiosError(error) &&
                   error.code === "ECONNABORTED"
@@ -1161,7 +1136,7 @@ const DashboardInterface = memo(
                   `${API_URL}/api/messages/${botMessage.id}`,
                   {
                     token,
-                    content: `Error: ${errorContent}`,
+                    content: errorContent,
                     timestamp: new Date().toISOString(),
                     reaction: null,
                     dislike_reason: null,
@@ -1173,7 +1148,7 @@ const DashboardInterface = memo(
                   type: "UPDATE_MESSAGE",
                   id: botMessage.id,
                   message: {
-                    content: `Error: ${errorContent}`,
+                    content: errorContent,
                     timestamp: new Date().toISOString(),
                     reaction: null,
                     dislike_reason: null,
@@ -1187,10 +1162,11 @@ const DashboardInterface = memo(
                           ...item,
                           question: newQuestion,
                           ...getDashboardErrorState(newQuestion, errorContent),
-                          textualSummary: `Error: ${errorContent}`,
+                          textualSummary: errorContent,
                           reaction: null,
                           dislike_reason: null,
                           botResponseId: botMessage.id,
+                          isError: true,
                         }
                       : item
                   );
@@ -1213,12 +1189,14 @@ const DashboardInterface = memo(
                       question: newQuestion,
                       ...getDashboardErrorState(
                         newQuestion,
-                        getErrorMessage(error)
+                        "Sorry, an error occurred. Please try again."
                       ),
-                      textualSummary: `Error: ${getErrorMessage(error)}`,
+                      textualSummary:
+                        "Sorry, an error occurred. Please try again.",
                       reaction: null,
                       dislike_reason: null,
                       botResponseId: "",
+                      isError: true,
                     }
                   : item
               );
@@ -1277,7 +1255,7 @@ const DashboardInterface = memo(
           setDashboardHistory((prev) =>
             prev.map((item, index) =>
               index === dashboardItemIndex
-                ? { ...item, ...getDashboardLoadingState() }
+                ? { ...item, ...getDashboardLoadingState(), isError: false }
                 : item
             )
           );
@@ -1289,8 +1267,8 @@ const DashboardInterface = memo(
                 token,
                 content: "loading...",
                 timestamp: new Date().toISOString(),
-                reaction: null, // Reset reaction on retry
-                dislike_reason: null, // Reset dislike_reason on retry
+                reaction: null,
+                dislike_reason: null,
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1345,6 +1323,7 @@ const DashboardInterface = memo(
                       reaction: sanitizeReaction(botResponseData.reaction),
                       dislike_reason: botResponseData.dislike_reason ?? null,
                       botResponseId: botMessage.id,
+                      isError: false,
                     }
                   : item
               )
@@ -1374,7 +1353,7 @@ const DashboardInterface = memo(
             });
           } catch (error) {
             console.error("Error during retry:", error);
-            const errorContent = getErrorMessage(error);
+            const errorContent = "Sorry, an error occurred. Please try again.";
 
             setDashboardHistory((prev) =>
               prev.map((item, index) =>
@@ -1382,10 +1361,11 @@ const DashboardInterface = memo(
                   ? {
                       ...item,
                       ...getDashboardErrorState(question, errorContent),
-                      textualSummary: `Error: ${errorContent}`,
+                      textualSummary: errorContent,
                       reaction: null,
                       dislike_reason: null,
                       botResponseId: botMessage.id,
+                      isError: true,
                     }
                   : item
               )
@@ -1395,7 +1375,7 @@ const DashboardInterface = memo(
               `${API_URL}/api/messages/${botMessage.id}`,
               {
                 token,
-                content: `Error: ${errorContent}`,
+                content: errorContent,
                 timestamp: new Date().toISOString(),
                 reaction: null,
                 dislike_reason: null,
@@ -1406,7 +1386,7 @@ const DashboardInterface = memo(
               type: "UPDATE_MESSAGE",
               id: botMessage.id,
               message: {
-                content: `Error: ${errorContent}`,
+                content: errorContent,
                 timestamp: new Date().toISOString(),
                 reaction: null,
                 dislike_reason: null,
@@ -1665,7 +1645,7 @@ const DashboardInterface = memo(
           )}, Main View Data Query: ${
             currentDashboardView.mainViewData.queryData
           }. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
-          const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA";
+          const apiKey = "YOUR_API_KEY_HERE"; // Replace with actual API key
 
           const payload = {
             contents: [
@@ -1752,15 +1732,15 @@ const DashboardInterface = memo(
               correspondingBotMessage.content !== "loading..."
             ) {
               if (
-                correspondingBotMessage.content.startsWith("Error:") ||
-                !correspondingBotMessage.content.trim().startsWith("{")
+                correspondingBotMessage.content ===
+                "Sorry, an error occurred. Please try again."
               ) {
                 const newEntry: DashboardItem = {
                   id: generateId(),
                   question: selectedUserMessage.content,
                   ...getDashboardErrorState(
                     selectedUserMessage.content,
-                    correspondingBotMessage.content.replace("Error: ", "")
+                    "Sorry, an error occurred. Please try again."
                   ),
                   lastViewType: "table",
                   isFavorited: selectedUserMessage.isFavorited,
@@ -1770,6 +1750,7 @@ const DashboardInterface = memo(
                   dislike_reason:
                     correspondingBotMessage.dislike_reason ?? null,
                   botResponseId: correspondingBotMessage.id,
+                  isError: true,
                 };
 
                 setDashboardHistory((prev) => {
@@ -1824,6 +1805,7 @@ const DashboardInterface = memo(
                     dislike_reason:
                       correspondingBotMessage.dislike_reason ?? null,
                     botResponseId: correspondingBotMessage.id,
+                    isError: false,
                   };
 
                   setDashboardHistory((prev) => {
@@ -2039,10 +2021,7 @@ const DashboardInterface = memo(
                     return (
                       <DashboardError
                         question={currentDashboardView.question}
-                        errorMessage={currentDashboardView.textualSummary.replace(
-                          "Error: ",
-                          ""
-                        )}
+                        errorMessage={currentDashboardView.textualSummary}
                         theme={theme}
                         onEditQuestion={(newQuestion) =>
                           handleEditQuestion(
