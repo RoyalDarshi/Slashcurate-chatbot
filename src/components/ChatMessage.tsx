@@ -149,7 +149,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
               );
             setHasNumericData(hasGraphicalData);
 
-            // Set default visualization parameters
             if (hasGraphicalData && tableData.length > 0) {
               const sample = tableData[0];
               const keys = Object.keys(sample);
@@ -163,9 +162,12 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 (k) => typeof sample[k] === "string" && !numericKeys.includes(k)
               );
 
-              setValueKey(numericKeys[0] || null);
-              setGroupBy(stringKeys[1] || stringKeys[0] || null);
-              setAggregate("sum");
+              // Only set defaults if not already set by user
+              setValueKey((prev) => prev || numericKeys[0] || null);
+              setGroupBy(
+                (prev) => prev || stringKeys[1] || stringKeys[0] || null
+              );
+              setAggregate((prev) => prev || "sum");
               setCurrentView("graph");
             } else if (tableData.length > 0) {
               setCurrentView("table");

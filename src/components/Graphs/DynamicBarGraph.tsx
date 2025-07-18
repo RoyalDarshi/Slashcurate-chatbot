@@ -240,9 +240,19 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
       const sampleSize = Math.min(100, rows.length);
       const sample = rows.slice(0, sampleSize);
-      const scores: Record<string, number> = {};
-
       const keys = Object.keys(sample[0]);
+
+      // ✅ Priority check for branch_name
+      if (
+        keys.includes("branch_name") &&
+        !excludeFn("branch_name") &&
+        new Set(sample.map((row) => row["branch_name"]).filter(Boolean)).size >
+          1
+      ) {
+        return "branch_name";
+      }
+
+      const scores: Record<string, number> = {};
 
       keys.forEach((key) => {
         if (excludeFn(key)) return;
@@ -263,6 +273,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
       return sorted.length ? sorted[0][0] : null;
     };
+
 
     // New useEffect to handle empty data immediately
     useEffect(() => {
