@@ -164,9 +164,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
               // Only set defaults if not already set by user
               setValueKey((prev) => prev || numericKeys[0] || null);
-              setGroupBy(
-                (prev) => prev || stringKeys[1] || stringKeys[0] || null
-              );
+              setGroupBy((prev) => {
+                if (prev) return prev;
+                if (stringKeys.includes("branch_name")) return "branch_name";
+                return stringKeys[1] || stringKeys[0] || null;
+              });
               setAggregate((prev) => prev || "sum");
               setCurrentView("graph");
             } else if (tableData.length > 0) {

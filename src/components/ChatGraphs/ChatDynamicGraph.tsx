@@ -290,9 +290,28 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       }
 
       // Use groupBy as indexByKey if valid, else default to first string key
-      let indexByKey =
-        groupBy && stringKeys.includes(groupBy) ? groupBy : stringKeys[0];
-      let effectiveGroupBy = stringKeys.find((k) => k !== indexByKey) || null;
+      let indexByKey: string;
+      let effectiveGroupBy: string | null | undefined = null;
+
+      // ✅ Priority: use groupBy prop if valid
+      if (groupBy && stringKeys.includes(groupBy)) {
+        indexByKey = groupBy;
+        effectiveGroupBy = stringKeys.find((k) => k !== indexByKey) || null;
+
+        // ✅ Secondary: prefer "branch_name" if exists
+      } else if (stringKeys.includes("branch_name")) {
+        indexByKey = "branch_name";
+        effectiveGroupBy = stringKeys.find((k) => k !== "branch_name") || null;
+
+        // ✅ Fallback: use first available key
+      } else {
+        indexByKey = stringKeys[0];
+        effectiveGroupBy =
+          stringKeys.length > 1
+            ? stringKeys.find((k) => k !== indexByKey)
+            : null;
+      }
+
 
       console.log(
         "transformDynamicData - indexByKey:",
