@@ -383,36 +383,23 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
     useEffect(() => {
       if (data && data.length > 0 && groupBy) {
+        setIsAnimating(true);
         try {
-          const { data: processedData, keys: processedKeys, indexBy } = transformDynamicData(
-            data,
-            groupBy,
-            aggregate,
-            valueKey
-          );
-
-          const hasValidNumericData = processedData.some((item) =>
-            processedKeys.some((key) => !isNaN(Number(item[key])) && item[key] !== 0)
-          );
-
-          if (!processedData.length || !indexBy || !hasValidNumericData) {
-            setGraphData([]);
-            setXKey(null);
-            setYKeys([]);
-            setIsAnimating(false);
-            return;
-          }
-
+          const {
+            data: processedData,
+            keys: processedKeys,
+            indexBy,
+          } = transformDynamicData(data, groupBy, aggregate, valueKey);
           setGraphData(processedData);
           setXKey(indexBy);
           setYKeys(processedKeys);
-          setIsAnimating(false);
+          setTimeout(() => setIsAnimating(false), 300);
         } catch (error) {
           console.error("Data processing error:", error);
           setGraphData([]);
           setXKey(null);
           setYKeys([]);
-          setIsAnimating(false);
+          setTimeout(() => setIsAnimating(false), 300);
         }
       } else {
         setGraphData([]);
@@ -476,7 +463,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    marginBottom: index < payload.length - 1 ? theme.spacing.md : 0,
+                    marginBottom:
+                      index < payload.length - 1 ? theme.spacing.md : 0,
                     padding: theme.spacing.md,
                     borderRadius: theme.borderRadius.default,
                     background: `${entry.color}15`,
@@ -577,7 +565,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               lineHeight: 1.6,
             }}
           >
-            Configure your data grouping and aggregation settings to create stunning visualizations
+            Configure your data grouping and aggregation settings to create
+            stunning visualizations
           </p>
         </div>
       );
@@ -658,10 +647,25 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={graphData} barCategoryGap="25%" barGap={6}>
                   <defs>
-                    <linearGradient id="gridGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor={`${theme.colors.accent}1A`} />
-                      <stop offset="50%" stopColor={`${theme.colors.accent}0D`} />
-                      <stop offset="100%" stopColor={`${theme.colors.accent}1A`} />
+                    <linearGradient
+                      id="gridGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="0%"
+                    >
+                      <stop
+                        offset="0%"
+                        stopColor={`${theme.colors.accent}1A`}
+                      />
+                      <stop
+                        offset="50%"
+                        stopColor={`${theme.colors.accent}0D`}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor={`${theme.colors.accent}1A`}
+                      />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
@@ -673,7 +677,10 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                   <XAxis
                     dataKey={xKey}
                     tickLine={false}
-                    axisLine={{ stroke: `${theme.colors.accent}4D`, strokeWidth: 2 }}
+                    axisLine={{
+                      stroke: `${theme.colors.accent}4D`,
+                      strokeWidth: 2,
+                    }}
                     angle={xTickRotation}
                     textAnchor={xTickAnchor}
                     height={xTickRotation === -45 ? 100 : 60}
@@ -684,12 +691,17 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                       fill: theme.colors.textSecondary,
                     }}
                     tickFormatter={(value) =>
-                      value.length > 14 ? value.slice(0, 12) + "…" : formatKey(value)
+                      value.length > 14
+                        ? value.slice(0, 12) + "…"
+                        : formatKey(value)
                     }
                   />
                   <YAxis
                     tickLine={false}
-                    axisLine={{ stroke: `${theme.colors.accent}4D`, strokeWidth: 2 }}
+                    axisLine={{
+                      stroke: `${theme.colors.accent}4D`,
+                      strokeWidth: 2,
+                    }}
                     style={{
                       fontSize: "13px",
                       fontWeight: theme.typography.weight.medium,
@@ -712,7 +724,11 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                       key={key}
                       dataKey={key}
                       stackId="a"
-                      fill={theme.colors.barColors[keyIndex % theme.colors.barColors.length]}
+                      fill={
+                        theme.colors.barColors[
+                          keyIndex % theme.colors.barColors.length
+                        ]
+                      }
                       shape={(props) => (
                         <ModernBarShape
                           {...props}
@@ -721,6 +737,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                           keyIndex={keyIndex}
                         />
                       )}
+                      isAnimationActive={true}
                       animationDuration={1200}
                       animationEasing="ease-out"
                       animationBegin={keyIndex * 150}
@@ -733,7 +750,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         </div>
         <style jsx>{`
           @keyframes pulse {
-            0%, 100% {
+            0%,
+            100% {
               transform: scale(1);
             }
             50% {
