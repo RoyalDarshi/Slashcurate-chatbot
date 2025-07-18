@@ -13,11 +13,14 @@ import { useTheme } from "../../ThemeContext";
 import html2canvas from "html2canvas";
 
 interface ModernBarGraphProps {
+  graphKey?: string;
   data: any[];
   groupBy: string | null;
   setGroupBy: React.Dispatch<React.SetStateAction<string | null>>;
   aggregate: "sum" | "count" | "avg" | "min" | "max";
-  setAggregate: React.Dispatch<React.SetStateAction<"sum" | "count" | "avg" | "min" | "max">>;
+  setAggregate: React.Dispatch<
+    React.SetStateAction<"sum" | "count" | "avg" | "min" | "max">
+  >;
   valueKey: string | null;
   setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -53,7 +56,9 @@ const ModernBarShape = (props: any) => {
     const pathData = `M ${x}, ${y + radius}
                       A ${radius}, ${radius}, 0, 0, 1, ${x + radius}, ${y}
                       L ${x + width - radius}, ${y}
-                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${y + radius}
+                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${
+      y + radius
+    }
                       L ${x + width}, ${y + height}
                       L ${x}, ${y + height}
                       Z`;
@@ -107,6 +112,7 @@ const ModernBarShape = (props: any) => {
 
 const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
   ({
+    graphKey,
     data,
     groupBy,
     aggregate,
@@ -172,7 +178,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }, [showResolutionOptions]);
 
     const formatKey = useCallback((key: any): string => {
@@ -227,7 +234,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         const values = sample.map((row) => row[key]).filter(Boolean);
         const uniqueCount = new Set(values).size;
         if (uniqueCount <= 1 || uniqueCount > sampleSize * 0.6) return;
-        const nullCount = values.length < sampleSize ? sampleSize - values.length : 0;
+        const nullCount =
+          values.length < sampleSize ? sampleSize - values.length : 0;
         const nullPenalty = nullCount / sampleSize;
         scores[key] = 1 / (uniqueCount + nullPenalty * 10);
       });
@@ -249,9 +257,14 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       if (dataKeys.length > 0) {
         const bestGroupBy = autoDetectBestGroupBy(data, isKeyExcluded);
         if (!groupBy) {
-          setGroupBy(bestGroupBy || dataKeys.find((key) => !isKeyExcluded(key)) || null);
+          setGroupBy(
+            bestGroupBy || dataKeys.find((key) => !isKeyExcluded(key)) || null
+          );
         }
-        if (numericKeys.length > 0 && (!valueKey || !numericKeys.includes(valueKey))) {
+        if (
+          numericKeys.length > 0 &&
+          (!valueKey || !numericKeys.includes(valueKey))
+        ) {
           setValueKey(numericKeys[0]);
         } else if (numericKeys.length === 0) {
           setValueKey(null);
@@ -260,7 +273,15 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         setGroupBy(null);
         setValueKey(null);
       }
-    }, [data, dataKeys, numericKeys, groupBy, setGroupBy, setValueKey, valueKey]);
+    }, [
+      data,
+      dataKeys,
+      numericKeys,
+      groupBy,
+      setGroupBy,
+      setValueKey,
+      valueKey,
+    ]);
 
     useEffect(() => {
       if (aggregate !== "count") {
@@ -306,7 +327,10 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       );
 
       if (stringKeys.length === 0) {
-        rawData = rawData.map((item, idx) => ({ ...item, label: `Item ${idx + 1}` }));
+        rawData = rawData.map((item, idx) => ({
+          ...item,
+          label: `Item ${idx + 1}`,
+        }));
         stringKeys = ["label"];
       }
 
@@ -331,14 +355,19 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
       // Get unique stack values
       const allStackValues = stackByKey
-        ? [...new Set(rawData.map((row) => row[stackByKey]))].filter((v) => v !== undefined && v !== null)
+        ? [...new Set(rawData.map((row) => row[stackByKey]))].filter(
+            (v) => v !== undefined && v !== null
+          )
         : ["value"];
 
       // Group and aggregate data
       const grouped = rawData.reduce((acc, row) => {
         const label = row[indexByKey];
         const stack = stackByKey ? row[stackByKey] : "value";
-        const value = selectedAggregate === "count" ? 1 : Number(row[effectiveValueKey] || 0);
+        const value =
+          selectedAggregate === "count"
+            ? 1
+            : Number(row[effectiveValueKey] || 0);
 
         if (!acc[label]) {
           acc[label] = { [indexByKey]: label };
@@ -349,12 +378,20 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           acc[label][stack] = (acc[label][stack] || 0) + 1;
         } else if (selectedAggregate === "avg") {
           acc[label][stack] = (acc[label][stack] || 0) + value;
-          acc[label][`${stack}_count`] = (acc[label][`${stack}_count`] || 0) + 1;
+          acc[label][`${stack}_count`] =
+            (acc[label][`${stack}_count`] || 0) + 1;
         } else if (selectedAggregate === "min") {
-          acc[label][stack] = acc[label][stack] !== undefined ? Math.min(acc[label][stack], value) : value;
+          acc[label][stack] =
+            acc[label][stack] !== undefined
+              ? Math.min(acc[label][stack], value)
+              : value;
         } else if (selectedAggregate === "max") {
-          acc[label][stack] = acc[label][stack] !== undefined ? Math.max(acc[label][stack], value) : value;
-        } else { // sum
+          acc[label][stack] =
+            acc[label][stack] !== undefined
+              ? Math.max(acc[label][stack], value)
+              : value;
+        } else {
+          // sum
           acc[label][stack] = (acc[label][stack] || 0) + value;
         }
 
@@ -390,7 +427,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             keys: processedKeys,
             indexBy,
           } = transformDynamicData(data, groupBy, aggregate, valueKey);
-          setGraphData(processedData);
+          setGraphData([...processedData]);
           setXKey(indexBy);
           setYKeys(processedKeys);
           setTimeout(() => setIsAnimating(false), 300);
@@ -644,7 +681,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
               }}
             >
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer key={graphKey} width="100%" height="100%">
                 <BarChart data={graphData} barCategoryGap="25%" barGap={6}>
                   <defs>
                     <linearGradient

@@ -700,6 +700,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 <div className="flex-1">
                   {graphType === "bar" && (
                     <DynamicBarGraph
+                      graphKey={dashboardItem.questionMessageId}
                       data={dashboardItem.mainViewData.chartData}
                       groupBy={groupBy}
                       setGroupBy={setGroupBy}
