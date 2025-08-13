@@ -533,6 +533,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                   `${formatKey(name)}: ${value.toLocaleString()}`
                 }
                 labelLine
+                isAnimationActive={false}
               >
                 {graphData.map((entry, index) => (
                   <Cell
@@ -652,9 +653,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                   strokeWidth={2}
                   dot={{ r: 4 }}
                   activeDot={{ r: 6 }}
-                  animationDuration={1200}
-                  animationEasing="ease-out"
-                  animationBegin={keyIndex * 150}
+                  isAnimationActive={false}
                 />
               ))}
             </LineChart>
@@ -759,9 +758,9 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                     keyIndex={keyIndex}
                   />
                 )}
-                animationDuration={1200}
-                animationEasing="ease-out"
-                animationBegin={keyIndex * 150}
+                isAnimationActive={false}
+                // animationEasing="ease-out"
+                // animationBegin={keyIndex * 150}
               />
             ))}
           </BarChart>

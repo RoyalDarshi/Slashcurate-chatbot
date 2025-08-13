@@ -38,7 +38,7 @@
     "react-tippy": "^1.4.0",
     "react-toastify": "^11.0.5",
     "react-tooltip": "^5.28.0",
-    "recharts": "^2.15.1",
+    "recharts": "^3.1.2",
     "remark-gfm": "^4.0.1",
     "styled-components": "^6.1.16",
     "tippy.js": "^6.3.7",

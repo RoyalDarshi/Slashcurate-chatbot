@@ -964,7 +964,6 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                         )}
                         animationDuration={1200}
                         animationEasing="ease-out"
-                        animationBegin={keyIndex * 150}
                       />
                     )
                   )}
