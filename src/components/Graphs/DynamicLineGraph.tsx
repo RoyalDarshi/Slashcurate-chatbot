@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import * as echarts from "echarts";
+import ReactECharts from "echarts-for-react";
 import {
   LineChart as LineChartIconLucide,
   TrendingUp,
@@ -26,6 +19,24 @@ interface ModernLineGraphProps {
   valueKey: string | null;
   setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
+
+// Helper function to convert hex to rgba
+const hexToRgba = (hex: string, alpha: number = 1): string => {
+  hex = hex.replace("#", "");
+  const r = parseInt(
+    hex.length === 3 ? hex.slice(0, 1).repeat(2) : hex.slice(0, 2),
+    16
+  );
+  const g = parseInt(
+    hex.length === 3 ? hex.slice(1, 2).repeat(2) : hex.slice(2, 4),
+    16
+  );
+  const b = parseInt(
+    hex.length === 3 ? hex.slice(2, 3).repeat(2) : hex.slice(4, 6),
+    16
+  );
+  return `rgba(${r},${g},${b},${alpha})`;
+};
 
 const DynamicLineGraph: React.FC<ModernLineGraphProps> = React.memo(
   ({
@@ -339,117 +350,6 @@ const DynamicLineGraph: React.FC<ModernLineGraphProps> = React.memo(
 
     const groupByOptions = dataKeys.filter((key) => !isKeyExcluded(key));
 
-    // Ultra-modern Custom Tooltip with glassmorphism
-    const ModernTooltip = ({ active, payload, label }: any) => {
-      if (active && payload && payload.length) {
-        // Use the color of the first line in the payload for the accent/border
-        const accentColor = payload[0]?.stroke || theme.colors.accent;
-        return (
-          <div
-            style={{
-              padding: theme.spacing.lg,
-              background: theme.colors.surface, // Use surface from theme
-              backdropFilter: "blur(20px) saturate(180%)",
-              WebkitBackdropFilter: "blur(20px) saturate(180%)",
-              color: theme.colors.text,
-              fontSize: "14px",
-              borderRadius: theme.borderRadius.large, // Use large from theme
-              boxShadow: theme.shadow.lg, // Use lg from theme
-              border: `1px solid ${theme.colors.border}`, // Use border from theme
-              fontFamily: theme.typography.fontFamily,
-              minWidth: "200px",
-              maxWidth: "280px",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: "3px",
-                background: theme.gradients.primary, // Use primary gradient from theme
-              }}
-            />
-            <div
-              style={{
-                marginBottom: theme.spacing.md,
-                fontWeight: theme.typography.weight.bold,
-                color: theme.colors.text,
-                fontSize: "16px",
-                display: "flex",
-                alignItems: "center",
-                gap: theme.spacing.sm,
-              }}
-            >
-              <TrendingUp
-                size={16}
-                style={{ color: theme.colors.accent }} // Use accent from theme
-              />
-              {formatKey(label)}
-            </div>
-            {payload
-  .filter((entry: any) => entry?.value !== 0)
-  .map((entry: any, index: number) => (
-              <div
-                key={`item-${index}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom:
-                    index < payload.length - 1 ? theme.spacing.md : 0,
-                  padding: theme.spacing.md,
-                  borderRadius: theme.borderRadius.default, // Use default from theme
-                  background: `${entry.stroke}15`, // Use stroke color for background
-                  border: `1px solid ${entry.stroke}30`, // Use stroke color for border
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <div
-                    style={{
-                      width: "14px",
-                      height: "14px",
-                      background: entry.stroke,
-                      borderRadius: "50%",
-                      marginRight: theme.spacing.md,
-                      boxShadow: theme.shadow.sm, // Use sm from theme
-                      border: `2px solid ${theme.colors.surface}`, // Use surface from theme
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontWeight: theme.typography.weight.medium,
-                      fontSize: "14px",
-                    }}
-                  >
-                    {formatKey(entry.name)}
-                  </span>
-                </div>
-                <span
-                  style={{
-                    fontWeight: theme.typography.weight.bold,
-                    color: theme.colors.text,
-                    fontSize: "15px",
-                    background: theme.gradients.primary, // Use primary gradient from theme
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  {entry.value.toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-        );
-      }
-      return null;
-    };
-
     if (!xKey || yKeys.length === 0 || !graphData.length) {
       return (
         <div
@@ -508,8 +408,189 @@ const DynamicLineGraph: React.FC<ModernLineGraphProps> = React.memo(
       );
     }
 
-    const xTickRotation = graphData.length > 8 ? -45 : 0;
-    const xTickAnchor = graphData.length > 8 ? "end" : "middle";
+    const xTickRotation = graphData.length > 8 ? 45 : 0; // Positive for ECharts
+
+    // Define ECharts option
+    const option = {
+      animationDuration: 1200,
+      animationEasing: "cubicOut",
+      grid: {
+        left: "3%",
+        right: "4%",
+        bottom: graphData.length > 8 ? "20%" : "10%",
+        top: "3%",
+        containLabel: true,
+      },
+      xAxis: {
+        type: "category",
+        data: graphData.map((d) => {
+          const value = d[xKey];
+          return value.length > 14
+            ? value.slice(0, 12) + "…"
+            : formatKey(value);
+        }),
+        axisTick: { show: false },
+        axisLine: {
+          lineStyle: {
+            color: `${theme.colors.accent}4D`,
+            width: 2,
+          },
+        },
+        axisLabel: {
+          rotate: xTickRotation,
+          align: xTickRotation > 0 ? "right" : "center",
+          fontSize: 13,
+          fontWeight: theme.typography.weight.medium,
+          fontFamily: theme.typography.fontFamily,
+          color: theme.colors.textSecondary,
+        },
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: "value",
+        axisTick: { show: false },
+        axisLine: {
+          lineStyle: {
+            color: `${theme.colors.accent}4D`,
+            width: 2,
+          },
+        },
+        axisLabel: {
+          fontSize: 13,
+          fontWeight: theme.typography.weight.medium,
+          fontFamily: theme.typography.fontFamily,
+          color: theme.colors.textSecondary,
+        },
+        splitLine: {
+          lineStyle: {
+            type: "dashed",
+            color: `${theme.colors.accent}33`,
+            opacity: 0.8,
+          },
+        },
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: {
+          type: "line",
+          lineStyle: {
+            color: `${theme.colors.accent}4D`,
+            width: 2,
+          },
+        },
+        backgroundColor: "transparent",
+        borderWidth: 0,
+        padding: 0,
+        extraCssText: `box-shadow: none;`,
+        formatter: (params: any) => {
+          if (!params || params.length === 0) return "";
+          const label = formatKey(params[0].axisValue);
+          let html = `
+            <div style="
+              padding: ${theme.spacing.lg};
+              background: ${theme.colors.surface};
+              backdrop-filter: blur(20px) saturate(180%);
+              -webkit-backdrop-filter: blur(20px) saturate(180%);
+              color: ${theme.colors.text};
+              font-size: 14px;
+              border-radius: ${theme.borderRadius.large};
+              box-shadow: ${theme.shadow.lg};
+              border: 1px solid ${theme.colors.border};
+              font-family: ${theme.typography.fontFamily};
+              min-width: 200px;
+              max-width: 280px;
+              position: relative;
+              overflow: hidden;
+            ">
+              <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: ${theme.gradients.primary};
+              "></div>
+              <div style="
+                margin-bottom: ${theme.spacing.md};
+                font-weight: ${theme.typography.weight.bold};
+                color: ${theme.colors.text};
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: ${theme.spacing.sm};
+              ">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${theme.colors.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                </svg>
+                ${label}
+              </div>
+          `;
+          params
+            .filter((entry: any) => entry.value !== 0)
+            .forEach((entry: any, index: number) => {
+              html += `
+              <div style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: ${
+                  index < params.length - 1 ? theme.spacing.md : 0
+                };
+                padding: ${theme.spacing.md};
+                border-radius: ${theme.borderRadius.default};
+                background: ${entry.color}15;
+                border: 1px solid ${entry.color}30;
+                transition: all 0.2s ease;
+              ">
+                <div style="display: flex; align-items: center;">
+                  <div style="
+                    width: 14px;
+                    height: 14px;
+                    background: ${entry.color};
+                    border-radius: 50%;
+                    margin-right: ${theme.spacing.md};
+                    box-shadow: ${theme.shadow.sm};
+                    border: 2px solid ${theme.colors.surface};
+                  "></div>
+                  <span style="
+                    font-weight: ${theme.typography.weight.medium};
+                    font-size: 14px;
+                  ">${formatKey(entry.seriesName)}</span>
+                </div>
+                <span style="
+                  font-weight: ${theme.typography.weight.bold};
+                  color: ${theme.colors.text};
+                  font-size: 15px;
+                  background: ${theme.gradients.primary};
+                  -webkit-background-clip: text;
+                  -webkit-text-fill-color: transparent;
+                  background-clip: text;
+                ">${entry.value.toLocaleString()}</span>
+              </div>
+            `;
+            });
+          html += `</div>`;
+          return html;
+        },
+      },
+      series: yKeys.map((key, index) => ({
+        name: formatKey(key),
+        type: "line",
+        smooth: true,
+        data: graphData.map((d) => d[key] || 0),
+        lineStyle: {
+          width: 3,
+          color: theme.colors.barColors[index % theme.colors.barColors.length],
+        },
+        symbolSize: 8,
+        emphasis: {
+          itemStyle: {
+            symbolSize: 12,
+          },
+        },
+        animationDelay: index * 150,
+      })),
+    };
 
     return (
       <div>
@@ -595,105 +676,12 @@ const DynamicLineGraph: React.FC<ModernLineGraphProps> = React.memo(
                 transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
               }}
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={graphData}>
-                  <defs>
-                    <linearGradient
-                      id="gridGradient"
-                      x1="0%"
-                      y1="0%"
-                      x2="100%"
-                      y2="0%"
-                    >
-                      <stop
-                        offset="0%"
-                        stopColor={`${theme.colors.accent}1A`}
-                      />{" "}
-                      {/* Accent with opacity */}
-                      <stop
-                        offset="50%"
-                        stopColor={`${theme.colors.accent}0D`}
-                      />{" "}
-                      {/* Accent with more opacity */}
-                      <stop
-                        offset="100%"
-                        stopColor={`${theme.colors.accent}1A`}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 6"
-                    vertical={false}
-                    stroke={`${theme.colors.accent}33`} // Accent with opacity
-                    opacity={0.8}
-                  />
-                  <XAxis
-                    dataKey={xKey}
-                    tickLine={false}
-                    axisLine={{
-                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
-                      strokeWidth: 2,
-                    }}
-                    angle={xTickRotation}
-                    textAnchor={xTickAnchor}
-                    height={xTickRotation === -45 ? 100 : 60}
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: theme.typography.weight.medium,
-                      fontFamily: theme.typography.fontFamily,
-                      fill: theme.colors.textSecondary,
-                    }}
-                    tickFormatter={(value) =>
-                      value.length > 14
-                        ? value.slice(0, 12) + "…"
-                        : formatKey(value)
-                    }
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={{
-                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
-                      strokeWidth: 2,
-                    }}
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: theme.typography.weight.medium,
-                      fontFamily: theme.typography.fontFamily,
-                      fill: theme.colors.textSecondary,
-                    }}
-                    domain={["auto", "auto"]}
-                  />
-                  <Tooltip
-                    cursor={{
-                      fill: `${theme.colors.accent}1A`, // Accent with opacity
-                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
-                      strokeWidth: 2,
-                      radius: 8,
-                    }}
-                    content={<ModernTooltip />}
-                  />
-                  {/* <Legend content={<CustomLegend />} /> // Removed legend to match bar graph */}
-                  {yKeys.map((key, index) => (
-                    <Line
-                      key={key}
-                      type="monotone"
-                      dataKey={key}
-                      // Use theme.colors.barColors for stroke consistency
-                      stroke={
-                        theme.colors.barColors[
-                          index % theme.colors.barColors.length
-                        ]
-                      }
-                      strokeWidth={3}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                      animationDuration={1200}
-                      animationEasing="ease-out"
-                      animationBegin={index * 150}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
+              <ReactECharts
+                option={option}
+                style={{ height: "100%", width: "100%" }}
+                notMerge={true}
+                lazyUpdate={true}
+              />
             </div>
           </div>
         </div>

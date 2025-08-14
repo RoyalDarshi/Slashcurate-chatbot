@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import * as echarts from "echarts";
+import ReactECharts from "echarts-for-react";
 import { BarChart3, TrendingUp, Download } from "lucide-react";
 import { useTheme } from "../../ThemeContext"; // Corrected import path
 import html2canvas from "html2canvas";
@@ -22,95 +15,22 @@ interface ModernBarGraphProps {
   setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-// Ultra-modern Custom Bar Shape with advanced gradients and animations
-const ModernBarShape = (props: any) => {
-  const { theme } = useTheme(); // Use theme from context
-  const {
-    x,
-    y,
-    width,
-    height,
-    dataKey,
-    payload,
-    yKeys,
-    index: groupIndex, // Renamed to avoid conflict
-    keyIndex,
-  } = props;
-  const radius = Math.min(8, width / 3);
-  const value = Number(payload[dataKey]);
-
-  const topMostKey = [...yKeys]
-    .reverse()
-    .find((key) => Number(payload[key]) > 0);
-
-  const isTopBar = dataKey === topMostKey;
-  const colorIndex = keyIndex % theme.colors.barColors.length;
-  const solidColor = theme.colors.barColors[colorIndex];
-
-  // FIX: Use unique ID based on groupIndex AND keyIndex
-  const gradientId = `gradient-${groupIndex}-${keyIndex}`;
-
-  if (value <= 0) return null;
-
-  // Define a simple gradient for the bars as `theme.gradients` might not have specific bar gradients
-  const barGradient = `linear-gradient(135deg, ${solidColor} 0%, ${solidColor}cc 100%)`; // Added opacity to the end color
-
-  if (isTopBar) {
-    const pathData = `M ${x}, ${y + radius}
-                      A ${radius}, ${radius}, 0, 0, 1, ${x + radius}, ${y}
-                      L ${x + width - radius}, ${y}
-                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${
-      y + radius
-    }
-                      L ${x + width}, ${y + height}
-                      L ${x}, ${y + height}
-                      Z`;
-
-    return (
-      <g>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={solidColor} stopOpacity="1" />
-            <stop offset="100%" stopColor={solidColor} stopOpacity="0.7" />
-          </linearGradient>
-        </defs>
-        <path
-          d={pathData}
-          fill={`url(#${gradientId})`}
-          stroke={theme.colors.surfaceGlass} // Using surfaceGlass from theme
-          strokeWidth="1"
-          style={{
-            transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
-            transformOrigin: "center bottom",
-          }}
-        />
-      </g>
-    );
-  } else {
-    return (
-      <g>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={solidColor} stopOpacity="1" />
-            <stop offset="100%" stopColor={solidColor} stopOpacity="0.7" />
-          </linearGradient>
-        </defs>
-        <rect
-          x={x}
-          y={y}
-          width={width}
-          height={height}
-          fill={`url(#${gradientId})`}
-          stroke={theme.colors.surfaceGlass} // Using surfaceGlass from theme
-          strokeWidth="1"
-          style={{
-            transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
-            transformOrigin: "center bottom",
-          }}
-        />
-      </g>
-    );
-  }
+// Helper function to convert hex to rgba
+const hexToRgba = (hex: string, alpha: number = 1): string => {
+  hex = hex.replace("#", "");
+  const r = parseInt(
+    hex.length === 3 ? hex.slice(0, 1).repeat(2) : hex.slice(0, 2),
+    16
+  );
+  const g = parseInt(
+    hex.length === 3 ? hex.slice(1, 2).repeat(2) : hex.slice(2, 4),
+    16
+  );
+  const b = parseInt(
+    hex.length === 3 ? hex.slice(2, 3).repeat(2) : hex.slice(4, 6),
+    16
+  );
+  return `rgba(${r},${g},${b},${alpha})`;
 };
 
 const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
@@ -273,7 +193,6 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
       return sorted.length ? sorted[0][0] : null;
     };
-
 
     // New useEffect to handle empty data immediately
     useEffect(() => {
@@ -495,115 +414,6 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
 
     const groupByOptions = dataKeys.filter((key) => !isKeyExcluded(key));
 
-    // Ultra-modern Custom Tooltip with glassmorphism
-    const ModernTooltip = ({ active, payload, label }: any) => {
-      if (active && payload && payload.length) {
-        // Use the color of the first bar in the payload for the accent/border
-        const accentColor = payload[0]?.color || theme.colors.accent;
-        return (
-          <div
-            style={{
-              padding: theme.spacing.lg,
-              background: theme.colors.surface, // Use surface from theme
-              backdropFilter: "blur(20px) saturate(180%)",
-              WebkitBackdropFilter: "blur(20px) saturate(180%)",
-              color: theme.colors.text,
-              fontSize: "14px",
-              borderRadius: theme.borderRadius.large, // Use large from theme
-              boxShadow: theme.shadow.lg, // Use lg from theme
-              border: `1px solid ${theme.colors.border}`, // Use border from theme
-              fontFamily: theme.typography.fontFamily,
-              minWidth: "200px",
-              maxWidth: "280px",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: "3px",
-                background: theme.gradients.primary, // Use primary gradient from theme
-              }}
-            />
-            <div
-              style={{
-                marginBottom: theme.spacing.md,
-                fontWeight: theme.typography.weight.bold,
-                color: theme.colors.text,
-                fontSize: "16px",
-                display: "flex",
-                alignItems: "center",
-                gap: theme.spacing.sm,
-              }}
-            >
-              <TrendingUp
-                size={16}
-                style={{ color: theme.colors.accent }} // Use accent from theme
-              />
-              {formatKey(label)}
-            </div>
-            {payload.map((entry: any, index: number) => (
-              <div
-                key={`item-${index}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom:
-                    index < payload.length - 1 ? theme.spacing.md : 0,
-                  padding: theme.spacing.md,
-                  borderRadius: theme.borderRadius.default, // Use default from theme
-                  background: `${entry.color}15`, // Keep opacity suffix
-                  border: `1px solid ${entry.color}30`, // Keep opacity suffix
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <div
-                    style={{
-                      width: "14px",
-                      height: "14px",
-                      background: entry.color,
-                      borderRadius: "50%",
-                      marginRight: theme.spacing.md,
-                      boxShadow: theme.shadow.sm, // Use sm from theme
-                      border: `2px solid ${theme.colors.surface}`, // Use surface from theme
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontWeight: theme.typography.weight.medium,
-                      fontSize: "14px",
-                    }}
-                  >
-                    {formatKey(entry.name)}
-                  </span>
-                </div>
-                <span
-                  style={{
-                    fontWeight: theme.typography.weight.bold,
-                    color: theme.colors.text,
-                    fontSize: "15px",
-                    background: theme.gradients.primary, // Use primary gradient from theme
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  {entry.value.toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-        );
-      }
-      return null;
-    };
-
     if (!xKey || yKeys.length === 0 || !graphData.length) {
       console.log("No valid data for rendering");
       return (
@@ -664,9 +474,203 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       );
     }
 
-    const xTickRotation = graphData.length > 8 ? -45 : 0;
-    const xTickAnchor = graphData.length > 8 ? "end" : "middle";
+    const xTickRotation = graphData.length > 8 ? 45 : 0; // Positive for ECharts
     console.log("Rendering graph with", { xKey, yKeys, graphData });
+
+    // Define ECharts option
+    const option = {
+      animationDuration: 1200,
+      animationEasing: "cubicOut",
+      grid: {
+        left: "3%",
+        right: "4%",
+        bottom: graphData.length > 8 ? "20%" : "10%",
+        top: "3%",
+        containLabel: true,
+      },
+      xAxis: {
+        type: "category",
+        data: graphData.map((d) => {
+          const value = d[xKey];
+          return value.length > 14
+            ? value.slice(0, 12) + "…"
+            : formatKey(value);
+        }),
+        axisTick: { show: false },
+        axisLine: {
+          lineStyle: {
+            color: `${theme.colors.accent}4D`,
+            width: 2,
+          },
+        },
+        axisLabel: {
+          rotate: xTickRotation,
+          align: xTickRotation > 0 ? "right" : "center",
+          fontSize: 13,
+          fontWeight: theme.typography.weight.medium,
+          fontFamily: theme.typography.fontFamily,
+          color: theme.colors.textSecondary,
+        },
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: "value",
+        axisTick: { show: false },
+        axisLine: {
+          lineStyle: {
+            color: `${theme.colors.accent}4D`,
+            width: 2,
+          },
+        },
+        axisLabel: {
+          fontSize: 13,
+          fontWeight: theme.typography.weight.medium,
+          fontFamily: theme.typography.fontFamily,
+          color: theme.colors.textSecondary,
+        },
+        splitLine: {
+          lineStyle: {
+            type: "dashed",
+            color: `${theme.colors.accent}33`,
+            opacity: 0.8,
+          },
+        },
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: {
+          type: "shadow",
+          shadowStyle: {
+            color: `${theme.colors.accent}1A`,
+            borderColor: `${theme.colors.accent}4D`,
+            borderWidth: 2,
+          },
+        },
+        backgroundColor: "transparent",
+        borderWidth: 0,
+        padding: 0,
+        extraCssText: `box-shadow: none;`,
+        formatter: (params: any) => {
+          if (!params || params.length === 0) return "";
+          const label = formatKey(params[0].axisValue);
+          const accentColor = params[0].color || theme.colors.accent;
+          let html = `
+            <div style="
+              padding: ${theme.spacing.lg};
+              background: ${theme.colors.surface};
+              backdrop-filter: blur(20px) saturate(180%);
+              -webkit-backdrop-filter: blur(20px) saturate(180%);
+              color: ${theme.colors.text};
+              font-size: 14px;
+              border-radius: ${theme.borderRadius.large};
+              box-shadow: ${theme.shadow.lg};
+              border: 1px solid ${theme.colors.border};
+              font-family: ${theme.typography.fontFamily};
+              min-width: 200px;
+              max-width: 280px;
+              position: relative;
+              overflow: hidden;
+            ">
+              <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: ${theme.gradients.primary};
+              "></div>
+              <div style="
+                margin-bottom: ${theme.spacing.md};
+                font-weight: ${theme.typography.weight.bold};
+                color: ${theme.colors.text};
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: ${theme.spacing.sm};
+              ">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${theme.colors.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                </svg>
+                ${label}
+              </div>
+          `;
+          params.forEach((entry: any, index: number) => {
+            if (entry.value <= 0) return;
+            html += `
+              <div style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: ${
+                  index < params.length - 1 ? theme.spacing.md : 0
+                };
+                padding: ${theme.spacing.md};
+                border-radius: ${theme.borderRadius.default};
+                background: ${entry.color}15;
+                border: 1px solid ${entry.color}30;
+                transition: all 0.2s ease;
+              ">
+                <div style="display: flex; align-items: center;">
+                  <div style="
+                    width: 14px;
+                    height: 14px;
+                    background: ${entry.color};
+                    border-radius: 50%;
+                    margin-right: ${theme.spacing.md};
+                    box-shadow: ${theme.shadow.sm};
+                    border: 2px solid ${theme.colors.surface};
+                  "></div>
+                  <span style="
+                    font-weight: ${theme.typography.weight.medium};
+                    font-size: 14px;
+                  ">${formatKey(entry.seriesName)}</span>
+                </div>
+                <span style="
+                  font-weight: ${theme.typography.weight.bold};
+                  color: ${theme.colors.text};
+                  font-size: 15px;
+                  background: ${theme.gradients.primary};
+                  -webkit-background-clip: text;
+                  -webkit-text-fill-color: transparent;
+                  background-clip: text;
+                ">${entry.value.toLocaleString()}</span>
+              </div>
+            `;
+          });
+          html += `</div>`;
+          return html;
+        },
+      },
+      series: yKeys.map((key, keyIndex) => ({
+        name: formatKey(key),
+        type: "bar",
+        stack: "a",
+        data: graphData.map((d) => (Number(d[key]) > 0 ? Number(d[key]) : 0)),
+        barCategoryGap: "25%",
+        barGap: "6%",
+        itemStyle: (params: any) => {
+          const { dataIndex } = params;
+          const payload = graphData[dataIndex];
+          const topMostKey = [...yKeys]
+            .reverse()
+            .find((k) => Number(payload[k]) > 0);
+          const isTopBar = key === topMostKey;
+          const solidColor =
+            theme.colors.barColors[keyIndex % theme.colors.barColors.length];
+          const radius = 8; // Fixed radius for simplicity
+          return {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: hexToRgba(solidColor, 1) },
+              { offset: 1, color: hexToRgba(solidColor, 0.7) },
+            ]),
+            borderColor: theme.colors.surfaceGlass,
+            borderWidth: 1,
+            barBorderRadius: isTopBar ? [radius, radius, 0, 0] : [0, 0, 0, 0],
+          };
+        },
+      })),
+    };
+
     return (
       <div>
         <div
@@ -863,112 +867,12 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
               }}
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={graphData} barCategoryGap="25%" barGap={6}>
-                  <defs>
-                    <linearGradient
-                      id="gridGradient"
-                      x1="0%"
-                      y1="0%"
-                      x2="100%"
-                      y2="0%"
-                    >
-                      <stop
-                        offset="0%"
-                        stopColor={`${theme.colors.accent}1A`}
-                      />{" "}
-                      {/* Accent with opacity */}
-                      <stop
-                        offset="50%"
-                        stopColor={`${theme.colors.accent}0D`}
-                      />{" "}
-                      {/* Accent with more opacity */}
-                      <stop
-                        offset="100%"
-                        stopColor={`${theme.colors.accent}1A`}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 6"
-                    vertical={false}
-                    stroke={`${theme.colors.accent}33`} // Accent with opacity
-                    opacity={0.8}
-                  />
-                  <XAxis
-                    dataKey={xKey}
-                    tickLine={false}
-                    axisLine={{
-                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
-                      strokeWidth: 2,
-                    }}
-                    angle={xTickRotation}
-                    textAnchor={xTickAnchor}
-                    height={xTickRotation === -45 ? 100 : 60}
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: theme.typography.weight.medium,
-                      fontFamily: theme.typography.fontFamily,
-                      fill: theme.colors.textSecondary,
-                    }}
-                    tickFormatter={(value) =>
-                      value.length > 14
-                        ? value.slice(0, 12) + "…"
-                        : formatKey(value)
-                    }
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={{
-                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
-                      strokeWidth: 2,
-                    }}
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: theme.typography.weight.medium,
-                      fontFamily: theme.typography.fontFamily,
-                      fill: theme.colors.textSecondary,
-                    }}
-                    domain={["auto", "auto"]}
-                  />
-                  <Tooltip
-                    cursor={{
-                      fill: `${theme.colors.accent}1A`, // Accent with opacity
-                      stroke: `${theme.colors.accent}4D`, // Accent with opacity
-                      strokeWidth: 2,
-                      radius: 8,
-                    }}
-                    content={<ModernTooltip />}
-                  />
-                  {yKeys.map(
-                    (
-                      key,
-                      keyIndex // Added keyIndex
-                    ) => (
-                      <Bar
-                        key={key}
-                        dataKey={key}
-                        stackId="a"
-                        fill={
-                          theme.colors.barColors[
-                            keyIndex % theme.colors.barColors.length
-                          ]
-                        }
-                        shape={(props) => (
-                          <ModernBarShape
-                            {...props}
-                            yKeys={yKeys}
-                            dataKey={key}
-                            keyIndex={keyIndex} // Pass keyIndex to shape
-                          />
-                        )}
-                        animationDuration={1200}
-                        animationEasing="ease-out"
-                      />
-                    )
-                  )}
-                </BarChart>
-              </ResponsiveContainer>
+              <ReactECharts
+                option={option}
+                style={{ height: "100%", width: "100%" }}
+                notMerge={true}
+                lazyUpdate={true}
+              />
             </div>
           </div>
         </div>

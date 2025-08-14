@@ -1,19 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import * as echarts from "echarts";
+import ReactECharts from "echarts-for-react";
 import { BarChart3, TrendingUp } from "lucide-react";
 import { useTheme } from "../../ThemeContext";
 
@@ -26,195 +13,22 @@ interface DynamicGraphProps {
   valueKey: string | null;
 }
 
-// Modern Bar Shape with rounded top bars and gradients
-const ModernBarShape = (props: any) => {
-  const { theme } = useTheme();
-  const {
-    x,
-    y,
-    width,
-    height,
-    dataKey,
-    payload,
-    yKeys,
-    index: groupIndex,
-    keyIndex,
-  } = props;
-
-  const radius = Math.min(6, width / 3);
-  const value = Number(payload[dataKey]);
-  const topMostKey = [...yKeys]
-    .reverse()
-    .find((key) => Number(payload[key]) > 0);
-  const isTopBar = dataKey === topMostKey;
-  const colorIndex = keyIndex % theme.colors.barColors.length;
-  const solidColor = theme.colors.barColors[colorIndex];
-  const gradientId = `gradient-${groupIndex}-${keyIndex}`;
-
-  if (value <= 0) return null;
-
-  if (isTopBar) {
-    const pathData = `M ${x}, ${y + radius}
-                      A ${radius}, ${radius}, 0, 0, 1, ${x + radius}, ${y}
-                      L ${x + width - radius}, ${y}
-                      A ${radius}, ${radius}, 0, 0, 1, ${x + width}, ${
-      y + radius
-    }
-                      L ${x + width}, ${y + height}
-                      L ${x}, ${y + height}
-                      Z`;
-
-    return (
-      <g>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={solidColor} stopOpacity="1" />
-            <stop offset="100%" stopColor={solidColor} stopOpacity="0.7" />
-          </linearGradient>
-        </defs>
-        <path
-          d={pathData}
-          fill={`url(#${gradientId})`}
-          stroke={theme.colors.surfaceGlass}
-          strokeWidth="1"
-          style={{
-            transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
-            transformOrigin: "center bottom",
-          }}
-        />
-      </g>
-    );
-  } else {
-    return (
-      <g>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={solidColor} stopOpacity="1" />
-            <stop offset="100%" stopColor={solidColor} stopOpacity="0.7" />
-          </linearGradient>
-        </defs>
-        <rect
-          x={x}
-          y={y}
-          width={width}
-          height={height}
-          fill={`url(#${gradientId})`}
-          stroke={theme.colors.surfaceGlass}
-          strokeWidth="1"
-          style={{
-            transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
-            transformOrigin: "center bottom",
-          }}
-        />
-      </g>
-    );
-  }
-};
-
-// Modern Tooltip with glassmorphism
-const ModernTooltip = ({ active, payload, label, theme }: any) => {
-  if (active && payload && payload.length) {
-    const accentColor = payload[0]?.color || theme.colors.accent;
-    return (
-      <div
-        style={{
-          padding: theme.spacing.lg,
-          background: theme.colors.surface,
-          backdropFilter: "blur(20px) saturate(180%)",
-          WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          color: theme.colors.text,
-          fontSize: "14px",
-          borderRadius: theme.borderRadius.large,
-          boxShadow: theme.shadow.lg,
-          border: `1px solid ${theme.colors.border}`,
-          fontFamily: theme.typography.fontFamily,
-          minWidth: "200px",
-          maxWidth: "280px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "3px",
-            background: theme.gradients.primary,
-          }}
-        />
-        <div
-          style={{
-            marginBottom: theme.spacing.md,
-            fontWeight: theme.typography.weight.bold,
-            color: theme.colors.text,
-            fontSize: "16px",
-            display: "flex",
-            alignItems: "center",
-            gap: theme.spacing.sm,
-          }}
-        >
-          <TrendingUp size={16} style={{ color: theme.colors.accent }} />
-          {formatKey(label)}
-        </div>
-        {payload
-          .filter((entry: any) => entry?.value !== 0)
-          .map((entry: any, index: number) => (
-            <div
-              key={`item-${index}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: index < payload.length - 1 ? theme.spacing.md : 0,
-                padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.default,
-                background: `${entry.color}15`,
-                border: `1px solid ${entry.color}30`,
-                transition: "all 0.2s ease",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <div
-                  style={{
-                    width: "14px",
-                    height: "14px",
-                    background: entry.color,
-                    borderRadius: "50%",
-                    marginRight: theme.spacing.md,
-                    boxShadow: theme.shadow.sm,
-                    border: `2px solid ${theme.colors.surface}`,
-                  }}
-                />
-                <span
-                  style={{
-                    fontWeight: theme.typography.weight.medium,
-                    fontSize: "14px",
-                  }}
-                >
-                  {formatKey(entry.name)}
-                </span>
-              </div>
-              <span
-                style={{
-                  fontWeight: theme.typography.weight.bold,
-                  color: theme.colors.text,
-                  fontSize: "15px",
-                  background: theme.gradients.primary,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                {entry.value.toLocaleString()}
-              </span>
-            </div>
-          ))}
-      </div>
-    );
-  }
-  return null;
+// Helper function to convert hex to rgba
+const hexToRgba = (hex: string, alpha: number = 1): string => {
+  hex = hex.replace("#", "");
+  const r = parseInt(
+    hex.length === 3 ? hex.slice(0, 1).repeat(2) : hex.slice(0, 2),
+    16
+  );
+  const g = parseInt(
+    hex.length === 3 ? hex.slice(1, 2).repeat(2) : hex.slice(2, 4),
+    16
+  );
+  const b = parseInt(
+    hex.length === 3 ? hex.slice(2, 3).repeat(2) : hex.slice(4, 6),
+    16
+  );
+  return `rgba(${r},${g},${b},${alpha})`;
 };
 
 export function formatKey(key: any): string {
@@ -311,7 +125,6 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             ? stringKeys.find((k) => k !== indexByKey)
             : null;
       }
-
 
       console.log(
         "transformDynamicData - indexByKey:",
@@ -514,258 +327,300 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       );
     }
 
-    const xTickRotation = graphData.length > 8 ? -45 : 0;
-    const xTickAnchor = graphData.length > 8 ? "end" : "middle";
+    const xTickRotation = graphData.length > 8 ? 45 : 0; // Positive for ECharts
 
-    const renderChart = () => {
-      if (chartType === "pie") {
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={graphData}
-                dataKey="value"
-                nameKey={xKey}
-                cx="50%"
-                cy="50%"
-                outerRadius={150}
-                label={({ name, value }) =>
-                  `${formatKey(name)}: ${value.toLocaleString()}`
-                }
-                labelLine
-                isAnimationActive={false}
-              >
-                {graphData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={
-                      theme.colors.barColors[
-                        index % theme.colors.barColors.length
-                      ]
-                    }
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<ModernTooltip theme={theme} />} />
-              <Legend
-                layout="horizontal"
-                align="center"
-                verticalAlign="bottom"
-                wrapperStyle={{
-                  fontSize: "13px",
-                  fontFamily: theme.typography.fontFamily,
-                  fontWeight: theme.typography.weight.medium,
-                  color: theme.colors.text,
-                }}
-                iconType="circle"
-                iconSize={14}
-                formatter={(value) => formatKey(value)}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-      }
+    const getOption = () => {
+      const legendCountThreshold = 5; // Hide legends if more than 5
+      const showLegend = yKeys.length <= legendCountThreshold;
 
-      if (chartType === "line") {
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={graphData}>
-              <defs>
-                <linearGradient
-                  id="gridGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="0%"
-                >
-                  <stop offset="0%" stopColor={`${theme.colors.accent}1A`} />
-                  <stop offset="50%" stopColor={`${theme.colors.accent}0D`} />
-                  <stop offset="100%" stopColor={`${theme.colors.accent}1A`} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 6"
-                vertical={false}
-                stroke={`${theme.colors.accent}33`}
-                opacity={0.8}
-              />
-              <XAxis
-                dataKey={xKey}
-                tickLine={false}
-                axisLine={{
-                  stroke: `${theme.colors.accent}4D`,
-                  strokeWidth: 2,
-                }}
-                angle={xTickRotation}
-                textAnchor={xTickAnchor}
-                height={xTickRotation === -45 ? 100 : 60}
-                style={{
-                  fontSize: "13px",
-                  fontWeight: theme.typography.weight.medium,
-                  fontFamily: theme.typography.fontFamily,
-                  fill: theme.colors.textSecondary,
-                }}
-                tickFormatter={(value) =>
-                  value.length > 14
-                    ? value.slice(0, 12) + "…"
-                    : formatKey(value)
-                }
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={{
-                  stroke: `${theme.colors.accent}4D`,
-                  strokeWidth: 2,
-                }}
-                style={{
-                  fontSize: "13px",
-                  fontWeight: theme.typography.weight.medium,
-                  fontFamily: theme.typography.fontFamily,
-                  fill: theme.colors.textSecondary,
-                }}
-                domain={["auto", "auto"]}
-              />
-              <Tooltip content={<ModernTooltip theme={theme} />} />
-              <Legend
-                layout="horizontal"
-                align="center"
-                verticalAlign="bottom"
-                wrapperStyle={{
-                  fontSize: "13px",
-                  fontFamily: theme.typography.fontFamily,
-                  fontWeight: theme.typography.weight.medium,
-                  color: theme.colors.text,
-                }}
-                iconType="circle"
-                iconSize={14}
-                formatter={(value) => formatKey(value)}
-              />
-              {yKeys.map((key, keyIndex) => (
-                <Line
-                  key={key}
-                  type="monotone"
-                  dataKey={key}
-                  stroke={
-                    theme.colors.barColors[
-                      keyIndex % theme.colors.barColors.length
-                    ]
+      const baseOption = {
+        animation: false, // Disable animation as per original
+        grid: {
+          left: "3%",
+          right: "4%",
+          bottom: graphData.length > 8 ? "20%" : "10%",
+          top: "3%",
+          containLabel: true,
+        },
+        xAxis: {
+          type: "category",
+          data: graphData.map((d) => {
+            const value = d[xKey];
+            return value.length > 14
+              ? value.slice(0, 12) + "…"
+              : formatKey(value);
+          }),
+          axisTick: { show: false },
+          axisLine: {
+            lineStyle: {
+              color: `${theme.colors.accent}4D`,
+              width: 2,
+            },
+          },
+          axisLabel: {
+            rotate: xTickRotation,
+            align: xTickRotation > 0 ? "right" : "center",
+            fontSize: 13,
+            fontWeight: theme.typography.weight.medium,
+            fontFamily: theme.typography.fontFamily,
+            color: theme.colors.textSecondary,
+          },
+          splitLine: { show: false },
+        },
+        yAxis: {
+          type: "value",
+          axisTick: { show: false },
+          axisLine: {
+            lineStyle: {
+              color: `${theme.colors.accent}4D`,
+              width: 2,
+            },
+          },
+          axisLabel: {
+            fontSize: 13,
+            fontWeight: theme.typography.weight.medium,
+            fontFamily: theme.typography.fontFamily,
+            color: theme.colors.textSecondary,
+          },
+          splitLine: {
+            lineStyle: {
+              type: "dashed",
+              color: `${theme.colors.accent}33`,
+              opacity: 0.8,
+            },
+          },
+        },
+        tooltip: {
+          trigger: chartType === "pie" ? "item" : "axis",
+          axisPointer: {
+            type: chartType === "line" ? "line" : "shadow",
+            shadowStyle:
+              chartType !== "line"
+                ? {
+                    color: `${theme.colors.accent}1A`,
+                    borderColor: `${theme.colors.accent}4D`,
+                    borderWidth: 2,
                   }
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                  isAnimationActive={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        );
-      }
-
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={graphData} barCategoryGap="10%" barGap={6}>
-            <defs>
-              <linearGradient
-                id="gridGradient"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop offset="0%" stopColor={`${theme.colors.accent}1A`} />
-                <stop offset="50%" stopColor={`${theme.colors.accent}0D`} />
-                <stop offset="100%" stopColor={`${theme.colors.accent}1A`} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              strokeDasharray="3 6"
-              vertical={false}
-              stroke={`${theme.colors.accent}33`}
-              opacity={0.8}
-            />
-            <XAxis
-              dataKey={xKey}
-              tickLine={false}
-              axisLine={{
-                stroke: `${theme.colors.accent}4D`,
-                strokeWidth: 2,
-              }}
-              angle={xTickRotation}
-              textAnchor={xTickAnchor}
-              height={xTickRotation === -45 ? 100 : 60}
-              style={{
-                fontSize: "13px",
-                fontWeight: theme.typography.weight.medium,
-                fontFamily: theme.typography.fontFamily,
-                fill: theme.colors.textSecondary,
-              }}
-              tickFormatter={(value) =>
-                value.length > 14 ? value.slice(0, 12) + "…" : formatKey(value)
-              }
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={{
-                stroke: `${theme.colors.accent}4D`,
-                strokeWidth: 2,
-              }}
-              style={{
-                fontSize: "13px",
-                fontWeight: theme.typography.weight.medium,
-                fontFamily: theme.typography.fontFamily,
-                fill: theme.colors.textSecondary,
-              }}
-              domain={["auto", "auto"]}
-            />
-            <Tooltip
-              cursor={{
-                fill: `${theme.colors.accent}1A`,
-                stroke: `${theme.colors.accent}4D`,
-                strokeWidth: 2,
-                radius: 8,
-              }}
-              content={<ModernTooltip theme={theme} />}
-            />
-            <Legend
-              layout="horizontal"
-              align="center"
-              verticalAlign="bottom"
-              wrapperStyle={{
-                fontSize: "13px",
+                : undefined,
+            lineStyle:
+              chartType === "line"
+                ? {
+                    color: `${theme.colors.accent}4D`,
+                    width: 2,
+                  }
+                : undefined,
+          },
+          backgroundColor: "transparent",
+          borderWidth: 0,
+          padding: 0,
+          extraCssText: `box-shadow: none;`,
+          formatter: (params: any) => {
+            if (!params) return "";
+            let payload = Array.isArray(params) ? params : [params];
+            payload = payload.filter((p: any) => p.value !== 0);
+            if (payload.length === 0) return "";
+            const label = formatKey(payload[0].axisValue || payload[0].name);
+            let html = `
+              <div style="
+                padding: ${theme.spacing.lg};
+                background: ${theme.colors.surface};
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                color: ${theme.colors.text};
+                font-size: 14px;
+                border-radius: ${theme.borderRadius.large};
+                box-shadow: ${theme.shadow.lg};
+                border: 1px solid ${theme.colors.border};
+                font-family: ${theme.typography.fontFamily};
+                min-width: 200px;
+                max-width: 280px;
+                position: relative;
+                overflow: hidden;
+              ">
+                <div style="
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  right: 0;
+                  height: 3px;
+                  background: ${theme.gradients.primary};
+                "></div>
+                <div style="
+                  margin-bottom: ${theme.spacing.md};
+                  font-weight: ${theme.typography.weight.bold};
+                  color: ${theme.colors.text};
+                  font-size: 16px;
+                  display: flex;
+                  align-items: center;
+                  gap: ${theme.spacing.sm};
+                ">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${theme.colors.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                  </svg>
+                  ${label}
+                </div>
+            `;
+            payload.forEach((entry: any, index: number) => {
+              html += `
+                <div style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  margin-bottom: ${
+                    index < payload.length - 1 ? theme.spacing.md : 0
+                  };
+                  padding: ${theme.spacing.md};
+                  border-radius: ${theme.borderRadius.default};
+                  background: ${entry.color}15;
+                  border: 1px solid ${entry.color}30;
+                  transition: all 0.2s ease;
+                ">
+                  <div style="display: flex; align-items: center;">
+                    <div style="
+                      width: 14px;
+                      height: 14px;
+                      background: ${entry.color};
+                      border-radius: 50%;
+                      margin-right: ${theme.spacing.md};
+                      box-shadow: ${theme.shadow.sm};
+                      border: 2px solid ${theme.colors.surface};
+                    "></div>
+                    <span style="
+                      font-weight: ${theme.typography.weight.medium};
+                      font-size: 14px;
+                    ">${formatKey(entry.seriesName)}</span>
+                  </div>
+                  <span style="
+                    font-weight: ${theme.typography.weight.bold};
+                    color: ${theme.colors.text};
+                    font-size: 15px;
+                    background: ${theme.gradients.primary};
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                  ">${entry.value.toLocaleString()}</span>
+                </div>
+              `;
+            });
+            html += `</div>`;
+            return html;
+          },
+        },
+        legend: showLegend
+          ? {
+              orient: "horizontal",
+              left: "center",
+              bottom: 0,
+              textStyle: {
+                fontSize: 13,
                 fontFamily: theme.typography.fontFamily,
                 fontWeight: theme.typography.weight.medium,
                 color: theme.colors.text,
-              }}
-              iconType="circle"
-              iconSize={14}
-              formatter={(value) => formatKey(value)}
-            />
-            {yKeys.map((key, keyIndex) => (
-              <Bar
-                key={key}
-                dataKey={key}
-                stackId="a"
-                fill={
-                  theme.colors.barColors[
-                    keyIndex % theme.colors.barColors.length
-                  ]
-                }
-                shape={(props) => (
-                  <ModernBarShape
-                    {...props}
-                    yKeys={yKeys}
-                    dataKey={key}
-                    keyIndex={keyIndex}
-                  />
-                )}
-                isAnimationActive={false}
-                // animationEasing="ease-out"
-                // animationBegin={keyIndex * 150}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      );
+              },
+              icon: "circle",
+              itemWidth: 14,
+              itemHeight: 14,
+              formatter: (name: string) => formatKey(name),
+            }
+          : { show: false },
+      };
+
+      if (chartType === "pie") {
+        return {
+          ...baseOption,
+          grid: undefined,
+          xAxis: undefined,
+          yAxis: undefined,
+          series: [
+            {
+              name: "Pie",
+              type: "pie",
+              radius: "50%",
+              center: ["50%", "50%"],
+              data: graphData.map((d, index) => ({
+                value: d.value,
+                name: formatKey(d[xKey]),
+                itemStyle: {
+                  color:
+                    theme.colors.barColors[
+                      index % theme.colors.barColors.length
+                    ],
+                },
+              })),
+              label: {
+                formatter: "{b}: {c}",
+                fontSize: 13,
+                fontWeight: theme.typography.weight.medium,
+                fontFamily: theme.typography.fontFamily,
+                color: theme.colors.textSecondary,
+              },
+              labelLine: {
+                show: true,
+              },
+            },
+          ],
+        };
+      } else {
+        return {
+          ...baseOption,
+          series: yKeys.map((key, keyIndex) => {
+            const seriesBase = {
+              name: formatKey(key),
+              type: chartType,
+              stack: chartType === "bar" ? "a" : undefined,
+              data: graphData.map((d) =>
+                Number(d[key]) > 0 ? Number(d[key]) : 0
+              ),
+              barCategoryGap: chartType === "bar" ? "10%" : undefined,
+              barGap: chartType === "bar" ? "6%" : undefined,
+              symbolSize: chartType === "line" ? 8 : undefined,
+              emphasis: {
+                focus: "series",
+              },
+              lineStyle:
+                chartType === "line"
+                  ? {
+                      width: 2,
+                    }
+                  : undefined,
+              itemStyle:
+                chartType === "line"
+                  ? {
+                      color:
+                        theme.colors.barColors[
+                          keyIndex % theme.colors.barColors.length
+                        ],
+                    }
+                  : (params: any) => {
+                      if (chartType !== "bar") return {};
+                      const { dataIndex } = params;
+                      const payload = graphData[dataIndex];
+                      const topMostKey = [...yKeys]
+                        .reverse()
+                        .find((k) => Number(payload[k]) > 0);
+                      const isTopBar = key === topMostKey;
+                      const solidColor =
+                        theme.colors.barColors[
+                          keyIndex % theme.colors.barColors.length
+                        ];
+                      const radius = 6; // Fixed radius for simplicity
+                      return {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                          { offset: 0, color: hexToRgba(solidColor, 1) },
+                          { offset: 1, color: hexToRgba(solidColor, 0.7) },
+                        ]),
+                        borderColor: theme.colors.surfaceGlass,
+                        borderWidth: 1,
+                        borderRadius: isTopBar
+                          ? [radius, radius, 0, 0]
+                          : [0, 0, 0, 0],
+                      };
+                    },
+            };
+            return seriesBase;
+          }),
+        };
+      }
     };
 
     return (
@@ -788,7 +643,12 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
             }}
           >
-            {renderChart()}
+            <ReactECharts
+              option={getOption()}
+              style={{ height: "100%", width: "100%" }}
+              notMerge={true}
+              lazyUpdate={true}
+            />
           </div>
         </div>
       </div>

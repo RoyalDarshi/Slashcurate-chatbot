@@ -3,6 +3,7 @@ import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Trash2, AlertTriangle } from "react-feather";
+import { ClipboardList } from "lucide-react";
 import { useTheme } from "../ThemeContext";
 import {
   deleteConnection,
@@ -10,6 +11,7 @@ import {
   getUserConnections,
 } from "../api";
 import CustomTooltip from "./CustomTooltip";
+import { CHATBOT_API_URL } from "../config";
 
 interface Connection {
   id: number;
@@ -132,6 +134,58 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
       }
     }
   }, [connectionToDelete, mode, fetchConnections]);
+
+  const handleReExtractMetadata = useCallback(
+    async (connection: Connection) => {
+      if (!token) {
+        toast.error("Authentication token not found. Please log in again.", {
+          theme: mode,
+        });
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const connData = {
+          commandTimeout: connection.commandTimeout,
+          connectionName: connection.connectionName,
+          database: connection.database,
+          description: connection.description,
+          hostname: connection.hostname,
+          maxTransportObjects: connection.maxTransportObjects,
+          password: connection.password,
+          port: connection.port,
+          selectedDB: connection.selectedDB,
+          username: connection.username,
+        };
+
+        const response = await axios.post(`${CHATBOT_API_URL}/meta_data`, {
+          connection: connData,
+        });
+
+        if (response.status === 200) {
+          toast.success("Metadata re-extracted successfully!", { theme: mode });
+        }
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          const axiosError = error as AxiosError<{ message?: string }>;
+          const errorMsg =
+            axiosError.response?.data?.message ?? axiosError.message;
+          toast.error(`Error: ${errorMsg}`, { theme: mode });
+          setError(errorMsg);
+        } else {
+          const errorMsg = (error as Error).message;
+          toast.error(`Error: ${errorMsg}`, { theme: mode });
+          setError(errorMsg);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [mode, token]
+  );
 
   useEffect(() => {
     if (fetched.current) return;
@@ -330,7 +384,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                     </th>
                     <th
                       className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "100px" }}
+                      style={{ width: "140px" }}
                     >
                       Actions
                     </th>
@@ -422,50 +476,99 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                       >
                         {connection.selectedDB}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-center">
-                        <CustomTooltip
-                          title={
-                            connection.isAdmin
-                              ? "Cannot delete default connections"
-                              : "Delete Connection"
-                          }
-                          position="top"
-                          variant="dark"
-                        >
-                          <button
-                            onClick={() => confirmDeleteConnection(connection)}
-                            className="p-1.5 rounded-full focus:outline-none disabled:cursor-not-allowed transition-colors duration-200"
-                            aria-label="Delete connection"
-                            disabled={connection.isAdmin}
-                            style={{
-                              color: connection.isAdmin
-                                ? theme.colors.disabled
-                                : "#EF4444",
-                              backgroundColor: "transparent",
-                            }}
-                            onMouseOver={(e) => {
-                              if (!connection.isAdmin) {
-                                e.currentTarget.style.backgroundColor =
-                                  theme.colors.background === "#0F172A"
-                                    ? "rgba(239, 68, 68, 0.2)"
-                                    : "rgba(254, 226, 226, 1)";
-                              }
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                "transparent";
-                            }}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex justify-center space-x-3">
+                          <CustomTooltip
+                            title={
+                              connection.isAdmin
+                                ? "Cannot re-extract metadata for default connections"
+                                : "Re-extract Metadata"
+                            }
+                            position="top"
+                            variant="dark"
                           >
-                            <Trash2
-                              size={18}
+                            <button
+                              onClick={() =>
+                                handleReExtractMetadata(connection)
+                              }
+                              className="p-1.5 rounded-full focus:outline-none disabled:cursor-not-allowed transition-colors duration-200"
+                              aria-label="Re-extract metadata"
+                              disabled={connection.isAdmin}
+                              style={{
+                                color: connection.isAdmin
+                                  ? theme.colors.disabled
+                                  : "#10B981",
+                                backgroundColor: "transparent",
+                              }}
+                              onMouseOver={(e) => {
+                                if (!connection.isAdmin) {
+                                  e.currentTarget.style.backgroundColor =
+                                    theme.colors.background === "#0F172A"
+                                      ? "rgba(16, 185, 129, 0.2)"
+                                      : "rgba(220, 252, 231, 1)";
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  "transparent";
+                              }}
+                            >
+                              <ClipboardList
+                                size={18}
+                                style={{
+                                  color: connection.isAdmin
+                                    ? theme.colors.disabled
+                                    : "#10B981",
+                                }}
+                              />
+                            </button>
+                          </CustomTooltip>
+                          <CustomTooltip
+                            title={
+                              connection.isAdmin
+                                ? "Cannot delete default connections"
+                                : "Delete Connection"
+                            }
+                            position="top"
+                            variant="dark"
+                          >
+                            <button
+                              onClick={() =>
+                                confirmDeleteConnection(connection)
+                              }
+                              className="p-1.5 rounded-full focus:outline-none disabled:cursor-not-allowed transition-colors duration-200"
+                              aria-label="Delete connection"
+                              disabled={connection.isAdmin}
                               style={{
                                 color: connection.isAdmin
                                   ? theme.colors.disabled
                                   : "#EF4444",
+                                backgroundColor: "transparent",
                               }}
-                            />
-                          </button>
-                        </CustomTooltip>
+                              onMouseOver={(e) => {
+                                if (!connection.isAdmin) {
+                                  e.currentTarget.style.backgroundColor =
+                                    theme.colors.background === "#0F172A"
+                                      ? "rgba(239, 68, 68, 0.2)"
+                                      : "rgba(254, 226, 226, 1)";
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  "transparent";
+                              }}
+                            >
+                              <Trash2
+                                size={18}
+                                style={{
+                                  color: connection.isAdmin
+                                    ? theme.colors.disabled
+                                    : "#EF4444",
+                                }}
+                              />
+                            </button>
+                          </CustomTooltip>
+                        </div>
                       </td>
                     </tr>
                   ))}
