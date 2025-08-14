@@ -331,7 +331,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
     const getOption = () => {
       const legendCountThreshold = 5; // Hide legends if more than 5
-      const showLegend = yKeys.length <= legendCountThreshold;
+      // Correctly check for legend visibility based on chart type and data
+      const showLegend =
+        chartType === "pie"
+          ? graphData.length <= legendCountThreshold
+          : yKeys.length <= legendCountThreshold;
 
       const baseOption = {
         animation: false, // Disable animation as per original
@@ -548,6 +552,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 },
               })),
               label: {
+                show: true, // Ensure labels are always shown for pie charts
                 formatter: "{b}: {c}",
                 fontSize: 13,
                 fontWeight: theme.typography.weight.medium,
@@ -574,8 +579,10 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               barCategoryGap: chartType === "bar" ? "10%" : undefined,
               barGap: chartType === "bar" ? "6%" : undefined,
               symbolSize: chartType === "line" ? 8 : undefined,
+              // Removed `emphasis.focus` to prevent other series from fading on hover
               emphasis: {
-                focus: "series",
+                disabled: true,
+                scale: false,
               },
               lineStyle:
                 chartType === "line"

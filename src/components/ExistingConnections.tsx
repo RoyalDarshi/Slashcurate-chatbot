@@ -12,6 +12,7 @@ import {
 } from "../api";
 import CustomTooltip from "./CustomTooltip";
 import { CHATBOT_API_URL } from "../config";
+import Loader from "./Loader";
 
 interface Connection {
   id: number;
@@ -631,6 +632,11 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
           >
             {"Create Connection"}
           </button>
+        </div>
+      )}
+      {loading && (
+        <div className="md:col-span-2 mt-4">
+          <Loader text={"Extracting metadata, please wait..."} />
         </div>
       )}
 
