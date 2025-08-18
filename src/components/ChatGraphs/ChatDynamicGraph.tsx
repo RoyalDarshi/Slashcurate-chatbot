@@ -1,4 +1,4 @@
-// Modified ChatDynamicGraph.tsx
+// ChatDynamicGraph.tsx
 import React, { useState, useEffect, useRef } from "react";
 import * as echarts from "echarts";
 import ReactECharts from "echarts-for-react";
@@ -8,7 +8,15 @@ import { useTheme } from "../../ThemeContext";
 interface DynamicGraphProps {
   data: any[];
   isValidGraph: (validData: boolean) => void;
-  chartType: "bar" | "line" | "pie";
+  chartType:
+    | "bar"
+    | "line"
+    | "pie"
+    | "area"
+    | "scatter"
+    | "radar"
+    | "funnel"
+    | "treemap";
   groupBy: string | null;
   aggregate: "sum" | "count" | "avg" | "min" | "max" | null;
   valueKey: string | null;
@@ -59,7 +67,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     const [yKeys, setYKeys] = useState<string[]>([]);
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
     const containerRef = useRef<HTMLDivElement>(null);
-    const isVertical = propIsVertical;
+    const isVertical = chartType === "bar" ? propIsVertical : true; // Only bar charts use isVertical
 
     // Resize observer for container
     useEffect(() => {
@@ -118,17 +126,12 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       let indexByKey: string;
       let effectiveGroupBy: string | null | undefined = null;
 
-      // ✅ Priority: use groupBy prop if valid
       if (groupBy && stringKeys.includes(groupBy)) {
         indexByKey = groupBy;
         effectiveGroupBy = stringKeys.find((k) => k !== indexByKey) || null;
-
-        // ✅ Secondary: prefer "branch_name" if exists
       } else if (stringKeys.includes("branch_name")) {
         indexByKey = "branch_name";
         effectiveGroupBy = stringKeys.find((k) => k !== "branch_name") || null;
-
-        // ✅ Fallback: use first available key
       } else {
         indexByKey = stringKeys[0];
         effectiveGroupBy =
@@ -149,7 +152,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         return { data: [], keys: [], indexBy: "" };
       }
 
-      if (chartType === "pie") {
+      if (
+        chartType === "pie" ||
+        chartType === "funnel" ||
+        chartType === "treemap"
+      ) {
         const grouped = rawData.reduce((acc, row) => {
           const group = row[indexByKey];
           const value = Number(row[effectiveValueKey]);
@@ -182,14 +189,66 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           return acc;
         }, {});
 
+        const transformedData = Object.values(grouped);
         return {
-          data: Object.values(grouped),
+          data: transformedData,
           keys: ["value"],
+          indexBy: indexByKey,
+        };
+      } else if (chartType === "radar") {
+        // Radar charts require a different data structure: one object per group with multiple indicators
+        const allGroupValues = effectiveGroupBy
+          ? [...new Set(rawData.map((row) => row[effectiveGroupBy]))]
+          : ["value"];
+
+        const grouped = rawData.reduce((acc, row) => {
+          const label = row[indexByKey];
+          const value = Number(row[effectiveValueKey]);
+
+          if (!acc[label]) {
+            acc[label] = { [indexByKey]: label, values: {} };
+            allGroupValues.forEach((type) => (acc[label].values[type] = 0));
+          }
+
+          if (aggregate === "count") {
+            acc[label].values["value"] += 1;
+          } else if (aggregate === "avg") {
+            acc[label].values["value"] += value;
+            acc[label].count = (acc[label].count || 0) + 1;
+          } else if (aggregate === "min") {
+            acc[label].values["value"] = acc[label].values["value"]
+              ? Math.min(acc[label].values["value"], value)
+              : value;
+          } else if (aggregate === "max") {
+            acc[label].values["value"] = acc[label].values["value"]
+              ? Math.max(acc[label].values["value"], value)
+              : value;
+          } else {
+            acc[label].values["value"] += value; // Default to sum
+          }
+
+          return acc;
+        }, {});
+
+        const finalData = Object.values(grouped).map((item: any) => {
+          const newItem = { ...item };
+          if (aggregate === "avg") {
+            newItem.values["value"] = item.count
+              ? item.values["value"] / item.count
+              : 0;
+            delete newItem.count;
+          }
+          return newItem;
+        });
+
+        return {
+          data: finalData,
+          keys: allGroupValues,
           indexBy: indexByKey,
         };
       }
 
-      // For bar and line charts
+      // For bar, line, area, and scatter charts
       const allGroupValues = effectiveGroupBy
         ? [...new Set(rawData.map((row) => row[effectiveGroupBy]))]
         : ["value"];
@@ -344,18 +403,26 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     const getOption = () => {
       const legendCountThreshold = 5;
       const showLegend =
-        chartType === "pie"
+        chartType === "pie" || chartType === "funnel" || chartType === "treemap"
           ? graphData.length <= legendCountThreshold
           : yKeys.length <= legendCountThreshold;
 
       const baseOption = {
         animation: false,
         tooltip: {
-          trigger: chartType === "pie" ? "item" : "axis",
+          trigger:
+            chartType === "pie" ||
+            chartType === "funnel" ||
+            chartType === "treemap"
+              ? "item"
+              : "axis",
           axisPointer: {
-            type: chartType === "line" ? "line" : "shadow",
+            type:
+              chartType === "line" || chartType === "area" ? "line" : "shadow",
             shadowStyle:
-              chartType !== "line"
+              chartType !== "line" &&
+              chartType !== "area" &&
+              chartType !== "scatter"
                 ? {
                     color: `${theme.colors.accent}1A`,
                     borderColor: `${theme.colors.accent}4D`,
@@ -363,7 +430,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                   }
                 : undefined,
             lineStyle:
-              chartType === "line"
+              chartType === "line" || chartType === "area"
                 ? {
                     color: `${theme.colors.accent}4D`,
                     width: 2,
@@ -489,7 +556,75 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           : { show: false },
       };
 
-      if (chartType === "pie") {
+      if (
+        chartType === "pie" ||
+        chartType === "funnel" ||
+        chartType === "treemap"
+      ) {
+        const seriesConfig =
+          chartType === "pie"
+            ? {
+                name: "Pie",
+                type: "pie",
+                radius: "50%",
+                center: ["50%", "50%"],
+                label: {
+                  show: true,
+                  formatter: "{b}: {c}",
+                  fontSize: 13,
+                  fontWeight: theme.typography.weight.medium,
+                  fontFamily: theme.typography.fontFamily,
+                  color: theme.colors.textSecondary,
+                },
+                labelLine: { show: true },
+              }
+            : chartType === "funnel"
+            ? {
+                name: "Funnel",
+                type: "funnel",
+                left: "10%",
+                top: "10%",
+                bottom: "10%",
+                width: "80%",
+                min: 0,
+                max: Math.max(...graphData.map((d) => d.value)),
+                minSize: "0%",
+                maxSize: "100%",
+                sort: "descending",
+                gap: 2,
+                label: {
+                  show: true,
+                  position: "inside",
+                  formatter: "{b}: {c}",
+                  fontSize: 13,
+                  fontWeight: theme.typography.weight.medium,
+                  fontFamily: theme.typography.fontFamily,
+                  color: theme.colors.textSecondary,
+                },
+              }
+            : {
+                name: "Treemap",
+                type: "treemap",
+                leafDepth: 1,
+                levels: [
+                  {
+                    itemStyle: {
+                      borderColor: theme.colors.surface,
+                      borderWidth: 2,
+                      gapWidth: 2,
+                    },
+                  },
+                ],
+                label: {
+                  show: true,
+                  formatter: "{b}: {c}",
+                  fontSize: 13,
+                  fontWeight: theme.typography.weight.medium,
+                  fontFamily: theme.typography.fontFamily,
+                  color: theme.colors.textSecondary,
+                },
+              };
+
         return {
           ...baseOption,
           grid: undefined,
@@ -497,10 +632,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           yAxis: undefined,
           series: [
             {
-              name: "Pie",
-              type: "pie",
-              radius: "50%",
-              center: ["50%", "50%"],
+              ...seriesConfig,
               data: graphData.map((d, index) => ({
                 value: d.value,
                 name: formatKey(d[xKey]),
@@ -511,157 +643,248 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                     ],
                 },
               })),
-              label: {
-                show: true,
-                formatter: "{b}: {c}",
-                fontSize: 13,
-                fontWeight: theme.typography.weight.medium,
-                fontFamily: theme.typography.fontFamily,
-                color: theme.colors.textSecondary,
+            },
+          ],
+        };
+      } else if (chartType === "radar") {
+        const maxValues = yKeys.map((key) => {
+          return Math.max(
+            ...graphData.map(
+              (d) =>
+                Number(d.values && d.values[key] ? d.values[key] : d[key]) || 0
+            )
+          );
+        });
+        const maxValue = Math.max(...maxValues, 100); // Ensure a minimum max for visibility
+
+        return {
+          ...baseOption,
+          radar: {
+            center: ["50%", "50%"],
+            radius: "60%",
+            indicator: yKeys.map((key) => ({
+              name: formatKey(key),
+              max: maxValue,
+            })),
+            axisName: {
+              color: theme.colors.textSecondary,
+              fontSize: 13,
+              fontWeight: theme.typography.weight.medium,
+              fontFamily: theme.typography.fontFamily,
+            },
+            splitArea: {
+              show: true,
+              areaStyle: {
+                color: [`${theme.colors.accent}10`, `${theme.colors.accent}05`],
               },
-              labelLine: {
-                show: true,
+            },
+            splitLine: {
+              lineStyle: {
+                color: `${theme.colors.accent}33`,
+              },
+            },
+          },
+          series: [
+            {
+              name: "Radar",
+              type: "radar",
+              data: graphData.map((d) => ({
+                value: yKeys.map(
+                  (key) =>
+                    Number(
+                      d.values && d.values[key] ? d.values[key] : d[key]
+                    ) || 0
+                ),
+                name: formatKey(d[xKey]),
+                itemStyle: {
+                  color:
+                    theme.colors.barColors[
+                      graphData.indexOf(d) % theme.colors.barColors.length
+                    ],
+                },
+                areaStyle: {
+                  opacity: 0.2,
+                },
+              })),
+              symbolSize: 8,
+              lineStyle: {
+                width: 2,
               },
             },
           ],
         };
-      } else {
-        const xAxisConfig = {
-          type: isVertical ? "category" : "value",
-          data: isVertical
-            ? graphData.map((d) => {
-                const value = d[xKey];
-                return value.length > 14
-                  ? value.slice(0, 12) + "…"
-                  : formatKey(value);
-              })
-            : undefined,
-          axisTick: { show: false },
-          axisLine: {
-            lineStyle: {
-              color: `${theme.colors.accent}4D`,
-              width: 2,
-            },
-          },
-          axisLabel: {
-            rotate: xTickRotation,
-            align: xTickRotation > 0 ? "right" : "center",
-            fontSize: 13,
-            fontWeight: theme.typography.weight.medium,
-            fontFamily: theme.typography.fontFamily,
-            color: theme.colors.textSecondary,
-          },
-          splitLine: { show: false },
-        };
-
-        const yAxisConfig = {
-          type: isVertical ? "value" : "category",
-          data: !isVertical
-            ? graphData.map((d) => {
-                const value = d[xKey];
-                return value.length > 14
-                  ? value.slice(0, 12) + "…"
-                  : formatKey(value);
-              })
-            : undefined,
-          axisTick: { show: false },
-          axisLine: {
-            lineStyle: {
-              color: `${theme.colors.accent}4D`,
-              width: 2,
-            },
-          },
-          axisLabel: {
-            rotate: yTickRotation,
-            align: yTickRotation > 0 ? "right" : "center",
-            fontSize: 13,
-            fontWeight: theme.typography.weight.medium,
-            fontFamily: theme.typography.fontFamily,
-            color: theme.colors.textSecondary,
-          },
-          splitLine: {
-            lineStyle: {
-              type: "dashed",
-              color: `${theme.colors.accent}33`,
-              opacity: 0.8,
-            },
-          },
-        };
-
-        return {
-          ...baseOption,
-          grid: {
-            left: !isVertical ? "20%" : "3%",
-            right: !isVertical ? "4%" : "4%",
-            bottom: isVertical ? "20%" : "10%",
-            top: "3%",
-            containLabel: true,
-          },
-          xAxis: xAxisConfig,
-          yAxis: yAxisConfig,
-          series: yKeys.map((key, keyIndex) => {
-            const seriesBase = {
-              name: formatKey(key),
-              type: chartType,
-              stack: chartType === "bar" ? "a" : undefined,
-              data: graphData.map((d) =>
-                Number(d[key]) > 0 ? Number(d[key]) : 0
-              ),
-              barCategoryGap: chartType === "bar" ? "10%" : undefined,
-              barGap: chartType === "bar" ? "6%" : undefined,
-              symbolSize: chartType === "line" ? 8 : undefined,
-              emphasis: {
-                disabled: true,
-                scale: false,
-              },
-              lineStyle:
-                chartType === "line"
-                  ? {
-                      width: 2,
-                    }
-                  : undefined,
-              itemStyle:
-                chartType === "line"
-                  ? {
-                      color:
-                        theme.colors.barColors[
-                          keyIndex % theme.colors.barColors.length
-                        ],
-                    }
-                  : (params: any) => {
-                      if (chartType !== "bar") return {};
-                      const { dataIndex } = params;
-                      const payload = graphData[dataIndex];
-                      const topMostKey = [...yKeys]
-                        .reverse()
-                        .find((k) => Number(payload[k]) > 0);
-                      const isTopBar = key === topMostKey;
-                      const solidColor =
-                        theme.colors.barColors[
-                          keyIndex % theme.colors.barColors.length
-                        ];
-                      const radius = 6;
-                      return {
-                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                          { offset: 0, color: hexToRgba(solidColor, 1) },
-                          { offset: 1, color: hexToRgba(solidColor, 0.7) },
-                        ]),
-                        borderColor: theme.colors.surfaceGlass,
-                        borderWidth: 1,
-                        borderRadius: isVertical
-                          ? isTopBar
-                            ? [radius, radius, 0, 0]
-                            : [0, 0, 0, 0]
-                          : isTopBar
-                          ? [0, radius, radius, 0]
-                          : [0, 0, 0, 0],
-                      };
-                    },
-            };
-            return seriesBase;
-          }),
-        };
       }
+
+      const xAxisConfig = {
+        type: isVertical ? "category" : "value",
+        data: isVertical
+          ? graphData.map((d) => {
+              const value = d[xKey];
+              return value.length > 14
+                ? value.slice(0, 12) + "…"
+                : formatKey(value);
+            })
+          : undefined,
+        axisTick: { show: false },
+        axisLine: {
+          lineStyle: {
+            color: `${theme.colors.accent}4D`,
+            width: 2,
+          },
+        },
+        axisLabel: {
+          rotate: xTickRotation,
+          align: xTickRotation > 0 ? "right" : "center",
+          fontSize: 13,
+          fontWeight: theme.typography.weight.medium,
+          fontFamily: theme.typography.fontFamily,
+          color: theme.colors.textSecondary,
+        },
+        splitLine: { show: false },
+      };
+
+      const yAxisConfig = {
+        type: isVertical ? "value" : "category",
+        data: !isVertical
+          ? graphData.map((d) => {
+              const value = d[xKey];
+              return value.length > 14
+                ? value.slice(0, 12) + "…"
+                : formatKey(value);
+            })
+          : undefined,
+        axisTick: { show: false },
+        axisLine: {
+          lineStyle: {
+            color: `${theme.colors.accent}4D`,
+            width: 2,
+          },
+        },
+        axisLabel: {
+          rotate: yTickRotation,
+          align: yTickRotation > 0 ? "right" : "center",
+          fontSize: 13,
+          fontWeight: theme.typography.weight.medium,
+          fontFamily: theme.typography.fontFamily,
+          color: theme.colors.textSecondary,
+        },
+        splitLine: {
+          lineStyle: {
+            type: "dashed",
+            color: `${theme.colors.accent}33`,
+            opacity: 0.8,
+          },
+        },
+      };
+
+      return {
+        ...baseOption,
+        grid: {
+          left: !isVertical ? "20%" : "3%",
+          right: !isVertical ? "4%" : "4%",
+          bottom: isVertical ? "20%" : "10%",
+          top: "3%",
+          containLabel: true,
+        },
+        xAxis: chartType !== "scatter" ? xAxisConfig : { type: "value" },
+        yAxis: chartType !== "scatter" ? yAxisConfig : { type: "value" },
+        series: yKeys.map((key, keyIndex) => {
+          const seriesBase = {
+            name: formatKey(key),
+            type: chartType === "area" ? "line" : chartType,
+            stack:
+              chartType === "bar" || chartType === "area" ? "a" : undefined,
+            data:
+              chartType === "scatter"
+                ? graphData.map((d, index) => ({
+                    value: [index, Number(d[key]) > 0 ? Number(d[key]) : 0],
+                  }))
+                : graphData.map((d) =>
+                    Number(d[key]) > 0 ? Number(d[key]) : 0
+                  ),
+            barCategoryGap: chartType === "bar" ? "10%" : undefined,
+            barGap: chartType === "bar" ? "6%" : undefined,
+            symbolSize:
+              chartType === "line" || chartType === "scatter" ? 8 : undefined,
+            emphasis: {
+              disabled: true,
+              scale: false,
+            },
+            areaStyle:
+              chartType === "area"
+                ? {
+                    opacity: 0.3,
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                      {
+                        offset: 0,
+                        color: hexToRgba(
+                          theme.colors.barColors[
+                            keyIndex % theme.colors.barColors.length
+                          ],
+                          0.7
+                        ),
+                      },
+                      {
+                        offset: 1,
+                        color: hexToRgba(
+                          theme.colors.barColors[
+                            keyIndex % theme.colors.barColors.length
+                          ],
+                          0.1
+                        ),
+                      },
+                    ]),
+                  }
+                : undefined,
+            lineStyle:
+              chartType === "line" || chartType === "area"
+                ? {
+                    width: 2,
+                  }
+                : undefined,
+            itemStyle:
+              chartType === "line" ||
+              chartType === "area" ||
+              chartType === "scatter"
+                ? {
+                    color:
+                      theme.colors.barColors[
+                        keyIndex % theme.colors.barColors.length
+                      ],
+                  }
+                : (params: any) => {
+                    if (chartType !== "bar") return {};
+                    const { dataIndex } = params;
+                    const payload = graphData[dataIndex];
+                    const topMostKey = [...yKeys]
+                      .reverse()
+                      .find((k) => Number(payload[k]) > 0);
+                    const isTopBar = key === topMostKey;
+                    const solidColor =
+                      theme.colors.barColors[
+                        keyIndex % theme.colors.barColors.length
+                      ];
+                    const radius = 6;
+                    return {
+                      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: hexToRgba(solidColor, 1) },
+                        { offset: 1, color: hexToRgba(solidColor, 0.7) },
+                      ]),
+                      borderColor: theme.colors.surfaceGlass,
+                      borderWidth: 1,
+                      borderRadius: isVertical
+                        ? isTopBar
+                          ? [radius, radius, 0, 0]
+                          : [0, 0, 0, 0]
+                        : isTopBar
+                        ? [0, radius, radius, 0]
+                        : [0, 0, 0, 0],
+                    };
+                  },
+          };
+          return seriesBase;
+        }),
+      };
     };
 
     return (

@@ -518,6 +518,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     <option value="bar">Bar Chart</option>
                     <option value="line">Line Chart</option>
                     <option value="pie">Pie Chart</option>
+                    <option value="area">Area Chart</option>
+                    <option value="scatter">Scatter Chart</option>
+                    <option value="radar">Radar Chart</option>
+                    <option value="funnel">Funnel Chart</option>
+                    <option value="treemap">Treemap Chart</option>
                   </select>
                   <select
                     value={groupBy || ""}
