@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as echarts from "echarts";
 import ReactECharts from "echarts-for-react";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown } from "lucide-react"; // Added TrendingDown for the toggle
 import { useTheme } from "../../ThemeContext";
 
 interface DynamicGraphProps {
@@ -49,6 +49,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     const [yKeys, setYKeys] = useState<string[]>([]);
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // New state to manage bar chart orientation
+    const [isVertical, setIsVertical] = useState<boolean>(true);
+    const [showOrientationToggle, setShowOrientationToggle] =
+      useState<boolean>(false);
 
     // Resize observer for container
     useEffect(() => {
@@ -269,6 +274,21 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       processApiData(data);
     }, [data, chartType, groupBy, aggregate, valueKey]);
 
+    // New useEffect to handle showing the orientation toggle
+    useEffect(() => {
+      if (
+        chartType === "bar" &&
+        graphData.length > 0 &&
+        graphData.length <= 7
+      ) {
+        setShowOrientationToggle(true);
+      } else {
+        setShowOrientationToggle(false);
+        // Reset to vertical if the conditions are no longer met
+        setIsVertical(true);
+      }
+    }, [chartType, graphData]);
+
     useEffect(() => {
       isValidGraph(isValidGraphData);
     }, [isValidGraphData, isValidGraph]);
@@ -327,73 +347,18 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       );
     }
 
-    const xTickRotation = graphData.length > 8 ? 45 : 0; // Positive for ECharts
+    const xTickRotation = isVertical && graphData.length > 8 ? 45 : 0;
+    const yTickRotation = !isVertical && graphData.length > 8 ? 45 : 0;
 
     const getOption = () => {
-      const legendCountThreshold = 5; // Hide legends if more than 5
-      // Correctly check for legend visibility based on chart type and data
+      const legendCountThreshold = 5;
       const showLegend =
         chartType === "pie"
           ? graphData.length <= legendCountThreshold
           : yKeys.length <= legendCountThreshold;
 
       const baseOption = {
-        animation: false, // Disable animation as per original
-        grid: {
-          left: "3%",
-          right: "4%",
-          bottom: graphData.length > 8 ? "20%" : "10%",
-          top: "3%",
-          containLabel: true,
-        },
-        xAxis: {
-          type: "category",
-          data: graphData.map((d) => {
-            const value = d[xKey];
-            return value.length > 14
-              ? value.slice(0, 12) + "…"
-              : formatKey(value);
-          }),
-          axisTick: { show: false },
-          axisLine: {
-            lineStyle: {
-              color: `${theme.colors.accent}4D`,
-              width: 2,
-            },
-          },
-          axisLabel: {
-            rotate: xTickRotation,
-            align: xTickRotation > 0 ? "right" : "center",
-            fontSize: 13,
-            fontWeight: theme.typography.weight.medium,
-            fontFamily: theme.typography.fontFamily,
-            color: theme.colors.textSecondary,
-          },
-          splitLine: { show: false },
-        },
-        yAxis: {
-          type: "value",
-          axisTick: { show: false },
-          axisLine: {
-            lineStyle: {
-              color: `${theme.colors.accent}4D`,
-              width: 2,
-            },
-          },
-          axisLabel: {
-            fontSize: 13,
-            fontWeight: theme.typography.weight.medium,
-            fontFamily: theme.typography.fontFamily,
-            color: theme.colors.textSecondary,
-          },
-          splitLine: {
-            lineStyle: {
-              type: "dashed",
-              color: `${theme.colors.accent}33`,
-              opacity: 0.8,
-            },
-          },
-        },
+        animation: false,
         tooltip: {
           trigger: chartType === "pie" ? "item" : "axis",
           axisPointer: {
@@ -423,7 +388,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             let payload = Array.isArray(params) ? params : [params];
             payload = payload.filter((p: any) => p.value !== 0);
             if (payload.length === 0) return "";
-            const label = formatKey(payload[0].axisValue || payload[0].name);
+            const label = formatKey(
+              isVertical
+                ? payload[0].axisValue
+                : payload[0].name || payload[0].axisValue
+            );
             let html = `
               <div style="
                 padding: ${theme.spacing.lg};
@@ -552,7 +521,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 },
               })),
               label: {
-                show: true, // Ensure labels are always shown for pie charts
+                show: true,
                 formatter: "{b}: {c}",
                 fontSize: 13,
                 fontWeight: theme.typography.weight.medium,
@@ -566,8 +535,79 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           ],
         };
       } else {
+        const xAxisConfig = {
+          type: isVertical ? "category" : "value",
+          data: isVertical
+            ? graphData.map((d) => {
+                const value = d[xKey];
+                return value.length > 14
+                  ? value.slice(0, 12) + "…"
+                  : formatKey(value);
+              })
+            : undefined,
+          axisTick: { show: false },
+          axisLine: {
+            lineStyle: {
+              color: `${theme.colors.accent}4D`,
+              width: 2,
+            },
+          },
+          axisLabel: {
+            rotate: xTickRotation,
+            align: xTickRotation > 0 ? "right" : "center",
+            fontSize: 13,
+            fontWeight: theme.typography.weight.medium,
+            fontFamily: theme.typography.fontFamily,
+            color: theme.colors.textSecondary,
+          },
+          splitLine: { show: false },
+        };
+
+        const yAxisConfig = {
+          type: isVertical ? "value" : "category",
+          data: !isVertical
+            ? graphData.map((d) => {
+                const value = d[xKey];
+                return value.length > 14
+                  ? value.slice(0, 12) + "…"
+                  : formatKey(value);
+              })
+            : undefined,
+          axisTick: { show: false },
+          axisLine: {
+            lineStyle: {
+              color: `${theme.colors.accent}4D`,
+              width: 2,
+            },
+          },
+          axisLabel: {
+            rotate: yTickRotation,
+            align: yTickRotation > 0 ? "right" : "center",
+            fontSize: 13,
+            fontWeight: theme.typography.weight.medium,
+            fontFamily: theme.typography.fontFamily,
+            color: theme.colors.textSecondary,
+          },
+          splitLine: {
+            lineStyle: {
+              type: "dashed",
+              color: `${theme.colors.accent}33`,
+              opacity: 0.8,
+            },
+          },
+        };
+
         return {
           ...baseOption,
+          grid: {
+            left: !isVertical ? "20%" : "3%",
+            right: !isVertical ? "4%" : "4%",
+            bottom: isVertical ? "20%" : "10%",
+            top: "3%",
+            containLabel: true,
+          },
+          xAxis: xAxisConfig,
+          yAxis: yAxisConfig,
           series: yKeys.map((key, keyIndex) => {
             const seriesBase = {
               name: formatKey(key),
@@ -579,7 +619,6 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               barCategoryGap: chartType === "bar" ? "10%" : undefined,
               barGap: chartType === "bar" ? "6%" : undefined,
               symbolSize: chartType === "line" ? 8 : undefined,
-              // Removed `emphasis.focus` to prevent other series from fading on hover
               emphasis: {
                 disabled: true,
                 scale: false,
@@ -610,7 +649,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                         theme.colors.barColors[
                           keyIndex % theme.colors.barColors.length
                         ];
-                      const radius = 6; // Fixed radius for simplicity
+                      const radius = 6;
                       return {
                         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                           { offset: 0, color: hexToRgba(solidColor, 1) },
@@ -618,8 +657,12 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                         ]),
                         borderColor: theme.colors.surfaceGlass,
                         borderWidth: 1,
-                        borderRadius: isTopBar
-                          ? [radius, radius, 0, 0]
+                        borderRadius: isVertical
+                          ? isTopBar
+                            ? [radius, radius, 0, 0]
+                            : [0, 0, 0, 0]
+                          : isTopBar
+                          ? [0, radius, radius, 0]
                           : [0, 0, 0, 0],
                       };
                     },
@@ -641,6 +684,46 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           transition: "all 0.4s ease",
         }}
       >
+        {showOrientationToggle && (
+          <div className="flex justify-end p-2">
+            <button
+              onClick={() => setIsVertical(!isVertical)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 12px",
+                borderRadius: theme.borderRadius.full,
+                background: theme.colors.primary,
+                color: theme.colors.textInvert,
+                border: "none",
+                cursor: "pointer",
+                boxShadow: theme.shadow.md,
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.transform = "scale(1.05)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.transform = "scale(1)")
+              }
+            >
+              {isVertical ? (
+                <TrendingUp size={20} />
+              ) : (
+                <TrendingDown size={20} />
+              )}
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: theme.typography.weight.bold,
+                }}
+              >
+                {isVertical ? "Horizontal" : "Vertical"}
+              </span>
+            </button>
+          </div>
+        )}
         <div ref={containerRef} style={{ height: "65vh", width: "100%" }}>
           <div
             style={{
