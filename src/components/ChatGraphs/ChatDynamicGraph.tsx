@@ -67,7 +67,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     const [yKeys, setYKeys] = useState<string[]>([]);
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
     const containerRef = useRef<HTMLDivElement>(null);
-    const isVertical = chartType === "bar" ? propIsVertical : true; // Only bar charts use isVertical
+    const isVertical = chartType === "bar" ? propIsVertical : true;
 
     // Resize observer for container
     useEffect(() => {
@@ -196,36 +196,38 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           indexBy: indexByKey,
         };
       } else if (chartType === "radar") {
-        // Radar charts require a different data structure: one object per group with multiple indicators
-        const allGroupValues = effectiveGroupBy
-          ? [...new Set(rawData.map((row) => row[effectiveGroupBy]))]
-          : ["value"];
-
+        // Radar charts require multiple numeric keys as indicators
+        const indicatorKeys =
+          numericKeys.length >= 2 ? numericKeys : [effectiveValueKey];
         const grouped = rawData.reduce((acc, row) => {
           const label = row[indexByKey];
-          const value = Number(row[effectiveValueKey]);
-
           if (!acc[label]) {
-            acc[label] = { [indexByKey]: label, values: {} };
-            allGroupValues.forEach((type) => (acc[label].values[type] = 0));
+            acc[label] = { [indexByKey]: label, values: {}, count: {} };
+            indicatorKeys.forEach((key) => {
+              acc[label].values[key] = 0;
+              acc[label].count[key] = 0;
+            });
           }
 
-          if (aggregate === "count") {
-            acc[label].values["value"] += 1;
-          } else if (aggregate === "avg") {
-            acc[label].values["value"] += value;
-            acc[label].count = (acc[label].count || 0) + 1;
-          } else if (aggregate === "min") {
-            acc[label].values["value"] = acc[label].values["value"]
-              ? Math.min(acc[label].values["value"], value)
-              : value;
-          } else if (aggregate === "max") {
-            acc[label].values["value"] = acc[label].values["value"]
-              ? Math.max(acc[label].values["value"], value)
-              : value;
-          } else {
-            acc[label].values["value"] += value; // Default to sum
-          }
+          indicatorKeys.forEach((key) => {
+            const value = Number(row[key]) || 0;
+            if (aggregate === "count") {
+              acc[label].values[key] += 1;
+            } else if (aggregate === "avg") {
+              acc[label].values[key] += value;
+              acc[label].count[key] += 1;
+            } else if (aggregate === "min") {
+              acc[label].values[key] = acc[label].values[key]
+                ? Math.min(acc[label].values[key], value)
+                : value;
+            } else if (aggregate === "max") {
+              acc[label].values[key] = acc[label].values[key]
+                ? Math.max(acc[label].values[key], value)
+                : value;
+            } else {
+              acc[label].values[key] += value; // Default to sum
+            }
+          });
 
           return acc;
         }, {});
@@ -233,9 +235,13 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         const finalData = Object.values(grouped).map((item: any) => {
           const newItem = { ...item };
           if (aggregate === "avg") {
-            newItem.values["value"] = item.count
-              ? item.values["value"] / item.count
-              : 0;
+            indicatorKeys.forEach((key) => {
+              newItem.values[key] = newItem.count[key]
+                ? newItem.values[key] / newItem.count[key]
+                : 0;
+            });
+            delete newItem.count;
+          } else {
             delete newItem.count;
           }
           return newItem;
@@ -243,7 +249,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
         return {
           data: finalData,
-          keys: allGroupValues,
+          keys: indicatorKeys,
           indexBy: indexByKey,
         };
       }
@@ -312,13 +318,28 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             indexBy,
           } = transformDynamicData(dataset);
 
-          if (!processedData.length || !indexBy || !processedKeys.length) {
+          // For radar charts, require at least one data point and one key
+          const isRadarValid =
+            chartType === "radar"
+              ? processedData.length > 0 && processedKeys.length >= 1
+              : true;
+
+          if (
+            !processedData.length ||
+            !indexBy ||
+            !processedKeys.length ||
+            !isRadarValid
+          ) {
             setIsValidGraphData(false);
             return;
           }
 
           const hasValidNumericData = processedData.some((item) =>
-            processedKeys.some((key) => !isNaN(Number(item[key])))
+            processedKeys.some((key) => {
+              const value =
+                chartType === "radar" ? item.values[key] : item[key];
+              return !isNaN(Number(value)) && Number(value) !== 0;
+            })
           );
 
           if (!hasValidNumericData) {
@@ -444,10 +465,14 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           formatter: (params: any) => {
             if (!params) return "";
             let payload = Array.isArray(params) ? params : [params];
-            payload = payload.filter((p: any) => p.value !== 0);
+            payload = payload.filter(
+              (p: any) => p.value !== 0 && p.value !== undefined
+            );
             if (payload.length === 0) return "";
             const label = formatKey(
-              isVertical
+              chartType === "radar"
+                ? payload[0].name
+                : isVertical
                 ? payload[0].axisValue
                 : payload[0].name || payload[0].axisValue
             );
@@ -492,6 +517,10 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 </div>
             `;
             payload.forEach((entry: any, index: number) => {
+              const value =
+                chartType === "radar"
+                  ? entry.value[yKeys.indexOf(entry.seriesName)]
+                  : entry.value;
               html += `
                 <div style="
                   display: flex;
@@ -529,7 +558,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                     background-clip: text;
-                  ">${entry.value.toLocaleString()}</span>
+                  ">${Number(value).toLocaleString()}</span>
                 </div>
               `;
             });
@@ -649,16 +678,19 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       } else if (chartType === "radar") {
         const maxValues = yKeys.map((key) => {
           return Math.max(
-            ...graphData.map(
-              (d) =>
-                Number(d.values && d.values[key] ? d.values[key] : d[key]) || 0
-            )
+            ...graphData.map((d) =>
+              Number(d.values && d.values[key] ? d.values[key] : 0)
+            ),
+            1 // Ensure minimum max value
           );
         });
-        const maxValue = Math.max(...maxValues, 100); // Ensure a minimum max for visibility
+        const maxValue = Math.max(...maxValues, 10); // Minimum max for visibility
 
         return {
           ...baseOption,
+          grid: undefined,
+          xAxis: undefined,
+          yAxis: undefined,
           radar: {
             center: ["50%", "50%"],
             radius: "60%",
@@ -688,18 +720,15 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             {
               name: "Radar",
               type: "radar",
-              data: graphData.map((d) => ({
-                value: yKeys.map(
-                  (key) =>
-                    Number(
-                      d.values && d.values[key] ? d.values[key] : d[key]
-                    ) || 0
+              data: graphData.map((d, index) => ({
+                value: yKeys.map((key) =>
+                  Number(d.values && d.values[key] ? d.values[key] : 0)
                 ),
                 name: formatKey(d[xKey]),
                 itemStyle: {
                   color:
                     theme.colors.barColors[
-                      graphData.indexOf(d) % theme.colors.barColors.length
+                      index % theme.colors.barColors.length
                     ],
                 },
                 areaStyle: {
