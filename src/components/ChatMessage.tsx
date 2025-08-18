@@ -1,3 +1,4 @@
+// ChatMessage.tsx
 import React, { useRef, useEffect, useState } from "react";
 import {
   Bot,
@@ -80,6 +81,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     >(null);
     const [valueKey, setValueKey] = useState<string | null>(null);
     const [showChartOptions, setShowChartOptions] = useState(false);
+    const [isVertical, setIsVertical] = useState(true);
+    const [showOrientationToggle, setShowOrientationToggle] = useState(false);
 
     const graphRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
@@ -184,6 +187,16 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         }
       }
     }, [message]);
+
+    useEffect(() => {
+      // Show orientation toggle when chartType is "bar" and there is valid data
+      const shouldShowToggle =
+        chartType === "bar" && hasNumericData && csvData.length > 0;
+      setShowOrientationToggle(shouldShowToggle);
+      if (!shouldShowToggle) {
+        setIsVertical(true);
+      }
+    }, [chartType, hasNumericData, csvData]);
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -562,6 +575,24 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       </option>
                     ))}
                   </select>
+                  {showOrientationToggle && (
+                    <select
+                      value={isVertical ? "vertical" : "horizontal"}
+                      onChange={(e) =>
+                        setIsVertical(e.target.value === "vertical")
+                      }
+                      style={{
+                        background: theme.colors.surface,
+                        color: theme.colors.text,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.borderRadius.default,
+                        padding: theme.spacing.sm,
+                      }}
+                    >
+                      <option value="vertical">Vertical Bar</option>
+                      <option value="horizontal">Horizontal Bar</option>
+                    </select>
+                  )}
                 </div>
                 <DynamicGraph
                   data={csvData}
@@ -570,6 +601,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                   groupBy={groupBy}
                   aggregate={aggregate}
                   valueKey={valueKey}
+                  isVertical={isVertical}
                 />
                 <div
                   className="mt-2 mr-2 text-right text-xs"

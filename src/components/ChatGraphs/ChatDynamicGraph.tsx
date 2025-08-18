@@ -1,7 +1,8 @@
+// Modified ChatDynamicGraph.tsx
 import React, { useState, useEffect, useRef } from "react";
 import * as echarts from "echarts";
 import ReactECharts from "echarts-for-react";
-import { BarChart3, TrendingUp, TrendingDown } from "lucide-react"; // Added TrendingDown for the toggle
+import { BarChart3 } from "lucide-react";
 import { useTheme } from "../../ThemeContext";
 
 interface DynamicGraphProps {
@@ -11,6 +12,7 @@ interface DynamicGraphProps {
   groupBy: string | null;
   aggregate: "sum" | "count" | "avg" | "min" | "max" | null;
   valueKey: string | null;
+  isVertical?: boolean;
 }
 
 // Helper function to convert hex to rgba
@@ -42,18 +44,22 @@ export function formatKey(key: any): string {
 }
 
 const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
-  ({ data, isValidGraph, chartType, groupBy, aggregate, valueKey }) => {
+  ({
+    data,
+    isValidGraph,
+    chartType,
+    groupBy,
+    aggregate,
+    valueKey,
+    isVertical: propIsVertical = true,
+  }) => {
     const { theme } = useTheme();
     const [graphData, setGraphData] = useState<any[]>([]);
     const [xKey, setXKey] = useState<string | null>(null);
     const [yKeys, setYKeys] = useState<string[]>([]);
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
     const containerRef = useRef<HTMLDivElement>(null);
-
-    // New state to manage bar chart orientation
-    const [isVertical, setIsVertical] = useState<boolean>(true);
-    const [showOrientationToggle, setShowOrientationToggle] =
-      useState<boolean>(false);
+    const isVertical = propIsVertical;
 
     // Resize observer for container
     useEffect(() => {
@@ -273,21 +279,6 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
       processApiData(data);
     }, [data, chartType, groupBy, aggregate, valueKey]);
-
-    // New useEffect to handle showing the orientation toggle
-    useEffect(() => {
-      if (
-        chartType === "bar" &&
-        graphData.length > 0 &&
-        graphData.length <= 7
-      ) {
-        setShowOrientationToggle(true);
-      } else {
-        setShowOrientationToggle(false);
-        // Reset to vertical if the conditions are no longer met
-        setIsVertical(true);
-      }
-    }, [chartType, graphData]);
 
     useEffect(() => {
       isValidGraph(isValidGraphData);
@@ -684,46 +675,6 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           transition: "all 0.4s ease",
         }}
       >
-        {showOrientationToggle && (
-          <div className="flex justify-end p-2">
-            <button
-              onClick={() => setIsVertical(!isVertical)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 12px",
-                borderRadius: theme.borderRadius.full,
-                background: theme.colors.primary,
-                color: theme.colors.textInvert,
-                border: "none",
-                cursor: "pointer",
-                boxShadow: theme.shadow.md,
-                transition: "all 0.3s ease",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.transform = "scale(1.05)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.transform = "scale(1)")
-              }
-            >
-              {isVertical ? (
-                <TrendingUp size={20} />
-              ) : (
-                <TrendingDown size={20} />
-              )}
-              <span
-                style={{
-                  fontSize: "14px",
-                  fontWeight: theme.typography.weight.bold,
-                }}
-              >
-                {isVertical ? "Horizontal" : "Vertical"}
-              </span>
-            </button>
-          </div>
-        )}
         <div ref={containerRef} style={{ height: "65vh", width: "100%" }}>
           <div
             style={{
@@ -751,7 +702,8 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       prevProps.chartType === nextProps.chartType &&
       prevProps.groupBy === nextProps.groupBy &&
       prevProps.aggregate === nextProps.aggregate &&
-      prevProps.valueKey === nextProps.valueKey
+      prevProps.valueKey === nextProps.valueKey &&
+      prevProps.isVertical === nextProps.isVertical
     );
   }
 );
