@@ -164,6 +164,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
 
         const response = await axios.post(`${CHATBOT_API_URL}/meta_data`, {
           connection: connData,
+          isEncrypted: true,
         });
 
         if (response.status === 200) {

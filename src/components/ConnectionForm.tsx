@@ -468,6 +468,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       // Pass the token if your extractMetadataFromDB API requires it
       const response = await axios.post(`${CHATBOT_API_URL}/meta_data`, {
         connection: formData,
+        isEncrypted: false,
       }); // Pass formData and token
       setLoading(false);
 
