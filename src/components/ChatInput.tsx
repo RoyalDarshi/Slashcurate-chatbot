@@ -118,7 +118,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       } else {
         console.warn("Speech Recognition API not supported in this browser.");
         setMicPermissionStatus("unsupported");
-        setVoiceInputStatus("Voice input not supported in this browser.");
+        // setVoiceInputStatus("Voice input not supported in this browser.");
       }
 
       // Cleanup on unmount
