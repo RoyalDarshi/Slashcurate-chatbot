@@ -648,16 +648,17 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         data: graphData.map((d) => (Number(d[key]) > 0 ? Number(d[key]) : 0)),
         barCategoryGap: "25%",
         barGap: "6%",
+        // ✅ Control width
+        barWidth: graphData.length <= 3 ? 60 : undefined,   // smaller width for single bar
+        barMaxWidth: 60, // optional cap for multi-bar cases
         itemStyle: (params: any) => {
           const { dataIndex } = params;
           const payload = graphData[dataIndex];
-          const topMostKey = [...yKeys]
-            .reverse()
-            .find((k) => Number(payload[k]) > 0);
+          const topMostKey = [...yKeys].reverse().find((k) => Number(payload[k]) > 0);
           const isTopBar = key === topMostKey;
           const solidColor =
             theme.colors.barColors[keyIndex % theme.colors.barColors.length];
-          const radius = 8; // Fixed radius for simplicity
+          const radius = 8;
           return {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
               { offset: 0, color: hexToRgba(solidColor, 1) },
@@ -668,7 +669,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             barBorderRadius: isTopBar ? [radius, radius, 0, 0] : [0, 0, 0, 0],
           };
         },
-      })),
+      }))
+
     };
 
     return (

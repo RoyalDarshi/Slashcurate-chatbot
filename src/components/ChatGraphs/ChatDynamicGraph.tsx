@@ -818,11 +818,13 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         xAxis: chartType !== "scatter" ? xAxisConfig : { type: "value" },
         yAxis: chartType !== "scatter" ? yAxisConfig : { type: "value" },
         series: yKeys.map((key, keyIndex) => {
+          const barCount = graphData.length;
+          const isFewBars = chartType === "bar" && barCount <= 3;
+
           const seriesBase = {
             name: formatKey(key),
             type: chartType === "area" ? "line" : chartType,
-            stack:
-              chartType === "bar" || chartType === "area" ? "a" : undefined,
+            stack: chartType === "bar" || chartType === "area" ? "a" : undefined,
             data:
               chartType === "scatter"
                 ? graphData.map((d, index) => ({
@@ -831,10 +833,22 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 : graphData.map((d) =>
                     Number(d[key]) > 0 ? Number(d[key]) : 0
                   ),
-            barCategoryGap: chartType === "bar" ? "10%" : undefined,
-            barGap: chartType === "bar" ? "6%" : undefined,
-            symbolSize:
-              chartType === "line" || chartType === "scatter" ? 8 : undefined,
+
+            // ✅ Bar width logic for 1–3 bars
+            barCategoryGap: chartType === "bar" ? (isFewBars ? "40%" : "10%") : undefined,
+            barGap: chartType === "bar" ? (isFewBars ? "20%" : "6%") : undefined,
+            barWidth:
+              chartType === "bar"
+                ? barCount === 1
+                  ? 60 // thinner for single bar
+                  : barCount === 2
+                  ? 60 // slightly wider
+                  : barCount === 3
+                  ? 50 // still controlled
+                  : undefined
+                : undefined,
+
+            symbolSize: chartType === "line" || chartType === "scatter" ? 8 : undefined,
             emphasis: {
               disabled: true,
               scale: false,
@@ -913,6 +927,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           };
           return seriesBase;
         }),
+
       };
     };
 
