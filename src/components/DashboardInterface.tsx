@@ -253,7 +253,6 @@ const DashboardInterface = memo(
       const recommendedQuestions = useRecommendedQuestions(token, sessionId);
 
       const [input, setInput] = useState("");
-      const [isSubmitting, setIsSubmitting] = useState(false);
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
       const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
         useState(false);
@@ -313,6 +312,11 @@ const DashboardInterface = memo(
 
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
+      // **FIX 1: Derive `isSubmitting` directly from the history state.**
+      // This is more reliable than using a separate useState and useEffect.
+      const isSubmitting =
+        currentDashboardView?.textualSummary === "Processing your request...";
+
       const isErrorState = currentDashboardView.isError;
 
       useEffect(() => {
@@ -320,19 +324,6 @@ const DashboardInterface = memo(
           setCurrentQuestionId(currentDashboardView.questionMessageId);
         }
       }, [currentDashboardView]);
-
-      useEffect(() => {
-        if (
-          currentDashboardView?.textualSummary === "Processing your request..."
-        ) {
-          setIsSubmitting(true);
-        } else if (
-          isSubmitting &&
-          currentDashboardView?.textualSummary !== "Processing your request..."
-        ) {
-          setIsSubmitting(false);
-        }
-      }, [currentDashboardView, isSubmitting]);
 
       useEffect(() => {
         if (sessionConnection) {
@@ -969,7 +960,6 @@ const DashboardInterface = memo(
             return;
           }
 
-          setIsSubmitting(true);
           setDashboardHistory((prev) => {
             const newHistory = prev.map((item, index) =>
               index === dashboardItemIndex
@@ -1204,7 +1194,7 @@ const DashboardInterface = memo(
             });
           } finally {
             await minLoadingTime;
-            setIsSubmitting(false);
+            // No need to setIsSubmitting(false) as it's now derived
           }
         },
         [
@@ -1251,7 +1241,6 @@ const DashboardInterface = memo(
             return;
           }
 
-          setIsSubmitting(true);
           setDashboardHistory((prev) =>
             prev.map((item, index) =>
               index === dashboardItemIndex
@@ -1393,7 +1382,7 @@ const DashboardInterface = memo(
               },
             });
           } finally {
-            setIsSubmitting(false);
+            // No need to setIsSubmitting(false) as it's now derived
           }
         },
         [
@@ -1423,7 +1412,8 @@ const DashboardInterface = memo(
       );
 
       const handleAskFavoriteQuestion = useCallback(
-        async (question: string, connectionName: string, query?: string) => {
+        (question: string, connectionName: string, query?: string) => {
+          console.log("Connections", connections);
           const connectionObj = connections.find(
             (conn) => conn.connectionName === connectionName
           );
@@ -1434,12 +1424,30 @@ const DashboardInterface = memo(
             return;
           }
           handleNewChat();
-          await new Promise<void>((resolve) => setTimeout(resolve, 0));
           setSelectedConnection(connectionName);
-          await askQuestion(question, connectionName, query);
+          // Use setTimeout to ensure state updates are processed before asking the question
+          setTimeout(() => {
+            askQuestion(question, connectionName, query);
+          }, 0);
         },
         [connections, handleNewChat, setSelectedConnection, askQuestion]
       );
+
+      useEffect(() => {
+        if (initialQuestion && onQuestionAsked && !connectionsLoading) {
+          handleAskFavoriteQuestion(
+            initialQuestion.text,
+            initialQuestion.connection,
+            initialQuestion.query
+          );
+          onQuestionAsked();
+        }
+      }, [
+        initialQuestion,
+        onQuestionAsked,
+        handleAskFavoriteQuestion,
+        connectionsLoading,
+      ]);
 
       const handleToggleFavorite = useCallback(
         async (
@@ -1645,7 +1653,7 @@ const DashboardInterface = memo(
           )}, Main View Data Query: ${
             currentDashboardView.mainViewData.queryData
           }. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
-          const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA"; // Replace with actual API key
+          const apiKey = "YOUR_GEMINI_API_KEY";
 
           const payload = {
             contents: [
@@ -1664,7 +1672,7 @@ const DashboardInterface = memo(
             ],
           };
 
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
           const response = await fetch(apiUrl, {
             method: "POST",
@@ -1701,7 +1709,7 @@ const DashboardInterface = memo(
           toast.error(`Failed to summarize graph: ${errorMessage}`);
           setGraphSummary(`Error: ${errorMessage}`);
         } finally {
-          setIsSubmitting(false);
+          // No need to setIsSubmitting(false)
         }
       }, [currentDashboardView, theme.colors.surface]);
 

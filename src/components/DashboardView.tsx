@@ -217,7 +217,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     }
 
-    const isErrorState = dashboardItem.textualSummary.startsWith("Error:");
+    // **FIX 1: Use the `isError` flag passed in the dashboard item**
+    const isErrorState = dashboardItem.isError;
+
     if (isErrorState) {
       return (
         <div
@@ -311,6 +313,39 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               </div>
             </div>
           )}
+        </div>
+      );
+    }
+
+    // **FIX 2: Add a dedicated view for when the query returns no data.**
+    const hasNoData =
+      !isSubmitting &&
+      dashboardItem.mainViewData.chartData?.length === 0 &&
+      dashboardItem.mainViewData.tableData?.length === 0;
+
+    if (hasNoData) {
+      return (
+        <div
+          className="flex flex-col items-center justify-center h-full p-4"
+          style={{ backgroundColor: theme.colors.background }}
+        >
+          <Table
+            size={48}
+            style={{ color: theme.colors.textSecondary }}
+            className="mb-3"
+          />
+          <h2
+            className="text-xl font-semibold text-center"
+            style={{ color: theme.colors.text }}
+          >
+            Question: {dashboardItem.question}
+          </h2>
+          <p
+            className="mt-1 text-center"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            Your query executed successfully but returned no results.
+          </p>
         </div>
       );
     }
