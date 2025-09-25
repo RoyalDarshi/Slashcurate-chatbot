@@ -42,14 +42,14 @@ const Settings = () => {
             type="checkbox"
             className="sr-only"
             onChange={toggleTheme}
-            checked={theme.colors.background === "#0F172A"} // Dark theme background color
+            checked={theme.mode === "dark"} // Dark theme background color
             aria-label="Toggle dark mode"
           />
           <span
             className="w-10 h-5 rounded-full transition-colors duration-200 ease-in-out"
             style={{
               backgroundColor:
-                theme.colors.background === "#0F172A"
+                theme.mode === "dark"
                   ? theme.colors.accent
                   : `${theme.colors.text}40`,
             }}
@@ -58,9 +58,7 @@ const Settings = () => {
             className="absolute w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out top-0.5 left-0.5"
             style={{
               transform:
-                theme.colors.background === "#0F172A"
-                  ? "translateX(20px)"
-                  : "translateX(0)",
+                theme.mode === "dark" ? "translateX(20px)" : "translateX(0)",
             }}
           ></span>
         </label>

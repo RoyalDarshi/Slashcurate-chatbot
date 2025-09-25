@@ -247,34 +247,47 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
             }}
           >
             {/* Microphone button */}
-            {showMicButton && recognition && micPermissionStatus !== "unsupported" && (
-              <CustomTooltip title={isRecording ? "Stop Voice Input" : "Voice Input"} position="top">
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={handleMicToggle}
-                    disabled={isDisabled || !recognition || micPermissionStatus === "denied"}
-                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0 ${
-                      isRecording ? "animate-pulse" : ""
-                    }`}
-                    style={{
-                      background: isRecording ? theme.colors.error : theme.colors.accent,
-                      color: "white",
-                      boxShadow: isRecording
-                        ? `0 0 15px ${theme.colors.error}60`
-                        : `0 0 10px ${theme.colors.accent}40`,
-                    }}
-                    aria-label={isRecording ? "Stop voice input" : "Start voice input"}
-                  >
-                    {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
-                  </button>
-                  <span
-                    className={`absolute top-0 right-0 block w-3 h-3 rounded-full ring-2 ring-white ${getPermissionIndicatorColor()}`}
-                    title={`Microphone status: ${micPermissionStatus}`}
-                  ></span>
-                </div>
-              </CustomTooltip>
-            )}
+            {showMicButton &&
+              recognition &&
+              micPermissionStatus !== "unsupported" && (
+                <CustomTooltip
+                  title={isRecording ? "Stop Voice Input" : "Voice Input"}
+                  position="top"
+                >
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={handleMicToggle}
+                      disabled={
+                        isDisabled ||
+                        !recognition ||
+                        micPermissionStatus === "denied"
+                      }
+                      className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0 ${
+                        isRecording ? "animate-pulse" : ""
+                      }`}
+                      style={{
+                        background: isRecording
+                          ? theme.colors.error
+                          : theme.colors.accent,
+                        color: "white",
+                        boxShadow: isRecording
+                          ? `0 0 15px ${theme.colors.error}60`
+                          : `0 0 10px ${theme.colors.accent}40`,
+                      }}
+                      aria-label={
+                        isRecording ? "Stop voice input" : "Start voice input"
+                      }
+                    >
+                      {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+                    </button>
+                    <span
+                      className={`absolute top-0 right-0 block w-3 h-3 rounded-full ring-2 ring-white ${getPermissionIndicatorColor()}`}
+                      title={`Microphone status: ${micPermissionStatus}`}
+                    ></span>
+                  </div>
+                </CustomTooltip>
+              )}
 
             {/* Input field */}
             <input
@@ -290,12 +303,15 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                 }
               }}
               placeholder={voiceInputStatus || "Ask about your data..."}
-              className="flex-grow h-10 px-3 text-base border-none rounded-lg focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed placeholder-opacity-50"
+              className="flex-grow h-10 px-3 text-base border-none rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed placeholder-opacity-50"
               style={{
                 backgroundColor: "transparent",
                 color: theme.colors.text,
-                border: theme.mode === "light" ? `1px solid ${theme.colors.border}` : "none",
-                boxShadow: theme.mode === "dark" ? theme.shadow.sm : "none",
+                border:
+                  theme.mode === "light"
+                    ? `1px solid ${theme.colors.border}`
+                    : "none",
+                // boxShadow: theme.mode === "dark" ? theme.shadow.sm : "none",
                 borderRadius: theme.borderRadius.default,
                 fontFamily: theme.typography.fontFamily,
                 fontSize: theme.typography.size.base,
@@ -303,8 +319,12 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                 outline: "none",
                 "--tw-ring-color": theme.colors.accent,
               }}
-              disabled={isDisabled || isRecording || micPermissionStatus === "denied"}
-              aria-disabled={isDisabled || isRecording || micPermissionStatus === "denied"}
+              disabled={
+                isDisabled || isRecording || micPermissionStatus === "denied"
+              }
+              aria-disabled={
+                isDisabled || isRecording || micPermissionStatus === "denied"
+              }
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -317,16 +337,22 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
             <CustomTooltip title="Ask Question" position="top">
               <button
                 type="submit"
-                disabled={isDisabled || isRecording || micPermissionStatus === "denied"}
+                disabled={
+                  isDisabled || isRecording || micPermissionStatus === "denied"
+                }
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
                 style={{
                   background:
-                    isDisabled || isRecording || micPermissionStatus === "denied"
+                    isDisabled ||
+                    isRecording ||
+                    micPermissionStatus === "denied"
                       ? `${theme.colors.text}20`
                       : theme.colors.accent,
                   color: "white",
                   boxShadow:
-                    isDisabled || isRecording || micPermissionStatus === "denied"
+                    isDisabled ||
+                    isRecording ||
+                    micPermissionStatus === "denied"
                       ? "none"
                       : `0 0 10px ${theme.colors.accent}40`,
                 }}
@@ -335,7 +361,10 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                 {isSubmitting ? (
                   <MiniLoader />
                 ) : (
-                  <Send size={18} className="transition-transform duration-300" />
+                  <Send
+                    size={18}
+                    className="transition-transform duration-300"
+                  />
                 )}
               </button>
             </CustomTooltip>

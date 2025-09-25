@@ -2,6 +2,7 @@ import { Theme } from "./types";
 
 export const themes: Record<"light" | "dark", Theme> = {
   light: {
+    mode: "light",
     colors: {
       background: "#F9FAFB",
       surface: "#FFFFFF",
@@ -83,6 +84,7 @@ export const themes: Record<"light" | "dark", Theme> = {
   },
 
   dark: {
+    mode: "dark",
     colors: {
       background: "#111827",
       surface: "#1F2937",
