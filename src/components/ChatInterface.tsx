@@ -808,11 +808,13 @@ const ChatInterface = memo(
             return;
           }
           try {
+            const message = messages.find((msg) => msg.id === messageId);
             await axios.post(
               `${API_URL}/unfavorite`,
               {
                 token,
                 currentConnection: currentConnectionForAction,
+                questionContent: message?.content,
                 questionId: messageId,
               },
               { headers: { "Content-Type": "application/json" } }
