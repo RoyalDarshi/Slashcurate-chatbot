@@ -97,6 +97,51 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const graphContainerRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
 
+    const isKeyExcluded = (key: string): boolean => {
+      const lowerKey = key.toLowerCase();
+      return (
+        /(id|code|number)$/.test(lowerKey) ||
+        lowerKey.includes("date") ||
+        lowerKey.includes("email") ||
+        lowerKey.includes("address") ||
+        lowerKey === "first_name" ||
+        lowerKey === "last_name" ||
+        lowerKey === "name" ||
+        lowerKey.length < 3
+      );
+    };
+
+    const getValidValueKeys = (data: any[]): string[] => {
+      if (!data || data.length === 0) return [];
+      return Object.keys(data[0]).filter(
+        (key) => !isKeyExcluded(key) && typeof data[0][key] === "number"
+      );
+    };
+
+    const getValidCategoricalKeys = (data: any[]): string[] => {
+      if (!data || data.length === 0) return [];
+      return Object.keys(data[0]).filter(
+        (key) =>
+          !isKeyExcluded(key) &&
+          (typeof data[0][key] === "string" ||
+            typeof data[0][key] === "boolean")
+      );
+    };
+
+    useEffect(() => {
+      const chartData = dashboardItem.mainViewData.chartData;
+      if (chartData && chartData.length > 0) {
+        const validKeys = getValidValueKeys(chartData);
+        setGroupBy(getValidCategoricalKeys(chartData)[0] || null);
+        setValueKey(validKeys[0] || null);
+        setAggregate("sum");
+        setGraphType("bar");
+      } else {
+        setGroupBy(null);
+        setValueKey(null);
+      }
+    }, [dashboardItem.mainViewData.chartData]);
+
     useEffect(() => {
       if (graphSummary) setShowSummaryModal(true);
     }, [graphSummary]);
@@ -317,83 +362,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     }
 
-    // **FIX 2: Add a dedicated view for when the query returns no data.**
-    const hasNoData =
-      !isSubmitting &&
-      dashboardItem.mainViewData.chartData?.length === 0 &&
-      dashboardItem.mainViewData.tableData?.length === 0;
-
-    if (hasNoData) {
-      return (
-        <div
-          className="flex flex-col items-center justify-center h-full p-4"
-          style={{ backgroundColor: theme.colors.background }}
-        >
-          <Table
-            size={48}
-            style={{ color: theme.colors.textSecondary }}
-            className="mb-3"
-          />
-          <h2
-            className="text-xl font-semibold text-center"
-            style={{ color: theme.colors.text }}
-          >
-            Question: {dashboardItem.question}
-          </h2>
-          <p
-            className="mt-1 text-center"
-            style={{ color: theme.colors.textSecondary }}
-          >
-            Your query executed successfully but returned no results.
-          </p>
-        </div>
-      );
-    }
-
-    const isKeyExcluded = (key: string): boolean => {
-      const lowerKey = key.toLowerCase();
-      return (
-        /(id|code|number)$/.test(lowerKey) ||
-        lowerKey.includes("date") ||
-        lowerKey.includes("email") ||
-        lowerKey.includes("address") ||
-        lowerKey === "first_name" ||
-        lowerKey === "last_name" ||
-        lowerKey === "name" ||
-        lowerKey.length < 3
-      );
-    };
-
-    const getValidValueKeys = (data: any[]): string[] => {
-      if (!data || data.length === 0) return [];
-      return Object.keys(data[0]).filter(
-        (key) => !isKeyExcluded(key) && typeof data[0][key] === "number"
-      );
-    };
-
-    const getValidCategoricalKeys = (data: any[]): string[] => {
-      if (!data || data.length === 0) return [];
-      return Object.keys(data[0]).filter(
-        (key) =>
-          !isKeyExcluded(key) &&
-          (typeof data[0][key] === "string" ||
-            typeof data[0][key] === "boolean")
-      );
-    };
-
-    useEffect(() => {
-      const chartData = dashboardItem.mainViewData.chartData;
-      if (chartData && chartData.length > 0) {
-        const validKeys = getValidValueKeys(chartData);
-        setGroupBy(getValidCategoricalKeys(chartData)[0] || null);
-        setValueKey(validKeys[0] || null);
-        setAggregate("sum");
-        setGraphType("bar");
-      } else {
-        setGroupBy(null);
-        setValueKey(null);
-      }
-    }, [dashboardItem.mainViewData.chartData]);
 
     return (
       <div>

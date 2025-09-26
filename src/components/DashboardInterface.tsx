@@ -14,7 +14,6 @@ import {
   Message,
   Connection,
   ChatInterfaceProps as DashboardInterfaceProps,
-  Theme,
 } from "../types";
 import { API_URL, CHATBOT_API_URL } from "../config";
 import ChatInput from "./DashboardInput";
@@ -312,8 +311,6 @@ const DashboardInterface = memo(
 
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
-      // **FIX 1: Derive `isSubmitting` directly from the history state.**
-      // This is more reliable than using a separate useState and useEffect.
       const isSubmitting =
         currentDashboardView?.textualSummary === "Processing your request...";
 
@@ -358,7 +355,6 @@ const DashboardInterface = memo(
                 }
               );
               const sessionData = response.data;
-              console.log(sessionData);
               await loadSession(storedSessionId);
 
               const userMessages = sessionData.messages
@@ -558,12 +554,10 @@ const DashboardInterface = memo(
                 : [...prev.slice(0, currentHistoryIndex + 1), newLoadingEntry];
             return newHistory;
           });
-
           setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
           setGraphSummary(null);
 
           let currentSessionId = sessionId;
-
           if (currentSessionId && !sessionConnection) {
             const currentSessionInfo = connections.find(
               (c) => c.connectionName === selectedConnection
@@ -591,25 +585,8 @@ const DashboardInterface = memo(
           }
 
           if (!currentSessionId) {
-            const storedSessionId = localStorage.getItem("currentSessionId");
-            if (storedSessionId) {
-              try {
-                await loadSession(storedSessionId);
-                currentSessionId = storedSessionId;
-              } catch (error) {
-                console.error(
-                  "Failed to load stored session from localStorage (askQuestion):",
-                  error
-                );
-                localStorage.removeItem("currentSessionId");
-                localStorage.removeItem("currentDashboardQuestionId");
-              }
-            }
-          }
-
-          if (!currentSessionId) {
             try {
-              const newSessId: string = await startNewSession(
+              const newSessId: any = await startNewSession(
                 connection,
                 question
               );
@@ -775,7 +752,7 @@ const DashboardInterface = memo(
               const response = await axios.post(
                 `${CHATBOT_API_URL}/ask`,
                 payload,
-                { timeout: 30000 }
+                { timeout: 3600000 }
               );
 
               const botResponseData = response.data;
@@ -1194,7 +1171,6 @@ const DashboardInterface = memo(
             });
           } finally {
             await minLoadingTime;
-            // No need to setIsSubmitting(false) as it's now derived
           }
         },
         [
@@ -1381,8 +1357,6 @@ const DashboardInterface = memo(
                 dislike_reason: null,
               },
             });
-          } finally {
-            // No need to setIsSubmitting(false) as it's now derived
           }
         },
         [
@@ -1412,8 +1386,7 @@ const DashboardInterface = memo(
       );
 
       const handleAskFavoriteQuestion = useCallback(
-        (question: string, connectionName: string, query?: string) => {
-          console.log("Connections", connections);
+        async (question: string, connectionName: string, query?: string) => {
           const connectionObj = connections.find(
             (conn) => conn.connectionName === connectionName
           );
@@ -1423,14 +1396,21 @@ const DashboardInterface = memo(
             );
             return;
           }
+
+          // Inspired by ChatInterface.tsx: always start a new chat for a favorite question on the dashboard
+          // to provide a clean slate for the visualization.
           handleNewChat();
           setSelectedConnection(connectionName);
-          // Use setTimeout to ensure state updates are processed before asking the question
-          setTimeout(() => {
-            askQuestion(question, connectionName, query);
-          }, 0);
+          localStorage.setItem("selectedConnection", connectionName);
+
+          // This promise with a timeout is crucial. It pauses execution, allowing React
+          // to process the state updates from handleNewChat() and re-render the component.
+          // Without this, askQuestion() would run before the state is cleared, causing issues.
+          await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+          await askQuestion(question, connectionName, query);
         },
-        [connections, handleNewChat, setSelectedConnection, askQuestion]
+        [connections, askQuestion, handleNewChat, setSelectedConnection]
       );
 
       useEffect(() => {
@@ -1708,8 +1688,6 @@ const DashboardInterface = memo(
           const errorMessage = getErrorMessage(error);
           toast.error(`Failed to summarize graph: ${errorMessage}`);
           setGraphSummary(`Error: ${errorMessage}`);
-        } finally {
-          // No need to setIsSubmitting(false)
         }
       }, [currentDashboardView, theme.colors.surface]);
 
