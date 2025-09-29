@@ -153,10 +153,6 @@ const createDashboardItemFromMessages = (
   botMessage: Message | undefined,
   connectionName: string
 ): DashboardItem | null => {
-  if (!botMessage || botMessage.content === "loading...") {
-    return null;
-  }
-
   const baseItem = {
     id: generateId(),
     question: userMessage.content,
@@ -164,13 +160,23 @@ const createDashboardItemFromMessages = (
     isFavorited: userMessage.isFavorited,
     questionMessageId: userMessage.id,
     connectionName: connectionName,
-    reaction: sanitizeReaction(botMessage.reaction),
-    dislike_reason: botMessage.dislike_reason ?? null,
-    botResponseId: botMessage.id,
+    reaction: botMessage ? sanitizeReaction(botMessage.reaction) : null,
+    dislike_reason: botMessage ? botMessage.dislike_reason ?? null : null,
+    botResponseId: botMessage ? botMessage.id : "",
     isError: false,
   };
 
-  if (botMessage.content === "Sorry, an error occurred. Please try again.") {
+  if (!botMessage) {
+    return null;
+  } else if (botMessage.content === "loading...") {
+    return {
+      ...baseItem,
+      ...getDashboardLoadingState(),
+      isError: false,
+    };
+  } else if (
+    botMessage.content === "Sorry, an error occurred. Please try again."
+  ) {
     return {
       ...baseItem,
       ...getDashboardErrorState(
@@ -262,6 +268,7 @@ const DashboardInterface = memo(
       const [sessionConnectionError, setSessionConnectionError] = useState<
         string | null
       >(null);
+      const [isSubmitting, setIsSubmitting] = useState(false);
 
       const options = [
         {
@@ -311,10 +318,107 @@ const DashboardInterface = memo(
 
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
-      const isSubmitting =
-        currentDashboardView?.textualSummary === "Processing your request...";
-
-      const isErrorState = currentDashboardView.isError;
+      useEffect(() => {
+        const loadingMessages = messages.filter(
+          (msg) => msg.isBot && msg.content === "loading..."
+        );
+        if (loadingMessages.length === 0) {
+          setIsSubmitting(false);
+          return;
+        }
+        setIsSubmitting(true);
+        const interval = setInterval(async () => {
+          try {
+            for (const msg of loadingMessages) {
+              const response = await axios.post(
+                `${API_URL}/api/getmessages/${msg.id}`,
+                { token },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              if (response.data.content !== "loading...") {
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: msg.id,
+                  message: {
+                    content: response.data.content,
+                    timestamp: response.data.timestamp,
+                    reaction: sanitizeReaction(response.data.reaction),
+                    dislike_reason: response.data.dislike_reason ?? null,
+                  },
+                });
+                // Update dashboardHistory based on the new bot content
+                setDashboardHistory((prev) =>
+                  prev.map((item) => {
+                    if (item.botResponseId === msg.id) {
+                      if (
+                        response.data.content ===
+                        "Sorry, an error occurred. Please try again."
+                      ) {
+                        return {
+                          ...item,
+                          ...getDashboardErrorState(
+                            item.question,
+                            "Sorry, an error occurred. Please try again."
+                          ),
+                          isError: true,
+                        };
+                      } else {
+                        try {
+                          const botResponseContent = JSON.parse(
+                            response.data.content
+                          );
+                          const actualKpiData =
+                            botResponseContent.kpiData || initialEmptyKpiData;
+                          const actualMainViewData = {
+                            chartData: Array.isArray(botResponseContent.answer)
+                              ? botResponseContent.answer
+                              : [],
+                            tableData: Array.isArray(botResponseContent.answer)
+                              ? botResponseContent.answer
+                              : [],
+                            queryData:
+                              typeof botResponseContent.sql_query === "string"
+                                ? botResponseContent.sql_query
+                                : "No query available.",
+                          };
+                          const actualTextualSummary =
+                            botResponseContent.textualSummary ||
+                            `Here is the analysis for: "${item.question}"`;
+                          return {
+                            ...item,
+                            kpiData: actualKpiData,
+                            mainViewData: actualMainViewData,
+                            textualSummary: actualTextualSummary,
+                            isError: false,
+                          };
+                        } catch (parseError) {
+                          console.error(
+                            "Failed to parse polled bot response:",
+                            parseError
+                          );
+                          return {
+                            ...item,
+                            ...getDashboardErrorState(
+                              item.question,
+                              "Sorry, an error occurred. Please try again."
+                            ),
+                            isError: true,
+                          };
+                        }
+                      }
+                    }
+                    return item;
+                  })
+                );
+              }
+            }
+          } catch (error) {
+            setIsSubmitting(false);
+            console.error("Error polling message updates:", error);
+          }
+        }, 2000);
+        return () => clearInterval(interval);
+      }, [messages, token, dispatchMessages]);
 
       useEffect(() => {
         if (currentDashboardView?.questionMessageId) {
@@ -512,7 +616,6 @@ const DashboardInterface = memo(
             );
             const newSessionId = response.data.id;
             localStorage.setItem("currentSessionId", newSessionId);
-            localStorage.removeItem("currentDashboardQuestionId");
             return newSessionId;
           } catch (error) {
             console.error("Error creating new session:", error);
@@ -670,26 +773,6 @@ const DashboardInterface = memo(
               message: finalUserMessage,
             });
 
-            setDashboardHistory((prev) =>
-              prev.map((item) =>
-                item.id === newLoadingEntryId
-                  ? {
-                      ...item,
-                      questionMessageId: finalUserMessageId,
-                      isFavorited: finalUserMessage.isFavorited,
-                      connectionName: connection,
-                    }
-                  : item
-              )
-            );
-
-            if (finalUserMessageId) {
-              localStorage.setItem(
-                "currentDashboardQuestionId",
-                finalUserMessageId
-              );
-            }
-
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -702,7 +785,7 @@ const DashboardInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            botMessageId = botLoadingResponse?.data?.id;
+            botMessageId = botLoadingResponse.data.id;
             const botLoadingMessage: Message = {
               id: botMessageId,
               isBot: true,
@@ -721,6 +804,7 @@ const DashboardInterface = memo(
                 item.id === newLoadingEntryId
                   ? {
                       ...item,
+                      questionMessageId: finalUserMessageId,
                       botResponseId: botMessageId,
                     }
                   : item
@@ -751,54 +835,9 @@ const DashboardInterface = memo(
                   };
               const response = await axios.post(
                 `${CHATBOT_API_URL}/ask`,
-                payload,
-                { timeout: 3600000 }
+                payload
               );
-
-              const botResponseData = response.data;
-
-              const actualKpiData =
-                botResponseData.kpiData || initialEmptyKpiData;
-
-              const actualMainViewData = {
-                chartData: Array.isArray(botResponseData.answer)
-                  ? botResponseData.answer
-                  : [],
-                tableData: Array.isArray(botResponseData.answer)
-                  ? botResponseData.answer
-                  : [],
-                queryData:
-                  typeof botResponseData.sql_query === "string"
-                    ? botResponseData.sql_query
-                    : "No query available.",
-              };
-
-              const actualTextualSummary =
-                botResponseData.textualSummary ||
-                `Here is the analysis for: "${question}"`;
-
-              setDashboardHistory((prev) =>
-                prev.map((item) =>
-                  item.id === newLoadingEntryId
-                    ? {
-                        ...item,
-                        kpiData: actualKpiData,
-                        mainViewData: actualMainViewData,
-                        textualSummary: actualTextualSummary,
-                        reaction: sanitizeReaction(botResponseData.reaction),
-                        dislike_reason: botResponseData.dislike_reason ?? null,
-                        botResponseId: botMessageId,
-                        isError: false,
-                      }
-                    : item
-                )
-              );
-
-              const botResponseContent = JSON.stringify(
-                botResponseData,
-                null,
-                2
-              );
+              const botResponseContent = JSON.stringify(response.data, null, 2);
 
               await axios.put(
                 `${API_URL}/api/messages/${botMessageId}`,
@@ -806,8 +845,6 @@ const DashboardInterface = memo(
                   token,
                   content: botResponseContent,
                   timestamp: new Date().toISOString(),
-                  reaction: sanitizeReaction(botResponseData.reaction),
-                  dislike_reason: botResponseData.dislike_reason ?? null,
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
@@ -815,86 +852,101 @@ const DashboardInterface = memo(
               const updatedBotMessage: Partial<Message> = {
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
-                reaction: sanitizeReaction(botResponseData.reaction),
-                dislike_reason: botResponseData.dislike_reason ?? null,
               };
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
                 id: botMessageId!,
                 message: updatedBotMessage,
               });
+
+              // Update dashboard item with response
+              try {
+                const botResponseContentParsed = JSON.parse(botResponseContent);
+                const actualKpiData =
+                  botResponseContentParsed.kpiData || initialEmptyKpiData;
+                const actualMainViewData = {
+                  chartData: Array.isArray(botResponseContentParsed.answer)
+                    ? botResponseContentParsed.answer
+                    : [],
+                  tableData: Array.isArray(botResponseContentParsed.answer)
+                    ? botResponseContentParsed.answer
+                    : [],
+                  queryData:
+                    typeof botResponseContentParsed.sql_query === "string"
+                      ? botResponseContentParsed.sql_query
+                      : "No query available.",
+                };
+                const actualTextualSummary =
+                  botResponseContentParsed.textualSummary ||
+                  `Here is the analysis for: "${question}"`;
+
+                setDashboardHistory((prev) =>
+                  prev.map((item) =>
+                    item.id === newLoadingEntryId
+                      ? {
+                          ...item,
+                          kpiData: actualKpiData,
+                          mainViewData: actualMainViewData,
+                          textualSummary: actualTextualSummary,
+                          isError: false,
+                        }
+                      : item
+                  )
+                );
+              } catch (parseError) {
+                console.error(
+                  "Failed to parse bot response content:",
+                  parseError
+                );
+                setDashboardHistory((prev) =>
+                  prev.map((item) =>
+                    item.id === newLoadingEntryId
+                      ? {
+                          ...item,
+                          ...getDashboardErrorState(
+                            question,
+                            "Sorry, an error occurred. Please try again."
+                          ),
+                          isError: true,
+                        }
+                      : item
+                  )
+                );
+              }
             } catch (error) {
               console.error("Error getting bot response:", error);
-              const errorContent =
-                "Sorry, an error occurred. Please try again.";
+              const errorContent = getErrorMessage(error);
 
+              await axios.put(
+                `${API_URL}/api/messages/${botMessageId}`,
+                {
+                  token,
+                  content: errorContent,
+                  timestamp: new Date().toISOString(),
+                },
+                { headers: { "Content-Type": "application/json" } }
+              );
+
+              const errorMessageUpdate: Partial<Message> = {
+                content: errorContent,
+                timestamp: new Date().toISOString(),
+              };
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessageId,
+                message: errorMessageUpdate,
+              });
               setDashboardHistory((prev) =>
                 prev.map((item) =>
                   item.id === newLoadingEntryId
                     ? {
                         ...item,
                         ...getDashboardErrorState(question, errorContent),
-                        textualSummary: errorContent,
-                        isFavorited: item.isFavorited,
-                        questionMessageId: item.questionMessageId,
-                        connectionName: item.connectionName,
-                        reaction: null,
-                        dislike_reason: null,
-                        botResponseId: botMessageId,
                         isError: true,
                       }
                     : item
                 )
               );
-
-              if (botMessageId) {
-                await axios
-                  .put(
-                    `${API_URL}/api/messages/${botMessageId}`,
-                    {
-                      token,
-                      content: errorContent,
-                      timestamp: new Date().toISOString(),
-                      reaction: null,
-                      dislike_reason: null,
-                    },
-                    { headers: { "Content-Type": "application/json" } }
-                  )
-                  .catch((updateError) =>
-                    console.error(
-                      "Failed to update message to error state on server:",
-                      updateError
-                    )
-                  );
-
-                const errorMessageUpdate: Partial<Message> = {
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                  reaction: null,
-                  dislike_reason: null,
-                };
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessageId,
-                  message: errorMessageUpdate,
-                });
-              } else {
-                console.error(
-                  "botMessageId is null when trying to update with error for /ask"
-                );
-                const generalErrorMessage: Message = {
-                  id: `error-${Date.now().toString()}`,
-                  content: errorContent,
-                  isBot: true,
-                  timestamp: new Date().toISOString(),
-                  isFavorited: false,
-                  parentId: finalUserMessageId,
-                };
-                dispatchMessages({
-                  type: "ADD_MESSAGE",
-                  message: generalErrorMessage,
-                });
-              }
             }
           } catch (error) {
             console.error(
@@ -902,11 +954,20 @@ const DashboardInterface = memo(
               error
             );
             toast.error(`Failed to send message: ${getErrorMessage(error)}`);
-
             setDashboardHistory((prev) =>
-              prev.filter((item) => item.id !== newLoadingEntryId)
+              prev.map((item) =>
+                item.id === newLoadingEntryId
+                  ? {
+                      ...item,
+                      ...getDashboardErrorState(
+                        question,
+                        getErrorMessage(error)
+                      ),
+                      isError: true,
+                    }
+                  : item
+              )
             );
-            setCurrentHistoryIndex((prevIndex) => Math.max(0, prevIndex - 1));
           }
         },
         [
@@ -918,477 +979,13 @@ const DashboardInterface = memo(
           loadSession,
           selectedConnection,
           currentHistoryIndex,
-          startNewSession,
         ]
-      );
-
-      const handleEditQuestion = useCallback(
-        async (questionMessageId: string, newQuestion: string) => {
-          if (!sessionId) {
-            toast.error("No active session to edit the question.");
-            return;
-          }
-
-          const dashboardItemIndex = dashboardHistory.findIndex(
-            (item) => item.questionMessageId === questionMessageId
-          );
-          if (dashboardItemIndex === -1) {
-            toast.error("Dashboard item not found for the given question.");
-            return;
-          }
-
-          setDashboardHistory((prev) => {
-            const newHistory = prev.map((item, index) =>
-              index === dashboardItemIndex
-                ? {
-                    ...item,
-                    question: newQuestion,
-                    ...getDashboardLoadingState(),
-                    isError: false,
-                  }
-                : item
-            );
-            return newHistory;
-          });
-
-          const minLoadingTime = new Promise((resolve) =>
-            setTimeout(resolve, 500)
-          );
-
-          try {
-            await axios.put(
-              `${API_URL}/api/messages/${questionMessageId}`,
-              {
-                token,
-                content: newQuestion,
-                timestamp: new Date().toISOString(),
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: questionMessageId,
-              message: {
-                content: newQuestion,
-                timestamp: new Date().toISOString(),
-              },
-            });
-
-            const botMessage = messages.find(
-              (msg) => msg.isBot && msg.parentId === questionMessageId
-            );
-
-            if (botMessage) {
-              await axios.put(
-                `${API_URL}/api/messages/${botMessage.id}`,
-                {
-                  token,
-                  content: "loading...",
-                  timestamp: new Date().toISOString(),
-                  reaction: null,
-                  dislike_reason: null,
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: botMessage.id,
-                message: {
-                  content: "loading...",
-                  timestamp: new Date().toISOString(),
-                  reaction: null,
-                  dislike_reason: null,
-                },
-              });
-
-              try {
-                const connectionObj = connections.find(
-                  (conn) => conn.connectionName === selectedConnection
-                );
-                if (!connectionObj) {
-                  throw new Error("Selected connection not found.");
-                }
-
-                const payload = {
-                  question: newQuestion,
-                  connection: connectionObj,
-                  sessionId,
-                };
-                const response = await axios.post(
-                  `${CHATBOT_API_URL}/ask`,
-                  payload
-                );
-                const botResponseData = response.data;
-
-                const actualKpiData =
-                  botResponseData.kpiData || initialEmptyKpiData;
-                const actualMainViewData = {
-                  chartData: Array.isArray(botResponseData.answer)
-                    ? botResponseData.answer
-                    : [],
-                  tableData: Array.isArray(botResponseData.answer)
-                    ? botResponseData.answer
-                    : [],
-                  queryData:
-                    typeof botResponseData.sql_query === "string"
-                      ? botResponseData.sql_query
-                      : "No query available.",
-                };
-                const actualTextualSummary =
-                  botResponseData.textualSummary ||
-                  "Here is the analysis for the updated question.";
-
-                const botResponseContent = JSON.stringify(
-                  botResponseData,
-                  null,
-                  2
-                );
-                await axios.put(
-                  `${API_URL}/api/messages/${botMessage.id}`,
-                  {
-                    token,
-                    content: botResponseContent,
-                    timestamp: new Date().toISOString(),
-                    reaction: sanitizeReaction(botResponseData.reaction),
-                    dislike_reason: botResponseData.dislike_reason ?? null,
-                  },
-                  { headers: { "Content-Type": "application/json" } }
-                );
-
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessage.id,
-                  message: {
-                    content: botResponseContent,
-                    timestamp: new Date().toISOString(),
-                    reaction: sanitizeReaction(botResponseData.reaction),
-                    dislike_reason: botResponseData.dislike_reason ?? null,
-                  },
-                });
-
-                setDashboardHistory((prev) => {
-                  const newHistory = prev.map((item, index) =>
-                    index === dashboardItemIndex
-                      ? {
-                          ...item,
-                          kpiData: actualKpiData,
-                          mainViewData: actualMainViewData,
-                          textualSummary: actualTextualSummary,
-                          reaction: sanitizeReaction(botResponseData.reaction),
-                          dislike_reason:
-                            botResponseData.dislike_reason ?? null,
-                          botResponseId: botMessage.id,
-                          isError: false,
-                        }
-                      : item
-                  );
-                  return newHistory;
-                });
-              } catch (error) {
-                console.error(
-                  "Error getting bot response for edited question:",
-                  error
-                );
-                let errorContent =
-                  "Sorry, an error occurred. Please try again.";
-                if (
-                  axios.isAxiosError(error) &&
-                  error.code === "ECONNABORTED"
-                ) {
-                  errorContent = "Request timed out. Please try again.";
-                }
-                await axios.put(
-                  `${API_URL}/api/messages/${botMessage.id}`,
-                  {
-                    token,
-                    content: errorContent,
-                    timestamp: new Date().toISOString(),
-                    reaction: null,
-                    dislike_reason: null,
-                  },
-                  { headers: { "Content-Type": "application/json" } }
-                );
-
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessage.id,
-                  message: {
-                    content: errorContent,
-                    timestamp: new Date().toISOString(),
-                    reaction: null,
-                    dislike_reason: null,
-                  },
-                });
-
-                setDashboardHistory((prev) => {
-                  const newHistory = prev.map((item, index) =>
-                    index === dashboardItemIndex
-                      ? {
-                          ...item,
-                          question: newQuestion,
-                          ...getDashboardErrorState(newQuestion, errorContent),
-                          textualSummary: errorContent,
-                          reaction: null,
-                          dislike_reason: null,
-                          botResponseId: botMessage.id,
-                          isError: true,
-                        }
-                      : item
-                  );
-                  return newHistory;
-                });
-              }
-            } else {
-              toast.error(
-                "No corresponding bot response found for the question."
-              );
-            }
-          } catch (error) {
-            console.error("Error updating user message:", error);
-            toast.error(`Failed to update message: ${getErrorMessage(error)}`);
-            setDashboardHistory((prev) => {
-              const newHistory = prev.map((item, index) =>
-                index === dashboardItemIndex
-                  ? {
-                      ...item,
-                      question: newQuestion,
-                      ...getDashboardErrorState(
-                        newQuestion,
-                        "Sorry, an error occurred. Please try again."
-                      ),
-                      textualSummary:
-                        "Sorry, an error occurred. Please try again.",
-                      reaction: null,
-                      dislike_reason: null,
-                      botResponseId: "",
-                      isError: true,
-                    }
-                  : item
-              );
-              return newHistory;
-            });
-          } finally {
-            await minLoadingTime;
-          }
-        },
-        [
-          sessionId,
-          dashboardHistory,
-          token,
-          connections,
-          selectedConnection,
-          dispatchMessages,
-          messages,
-        ]
-      );
-
-      const handleRetry = useCallback(
-        async (questionMessageId: string) => {
-          const dashboardItemIndex = dashboardHistory.findIndex(
-            (item) => item.questionMessageId === questionMessageId
-          );
-          if (dashboardItemIndex === -1) {
-            toast.error("Dashboard item not found for retry.");
-            return;
-          }
-          const dashboardItem = dashboardHistory[dashboardItemIndex];
-          const { question, connectionName } = dashboardItem;
-
-          const botMessage = messages.find(
-            (msg) => msg.isBot && msg.parentId === questionMessageId
-          );
-          if (!botMessage) {
-            toast.error("Bot response not found for retry.");
-            return;
-          }
-
-          const connectionObj = connections.find(
-            (conn) => conn.connectionName === connectionName
-          );
-          if (!connectionObj) {
-            toast.error("Connection details not found for retry.");
-            return;
-          }
-
-          if (!sessionId) {
-            toast.error("Session ID is missing, cannot retry.");
-            return;
-          }
-
-          setDashboardHistory((prev) =>
-            prev.map((item, index) =>
-              index === dashboardItemIndex
-                ? { ...item, ...getDashboardLoadingState(), isError: false }
-                : item
-            )
-          );
-
-          try {
-            await axios.put(
-              `${API_URL}/api/messages/${botMessage.id}`,
-              {
-                token,
-                content: "loading...",
-                timestamp: new Date().toISOString(),
-                reaction: null,
-                dislike_reason: null,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessage.id,
-              message: {
-                content: "loading...",
-                timestamp: new Date().toISOString(),
-                reaction: null,
-                dislike_reason: null,
-              },
-            });
-
-            const payload = {
-              question,
-              connection: connectionObj,
-              sessionId,
-            };
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              payload
-            );
-            const botResponseData = response.data;
-
-            const actualKpiData =
-              botResponseData.kpiData || initialEmptyKpiData;
-            const actualMainViewData = {
-              chartData: Array.isArray(botResponseData.answer)
-                ? botResponseData.answer
-                : [],
-              tableData: Array.isArray(botResponseData.answer)
-                ? botResponseData.answer
-                : [],
-              queryData:
-                typeof botResponseData.sql_query === "string"
-                  ? botResponseData.sql_query
-                  : "No query available.",
-            };
-            const actualTextualSummary =
-              botResponseData.textualSummary ||
-              `Here is the analysis for: "${question}"`;
-
-            setDashboardHistory((prev) =>
-              prev.map((item, index) =>
-                index === dashboardItemIndex
-                  ? {
-                      ...item,
-                      kpiData: actualKpiData,
-                      mainViewData: actualMainViewData,
-                      textualSummary: actualTextualSummary,
-                      reaction: sanitizeReaction(botResponseData.reaction),
-                      dislike_reason: botResponseData.dislike_reason ?? null,
-                      botResponseId: botMessage.id,
-                      isError: false,
-                    }
-                  : item
-              )
-            );
-
-            const botResponseContent = JSON.stringify(botResponseData, null, 2);
-            await axios.put(
-              `${API_URL}/api/messages/${botMessage.id}`,
-              {
-                token,
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-                reaction: sanitizeReaction(botResponseData.reaction),
-                dislike_reason: botResponseData.dislike_reason ?? null,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessage.id,
-              message: {
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-                reaction: sanitizeReaction(botResponseData.reaction),
-                dislike_reason: botResponseData.dislike_reason ?? null,
-              },
-            });
-          } catch (error) {
-            console.error("Error during retry:", error);
-            const errorContent = "Sorry, an error occurred. Please try again.";
-
-            setDashboardHistory((prev) =>
-              prev.map((item, index) =>
-                index === dashboardItemIndex
-                  ? {
-                      ...item,
-                      ...getDashboardErrorState(question, errorContent),
-                      textualSummary: errorContent,
-                      reaction: null,
-                      dislike_reason: null,
-                      botResponseId: botMessage.id,
-                      isError: true,
-                    }
-                  : item
-              )
-            );
-
-            await axios.put(
-              `${API_URL}/api/messages/${botMessage.id}`,
-              {
-                token,
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-                reaction: null,
-                dislike_reason: null,
-              },
-              { headers: { "Content-Type": "application/json" } }
-            );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessage.id,
-              message: {
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-                reaction: null,
-                dislike_reason: null,
-              },
-            });
-          }
-        },
-        [
-          dashboardHistory,
-          messages,
-          connections,
-          sessionId,
-          token,
-          dispatchMessages,
-        ]
-      );
-
-      const handleSubmit = useCallback(
-        async (e: React.FormEvent) => {
-          e.preventDefault();
-          if (!input.trim() || isSubmitting) return;
-          if (!selectedConnection) {
-            toast.error("No connection selected.");
-            return;
-          }
-
-          const questionToAsk = input;
-          setInput("");
-          await askQuestion(questionToAsk, selectedConnection);
-        },
-        [input, isSubmitting, selectedConnection, askQuestion]
       );
 
       const handleAskFavoriteQuestion = useCallback(
-        async (question: string, connectionName: string, query?: string) => {
+        async (question: string, connection: string, query?: string) => {
           const connectionObj = connections.find(
-            (conn) => conn.connectionName === connectionName
+            (conn) => conn.connectionName === connection
           );
           if (!connectionObj) {
             toast.error(
@@ -1397,37 +994,72 @@ const DashboardInterface = memo(
             return;
           }
 
-          // Inspired by ChatInterface.tsx: always start a new chat for a favorite question on the dashboard
-          // to provide a clean slate for the visualization.
-          handleNewChat();
-          setSelectedConnection(connectionName);
-          localStorage.setItem("selectedConnection", connectionName);
-
-          // This promise with a timeout is crucial. It pauses execution, allowing React
-          // to process the state updates from handleNewChat() and re-render the component.
-          // Without this, askQuestion() would run before the state is cleared, causing issues.
-          await new Promise<void>((resolve) => setTimeout(resolve, 50));
-
-          await askQuestion(question, connectionName, query);
+          if (sessionId && sessionConnection === connection) {
+            await askQuestion(question, connection, query);
+          } else {
+            handleNewChat();
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+            setSelectedConnection(connection);
+            await askQuestion(question, connection, query);
+          }
         },
-        [connections, askQuestion, handleNewChat, setSelectedConnection]
+        [
+          sessionId,
+          sessionConnection,
+          connections,
+          askQuestion,
+          handleNewChat,
+          setSelectedConnection,
+        ]
       );
 
-      useEffect(() => {
-        if (initialQuestion && onQuestionAsked && !connectionsLoading) {
-          handleAskFavoriteQuestion(
-            initialQuestion.text,
-            initialQuestion.connection,
-            initialQuestion.query
-          );
-          onQuestionAsked();
-        }
-      }, [
-        initialQuestion,
-        onQuestionAsked,
-        handleAskFavoriteQuestion,
-        connectionsLoading,
-      ]);
+      const handleConnectionSelect = useCallback(
+        (value: string) => {
+          if (value === "create-con") {
+            onCreateConSelected();
+          } else {
+            setSelectedConnection(value);
+          }
+          setIsConnectionDropdownOpen(false);
+        },
+        [onCreateConSelected, setSelectedConnection]
+      );
+
+      const handlePdfClick = useCallback(
+        async (connectionName: string, e: React.MouseEvent) => {
+          e.stopPropagation();
+          try {
+            const response = await axios.get(
+              `${API_URL}/api/connections/${connectionName}/atlas`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: "blob",
+              }
+            );
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", `${connectionName}_data_atlas.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          } catch (error) {
+            console.error("Error downloading PDF:", error);
+            toast.error("Failed to download Data Atlas PDF.");
+          }
+        },
+        [token]
+      );
+
+      const handleSubmit = useCallback(
+        (e: React.FormEvent) => {
+          e.preventDefault();
+          if (!input.trim() || !selectedConnection || isSubmitting) return;
+          askQuestion(input, selectedConnection);
+          setInput("");
+        },
+        [askQuestion, input, selectedConnection, isSubmitting]
+      );
 
       const handleToggleFavorite = useCallback(
         async (
@@ -1437,204 +1069,85 @@ const DashboardInterface = memo(
           currentConnection: string,
           isCurrentlyFavorited: boolean
         ) => {
-          if (!token) {
-            toast.error("Authentication required to favorite/unfavorite.");
-            return;
-          }
-
           try {
-            if (isCurrentlyFavorited) {
-              await axios.post(
-                `${API_URL}/unfavorite`,
-                {
-                  questionId: questionMessageId,
-                  uid: "user1",
-                  currentConnection,
-                  questionContent,
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-            } else {
-              await axios.post(
-                `${API_URL}/favorite`,
-                {
-                  questionId: questionMessageId,
-                  questionContent,
-                  responseQuery,
-                  currentConnection,
-                  uid: "user1",
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-            }
-
-            setDashboardHistory((prevHistory) =>
-              prevHistory.map((item) =>
-                item.questionMessageId === questionMessageId
-                  ? { ...item, isFavorited: !isCurrentlyFavorited }
-                  : item
-              )
-            );
-
+            await axios.post(`${API_URL}/api/favorites`, {
+              token,
+              question: questionContent,
+              connection: currentConnection,
+              query: responseQuery,
+              isFavorited: !isCurrentlyFavorited,
+            });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: questionMessageId,
               message: { isFavorited: !isCurrentlyFavorited },
             });
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.questionMessageId === questionMessageId
+                  ? { ...item, isFavorited: !isCurrentlyFavorited }
+                  : item
+              )
+            );
           } catch (error) {
             console.error("Error toggling favorite:", error);
-            toast.error(`Failed to toggle favorite: ${getErrorMessage(error)}`);
+            toast.error("Failed to toggle favorite.");
           }
         },
         [token, dispatchMessages]
       );
 
       const handleUpdateReaction = useCallback(
-        (
+        async (
           questionMessageId: string,
           reaction: "like" | "dislike" | null,
           dislike_reason: string | null
         ) => {
-          setDashboardHistory((prevHistory) =>
-            prevHistory.map((item) =>
-              item.questionMessageId === questionMessageId
-                ? { ...item, reaction, dislike_reason }
-                : item
-            )
+          const item = dashboardHistory.find(
+            (i) => i.questionMessageId === questionMessageId
           );
-
-          const botMessage = messages.find(
-            (msg) => msg.isBot && msg.parentId === questionMessageId
-          );
-          if (botMessage) {
+          if (!item) return;
+          try {
+            await axios.post(
+              `${API_URL}/api/messages/${item.botResponseId}/reaction`,
+              {
+                token,
+                reaction,
+                dislike_reason,
+              }
+            );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
-              id: botMessage.id,
+              id: item.botResponseId,
               message: { reaction, dislike_reason },
             });
-          }
-        },
-        [messages, dispatchMessages]
-      );
-
-      const handleConnectionSelect = useCallback(
-        (connection: string | null) => {
-          if (connection === "create-con") {
-            onCreateConSelected();
-            if (sessionId) handleNewChat();
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
-          } else {
-            const selectedConnectionObj = connections.find(
-              (conn) => conn.connectionName === connection
+            setDashboardHistory((prev) =>
+              prev.map((i) =>
+                i.questionMessageId === questionMessageId
+                  ? { ...i, reaction, dislike_reason }
+                  : i
+              )
             );
-            if (selectedConnectionObj) {
-              if (
-                selectedConnection !== selectedConnectionObj.connectionName ||
-                !sessionId
-              ) {
-                handleNewChat();
-                setSelectedConnection(selectedConnectionObj.connectionName);
-                localStorage.setItem(
-                  "selectedConnection",
-                  selectedConnectionObj.connectionName
-                );
-              }
-            } else {
-              if (selectedConnection) handleNewChat();
-              setSelectedConnection(null);
-              localStorage.removeItem("selectedConnection");
-            }
-          }
-          setIsConnectionDropdownOpen(false);
-        },
-        [
-          onCreateConSelected,
-          handleNewChat,
-          setSelectedConnection,
-          sessionId,
-          selectedConnection,
-          connections,
-        ]
-      );
-
-      const handlePdfClick = useCallback(
-        async (connection: string, e: React.MouseEvent) => {
-          e.stopPropagation();
-          try {
-            const response = await axios.get(
-              `${API_URL}/api/data-atlas/${connection}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-                responseType: "blob",
-              }
-            );
-            const pdfBlob = new Blob([response.data], {
-              type: "application/pdf",
-            });
-            const url = window.URL.createObjectURL(pdfBlob);
-            window.open(url, "_blank");
-            window.URL.revokeObjectURL(url);
-            toast.success(`Opened Data Atlas for ${connection}`);
           } catch (error) {
-            console.error("Error fetching Data Atlas:", error);
-            toast.error(`Failed to open Data Atlas: ${getErrorMessage(error)}`);
+            console.error("Error updating reaction:", error);
+            toast.error("Failed to update reaction.");
           }
         },
-        [token]
+        [token, dispatchMessages, dashboardHistory]
       );
 
       const handleSummarizeGraph = useCallback(async () => {
-        if (!dashboardViewRef.current) {
-          toast.error("Graph component not ready for summarization.");
+        const graphContainer = dashboardViewRef.current?.getGraphContainer();
+        if (!graphContainer) {
+          toast.error("No graph element to summarize.");
           return;
         }
-
-        const graphElement = dashboardViewRef.current.getGraphContainer();
-
-        if (!graphElement) {
-          toast.error("No graph visible to summarize.");
-          return;
-        }
-        setGraphSummary(null);
-        toast.info("Summarizing graph...", { autoClose: false });
-
+        setIsSubmitting(true);
         try {
-          const kpiSection = graphElement
-            .closest(".flex")
-            ?.querySelector(".grid.m-2");
-          const viewToggleSection = graphElement
-            .closest(".flex")
-            ?.querySelector(".flex-row.self-start");
-          const originalKPIDisplay = kpiSection ? kpiSection.style.display : "";
-          const originalViewToggleDisplay = viewToggleSection
-            ? viewToggleSection.style.display
-            : "";
-
-          if (kpiSection) kpiSection.style.display = "none";
-          if (viewToggleSection) viewToggleSection.style.display = "none";
-
-          const canvas = await html2canvas(graphElement, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: theme.colors.surface,
-          });
+          const canvas = await html2canvas(graphContainer, { scale: 2 });
           const imageData = canvas.toDataURL("image/png");
-
-          if (kpiSection) kpiSection.style.display = originalKPIDisplay;
-          if (viewToggleSection)
-            viewToggleSection.style.display = originalViewToggleDisplay;
-
-          const prompt = `Summarize the key insights from this graph image. Consider the current question: "${
-            currentDashboardView.question
-          }". Also, note the dashboard's current state: Kpi data: ${JSON.stringify(
-            currentDashboardView.kpiData
-          )}, Main View Data Query: ${
-            currentDashboardView.mainViewData.queryData
-          }. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
-          const apiKey = "YOUR_GEMINI_API_KEY";
-
+          const prompt = `Summarize the key insights from this graph image for the question: "${currentDashboardView.question}".`;
+          const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA"; // Replace with your actual API key
           const payload = {
             contents: [
               {
@@ -1651,18 +1164,14 @@ const DashboardInterface = memo(
               },
             ],
           };
-
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
-
           const result = await response.json();
           let summaryText = "No summary could be generated.";
-
           if (
             result.candidates &&
             result.candidates.length > 0 &&
@@ -1673,151 +1182,279 @@ const DashboardInterface = memo(
             summaryText = result.candidates[0].content.parts[0].text;
             setGraphSummary(summaryText);
           } else {
-            console.error("Unexpected Gemini API response structure:", result);
-            toast.error(
-              "Failed to get summary from AI due to unexpected response."
-            );
-            setGraphSummary("Error: Failed to get summary from AI.");
+            console.error("Unexpected API response:", result);
+            toast.error("Failed to get summary from AI.");
           }
-
-          toast.dismiss();
-          toast.success("Graph summarized successfully!");
         } catch (error) {
           console.error("Error summarizing graph:", error);
-          toast.dismiss();
-          const errorMessage = getErrorMessage(error);
-          toast.error(`Failed to summarize graph: ${errorMessage}`);
-          setGraphSummary(`Error: ${errorMessage}`);
+          toast.error("Failed to summarize graph.");
+        } finally {
+          setIsSubmitting(false);
         }
-      }, [currentDashboardView, theme.colors.surface]);
+      }, [currentDashboardView, theme]);
+
+      const handleEditQuestion = useCallback(
+        async (questionMessageId: string, newQuestion: string) => {
+          if (!newQuestion.trim() || !selectedConnection) return;
+          const userMessage = messages.find((m) => m.id === questionMessageId);
+          if (!userMessage) return;
+          try {
+            await axios.put(`${API_URL}/api/messages/${questionMessageId}`, {
+              token,
+              content: newQuestion,
+              timestamp: new Date().toISOString(),
+            });
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: questionMessageId,
+              message: {
+                content: newQuestion,
+                timestamp: new Date().toISOString(),
+              },
+            });
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.questionMessageId === questionMessageId
+                  ? { ...item, question: newQuestion }
+                  : item
+              )
+            );
+
+            const botMessage = messages.find(
+              (m) => m.isBot && m.parentId === questionMessageId
+            );
+            let botMessageToUpdateId = botMessage?.id;
+
+            if (botMessageToUpdateId) {
+              await axios.put(
+                `${API_URL}/api/messages/${botMessageToUpdateId}`,
+                {
+                  token,
+                  content: "loading...",
+                  timestamp: new Date().toISOString(),
+                }
+              );
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessageToUpdateId,
+                message: {
+                  content: "loading...",
+                  timestamp: new Date().toISOString(),
+                },
+              });
+            } else {
+              const botLoadingResponse = await axios.post(
+                `${API_URL}/api/messages`,
+                {
+                  token,
+                  session_id: sessionId,
+                  content: "loading...",
+                  isBot: true,
+                  isFavorited: false,
+                  parentId: questionMessageId,
+                }
+              );
+              botMessageToUpdateId = botLoadingResponse.data.id;
+              const newBotLoadingMessage: Message = {
+                id: botMessageToUpdateId,
+                content: "loading...",
+                isBot: true,
+                timestamp: new Date().toISOString(),
+                isFavorited: false,
+                parentId: questionMessageId,
+              };
+              dispatchMessages({
+                type: "ADD_MESSAGE",
+                message: newBotLoadingMessage,
+              });
+            }
+
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.questionMessageId === questionMessageId
+                  ? { ...item, textualSummary: "Processing your request..." }
+                  : item
+              )
+            );
+
+            try {
+              const connectionObj = connections.find(
+                (conn) => conn.connectionName === selectedConnection
+              );
+              const payload = {
+                question: newQuestion,
+                connection: connectionObj,
+                sessionId,
+              };
+              const response = await axios.post(
+                `${CHATBOT_API_URL}/ask`,
+                payload
+              );
+              const botResponseContent = JSON.stringify(response.data, null, 2);
+
+              await axios.put(
+                `${API_URL}/api/messages/${botMessageToUpdateId}`,
+                {
+                  token,
+                  content: botResponseContent,
+                  timestamp: new Date().toISOString(),
+                }
+              );
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessageToUpdateId!,
+                message: {
+                  content: botResponseContent,
+                  timestamp: new Date().toISOString(),
+                },
+              });
+
+              // Update dashboard item
+              try {
+                const botResponseContentParsed = JSON.parse(botResponseContent);
+                const actualKpiData =
+                  botResponseContentParsed.kpiData || initialEmptyKpiData;
+                const actualMainViewData = {
+                  chartData: Array.isArray(botResponseContentParsed.answer)
+                    ? botResponseContentParsed.answer
+                    : [],
+                  tableData: Array.isArray(botResponseContentParsed.answer)
+                    ? botResponseContentParsed.answer
+                    : [],
+                  queryData:
+                    typeof botResponseContentParsed.sql_query === "string"
+                      ? botResponseContentParsed.sql_query
+                      : "No query available.",
+                };
+                const actualTextualSummary =
+                  botResponseContentParsed.textualSummary ||
+                  `Here is the analysis for: "${newQuestion}"`;
+
+                setDashboardHistory((prev) =>
+                  prev.map((item) =>
+                    item.questionMessageId === questionMessageId
+                      ? {
+                          ...item,
+                          kpiData: actualKpiData,
+                          mainViewData: actualMainViewData,
+                          textualSummary: actualTextualSummary,
+                          isError: false,
+                        }
+                      : item
+                  )
+                );
+              } catch (parseError) {
+                console.error(
+                  "Failed to parse bot response for edited question:",
+                  parseError
+                );
+                setDashboardHistory((prev) =>
+                  prev.map((item) =>
+                    item.questionMessageId === questionMessageId
+                      ? {
+                          ...item,
+                          ...getDashboardErrorState(
+                            newQuestion,
+                            "Sorry, an error occurred. Please try again."
+                          ),
+                          isError: true,
+                        }
+                      : item
+                  )
+                );
+              }
+            } catch (error) {
+              const errorContent = getErrorMessage(error);
+              await axios.put(
+                `${API_URL}/api/messages/${botMessageToUpdateId}`,
+                {
+                  token,
+                  content: errorContent,
+                  timestamp: new Date().toISOString(),
+                }
+              );
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessageToUpdateId!,
+                message: {
+                  content: errorContent,
+                  timestamp: new Date().toISOString(),
+                },
+              });
+              setDashboardHistory((prev) =>
+                prev.map((item) =>
+                  item.questionMessageId === questionMessageId
+                    ? {
+                        ...item,
+                        ...getDashboardErrorState(newQuestion, errorContent),
+                        isError: true,
+                      }
+                    : item
+                )
+              );
+            }
+          } catch (error) {
+            console.error("Error updating user message:", error);
+            toast.error("Failed to update question.");
+          }
+        },
+        [
+          selectedConnection,
+          messages,
+          connections,
+          sessionId,
+          token,
+          dispatchMessages,
+        ]
+      );
+
+      const handleRetry = useCallback(
+        async (questionMessageId: string) => {
+          const userMessage = messages.find((m) => m.id === questionMessageId);
+          if (!userMessage) return;
+          askQuestion(
+            userMessage.content,
+            selectedConnection,
+            userMessage.isFavorited
+          );
+        },
+        [askQuestion, selectedConnection, messages]
+      );
 
       const handleSelectPrevQuestion = useCallback(
         async (messageId: string) => {
-          if (!selectedConnection) {
-            toast.error(
-              "No connection selected. Please select a connection first."
-            );
-            return;
-          }
-
-          setInput("");
-          setShowPrevQuestionsModal(false);
-          setGraphSummary(null);
-
           const selectedUserMessage = messages.find(
-            (msg) => !msg.isBot && msg.id === messageId
+            (m) => m.id === messageId && !m.isBot
           );
-
           if (selectedUserMessage) {
-            const correspondingBotMessage = messages.find(
-              (msg) => msg.isBot && msg.parentId === selectedUserMessage.id
+            const correspondingBotMessages = messages.filter(
+              (m) => m.isBot && m.parentId === messageId
             );
+            const latestBotMessage = correspondingBotMessages.sort(
+              (a, b) =>
+                new Date(b.timestamp).getTime() -
+                new Date(a.timestamp).getTime()
+            )[0];
 
-            if (
-              correspondingBotMessage &&
-              correspondingBotMessage.content !== "loading..."
-            ) {
-              if (
-                correspondingBotMessage.content ===
-                "Sorry, an error occurred. Please try again."
-              ) {
-                const newEntry: DashboardItem = {
-                  id: generateId(),
-                  question: selectedUserMessage.content,
-                  ...getDashboardErrorState(
-                    selectedUserMessage.content,
-                    "Sorry, an error occurred. Please try again."
-                  ),
-                  lastViewType: "table",
-                  isFavorited: selectedUserMessage.isFavorited,
-                  questionMessageId: selectedUserMessage.id,
-                  connectionName: selectedConnection,
-                  reaction: sanitizeReaction(correspondingBotMessage.reaction),
-                  dislike_reason:
-                    correspondingBotMessage.dislike_reason ?? null,
-                  botResponseId: correspondingBotMessage.id,
-                  isError: true,
-                };
-
-                setDashboardHistory((prev) => {
-                  const newHistory =
-                    currentHistoryIndex === prev.length - 1
-                      ? [...prev, newEntry]
-                      : [...prev.slice(0, currentHistoryIndex + 1), newEntry];
-                  return newHistory;
-                });
-                setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
-                localStorage.setItem(
-                  "currentDashboardQuestionId",
-                  selectedUserMessage.id
-                );
-              } else {
-                try {
-                  const botResponseContent = JSON.parse(
-                    correspondingBotMessage.content
-                  );
-
-                  const actualKpiData =
-                    botResponseContent.kpiData || initialEmptyKpiData;
-                  const actualMainViewData = {
-                    chartData: Array.isArray(botResponseContent.answer)
-                      ? botResponseContent.answer
-                      : [],
-                    tableData: Array.isArray(botResponseContent.answer)
-                      ? botResponseContent.answer
-                      : [],
-                    queryData:
-                      typeof botResponseContent.sql_query === "string"
-                        ? botResponseContent.sql_query
-                        : "No query available.",
-                  };
-                  const actualTextualSummary =
-                    botResponseContent.textualSummary ||
-                    `Here is the analysis for: "${selectedUserMessage.content}"`;
-
-                  const newEntry: DashboardItem = {
-                    id: generateId(),
-                    question: selectedUserMessage.content,
-                    kpiData: actualKpiData,
-                    mainViewData: actualMainViewData,
-                    textualSummary: actualTextualSummary,
-                    lastViewType: "table",
-                    isFavorited: selectedUserMessage.isFavorited,
-                    questionMessageId: selectedUserMessage.id,
-                    connectionName: selectedConnection,
-                    reaction: sanitizeReaction(
-                      correspondingBotMessage.reaction
-                    ),
-                    dislike_reason:
-                      correspondingBotMessage.dislike_reason ?? null,
-                    botResponseId: correspondingBotMessage.id,
-                    isError: false,
-                  };
-
-                  setDashboardHistory((prev) => {
-                    const newHistory =
-                      currentHistoryIndex === prev.length - 1
-                        ? [...prev, newEntry]
-                        : [...prev.slice(0, currentHistoryIndex + 1), newEntry];
-                    return newHistory;
-                  });
-                  setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
-                  localStorage.setItem(
-                    "currentDashboardQuestionId",
-                    selectedUserMessage.id
-                  );
-                  setCurrentQuestionId(selectedUserMessage.id);
-                } catch (parseError) {
-                  console.error(
-                    "Failed to parse bot response content for previous question:",
-                    parseError
-                  );
-                  await askQuestion(
-                    selectedUserMessage.content,
-                    selectedConnection
-                  );
-                }
-              }
+            const newEntry = createDashboardItemFromMessages(
+              selectedUserMessage,
+              latestBotMessage,
+              selectedConnection
+            );
+            if (newEntry) {
+              setDashboardHistory((prev) => {
+                const newHistory =
+                  currentHistoryIndex === prev.length - 1
+                    ? [...prev, newEntry]
+                    : [...prev.slice(0, currentHistoryIndex + 1), newEntry];
+                return newHistory;
+              });
+              setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
+              localStorage.setItem(
+                "currentDashboardQuestionId",
+                selectedUserMessage.id
+              );
+              setCurrentQuestionId(selectedUserMessage.id);
             } else {
               await askQuestion(
                 selectedUserMessage.content,
@@ -1832,7 +1469,7 @@ const DashboardInterface = memo(
             toast.error("Could not load the selected previous question.");
           }
         },
-        [selectedConnection, messages, askQuestion, currentHistoryIndex]
+        [messages, selectedConnection, askQuestion, currentHistoryIndex]
       );
 
       const navigateDashboardHistory = useCallback(
@@ -2003,7 +1640,7 @@ const DashboardInterface = memo(
                       />
                     );
                   }
-                  if (isErrorState) {
+                  if (currentDashboardView.isError) {
                     return (
                       <DashboardError
                         question={currentDashboardView.question}
@@ -2278,7 +1915,7 @@ const DashboardInterface = memo(
                 </button>
               </CustomTooltip>
               {showDashboardContent &&
-                !isErrorState &&
+                !currentDashboardView.isError &&
                 currentDashboardView.mainViewData.chartData.length > 0 && (
                   <CustomTooltip title="Summarize Graph" position="top">
                     <button
