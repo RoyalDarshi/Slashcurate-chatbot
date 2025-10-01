@@ -915,38 +915,74 @@ const DashboardInterface = memo(
               }
             } catch (error) {
               console.error("Error getting bot response:", error);
-              const errorContent = getErrorMessage(error);
+              const errorContent =
+                "Sorry, an error occurred. Please try again.";
 
-              await axios.put(
-                `${API_URL}/api/messages/${botMessageId}`,
-                {
-                  token,
+              setDashboardHistory((prev) =>
+                prev.map((item) => {
+                  return {
+                    ...item,
+                    ...getDashboardErrorState(question, errorContent),
+                    textualSummary: errorContent,
+                    isFavorited: item.isFavorited,
+                    questionMessageId: item.questionMessageId,
+                    connectionName: item.connectionName,
+                    reaction: null,
+                    dislike_reason: null,
+                    botResponseId: botMessageId,
+                    isError: true,
+                  };
+                })
+              );
+
+              if (botMessageId) {
+                await axios
+                  .put(
+                    `${API_URL}/api/messages/${botMessageId}`,
+                    {
+                      token,
+                      content: errorContent,
+                      timestamp: new Date().toISOString(),
+                      reaction: null,
+                      dislike_reason: null,
+                    },
+                    { headers: { "Content-Type": "application/json" } }
+                  )
+                  .catch((updateError) =>
+                    console.error(
+                      "Failed to update message to error state on server:",
+                      updateError
+                    )
+                  );
+
+                const errorMessageUpdate: Partial<Message> = {
                   content: errorContent,
                   timestamp: new Date().toISOString(),
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-
-              const errorMessageUpdate: Partial<Message> = {
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-              };
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: botMessageId,
-                message: errorMessageUpdate,
-              });
-              setDashboardHistory((prev) =>
-                prev.map((item) =>
-                  item.id === newLoadingEntryId
-                    ? {
-                        ...item,
-                        ...getDashboardErrorState(question, errorContent),
-                        isError: true,
-                      }
-                    : item
-                )
-              );
+                  reaction: null,
+                  dislike_reason: null,
+                };
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessageId,
+                  message: errorMessageUpdate,
+                });
+              } else {
+                console.error(
+                  "botMessageId is null when trying to update with error for /ask"
+                );
+                const generalErrorMessage: Message = {
+                  id: `error-${Date.now().toString()}`,
+                  content: errorContent,
+                  isBot: true,
+                  timestamp: new Date().toISOString(),
+                  isFavorited: false,
+                  parentId: finalUserMessageId,
+                };
+                dispatchMessages({
+                  type: "ADD_MESSAGE",
+                  message: generalErrorMessage,
+                });
+              }
             }
           } catch (error) {
             console.error(
@@ -954,20 +990,11 @@ const DashboardInterface = memo(
               error
             );
             toast.error(`Failed to send message: ${getErrorMessage(error)}`);
+
             setDashboardHistory((prev) =>
-              prev.map((item) =>
-                item.id === newLoadingEntryId
-                  ? {
-                      ...item,
-                      ...getDashboardErrorState(
-                        question,
-                        getErrorMessage(error)
-                      ),
-                      isError: true,
-                    }
-                  : item
-              )
+              prev.filter((item) => item.id !== newLoadingEntryId)
             );
+            setCurrentHistoryIndex((prevIndex) => Math.max(0, prevIndex - 1));
           }
         },
         [
@@ -979,6 +1006,7 @@ const DashboardInterface = memo(
           loadSession,
           selectedConnection,
           currentHistoryIndex,
+          startNewSession,
         ]
       );
 
@@ -993,25 +1021,29 @@ const DashboardInterface = memo(
             );
             return;
           }
-
-          if (sessionId && sessionConnection === connection) {
-            await askQuestion(question, connection, query);
-          } else {
-            handleNewChat();
-            await new Promise<void>((resolve) => setTimeout(resolve, 0));
-            setSelectedConnection(connection);
-            await askQuestion(question, connection, query);
-          }
+          handleNewChat();
+          setSelectedConnection(connection);
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          await askQuestion(question, connection, query);
         },
-        [
-          sessionId,
-          sessionConnection,
-          connections,
-          askQuestion,
-          handleNewChat,
-          setSelectedConnection,
-        ]
+        [connections, askQuestion, handleNewChat, setSelectedConnection]
       );
+
+      useEffect(() => {
+        if (initialQuestion && onQuestionAsked && !connectionsLoading) {
+          handleAskFavoriteQuestion(
+            initialQuestion.text,
+            initialQuestion.connection,
+            initialQuestion.query
+          );
+          onQuestionAsked();
+        }
+      }, [
+        initialQuestion,
+        onQuestionAsked,
+        handleAskFavoriteQuestion,
+        connectionsLoading,
+      ]);
 
       const handleConnectionSelect = useCallback(
         (value: string) => {
@@ -1070,12 +1102,15 @@ const DashboardInterface = memo(
           isCurrentlyFavorited: boolean
         ) => {
           try {
-            await axios.post(`${API_URL}/api/favorites`, {
+            const favEndpoint = isCurrentlyFavorited
+              ? "unfavorite"
+              : "favorite";
+            await axios.post(`${API_URL}/${favEndpoint}`, {
               token,
-              question: questionContent,
-              connection: currentConnection,
-              query: responseQuery,
-              isFavorited: !isCurrentlyFavorited,
+              questionId: questionMessageId,
+              questionContent: questionContent,
+              currentConnection: currentConnection,
+              responseQuery: responseQuery,
             });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -1142,12 +1177,11 @@ const DashboardInterface = memo(
           toast.error("No graph element to summarize.");
           return;
         }
-        setIsSubmitting(true);
         try {
           const canvas = await html2canvas(graphContainer, { scale: 2 });
           const imageData = canvas.toDataURL("image/png");
-          const prompt = `Summarize the key insights from this graph image for the question: "${currentDashboardView.question}".`;
-          const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA"; // Replace with your actual API key
+          const prompt = `Summarize the key insights from this graph image. Consider the current question: "${currentDashboardView.question}". Main View Data Query: ${currentDashboardView.mainViewData.queryData}. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
+          const apiKey = import.meta.env.VITE_GEMINI_API_KEY; // Replace with your actual API key
           const payload = {
             contents: [
               {
@@ -1164,7 +1198,7 @@ const DashboardInterface = memo(
               },
             ],
           };
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1188,8 +1222,6 @@ const DashboardInterface = memo(
         } catch (error) {
           console.error("Error summarizing graph:", error);
           toast.error("Failed to summarize graph.");
-        } finally {
-          setIsSubmitting(false);
         }
       }, [currentDashboardView, theme]);
 
@@ -1455,11 +1487,6 @@ const DashboardInterface = memo(
                 selectedUserMessage.id
               );
               setCurrentQuestionId(selectedUserMessage.id);
-            } else {
-              await askQuestion(
-                selectedUserMessage.content,
-                selectedConnection
-              );
             }
           } else {
             console.error(
@@ -1468,6 +1495,7 @@ const DashboardInterface = memo(
             );
             toast.error("Could not load the selected previous question.");
           }
+          setShowPrevQuestionsModal(false)
         },
         [messages, selectedConnection, askQuestion, currentHistoryIndex]
       );

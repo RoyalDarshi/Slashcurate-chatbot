@@ -156,8 +156,8 @@ const ChatInterface = memo(
           try {
             const canvas = await html2canvas(graphElement, { scale: 2 });
             const imageData = canvas.toDataURL("image/png");
-            const prompt = `Summarize the key insights from this graph image for the question: "${question}".`;
-            const apiKey = "AIzaSyCN_i1Fmhs1B5Sx7YxdTOZvJChG-uB6oFA"; // Replace with your actual API key
+            const prompt = `Summarize the key insights from this graph image. Consider the current question: "${question}". Main View Data Query: ${botMessage.sql_query}. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
+            const apiKey = import.meta.env.VITE_GEMINI_API_KEY; // Replace with your actual API key
             const payload = {
               contents: [
                 {
