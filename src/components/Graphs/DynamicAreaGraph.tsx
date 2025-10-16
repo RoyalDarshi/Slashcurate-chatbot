@@ -690,6 +690,11 @@ const DynamicAreaGraph: React.FC<ModernAreaGraphProps> = React.memo(
                       fill={`url(#colorUv-${key})`}
                       strokeWidth={3}
                       animationDuration={1200}
+                      color={
+                        theme.colors.barColors[
+                          keyIndex % theme.colors.barColors.length
+                        ]
+                      }
                       animationEasing="ease-out"
                       animationBegin={keyIndex * 150}
                     />

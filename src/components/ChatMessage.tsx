@@ -108,6 +108,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         } else {
           try {
             const parsedData = JSON.parse(message.content);
+            console.log(parsedData);
             let tableData = [];
 
             if (parsedData?.answer) {

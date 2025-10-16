@@ -39,7 +39,7 @@ export type ChatInterfaceHandle = {
   ) => void;
 };
 
-const getErrorMessage = (error: any): string => {
+const getErrorMessage = (error: unknown): string => {
   let extractedErrorMessage = "Sorry, an error occurred. Please try again.";
   if (axios.isAxiosError(error)) {
     if (error.response && error.response.data) {
@@ -68,15 +68,7 @@ const getErrorMessage = (error: any): string => {
 
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
-    (
-      {
-        onCreateConSelected,
-        onSessionSelected,
-        initialQuestion,
-        onQuestionAsked,
-      },
-      ref
-    ) => {
+    ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
       const token = sessionStorage.getItem("token") ?? "";
       const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
@@ -326,10 +318,7 @@ const ChatInterface = memo(
 
           if (!currentSessionId) {
             const storedSessionId = localStorage.getItem("currentSessionId");
-            if (
-              // @ts-ignore
-              storedSessionId
-            ) {
+            if (storedSessionId) {
               try {
                 await loadSession(storedSessionId);
                 currentSessionId = storedSessionId;
@@ -355,10 +344,10 @@ const ChatInterface = memo(
                 { headers: { "Content-Type": "application/json" } }
               );
               currentSessionId = response.data.id;
-              localStorage.setItem("currentSessionId", currentSessionId);
+              localStorage.setItem("currentSessionId", currentSessionId || "");
               dispatchMessages({
                 type: "SET_SESSION",
-                sessionId: currentSessionId,
+                sessionId: currentSessionId || "",
                 messages: [],
                 connection: connection,
               });
@@ -417,7 +406,7 @@ const ChatInterface = memo(
             );
             botMessageId = botLoadingResponse.data.id;
             const botLoadingMessage: Message = {
-              id: botMessageId,
+              id: botMessageId || "",
               isBot: true,
               content: "loading...",
               timestamp: new Date().toISOString(),
@@ -510,7 +499,10 @@ const ChatInterface = memo(
                   id: botMessageId,
                   message: errorMessageUpdate,
                 });
-                setTimeout(() => scrollToMessage(botMessageId), 100);
+                setTimeout(
+                  () => botMessageId && scrollToMessage(botMessageId),
+                  100
+                );
               } else {
                 const generalErrorMessage: Message = {
                   id: `error-${Date.now().toString()}`,
@@ -537,6 +529,7 @@ const ChatInterface = memo(
         },
         [
           sessionId,
+          messages.length,
           sessionConnection,
           connections,
           token,
@@ -559,18 +552,18 @@ const ChatInterface = memo(
             return;
           }
 
-          if (sessionId && sessionConnection === connection) {
-            await askQuestion(question, connection, true, query);
-          } else {
-            handleNewChat();
-            await new Promise<void>((resolve) => setTimeout(resolve, 0));
-            setSelectedConnection(connection);
-            await askQuestion(question, connection, true, query);
-          }
+          // if (sessionId && sessionConnection === connection) {
+          //   await askQuestion(question, connection, true, query);
+          // } else {
+          handleNewChat();
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          setSelectedConnection(connection);
+          await askQuestion(question, connection, true, query);
+          // }
         },
         [
-          sessionId,
-          sessionConnection,
+          // sessionId,
+          // sessionConnection,
           connections,
           askQuestion,
           handleNewChat,
@@ -1070,7 +1063,7 @@ const ChatInterface = memo(
             );
             botMessageToUpdateId = botLoadingResponse.data.id;
             const newBotLoadingMessage: Message = {
-              id: botMessageToUpdateId,
+              id: botMessageToUpdateId!,
               content: "loading...",
               isBot: true,
               timestamp: new Date().toISOString(),
@@ -1185,7 +1178,7 @@ const ChatInterface = memo(
           try {
             JSON.parse(botResponse.content);
             return "success";
-          } catch (e) {
+          } catch {
             return "error";
           }
         }
@@ -1197,7 +1190,7 @@ const ChatInterface = memo(
           setIsDbExplorerOpen(false);
         }
         setIsConnectionDropdownOpen((prev) => !prev);
-      }, []);
+      }, [isDbExplorerOpen]);
 
       const toggleDbExplorer = useCallback(() => {
         setIsDbExplorerOpen((prev) => !prev);

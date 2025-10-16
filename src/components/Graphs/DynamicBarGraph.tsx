@@ -646,20 +646,25 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         type: "bar",
         stack: "a",
         data: graphData.map((d) => (Number(d[key]) > 0 ? Number(d[key]) : 0)),
+        color: theme.colors.barColors[keyIndex % theme.colors.barColors.length],
         barCategoryGap: "25%",
         barGap: "6%",
         // ✅ Control width
-        barWidth: graphData.length <= 3 ? 60 : undefined,   // smaller width for single bar
+        barWidth: graphData.length <= 3 ? 60 : undefined, // smaller width for single bar
         barMaxWidth: 60, // optional cap for multi-bar cases
         itemStyle: (params: any) => {
           const { dataIndex } = params;
           const payload = graphData[dataIndex];
-          const topMostKey = [...yKeys].reverse().find((k) => Number(payload[k]) > 0);
+          const topMostKey = [...yKeys]
+            .reverse()
+            .find((k) => Number(payload[k]) > 0);
           const isTopBar = key === topMostKey;
           const solidColor =
             theme.colors.barColors[keyIndex % theme.colors.barColors.length];
           const radius = 8;
+          // For ECharts, we need to use their built-in gradient system
           return {
+            // Using ECharts LinearGradient for proper rendering
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
               { offset: 0, color: hexToRgba(solidColor, 1) },
               { offset: 1, color: hexToRgba(solidColor, 0.7) },
@@ -669,10 +674,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
             barBorderRadius: isTopBar ? [radius, radius, 0, 0] : [0, 0, 0, 0],
           };
         },
-      }))
-
-    };
-
+      })),
+    }; 
     return (
       <div>
         <div
