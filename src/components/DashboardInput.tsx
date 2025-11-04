@@ -307,10 +307,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
               style={{
                 backgroundColor: "transparent",
                 color: theme.colors.text,
-                border:
-                  theme.mode === "light"
-                    ? `1px solid ${theme.colors.border}`
-                    : "none",
+                border: "none",
                 // boxShadow: theme.mode === "dark" ? theme.shadow.sm : "none",
                 borderRadius: theme.borderRadius.default,
                 fontFamily: theme.typography.fontFamily,

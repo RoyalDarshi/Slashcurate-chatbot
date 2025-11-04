@@ -163,8 +163,13 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
 
   return (
     <div
-      className="rounded-lg overflow-hidden shadow-lg"
-      style={{ background: theme.colors.surface }}
+      className="rounded-lg border overflow-hidden"
+      style={{
+        background: theme.colors.surface,
+        borderColor: `${theme.colors.text}10`,
+        borderRadius: theme.borderRadius.default,
+        boxShadow: theme.shadow.lg,
+      }}
     >
       <div
         className={`flex ${

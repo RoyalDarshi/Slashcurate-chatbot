@@ -248,10 +248,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             style={{
               backgroundColor: "transparent",
               color: theme.colors.text,
-              border:
-                theme.mode === "light"
-                  ? `1px solid ${theme.colors.border}`
-                  : "none",
+              border: "none",
               borderRadius: theme.borderRadius.default,
               fontFamily: theme.typography.fontFamily,
               fontSize: theme.typography.size.base,

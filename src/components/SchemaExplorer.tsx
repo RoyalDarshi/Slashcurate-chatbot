@@ -341,7 +341,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
       className="schema-explorer w-full max-w-full rounded-lg flex flex-col"
       style={{
         background: theme.colors.surface,
-        // boxShadow: `0 8px 32px ${theme.colors.text}15`,
+        boxShadow: `0 8px 32px ${theme.colors.text}15`,
         maxHeight: isMobileView ? "calc(100vh - 80px)" : maxHeight,
         height: "100%",
         overflow: "hidden",

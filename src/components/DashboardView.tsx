@@ -782,7 +782,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               </div>
 
-              <div className="lg:w-[40%] w-full mx-2 rounded-xl overflow-hidden">
+              <div className="lg:w-[40%] w-full mx-2 overflow-hidden">
                 {activeViewType === "table" && (
                   <DataTable data={dashboardItem.mainViewData.tableData} />
                 )}
@@ -805,7 +805,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                       title={
                         viewType.charAt(0).toUpperCase() + viewType.slice(1)
                       }
-                      className="p-2 transition-all rounded-full duration-200 ease-in-out disabled:opacity-60"
+                      className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
                       style={{
                         backgroundColor:
                           activeViewType === viewType
@@ -815,6 +815,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                           activeViewType === viewType
                             ? "white"
                             : theme.colors.accent,
+                        border: `1px solid ${theme.colors.text}10`,
+                        boxShadow: theme.shadow.lg,
                       }}
                     >
                       {viewType === "table" && <Table size={24} />}

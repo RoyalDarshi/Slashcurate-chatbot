@@ -140,11 +140,11 @@ const Settings = () => {
             className="text-lg font-semibold"
             style={{ color: theme.colors.text }}
           >
-            Notifications
+            Quick Tips
           </h3>
           <div className="flex items-center justify-between">
             <p style={{ color: theme.colors.textSecondary }}>
-              Enable Notifications
+              Enable Quick Tips
             </p>
             <label className="relative inline-flex items-center cursor-pointer">
               <input

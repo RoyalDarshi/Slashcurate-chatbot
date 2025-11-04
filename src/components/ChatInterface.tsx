@@ -1353,197 +1353,199 @@ const ChatInterface = memo(
             )}
             <div ref={messagesEndRef} />
           </div>
-          <div
-            style={{
-              position: "sticky",
-              bottom: 0,
-              background: theme.colors.background,
-              paddingBottom: theme.spacing.sm,
-            }}
-          >
-            {userHasScrolledUp && (
-              <div
-                className="flex justify-end"
-                style={{
-                  position: "absolute",
-                  bottom: "80px",
-                  right: "30px",
-                  zIndex: 1000,
-                }}
-              >
-                <CustomTooltip title="Scroll to Bottom" position="top">
-                  <button
-                    onClick={scrollToBottom}
-                    style={{
-                      background: theme.colors.accent,
-                      color: "white",
-                      padding: "8px",
-                      borderRadius: theme.borderRadius.large,
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow: theme.shadow.md,
-                    }}
-                  >
-                    <ArrowDown size={20} />
-                  </button>
-                </CustomTooltip>
-              </div>
-            )}
-            <div className="max-w-4xl mx-auto flex items-center gap-2">
-              <div className="relative" ref={connectionDropdownRef}>
-                <CustomTooltip
-                  title="Change or create a connection"
-                  position="top"
+          {connections.length > 0 && (
+            <div
+              style={{
+                position: "sticky",
+                bottom: 0,
+                background: theme.colors.background,
+                paddingBottom: theme.spacing.sm,
+              }}
+            >
+              {userHasScrolledUp && (
+                <div
+                  className="flex justify-end"
+                  style={{
+                    position: "absolute",
+                    bottom: "80px",
+                    right: "30px",
+                    zIndex: 1000,
+                  }}
                 >
+                  <CustomTooltip title="Scroll to Bottom" position="top">
+                    <button
+                      onClick={scrollToBottom}
+                      style={{
+                        background: theme.colors.accent,
+                        color: "white",
+                        padding: "8px",
+                        borderRadius: theme.borderRadius.large,
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: theme.shadow.md,
+                      }}
+                    >
+                      <ArrowDown size={20} />
+                    </button>
+                  </CustomTooltip>
+                </div>
+              )}
+              <div className="max-w-4xl mx-auto flex items-center gap-2">
+                <div className="relative" ref={connectionDropdownRef}>
+                  <CustomTooltip
+                    title="Change or create a connection"
+                    position="top"
+                  >
+                    <button
+                      type="button"
+                      onClick={toggleConnectionDropdown}
+                      disabled={isSubmitting || !!sessionConnectionError}
+                      className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
+                      style={{
+                        background: theme.colors.surface,
+                        color: theme.colors.accent,
+                      }}
+                    >
+                      <Database size={20} />
+                    </button>
+                  </CustomTooltip>
+                  {isConnectionDropdownOpen && (
+                    <div
+                      className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2"
+                      style={{
+                        background: theme.colors.surface,
+                        border: `1px solid ${theme.colors.border}`,
+                        boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                        width: "min-content",
+                        maxWidth: "min-content",
+                      }}
+                    >
+                      {options.map((option) => (
+                        <div
+                          key={option.value}
+                          className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
+                          style={{
+                            color: theme.colors.text,
+                            background:
+                              selectedConnection === option.value
+                                ? `${theme.colors.accent}10`
+                                : "transparent",
+                          }}
+                          onClick={() => handleConnectionSelect(option.value)}
+                        >
+                          <span
+                            className="truncate"
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {option.label}
+                          </span>
+                          {option.isAdmin && (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                backgroundColor: theme.colors.background,
+                                color: theme.colors.accent,
+                                fontSize: theme.typography.size.sm,
+                                fontWeight: theme.typography.weight.normal,
+                                padding: `0 ${theme.spacing.sm}`,
+                                borderRadius: theme.borderRadius.default,
+                                marginLeft: theme.spacing.sm,
+                                textTransform: "lowercase",
+                              }}
+                            >
+                              Default
+                            </span>
+                          )}
+                          {option.value !== "create-con" && (
+                            <div className="relative group">
+                              <button
+                                type="button"
+                                onClick={(e) => handlePdfClick(option.value, e)}
+                                className="p-1"
+                              >
+                                <FaFilePdf
+                                  size={16}
+                                  style={{ color: theme.colors.error }}
+                                  className="hover:scale-105 transition-transform duration-300"
+                                />
+                              </button>
+                              <span
+                                className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
+                                style={{
+                                  background: theme.colors.accent,
+                                  color: theme.colors.surface,
+                                  boxShadow: `0 0 6px ${theme.colors.accent}40`,
+                                }}
+                              >
+                                View Data Atlas
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <CustomTooltip title="Explore Database Schema" position="top">
                   <button
                     type="button"
-                    onClick={toggleConnectionDropdown}
-                    disabled={isSubmitting || !!sessionConnectionError}
+                    onClick={toggleDbExplorer}
+                    disabled={
+                      isSubmitting ||
+                      !selectedConnection ||
+                      !!sessionConnectionError
+                    }
+                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
+                      isDbExplorerOpen ? "schema-active" : ""
+                    }`}
+                    style={{
+                      background: theme.colors.surface,
+                      color: theme.colors.accent,
+                    }}
+                  >
+                    <Layers
+                      size={20}
+                      style={{
+                        transform: isDbExplorerOpen
+                          ? "rotate(180deg)"
+                          : "rotate(0deg)",
+                        transition: "transform 0.3s ease",
+                      }}
+                    />
+                  </button>
+                </CustomTooltip>
+                <CustomTooltip title="Create a new session" position="top">
+                  <button
+                    type="button"
+                    onClick={handleNewChat}
+                    disabled={isSubmitting}
                     className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
                     style={{
                       background: theme.colors.surface,
                       color: theme.colors.accent,
                     }}
                   >
-                    <Database size={20} />
+                    <PlusCircle size={20} />
                   </button>
                 </CustomTooltip>
-                {isConnectionDropdownOpen && (
-                  <div
-                    className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2"
-                    style={{
-                      background: theme.colors.surface,
-                      border: `1px solid ${theme.colors.border}`,
-                      boxShadow: `0 4px 12px ${theme.colors.text}20`,
-                      width: "min-content",
-                      maxWidth: "min-content",
-                    }}
-                  >
-                    {options.map((option) => (
-                      <div
-                        key={option.value}
-                        className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
-                        style={{
-                          color: theme.colors.text,
-                          background:
-                            selectedConnection === option.value
-                              ? `${theme.colors.accent}10`
-                              : "transparent",
-                        }}
-                        onClick={() => handleConnectionSelect(option.value)}
-                      >
-                        <span
-                          className="truncate"
-                          style={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {option.label}
-                        </span>
-                        {option.isAdmin && (
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              backgroundColor: theme.colors.background,
-                              color: theme.colors.accent,
-                              fontSize: theme.typography.size.sm,
-                              fontWeight: theme.typography.weight.normal,
-                              padding: `0 ${theme.spacing.sm}`,
-                              borderRadius: theme.borderRadius.default,
-                              marginLeft: theme.spacing.sm,
-                              textTransform: "lowercase",
-                            }}
-                          >
-                            Default
-                          </span>
-                        )}
-                        {option.value !== "create-con" && (
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={(e) => handlePdfClick(option.value, e)}
-                              className="p-1"
-                            >
-                              <FaFilePdf
-                                size={16}
-                                style={{ color: theme.colors.error }}
-                                className="hover:scale-105 transition-transform duration-300"
-                              />
-                            </button>
-                            <span
-                              className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
-                              style={{
-                                background: theme.colors.accent,
-                                color: theme.colors.surface,
-                                boxShadow: `0 0 6px ${theme.colors.accent}40`,
-                              }}
-                            >
-                              View Data Atlas
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <ChatInput
+                  input={input}
+                  isSubmitting={isSubmitting}
+                  onInputChange={setInput}
+                  onSubmit={handleSubmit}
+                  disabled={!!sessionConnectionError}
+                />
               </div>
-              <CustomTooltip title="Explore Database Schema" position="top">
-                <button
-                  type="button"
-                  onClick={toggleDbExplorer}
-                  disabled={
-                    isSubmitting ||
-                    !selectedConnection ||
-                    !!sessionConnectionError
-                  }
-                  className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
-                    isDbExplorerOpen ? "schema-active" : ""
-                  }`}
-                  style={{
-                    background: theme.colors.surface,
-                    color: theme.colors.accent,
-                  }}
-                >
-                  <Layers
-                    size={20}
-                    style={{
-                      transform: isDbExplorerOpen
-                        ? "rotate(180deg)"
-                        : "rotate(0deg)",
-                      transition: "transform 0.3s ease",
-                    }}
-                  />
-                </button>
-              </CustomTooltip>
-              <CustomTooltip title="Create a new session" position="top">
-                <button
-                  type="button"
-                  onClick={handleNewChat}
-                  disabled={isSubmitting}
-                  className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
-                  style={{
-                    background: theme.colors.surface,
-                    color: theme.colors.accent,
-                  }}
-                >
-                  <PlusCircle size={20} />
-                </button>
-              </CustomTooltip>
-              <ChatInput
-                input={input}
-                isSubmitting={isSubmitting}
-                onInputChange={setInput}
-                onSubmit={handleSubmit}
-                disabled={!!sessionConnectionError}
-              />
             </div>
-          </div>
+          )}
           {isDbExplorerOpen && selectedConnection && (
             <div className="w-3/4 backdrop-blur-lg self-center absolute bottom-16 z-50 flex items-center justify-center">
               <SchemaExplorer

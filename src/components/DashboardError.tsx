@@ -169,13 +169,8 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
         <div
           className="w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-2xl border transform transition-all duration-700 overflow-hidden flex flex-col"
           style={{
-            backgroundColor: `${theme.colors.surface}98`,
-            borderColor: `${theme.colors.border}30`,
-            boxShadow: `
-              0 25px 50px -12px ${theme.colors.background}60,
-              0 0 0 1px ${theme.colors.border}20,
-              inset 0 1px 0 ${theme.colors.surface}40
-            `,
+            backgroundColor: `${theme.colors.surface}`,
+            borderColor: `${theme.colors.border}`,
           }}
         >
           <div className="text-center p-2">
@@ -300,7 +295,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
             ) : (
               <div className="space-y-2 relative">
                 <div
-                  className="group p-2 rounded-2xl transition-all duration-500 hover:shadow-2xl"
+                  className="group p-2 rounded-2xl transition-all duration-500"
                   style={{
                     backgroundColor: `${theme.colors.background}90`,
                     border: `2px solid ${theme.colors.accent}25`,
@@ -322,7 +317,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                   <div>
                     <div className="flex items-start gap-2 mb-2">
                       <div
-                        className="p-3 rounded-xl flex-shrink-0 shadow-lg"
+                        className="p-3 rounded-xl flex-shrink-0 shadow-sm"
                         style={{ backgroundColor: `${theme.colors.accent}15` }}
                       >
                         <AlertCircle
@@ -362,7 +357,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                         <>
                           <button
                             onClick={handleEditClick}
-                            className="flex items-center mr-1 gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-md hover:shadow-lg"
+                            className="flex items-center mr-1 gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-sm"
                             style={{
                               backgroundColor: `${theme.colors.accent}12`,
                               color: theme.colors.accent,
@@ -512,7 +507,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                 </div>
 
                 <div
-                  className="relative p-2 rounded-2xl transition-all duration-500 hover:shadow-2xl"
+                  className="relative p-2 rounded-2xl transition-all duration-500"
                   style={{
                     backgroundColor: `${theme.colors.error}06`,
                     border: `2px solid ${theme.colors.error}25`,
@@ -528,7 +523,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                     <div className="flex items-start justify-between mb-5">
                       <div className="flex items-start gap-2">
                         <div
-                          className="p-3 rounded-xl flex-shrink-0 shadow-lg"
+                          className="p-3 rounded-xl flex-shrink-0 shadow-sm"
                           style={{ backgroundColor: `${theme.colors.error}15` }}
                         >
                           <TriangleAlert
