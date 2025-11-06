@@ -57,7 +57,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const [hasNumericData, setHasNumericData] = useState<boolean>(false);
     const [currentView, setCurrentView] = useState<
       "table" | "graph" | "query" | "text" | "error"
-    >("text");
+    >("table");
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [hasChanges, setHasChanges] = useState(false);
@@ -108,6 +108,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         } else {
           try {
             const parsedData = JSON.parse(message.content);
+            console.log(parsedData);
             let tableData = [];
 
             if (parsedData?.answer) {
@@ -173,7 +174,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                 return stringKeys[1] || stringKeys[0] || null;
               });
               setAggregate((prev) => prev || "sum");
-              setCurrentView("graph");
+              setCurrentView("table");
             } else if (tableData.length > 0) {
               setCurrentView("table");
             } else {

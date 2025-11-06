@@ -421,6 +421,7 @@ const DynamicLineGraph: React.FC<ModernLineGraphProps> = React.memo(
         top: "3%",
         containLabel: true,
       },
+      color: theme.colors.barColors,
       xAxis: {
         type: "category",
         data: graphData.map((d) => {

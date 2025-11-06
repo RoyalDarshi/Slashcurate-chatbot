@@ -646,10 +646,15 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         type: "bar",
         stack: "a",
         data: graphData.map((d) => (Number(d[key]) > 0 ? Number(d[key]) : 0)),
+        color: theme.colors.barColors[keyIndex % theme.colors.barColors.length],
         barCategoryGap: "25%",
         barGap: "6%",
         // ✅ Control width
+<<<<<<< HEAD
         barWidth: graphData.length === 1 ? 45 : undefined, // smaller width for single bar
+=======
+        barWidth: graphData.length <= 3 ? 60 : undefined, // smaller width for single bar
+>>>>>>> 3c8b5d3e19b825957fa870acdf2c01ea3c74bfd2
         barMaxWidth: 60, // optional cap for multi-bar cases
         itemStyle: (params: any) => {
           const { dataIndex } = params;
@@ -661,7 +666,12 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           const solidColor =
             theme.colors.barColors[keyIndex % theme.colors.barColors.length];
           const radius = 8;
+<<<<<<< HEAD
+=======
+          // For ECharts, we need to use their built-in gradient system
+>>>>>>> 3c8b5d3e19b825957fa870acdf2c01ea3c74bfd2
           return {
+            // Using ECharts LinearGradient for proper rendering
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
               { offset: 0, color: hexToRgba(solidColor, 1) },
               { offset: 1, color: hexToRgba(solidColor, 0.7) },
@@ -672,8 +682,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           };
         },
       })),
-    };
-
+    }; 
     return (
       <div>
         <div

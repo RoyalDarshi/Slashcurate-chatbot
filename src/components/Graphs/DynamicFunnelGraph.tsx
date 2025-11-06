@@ -523,7 +523,7 @@ const DynamicFunnelGraph: React.FC<ModernFunnelGraphProps> = React.memo(
                     isAnimationActive={true}
                     animationDuration={1200}
                     animationEasing="ease-out"
-                    fill={theme.colors.accent} // Default fill
+                    fill={theme.colors.barColors[0]} // Default fill
                     strokeWidth={0} // No stroke for a cleaner look
                   >
                     {graphData.map((entry, index) => (

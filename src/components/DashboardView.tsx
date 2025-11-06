@@ -97,6 +97,51 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const graphContainerRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
 
+    const isKeyExcluded = (key: string): boolean => {
+      const lowerKey = key.toLowerCase();
+      return (
+        /(id|code|number)$/.test(lowerKey) ||
+        lowerKey.includes("date") ||
+        lowerKey.includes("email") ||
+        lowerKey.includes("address") ||
+        lowerKey === "first_name" ||
+        lowerKey === "last_name" ||
+        lowerKey === "name" ||
+        lowerKey.length < 3
+      );
+    };
+
+    const getValidValueKeys = (data: any[]): string[] => {
+      if (!data || data.length === 0) return [];
+      return Object.keys(data[0]).filter(
+        (key) => !isKeyExcluded(key) && typeof data[0][key] === "number"
+      );
+    };
+
+    const getValidCategoricalKeys = (data: any[]): string[] => {
+      if (!data || data.length === 0) return [];
+      return Object.keys(data[0]).filter(
+        (key) =>
+          !isKeyExcluded(key) &&
+          (typeof data[0][key] === "string" ||
+            typeof data[0][key] === "boolean")
+      );
+    };
+
+    useEffect(() => {
+      const chartData = dashboardItem.mainViewData.chartData;
+      if (chartData && chartData.length > 0) {
+        const validKeys = getValidValueKeys(chartData);
+        setGroupBy(getValidCategoricalKeys(chartData)[0] || null);
+        setValueKey(validKeys[0] || null);
+        setAggregate("sum");
+        setGraphType("bar");
+      } else {
+        setGroupBy(null);
+        setValueKey(null);
+      }
+    }, [dashboardItem.mainViewData.chartData]);
+
     useEffect(() => {
       if (graphSummary) setShowSummaryModal(true);
     }, [graphSummary]);
@@ -217,7 +262,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     }
 
-    const isErrorState = dashboardItem.textualSummary.startsWith("Error:");
+    // **FIX 1: Use the `isError` flag passed in the dashboard item**
+    const isErrorState = dashboardItem.isError;
+
     if (isErrorState) {
       return (
         <div
@@ -315,50 +362,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     }
 
-    const isKeyExcluded = (key: string): boolean => {
-      const lowerKey = key.toLowerCase();
-      return (
-        /(id|code|number)$/.test(lowerKey) ||
-        lowerKey.includes("date") ||
-        lowerKey.includes("email") ||
-        lowerKey.includes("address") ||
-        lowerKey === "first_name" ||
-        lowerKey === "last_name" ||
-        lowerKey === "name" ||
-        lowerKey.length < 3
-      );
-    };
-
-    const getValidValueKeys = (data: any[]): string[] => {
-      if (!data || data.length === 0) return [];
-      return Object.keys(data[0]).filter(
-        (key) => !isKeyExcluded(key) && typeof data[0][key] === "number"
-      );
-    };
-
-    const getValidCategoricalKeys = (data: any[]): string[] => {
-      if (!data || data.length === 0) return [];
-      return Object.keys(data[0]).filter(
-        (key) =>
-          !isKeyExcluded(key) &&
-          (typeof data[0][key] === "string" ||
-            typeof data[0][key] === "boolean")
-      );
-    };
-
-    useEffect(() => {
-      const chartData = dashboardItem.mainViewData.chartData;
-      if (chartData && chartData.length > 0) {
-        const validKeys = getValidValueKeys(chartData);
-        setGroupBy(getValidCategoricalKeys(chartData)[0] || null);
-        setValueKey(validKeys[0] || null);
-        setAggregate("sum");
-        setGraphType("bar");
-      } else {
-        setGroupBy(null);
-        setValueKey(null);
-      }
-    }, [dashboardItem.mainViewData.chartData]);
 
     return (
       <div>
@@ -779,7 +782,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               </div>
 
-              <div className="lg:w-[40%] w-full mx-2 rounded-xl overflow-hidden">
+              <div className="lg:w-[40%] w-full mx-2 overflow-hidden">
                 {activeViewType === "table" && (
                   <DataTable data={dashboardItem.mainViewData.tableData} />
                 )}
@@ -802,7 +805,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                       title={
                         viewType.charAt(0).toUpperCase() + viewType.slice(1)
                       }
-                      className="p-2 transition-all rounded-full duration-200 ease-in-out disabled:opacity-60"
+                      className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
                       style={{
                         backgroundColor:
                           activeViewType === viewType
@@ -812,6 +815,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                           activeViewType === viewType
                             ? "white"
                             : theme.colors.accent,
+                        border: `1px solid ${theme.colors.text}10`,
+                        boxShadow: theme.shadow.lg,
                       }}
                     >
                       {viewType === "table" && <Table size={24} />}

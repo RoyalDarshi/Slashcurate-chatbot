@@ -118,7 +118,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       } else {
         console.warn("Speech Recognition API not supported in this browser.");
         setMicPermissionStatus("unsupported");
-        setVoiceInputStatus("Voice input not supported in this browser.");
+        // setVoiceInputStatus("Voice input not supported in this browser.");
       }
 
       // Cleanup on unmount
@@ -244,15 +244,11 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               }
             }}
             placeholder={voiceInputStatus || "Ask about your data..."}
-            className="flex-grow h-10 px-3 text-base border-none rounded-lg focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed placeholder-opacity-50"
+            className="flex-grow h-10 px-3 text-base border-none rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed placeholder-opacity-50"
             style={{
               backgroundColor: "transparent",
               color: theme.colors.text,
-              border:
-                theme.mode === "light"
-                  ? `1px solid ${theme.colors.border}`
-                  : "none",
-              boxShadow: theme.mode === "dark" ? theme.shadow.sm : "none",
+              border: "none",
               borderRadius: theme.borderRadius.default,
               fontFamily: theme.typography.fontFamily,
               fontSize: theme.typography.size.base,

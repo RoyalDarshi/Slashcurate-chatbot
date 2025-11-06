@@ -134,6 +134,7 @@ export interface TableHeaderProps {
 
 
 export interface Theme {
+  mode: string;
   colors: {
     // Core UI Colors
     background: string; // App background
