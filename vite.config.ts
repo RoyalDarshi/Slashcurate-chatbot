@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       //   cert: fs.readFileSync("cert.pem"),
       // },
       host: "0.0.0.0",
-      port: 5173, // Or your desired port
+      port: 5175, // Or your desired port
     },
     plugins: [react(), visualizer()],
     define: {
