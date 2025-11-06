@@ -413,6 +413,7 @@ const ChatInterface = memo(
               isFavorited: false,
               parentId: finalUserMessage.id,
             };
+            setIsSubmitting(true);
             dispatchMessages({
               type: "ADD_MESSAGE",
               message: botLoadingMessage,
@@ -713,22 +714,24 @@ const ChatInterface = memo(
           e.preventDefault();
           if (!input.trim() || isSubmitting) return;
           if (!selectedConnection) {
-            toast.error("No connection selected.", {
-              style: {
-                background: theme.colors.surface,
-                color: theme.colors.error,
-              },
-              theme: mode,
-            });
+            toast.error("No connection selected.");
             return;
           }
+
           setIsSubmitting(true);
+          const question = input;
           setInput("");
-          await askQuestion(input, selectedConnection, false);
-          setIsSubmitting(false);
+
+          try {
+            await askQuestion(question, selectedConnection, false);
+          } finally {
+            // Keep submitting true until the "loading..." message is replaced
+            setTimeout(() => setIsSubmitting(false), 1500);
+          }
         },
-        [input, isSubmitting, selectedConnection, askQuestion, theme, mode]
+        [input, isSubmitting, selectedConnection, askQuestion]
       );
+
 
       const handleFavoriteMessage = useCallback(
         async (messageId: string) => {

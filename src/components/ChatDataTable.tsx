@@ -190,6 +190,23 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     overscan: 5,
   });
 
+  // --- NEW: Ref for the header container ---
+  const headerContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- NEW: Effect to sync horizontal scroll ---
+  useEffect(() => {
+    const bodyEl = tableContainerRef.current;
+    const headEl = headerContainerRef.current;
+
+    if (bodyEl && headEl) {
+      const syncScroll = () => {
+        headEl.scrollLeft = bodyEl.scrollLeft;
+      };
+      bodyEl.addEventListener("scroll", syncScroll);
+      return () => bodyEl.removeEventListener("scroll", syncScroll);
+    }
+  }, []); // Runs once on mount
+
   const toggleControls = () => {
     setShowControls(!showControls);
   };
@@ -202,6 +219,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         transition: "all 0.3s ease",
       }}
     >
+      {/* --- CONTROLS SECTION (Unchanged) --- */}
       {filteredData.length <= 20 && (
         <div className="flex justify-end ">
           <button
@@ -306,15 +324,22 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         </div>
       )}
 
-      {/* --- Scrollable Table Container --- */}
+      {/* --- NEW: Header Table Container --- */}
       <div
-        ref={tableContainerRef}
-        className="max-w-3xl overflow-auto max-h-96 scrollbar-thin"
+        ref={headerContainerRef}
+        className="max-w-3xl overflow-x-hidden" // Overflow is hidden, controlled by body scroll
         style={{
-          scrollbarColor: `${theme.colors.accent}40 ${theme.colors.surface}`,
+          scrollbarWidth: "none", // Firefox
+          msOverflowStyle: "none", // IE
         }}
       >
-        <table className="w-full">
+        <table
+          className="w-full"
+          style={{
+            tableLayout: "fixed",
+            width: table.getTotalSize(), // Set total width
+          }}
+        >
           <thead
             style={{
               background: theme.colors.accent,
@@ -328,6 +353,9 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     key={header.id}
                     className="px-6 py-3 text-center text-sm font-medium"
                     onClick={header.column.getToggleSortingHandler()}
+                    style={{
+                      width: header.getSize(), // Set specific column width
+                    }}
                   >
                     {flexRender(
                       header.column.columnDef.header,
@@ -338,56 +366,79 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               </tr>
             ))}
           </thead>
+        </table>
+      </div>
+
+      {/* --- REFACTORED: Body Table Container (Scrollable) --- */}
+      <div
+        ref={tableContainerRef}
+        className="max-w-3xl overflow-auto max-h-96 scrollbar-thin" // Handles V and H scroll
+        style={{
+          scrollbarColor: `${theme.colors.accent}40 ${theme.colors.surface}`,
+        }}
+      >
+        <table
+          className="w-full"
+          style={{
+            tableLayout: "fixed",
+            width: table.getTotalSize(), // Set total width
+          }}
+        >
+          {/* Header is GONE from here */}
 
           {/* --- Virtualized Table Body --- */}
           <tbody
             style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
+              height: `${rowVirtualizer.getTotalSize()}px`, // Virtual height
               position: "relative",
-              tableLayout: "fixed"
             }}
           >
-            {rows.length > 0 ? (
-              rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const row = rows[virtualRow.index];
-                return (
-                  <motion.tr
-                    key={row.id}
-                    initial={{ opacity: 0 }}
-                    // Tell Framer Motion to animate the row to the correct vertical position
-                    animate={{ opacity: 1, y: virtualRow.start }}
-                    // A spring transition feels smoother for positioning
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: `${virtualRow.size}px`,
-                      // The conflicting transform property is now GONE from the style object
-                    }}
-                    onMouseEnter={() => setHoveredRow(row.id)}
-                    onMouseLeave={() => setHoveredRow(null)}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="px-6 py-5 text-md"
-                        style={{
-                          color: theme.colors.text,
-                          textAlign: "center !important",
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </td>
-                    ))}
-                  </motion.tr>
-                );
-              })
-            ) : (
+            {/* Rows are mapped only if they exist */}
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const row = rows[virtualRow.index];
+              return (
+                <motion.tr
+                  key={row.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, y: virtualRow.start }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%", // Row spans full table width
+                    height: `${virtualRow.size}px`,
+                  }}
+                  onMouseEnter={() => setHoveredRow(row.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className="px-6 py-5 text-md"
+                      style={{
+                        color: theme.colors.text,
+                        textAlign: "center !important",
+                        width: cell.column.getSize(), // Set specific column width
+                      }}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </td>
+                  ))}
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* --- NEW: "No Results" Table --- */}
+        {/* Rendered only when rows.length is 0, outside the virtualized tbody */}
+        {rows.length === 0 && (
+          <table className="w-full">
+            <tbody>
               <tr>
                 <td
                   colSpan={headers.length}
@@ -427,9 +478,9 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                   </div>
                 </td>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
