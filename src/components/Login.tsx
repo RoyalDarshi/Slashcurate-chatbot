@@ -166,9 +166,9 @@ const Login: React.FC<LoginProps> = ({
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-32 mx-auto shadow-md block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            color: theme.colors.text,
+            color: theme.colors.accent,
             backgroundColor: "transparent",
             border: `1px solid ${theme.colors.accent}`,
             borderRadius: theme.borderRadius.pill,
