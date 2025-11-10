@@ -101,11 +101,11 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
 
     useEffect(() => {
       if (message.isBot) {
-        if (message.content.includes("Sorry, an error occurred.")) {
+        if (message.status === "error") {
           setCurrentView("error");
           setCsvData([]);
           setHasNumericData(false);
-        } else {
+        } else if (message.status === "normal") {
           try {
             const parsedData = JSON.parse(message.content);
             console.log(parsedData);
@@ -186,8 +186,10 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
             setCurrentView("text");
           }
         }
+        // If status is 'loading', do nothing here;
+        // renderContent will handle it.
       }
-    }, [message]);
+    }, [message.content, message.isBot, message.status]); // <-- MODIFIED
 
     useEffect(() => {
       // Show orientation toggle when chartType is "bar" and there is valid data
@@ -392,7 +394,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     }, [csvData]);
 
     const renderContent = () => {
-      if (message.isBot && message.content === "loading...") {
+      if (message.isBot && message.status === "loading") {
+        // <-- MODIFIED
         return (
           <div
             className="p-4 shadow-md flex items-center justify-center"
@@ -416,7 +419,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
         );
       }
 
-      if (currentView === "error") {
+      if (currentView === "error" || message.status === "error") {
+        // <-- MODIFIED
         return (
           <div
             className="p-4 shadow-md border-l-4 border-red-500"
@@ -692,104 +696,125 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                       </motion.button>
                     </CustomTooltip>
                   )}
-                  {currentView !== "error" &&
-                    message.content !== "loading..." && (
-                      <>
-                        {currentView === "query" && csvData.length === 0 && (
-                          <CustomTooltip
-                            title="Switch to Text View"
-                            position="top"
+                  {currentView !== "error" && message.status === "normal" && (
+                    <>
+                      {currentView === "query" && csvData.length === 0 && (
+                        <CustomTooltip
+                          title="Switch to Text View"
+                          position="top"
+                        >
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setCurrentView("text")}
+                            className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                            style={{ background: theme.colors.surface }}
                           >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setCurrentView("text")}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                            >
-                              <Table
-                                size={20}
-                                style={{ color: theme.colors.accent }}
-                              />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                        {csvData.length > 0 && currentView !== "table" && (
-                          <CustomTooltip
-                            title="Switch to Table View"
-                            position="top"
+                            <Table
+                              size={20}
+                              style={{ color: theme.colors.accent }}
+                            />
+                          </motion.button>
+                        </CustomTooltip>
+                      )}
+                      {csvData.length > 0 && currentView !== "table" && (
+                        <CustomTooltip
+                          title="Switch to Table View"
+                          position="top"
+                        >
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setCurrentView("table")}
+                            className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                            style={{ background: theme.colors.surface }}
                           >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setCurrentView("table")}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                            >
-                              <Table
-                                size={20}
-                                style={{ color: theme.colors.accent }}
-                              />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                        {currentView !== "graph" && (
-                          <CustomTooltip
-                            title={
-                              !hasNumericData
-                                ? "No valid data for graph"
-                                : "Switch to Graph View"
-                            }
-                            position="top"
+                            <Table
+                              size={20}
+                              style={{ color: theme.colors.accent }}
+                            />
+                          </motion.button>
+                        </CustomTooltip>
+                      )}
+                      {currentView !== "graph" && (
+                        <CustomTooltip
+                          title={
+                            !hasNumericData
+                              ? "No valid data for graph"
+                              : "Switch to Graph View"
+                          }
+                          position="top"
+                        >
+                          <motion.button
+                            whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
+                            whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
+                            disabled={!hasNumericData}
+                            onClick={() => setCurrentView("graph")}
+                            className="rounded-full disabled:cursor-not-allowed p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                            style={{
+                              background: hasNumericData
+                                ? theme.colors.surface
+                                : theme.colors.disabled,
+                            }}
                           >
-                            <motion.button
-                              whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
-                              whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
-                              disabled={!hasNumericData}
-                              onClick={() => setCurrentView("graph")}
-                              className="rounded-full disabled:cursor-not-allowed p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                            <LineChart
+                              size={20}
                               style={{
-                                background: hasNumericData
-                                  ? theme.colors.surface
-                                  : theme.colors.disabled,
+                                color: hasNumericData
+                                  ? theme.colors.accent
+                                  : theme.colors.disabledText,
                               }}
-                            >
-                              <LineChart
-                                size={20}
-                                style={{
-                                  color: hasNumericData
-                                    ? theme.colors.accent
-                                    : theme.colors.disabledText,
-                                }}
-                              />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                        {parsedData?.sql_query && currentView !== "query" && (
+                            />
+                          </motion.button>
+                        </CustomTooltip>
+                      )}
+                      {parsedData?.sql_query && currentView !== "query" && (
+                        <CustomTooltip
+                          title="Switch to Query View"
+                          position="top"
+                        >
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setCurrentView("query")}
+                            className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                            style={{ background: theme.colors.surface }}
+                          >
+                            <Database
+                              size={20}
+                              style={{ color: theme.colors.accent }}
+                            />
+                          </motion.button>
+                        </CustomTooltip>
+                      )}
+                      {currentView === "table" && csvData.length > 0 && (
+                        <CustomTooltip title="Download XLSX" position="top">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleDownloadTableXLSX}
+                            className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                            style={{ background: theme.colors.surface }}
+                          >
+                            <Download
+                              size={20}
+                              style={{ color: theme.colors.accent }}
+                            />
+                          </motion.button>
+                        </CustomTooltip>
+                      )}
+                      {currentView === "graph" && hasNumericData && (
+                        <div className="relative" ref={resolutionRef}>
                           <CustomTooltip
-                            title="Switch to Query View"
-                            position="top"
+                            title="Download Graph"
+                            position="bottom"
                           >
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.95 }}
-                              onClick={() => setCurrentView("query")}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                            >
-                              <Database
-                                size={20}
-                                style={{ color: theme.colors.accent }}
-                              />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                        {currentView === "table" && csvData.length > 0 && (
-                          <CustomTooltip title="Download XLSX" position="top">
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={handleDownloadTableXLSX}
+                              onClick={() =>
+                                setShowResolutionOptions(!showResolutionOptions)
+                              }
                               className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
                               style={{ background: theme.colors.surface }}
                             >
@@ -799,186 +824,155 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                               />
                             </motion.button>
                           </CustomTooltip>
-                        )}
-                        {currentView === "graph" && hasNumericData && (
-                          <div className="relative" ref={resolutionRef}>
-                            <CustomTooltip
-                              title="Download Graph"
-                              position="bottom"
+                          {showResolutionOptions && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                              style={{
+                                background: theme.colors.surface,
+                                border: `1px solid ${theme.colors.border}`,
+                                boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                              }}
                             >
-                              <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() =>
-                                  setShowResolutionOptions(
-                                    !showResolutionOptions
-                                  )
-                                }
-                                className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                                style={{ background: theme.colors.surface }}
-                              >
-                                <Download
-                                  size={20}
-                                  style={{ color: theme.colors.accent }}
-                                />
-                              </motion.button>
-                            </CustomTooltip>
-                            {showResolutionOptions && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
+                              <button
+                                onClick={() => handleDownloadGraph("low")}
+                                className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
                                 style={{
-                                  background: theme.colors.surface,
-                                  border: `1px solid ${theme.colors.border}`,
-                                  boxShadow: `0 4px 12px ${theme.colors.text}20`,
+                                  color: theme.colors.text,
+                                  backgroundColor: "transparent",
                                 }}
-                              >
-                                <button
-                                  onClick={() => handleDownloadGraph("low")}
-                                  className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
-                                  style={{
-                                    color: theme.colors.text,
-                                    backgroundColor: "transparent",
-                                  }}
-                                  onMouseEnter={(e) =>
-                                    (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-                                  }
-                                  onMouseLeave={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      "transparent")
-                                  }
-                                >
-                                  Low Resolution
-                                </button>
-                                <button
-                                  onClick={() => handleDownloadGraph("high")}
-                                  className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
-                                  style={{
-                                    color: theme.colors.text,
-                                    backgroundColor: "transparent",
-                                  }}
-                                  onMouseEnter={(e) =>
-                                    (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-                                  }
-                                  onMouseLeave={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      "transparent")
-                                  }
-                                >
-                                  High Resolution
-                                </button>
-                              </motion.div>
-                            )}
-                          </div>
-                        )}
-                        {currentView === "graph" &&
-                          hasNumericData &&
-                          onSummarizeGraph && (
-                            <CustomTooltip
-                              title="Summarize Graph"
-                              position="top"
-                            >
-                              <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() =>
-                                  onSummarizeGraph(
-                                    graphRef.current!,
-                                    message.id
-                                  )
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
                                 }
-                                disabled={isSubmitting}
-                                className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85 disabled:opacity-50"
-                                style={{ background: theme.colors.surface }}
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "transparent")
+                                }
                               >
-                                <ScanEye
-                                  size={20}
-                                  style={{ color: theme.colors.accent }}
-                                />
-                              </motion.button>
-                            </CustomTooltip>
+                                Low Resolution
+                              </button>
+                              <button
+                                onClick={() => handleDownloadGraph("high")}
+                                className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
+                                style={{
+                                  color: theme.colors.text,
+                                  backgroundColor: "transparent",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.backgroundColor =
+                                    "transparent")
+                                }
+                              >
+                                High Resolution
+                              </button>
+                            </motion.div>
                           )}
-                        {currentView === "query" && parsedData?.sql_query && (
-                          <CustomTooltip title={copyTooltipTxt} position="top">
+                        </div>
+                      )}
+                      {currentView === "graph" &&
+                        hasNumericData &&
+                        onSummarizeGraph && (
+                          <CustomTooltip title="Summarize Graph" position="top">
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.95 }}
-                              onClick={() => {
-                                if (!canCopy) return;
-                                setCanCopy(false);
-                                if (navigator?.clipboard?.writeText) {
-                                  navigator.clipboard
-                                    .writeText(parsedData.sql_query)
-                                    .then(() => {
-                                      setCopied(true);
-                                      setCopyTooltipTxt("Copied!");
-                                    })
-                                    .catch((error) => {
-                                      console.error("Copy failed:", error);
-                                      toast.error("Failed to copy. Try again.");
-                                    })
-                                    .finally(() => {
-                                      setTimeout(() => {
-                                        setCopied(false);
-                                        setCopyTooltipTxt("Copy SQL Query");
-                                        setCanCopy(true);
-                                      }, 2000);
-                                    });
-                                } else {
-                                  const textarea =
-                                    document.createElement("textarea");
-                                  textarea.value = parsedData.sql_query;
-                                  document.body.appendChild(textarea);
-                                  textarea.select();
-                                  try {
-                                    const success =
-                                      document.execCommand("copy");
-                                    if (success) {
-                                      setCopied(true);
-                                      setCopyTooltipTxt("Copied!");
-                                    } else {
-                                      toast.error("Copying failed. Try again.");
-                                    }
-                                  } catch (error) {
-                                    console.error("Legacy copy failed:", error);
-                                    toast.error(
-                                      "Copying not supported in this browser."
-                                    );
-                                  } finally {
-                                    document.body.removeChild(textarea);
+                              onClick={() =>
+                                onSummarizeGraph(graphRef.current!, message.id)
+                              }
+                              disabled={isSubmitting}
+                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85 disabled:opacity-50"
+                              style={{ background: theme.colors.surface }}
+                            >
+                              <ScanEye
+                                size={20}
+                                style={{ color: theme.colors.accent }}
+                              />
+                            </motion.button>
+                          </CustomTooltip>
+                        )}
+                      {currentView === "query" && parsedData?.sql_query && (
+                        <CustomTooltip title={copyTooltipTxt} position="top">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              if (!canCopy) return;
+                              setCanCopy(false);
+                              if (navigator?.clipboard?.writeText) {
+                                navigator.clipboard
+                                  .writeText(parsedData.sql_query)
+                                  .then(() => {
+                                    setCopied(true);
+                                    setCopyTooltipTxt("Copied!");
+                                  })
+                                  .catch((error) => {
+                                    console.error("Copy failed:", error);
+                                    toast.error("Failed to copy. Try again.");
+                                  })
+                                  .finally(() => {
                                     setTimeout(() => {
                                       setCopied(false);
                                       setCopyTooltipTxt("Copy SQL Query");
                                       setCanCopy(true);
                                     }, 2000);
+                                  });
+                              } else {
+                                const textarea =
+                                  document.createElement("textarea");
+                                textarea.value = parsedData.sql_query;
+                                document.body.appendChild(textarea);
+                                textarea.select();
+                                try {
+                                  const success = document.execCommand("copy");
+                                  if (success) {
+                                    setCopied(true);
+                                    setCopyTooltipTxt("Copied!");
+                                  } else {
+                                    toast.error("Copying failed. Try again.");
                                   }
+                                } catch (error) {
+                                  console.error("Legacy copy failed:", error);
+                                  toast.error(
+                                    "Copying not supported in this browser."
+                                  );
+                                } finally {
+                                  document.body.removeChild(textarea);
+                                  setTimeout(() => {
+                                    setCopied(false);
+                                    setCopyTooltipTxt("Copy SQL Query");
+                                    setCanCopy(true);
+                                  }, 2000);
                                 }
-                              }}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                              disabled={!canCopy}
-                            >
-                              {copied ? (
-                                <Check
-                                  size={20}
-                                  style={{ color: theme.colors.accent }}
-                                />
-                              ) : (
-                                <Copy
-                                  size={20}
-                                  style={{ color: theme.colors.accent }}
-                                />
-                              )}
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                      </>
-                    )}
+                              }
+                            }}
+                            className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
+                            style={{ background: theme.colors.surface }}
+                            disabled={!canCopy}
+                          >
+                            {copied ? (
+                              <Check
+                                size={20}
+                                style={{ color: theme.colors.accent }}
+                              />
+                            ) : (
+                              <Copy
+                                size={20}
+                                style={{ color: theme.colors.accent }}
+                              />
+                            )}
+                          </motion.button>
+                        </CustomTooltip>
+                      )}
+                    </>
+                  )}
                 </div>
                 {renderContent()}
               </div>
-              {message.content !== "loading..." && !disabled && (
+              {message.status === "normal" && !disabled && (
                 <div className="flex justify-end items-center gap-2">
                   <CustomTooltip
                     title={isLiked ? "Remove like" : "Like this response"}
@@ -1266,7 +1260,7 @@ const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
     prevProps.responseStatus === nextProps.responseStatus &&
     prevProps.disabled === nextProps.disabled &&
     prevProps.onRetry === nextProps.onRetry &&
-    prevProps.onSummarizeGraph === nextProps.onSummarizeGraph &&
+    prevProps.onSummarizeGraph === nextProps.onSummarHizeGraph &&
     prevProps.isSubmitting === nextProps.isSubmitting
   );
 };

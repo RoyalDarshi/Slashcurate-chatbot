@@ -172,22 +172,22 @@ const createDashboardItemFromMessages = (
 
   if (!botMessage) {
     return null;
-  } else if (botMessage.content === "loading...") {
+  } else if (botMessage.status === "loading") {
+    // <-- MODIFIED
     return {
       ...baseItem,
       ...getDashboardLoadingState(),
       isError: false,
     };
-  } else if (
-    botMessage.content === "Sorry, an error occurred. Please try again." ||
-    botMessage.content === "Request cancelled by user."
-  ) {
+  } else if (botMessage.status === "error") {
+    // <-- MODIFIED
     return {
       ...baseItem,
       ...getDashboardErrorState(userMessage.content, botMessage.content),
       isError: true,
     };
   } else {
+    // Assumes botMessage.status === "normal"
     try {
       const botResponseContent = JSON.parse(botMessage.content);
       const actualKpiData = botResponseContent.kpiData || initialEmptyKpiData;
@@ -324,7 +324,7 @@ const DashboardInterface = memo(
 
       useEffect(() => {
         const loadingMessages = messages.filter(
-          (msg) => msg.isBot && msg.content === "loading..."
+          (msg) => msg.isBot && msg.status === "loading" // <-- MODIFIED
         );
         if (loadingMessages.length === 0) {
           setIsSubmitting(false);
@@ -339,7 +339,8 @@ const DashboardInterface = memo(
                 { token },
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-              if (response.data.content !== "loading...") {
+              if (response.data.status !== "loading") {
+                // <-- MODIFIED
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
                   id: msg.id,
@@ -348,17 +349,15 @@ const DashboardInterface = memo(
                     timestamp: response.data.timestamp,
                     reaction: sanitizeReaction(response.data.reaction),
                     dislike_reason: response.data.dislike_reason ?? null,
+                    status: response.data.status, // <-- ADDED
                   },
                 });
                 // Update dashboardHistory based on the new bot content
                 setDashboardHistory((prev) =>
                   prev.map((item) => {
                     if (item.botResponseId === msg.id) {
-                      if (
-                        response.data.content ===
-                          "Sorry, an error occurred. Please try again." ||
-                        response.data.content === "Request cancelled by user."
-                      ) {
+                      if (response.data.status === "error") {
+                        // <-- MODIFIED
                         return {
                           ...item,
                           ...getDashboardErrorState(
@@ -368,6 +367,7 @@ const DashboardInterface = memo(
                           isError: true,
                         };
                       } else {
+                        // Assumes "normal"
                         try {
                           const botResponseContent = JSON.parse(
                             response.data.content
@@ -750,6 +750,7 @@ const DashboardInterface = memo(
             timestamp: new Date().toISOString(),
             isFavorited: false,
             parentId: null,
+            status: "normal", // <-- MODIFIED
           };
 
           let finalUserMessageId: string = "";
@@ -764,6 +765,7 @@ const DashboardInterface = memo(
                 content: question,
                 isBot: false,
                 parentId: null,
+                status: "normal", // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -787,6 +789,7 @@ const DashboardInterface = memo(
                 isBot: true,
                 isFavorited: false,
                 parentId: finalUserMessage.id,
+                status: "loading", // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -798,6 +801,7 @@ const DashboardInterface = memo(
               timestamp: new Date().toISOString(),
               isFavorited: false,
               parentId: finalUserMessage.id,
+              status: "loading", // <-- MODIFIED
             };
             dispatchMessages({
               type: "ADD_MESSAGE",
@@ -860,6 +864,7 @@ const DashboardInterface = memo(
                   token,
                   content: botResponseContent,
                   timestamp: new Date().toISOString(),
+                  status: "normal", // <-- MODIFIED
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
@@ -867,6 +872,7 @@ const DashboardInterface = memo(
               const updatedBotMessage: Partial<Message> = {
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                status: "normal", // <-- MODIFIED
               };
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
@@ -932,6 +938,7 @@ const DashboardInterface = memo(
               // Clear the controller
               setActiveRequestController(null);
               const errorContent = getErrorMessage(error); // Get smart error message
+              const errorStatus = "error"; // <-- ADDED
 
               // Check if the error was from cancellation
               if (
@@ -987,6 +994,7 @@ const DashboardInterface = memo(
                         timestamp: new Date().toISOString(),
                         reaction: null,
                         dislike_reason: null,
+                        status: errorStatus, // <-- MODIFIED
                       },
                       { headers: { "Content-Type": "application/json" } }
                     )
@@ -1002,6 +1010,7 @@ const DashboardInterface = memo(
                     timestamp: new Date().toISOString(),
                     reaction: null,
                     dislike_reason: null,
+                    status: errorStatus, // <-- MODIFIED
                   };
                   dispatchMessages({
                     type: "UPDATE_MESSAGE",
@@ -1019,6 +1028,7 @@ const DashboardInterface = memo(
                     timestamp: new Date().toISOString(),
                     isFavorited: false,
                     parentId: finalUserMessageId,
+                    status: errorStatus, // <-- MODIFIED
                   };
                   dispatchMessages({
                     type: "ADD_MESSAGE",
@@ -1064,10 +1074,11 @@ const DashboardInterface = memo(
         }
 
         const errorMessage = "Request cancelled by user.";
+        const errorStatus = "error"; // <-- ADDED
 
         // 2. Find the loading message in the session
         const loadingMessage = messages.find(
-          (msg) => msg.isBot && msg.content === "loading..."
+          (msg) => msg.isBot && msg.status === "loading" // <-- MODIFIED
         );
 
         if (loadingMessage && loadingMessage.id) {
@@ -1080,6 +1091,7 @@ const DashboardInterface = memo(
                 token,
                 content: errorMessage,
                 timestamp: new Date().toISOString(),
+                status: errorStatus, // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1091,6 +1103,7 @@ const DashboardInterface = memo(
               message: {
                 content: errorMessage,
                 timestamp: new Date().toISOString(),
+                status: errorStatus, // <-- MODIFIED
               },
             });
 
@@ -1366,6 +1379,7 @@ const DashboardInterface = memo(
               token,
               content: newQuestion,
               timestamp: new Date().toISOString(),
+              status: "normal", // <-- MODIFIED
             });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -1373,6 +1387,7 @@ const DashboardInterface = memo(
               message: {
                 content: newQuestion,
                 timestamp: new Date().toISOString(),
+                status: "normal", // <-- MODIFIED
               },
             });
             setDashboardHistory((prev) =>
@@ -1400,6 +1415,7 @@ const DashboardInterface = memo(
                   token,
                   content: "loading...",
                   timestamp: new Date().toISOString(),
+                  status: "loading", // <-- MODIFIED
                 }
               );
               dispatchMessages({
@@ -1408,6 +1424,7 @@ const DashboardInterface = memo(
                 message: {
                   content: "loading...",
                   timestamp: new Date().toISOString(),
+                  status: "loading", // <-- MODIFIED
                 },
               });
             } else {
@@ -1420,6 +1437,7 @@ const DashboardInterface = memo(
                   isBot: true,
                   isFavorited: false,
                   parentId: questionMessageId,
+                  status: "loading", // <-- MODIFIED
                 }
               );
               botMessageToUpdateId = botLoadingResponse.data.id;
@@ -1430,6 +1448,7 @@ const DashboardInterface = memo(
                 timestamp: new Date().toISOString(),
                 isFavorited: false,
                 parentId: questionMessageId,
+                status: "loading", // <-- MODIFIED
               };
               dispatchMessages({
                 type: "ADD_MESSAGE",
@@ -1477,6 +1496,7 @@ const DashboardInterface = memo(
                   token,
                   content: botResponseContent,
                   timestamp: new Date().toISOString(),
+                  status: "normal", // <-- MODIFIED
                 }
               );
               dispatchMessages({
@@ -1485,6 +1505,7 @@ const DashboardInterface = memo(
                 message: {
                   content: botResponseContent,
                   timestamp: new Date().toISOString(),
+                  status: "normal", // <-- MODIFIED
                 },
               });
 
@@ -1546,6 +1567,7 @@ const DashboardInterface = memo(
               // Clear the controller
               setActiveRequestController(null);
               const errorContent = getErrorMessage(error); // Get smart error message
+              const errorStatus = "error"; // <-- ADDED
 
               // Check if the error was from cancellation
               if (
@@ -1561,6 +1583,7 @@ const DashboardInterface = memo(
                     token,
                     content: errorContent,
                     timestamp: new Date().toISOString(),
+                    status: errorStatus, // <-- MODIFIED
                   }
                 );
                 dispatchMessages({
@@ -1569,6 +1592,7 @@ const DashboardInterface = memo(
                   message: {
                     content: errorContent,
                     timestamp: new Date().toISOString(),
+                    status: errorStatus, // <-- MODIFIED
                   },
                 });
                 setDashboardHistory((prev) =>
@@ -1658,6 +1682,7 @@ const DashboardInterface = memo(
                   token,
                   content: "loading...",
                   timestamp: new Date().toISOString(),
+                  status: "loading", // <-- MODIFIED
                 }
               );
               dispatchMessages({
@@ -1666,6 +1691,7 @@ const DashboardInterface = memo(
                 message: {
                   content: "loading...",
                   timestamp: new Date().toISOString(),
+                  status: "loading", // <-- MODIFIED
                 },
               });
             } else {
@@ -1679,6 +1705,7 @@ const DashboardInterface = memo(
                   isBot: true,
                   isFavorited: false,
                   parentId: questionMessageId,
+                  status: "loading", // <-- MODIFIED
                 }
               );
               botMessageToUpdateId = botLoadingResponse.data.id;
@@ -1689,6 +1716,7 @@ const DashboardInterface = memo(
                 timestamp: new Date().toISOString(),
                 isFavorited: false,
                 parentId: questionMessageId,
+                status: "loading", // <-- MODIFIED
               };
               dispatchMessages({
                 type: "ADD_MESSAGE",
@@ -1730,6 +1758,7 @@ const DashboardInterface = memo(
                   token,
                   content: botResponseContent,
                   timestamp: new Date().toISOString(),
+                  status: "normal", // <-- MODIFIED
                 }
               );
               dispatchMessages({
@@ -1738,6 +1767,7 @@ const DashboardInterface = memo(
                 message: {
                   content: botResponseContent,
                   timestamp: new Date().toISOString(),
+                  status: "normal", // <-- MODIFIED
                 },
               });
 
@@ -1778,6 +1808,7 @@ const DashboardInterface = memo(
               // 6. Handle Failure
               setActiveRequestController(null);
               const errorContent = getErrorMessage(error);
+              const errorStatus = "error"; // <-- ADDED
 
               if (
                 axios.isCancel(error) ||
@@ -1792,6 +1823,7 @@ const DashboardInterface = memo(
                     token,
                     content: errorContent,
                     timestamp: new Date().toISOString(),
+                    status: errorStatus, // <-- MODIFIED
                   }
                 );
                 dispatchMessages({
@@ -1800,6 +1832,7 @@ const DashboardInterface = memo(
                   message: {
                     content: errorContent,
                     timestamp: new Date().toISOString(),
+                    status: errorStatus, // <-- MODIFIED
                   },
                 });
                 setDashboardHistory((prev) =>

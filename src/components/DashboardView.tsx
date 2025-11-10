@@ -129,8 +129,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     };
 
     useEffect(() => {
-      const chartData = dashboardItem.mainViewData.chartData;
-      if (chartData && chartData.length > 0) {
+      if (
+        dashboardItem?.mainViewData?.chartData &&
+        dashboardItem.mainViewData.chartData.length > 0
+      ) {
+        const chartData = dashboardItem.mainViewData.chartData;
         const validKeys = getValidValueKeys(chartData);
         setGroupBy(getValidCategoricalKeys(chartData)[0] || null);
         setValueKey(validKeys[0] || null);
@@ -140,7 +143,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         setGroupBy(null);
         setValueKey(null);
       }
-    }, [dashboardItem.mainViewData.chartData]);
+    }, [dashboardItem?.mainViewData?.chartData]);
 
     useEffect(() => {
       if (graphSummary) setShowSummaryModal(true);
@@ -229,6 +232,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           }
         );
         onUpdateReaction(dashboardItem.questionMessageId, "dislike", reason);
+        setShowDislikeOptions(false); // <-- Close on submit
+        setShowCustomInput(false); // <-- Close on submit
       } catch (error) {
         console.error("Error setting dislike reaction:", error);
         toast.error("Failed to set dislike reaction.");
@@ -262,10 +267,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     }
 
-    // **FIX 1: Use the `isError` flag passed in the dashboard item**
-    const isErrorState = dashboardItem.isError;
-
-    if (isErrorState) {
+    // **FIX: Simplified this check**
+    if (dashboardItem.isError) {
+      // The DashboardError component is now rendered in DashboardInterface
+      // This logic is technically redundant if DashboardInterface is correct,
+      // but serves as a fallback.
       return (
         <div
           className="flex flex-col items-center justify-center h-full p-4"
@@ -361,7 +367,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         </div>
       );
     }
-
 
     return (
       <div>

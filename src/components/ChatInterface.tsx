@@ -202,7 +202,7 @@ const ChatInterface = memo(
 
       useEffect(() => {
         const loadingMessages = messages.filter(
-          (msg) => msg.isBot && msg.content === "loading..."
+          (msg) => msg.isBot && msg.status === "loading"
         );
         if (loadingMessages.length === 0) {
           setIsSubmitting(false);
@@ -217,7 +217,7 @@ const ChatInterface = memo(
                 { token },
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-              if (response.data.content !== "loading...") {
+              if (response.data.status !== "loading") {
                 setIsSubmitting(false);
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
@@ -225,6 +225,7 @@ const ChatInterface = memo(
                   message: {
                     content: response.data.content,
                     timestamp: response.data.timestamp,
+                    status: response.data.status,
                   },
                 });
               }
@@ -366,6 +367,7 @@ const ChatInterface = memo(
             timestamp: new Date().toISOString(),
             isFavorited,
             parentId: null,
+            status: "normal",
           };
 
           let finalUserMessageId: string | null = null;
@@ -381,6 +383,7 @@ const ChatInterface = memo(
                 isBot: false,
                 isFavorited,
                 parentId: null,
+                status: "normal",
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -403,6 +406,7 @@ const ChatInterface = memo(
                 isBot: true,
                 isFavorited: false,
                 parentId: finalUserMessage.id,
+                status: "loading", // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -414,6 +418,7 @@ const ChatInterface = memo(
               timestamp: new Date().toISOString(),
               isFavorited: false,
               parentId: finalUserMessage.id,
+              status: "loading", // <-- MODIFIED
             };
             setIsSubmitting(true);
             dispatchMessages({
@@ -466,6 +471,7 @@ const ChatInterface = memo(
                   token,
                   content: botResponseContent,
                   timestamp: new Date().toISOString(),
+                  status: "normal",
                 },
                 { headers: { "Content-Type": "application/json" } }
               );
@@ -473,6 +479,7 @@ const ChatInterface = memo(
               const updatedBotMessage: Partial<Message> = {
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                status: "normal",
               };
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
@@ -497,6 +504,7 @@ const ChatInterface = memo(
                 console.error("Error getting bot response:", error);
                 const errorContent =
                   "Sorry, an error occurred. Please try again.";
+                const errorStatus = "error"; // <-- ADDED
 
                 if (botMessageId) {
                   await axios
@@ -506,6 +514,7 @@ const ChatInterface = memo(
                         token,
                         content: errorContent,
                         timestamp: new Date().toISOString(),
+                        status: errorStatus, // <-- MODIFIED
                       },
                       { headers: { "Content-Type": "application/json" } }
                     )
@@ -519,6 +528,7 @@ const ChatInterface = memo(
                   const errorMessageUpdate: Partial<Message> = {
                     content: errorContent,
                     timestamp: new Date().toISOString(),
+                    status: errorStatus, // <-- MODIFIED
                   };
                   dispatchMessages({
                     type: "UPDATE_MESSAGE",
@@ -537,6 +547,7 @@ const ChatInterface = memo(
                     timestamp: new Date().toISOString(),
                     isFavorited: false,
                     parentId: finalUserMessageId,
+                    status: errorStatus, // <-- MODIFIED
                   };
                   dispatchMessages({
                     type: "ADD_MESSAGE",
@@ -772,11 +783,12 @@ const ChatInterface = memo(
 
         // Find the message that is currently loading
         const loadingMessage = messages.find(
-          (msg) => msg.isBot && msg.content === "loading..."
+          (msg) => msg.isBot && msg.status === "loading"
         );
 
         if (loadingMessage && loadingMessage.id) {
-          const errorMessage = "Sorry, an error occurred. Please try again.";
+          const errorMessage = "Request cancelled by user.";
+          const errorStatus = "error"; // <-- ADDED
           const loadingMessageId = loadingMessage.id;
 
           try {
@@ -787,6 +799,7 @@ const ChatInterface = memo(
                 token,
                 content: errorMessage,
                 timestamp: new Date().toISOString(),
+                status: errorStatus, // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -798,6 +811,7 @@ const ChatInterface = memo(
               message: {
                 content: errorMessage,
                 timestamp: new Date().toISOString(),
+                status: errorStatus, // <-- MODIFIED
               },
             });
 
@@ -813,6 +827,7 @@ const ChatInterface = memo(
               message: {
                 content: `Error cancelling: ${getErrorMessage(error)}`,
                 timestamp: new Date().toISOString(),
+                status: "error", // <-- MODIFIED
               },
             });
             setIsSubmitting(false);
@@ -853,9 +868,7 @@ const ChatInterface = memo(
                 questionContent: questionMessage.content,
                 currentConnection: currentConnectionForAction,
                 responseQuery:
-                  responseMessage &&
-                  responseMessage.content !== "loading..." &&
-                  !getErrorMessage(null).includes(responseMessage.content)
+                  responseMessage && responseMessage.status === "normal"
                     ? JSON.parse(responseMessage.content).sql_query
                     : null,
               },
@@ -990,6 +1003,7 @@ const ChatInterface = memo(
                 token,
                 content: "loading...",
                 timestamp: new Date().toISOString(),
+                status: "loading", // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -999,6 +1013,7 @@ const ChatInterface = memo(
               message: {
                 content: "loading...",
                 timestamp: new Date().toISOString(),
+                status: "loading", // <-- MODIFIED
               },
             });
 
@@ -1031,6 +1046,7 @@ const ChatInterface = memo(
                 token,
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                status: "normal", // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1040,6 +1056,7 @@ const ChatInterface = memo(
               message: {
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                status: "normal", // <-- MODIFIED
               },
             });
             setTimeout(() => scrollToMessage(originalBotMessageId), 100);
@@ -1058,6 +1075,7 @@ const ChatInterface = memo(
               console.error("Error retrying message:", error);
               const errorContent =
                 "Sorry, an error occurred. Please try again.";
+              const errorStatus = "error"; // <-- ADDED
 
               await axios
                 .put(
@@ -1066,6 +1084,7 @@ const ChatInterface = memo(
                     token,
                     content: errorContent,
                     timestamp: new Date().toISOString(),
+                    status: errorStatus, // <-- MODIFIED
                   },
                   { headers: { "Content-Type": "application/json" } }
                 )
@@ -1081,6 +1100,7 @@ const ChatInterface = memo(
                 message: {
                   content: errorContent,
                   timestamp: new Date().toISOString(),
+                  status: errorStatus, // <-- MODIFIED
                 },
               });
               setTimeout(() => scrollToMessage(originalBotMessageId), 100);
@@ -1142,6 +1162,7 @@ const ChatInterface = memo(
               token,
               content,
               timestamp: new Date().toISOString(),
+              status: "normal",
             },
             { headers: { "Content-Type": "application/json" } }
           );
@@ -1151,6 +1172,7 @@ const ChatInterface = memo(
             message: {
               content,
               timestamp: new Date().toISOString(),
+              status: "normal",
             },
           });
 
@@ -1161,6 +1183,7 @@ const ChatInterface = memo(
                 token,
                 content: "loading...",
                 timestamp: new Date().toISOString(),
+                status: "loading", // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1170,6 +1193,7 @@ const ChatInterface = memo(
               message: {
                 content: "loading...",
                 timestamp: new Date().toISOString(),
+                status: "loading", // <-- MODIFIED
               },
             });
           } else {
@@ -1182,6 +1206,7 @@ const ChatInterface = memo(
                 isBot: true,
                 isFavorited: false,
                 parentId: id,
+                status: "loading", // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1193,6 +1218,7 @@ const ChatInterface = memo(
               timestamp: new Date().toISOString(),
               isFavorited: false,
               parentId: id,
+              status: "loading", // <-- MODIFIED
             };
             dispatchMessages({
               type: "ADD_MESSAGE",
@@ -1235,6 +1261,7 @@ const ChatInterface = memo(
                 token,
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                status: "normal", // <-- MODIFIED
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -1244,6 +1271,7 @@ const ChatInterface = memo(
               message: {
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
+                status: "normal", // <-- MODIFIED
               },
             });
             setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
@@ -1265,6 +1293,7 @@ const ChatInterface = memo(
               );
               const errorContent =
                 "Sorry, an error occurred. Please try again.";
+              const errorStatus = "error"; // <-- ADDED
 
               await axios
                 .put(
@@ -1273,6 +1302,7 @@ const ChatInterface = memo(
                     token,
                     content: errorContent,
                     timestamp: new Date().toISOString(),
+                    status: errorStatus, // <-- MODIFIED
                   },
                   { headers: { "Content-Type": "application/json" } }
                 )
@@ -1288,6 +1318,7 @@ const ChatInterface = memo(
                 message: {
                   content: errorContent,
                   timestamp: new Date().toISOString(),
+                  status: errorStatus, // <-- MODIFIED
                 },
               });
               setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
@@ -1311,25 +1342,10 @@ const ChatInterface = memo(
           (msg) => msg.isBot && msg.parentId === userMessageId
         );
         if (botResponse) {
-          if (botResponse.content === "loading...") return "loading";
-          const potentialErrorMessages = [
-            "Sorry, an error occurred. Please try again.",
-            "An unknown error occurred. Please try again.",
-            "Request cancelled by user.", // Add our new error message
-          ];
-          if (
-            potentialErrorMessages.includes(botResponse.content) ||
-            (botResponse.content &&
-              botResponse.content.startsWith("Request failed with status code"))
-          ) {
-            return "error";
-          }
-          try {
-            JSON.parse(botResponse.content);
-            return "success";
-          } catch {
-            return "error";
-          }
+          if (botResponse.status === "loading") return "loading";
+          if (botResponse.status === "error") return "error";
+          // We assume 'normal' status means success
+          if (botResponse.status === "normal") return "success";
         }
         return null;
       };
