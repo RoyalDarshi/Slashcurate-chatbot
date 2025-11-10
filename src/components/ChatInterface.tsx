@@ -97,6 +97,8 @@ const ChatInterface = memo(
         scrollToMessage,
         userHasScrolledUp,
       } = useChatScroll();
+      const [activeRequestController, setActiveRequestController] =
+        useState<AbortController | null>(null);
 
       const [input, setInput] = useState("");
       const connectionDropdownRef = useRef<HTMLDivElement>(null);
@@ -421,6 +423,10 @@ const ChatInterface = memo(
             setTimeout(() => scrollToMessage(botMessageId!), 100);
 
             try {
+              // Create a new AbortController for this request
+              const controller = new AbortController();
+              setActiveRequestController(controller); // Store it in state
+
               const connectionObj = connections.find(
                 (conn) => conn.connectionName === connection
               );
@@ -444,8 +450,14 @@ const ChatInterface = memo(
                   };
               const response = await axios.post(
                 `${CHATBOT_API_URL}/ask`,
-                payload
+                payload,
+                {
+                  signal: controller.signal, // <-- Pass the signal here
+                }
               );
+
+              // If we get here, the request was NOT cancelled
+              setActiveRequestController(null);
               const botResponseContent = JSON.stringify(response.data, null, 2);
 
               await axios.put(
@@ -469,55 +481,72 @@ const ChatInterface = memo(
               });
               setTimeout(() => scrollToMessage(botMessageId!), 100);
             } catch (error) {
-              console.error("Error getting bot response:", error);
-              const errorContent =
-                "Sorry, an error occurred. Please try again.";
+              // Clear the controller
+              setActiveRequestController(null);
 
-              if (botMessageId) {
-                await axios
-                  .put(
-                    `${API_URL}/api/messages/${botMessageId}`,
-                    {
-                      token,
-                      content: errorContent,
-                      timestamp: new Date().toISOString(),
-                    },
-                    { headers: { "Content-Type": "application/json" } }
-                  )
-                  .catch((updateError) =>
-                    console.error(
-                      "Failed to update message to error state on server:",
-                      updateError
-                    )
-                  );
-
-                const errorMessageUpdate: Partial<Message> = {
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                };
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessageId,
-                  message: errorMessageUpdate,
-                });
-                setTimeout(
-                  () => botMessageId && scrollToMessage(botMessageId),
-                  100
-                );
+              // Check if the error was from cancellation
+              if (
+                axios.isCancel(error) ||
+                (error as Error).name === "CanceledError"
+              ) {
+                console.log("Request cancelled by AbortController.");
+                // The message was already updated by handleStopRequest,
+                // so we just need to NOT proceed to the error logic below.
               } else {
-                const generalErrorMessage: Message = {
-                  id: `error-${Date.now().toString()}`,
-                  content: errorContent,
-                  isBot: true,
-                  timestamp: new Date().toISOString(),
-                  isFavorited: false,
-                  parentId: finalUserMessageId,
-                };
-                dispatchMessages({
-                  type: "ADD_MESSAGE",
-                  message: generalErrorMessage,
-                });
-                setTimeout(() => scrollToMessage(generalErrorMessage.id), 100);
+                // This is a *real* error
+                console.error("Error getting bot response:", error);
+                const errorContent =
+                  "Sorry, an error occurred. Please try again.";
+
+                if (botMessageId) {
+                  await axios
+                    .put(
+                      `${API_URL}/api/messages/${botMessageId}`,
+                      {
+                        token,
+                        content: errorContent,
+                        timestamp: new Date().toISOString(),
+                      },
+                      { headers: { "Content-Type": "application/json" } }
+                    )
+                    .catch((updateError) =>
+                      console.error(
+                        "Failed to update message to error state on server:",
+                        updateError
+                      )
+                    );
+
+                  const errorMessageUpdate: Partial<Message> = {
+                    content: errorContent,
+                    timestamp: new Date().toISOString(),
+                  };
+                  dispatchMessages({
+                    type: "UPDATE_MESSAGE",
+                    id: botMessageId,
+                    message: errorMessageUpdate,
+                  });
+                  setTimeout(
+                    () => botMessageId && scrollToMessage(botMessageId),
+                    100
+                  );
+                } else {
+                  const generalErrorMessage: Message = {
+                    id: `error-${Date.now().toString()}`,
+                    content: errorContent,
+                    isBot: true,
+                    timestamp: new Date().toISOString(),
+                    isFavorited: false,
+                    parentId: finalUserMessageId,
+                  };
+                  dispatchMessages({
+                    type: "ADD_MESSAGE",
+                    message: generalErrorMessage,
+                  });
+                  setTimeout(
+                    () => scrollToMessage(generalErrorMessage.id),
+                    100
+                  );
+                }
               }
             }
           } catch (error) {
@@ -732,6 +761,73 @@ const ChatInterface = memo(
         [input, isSubmitting, selectedConnection, askQuestion]
       );
 
+      const handleStopRequest = useCallback(async () => {
+        if (!isSubmitting) return; // Guard clause
+
+        // 1. Abort the in-flight Axios request
+        if (activeRequestController) {
+          activeRequestController.abort();
+          setActiveRequestController(null);
+        }
+
+        // Find the message that is currently loading
+        const loadingMessage = messages.find(
+          (msg) => msg.isBot && msg.content === "loading..."
+        );
+
+        if (loadingMessage && loadingMessage.id) {
+          const errorMessage = "Sorry, an error occurred. Please try again.";
+          const loadingMessageId = loadingMessage.id;
+
+          try {
+            // 2. Update the Flask (API_URL) backend message to an error state
+            await axios.put(
+              `${API_URL}/api/messages/${loadingMessageId}`,
+              {
+                token,
+                content: errorMessage,
+                timestamp: new Date().toISOString(),
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
+            // 3. Update local state
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: loadingMessageId,
+              message: {
+                content: errorMessage,
+                timestamp: new Date().toISOString(),
+              },
+            });
+
+            // 4. Update component's submitting state
+            setIsSubmitting(false);
+          } catch (error) {
+            console.error("Error cancelling request:", error);
+            toast.error("Failed to cancel request. Please try again.");
+            // Still update UI and state even if API fails
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: loadingMessageId,
+              message: {
+                content: `Error cancelling: ${getErrorMessage(error)}`,
+                timestamp: new Date().toISOString(),
+              },
+            });
+            setIsSubmitting(false);
+          }
+        } else {
+          console.warn("Stop requested, but no 'loading...' message found.");
+          setIsSubmitting(false); // Reset state just in case
+        }
+      }, [
+        isSubmitting,
+        messages,
+        token,
+        dispatchMessages,
+        activeRequestController,
+      ]);
 
       const handleFavoriteMessage = useCallback(
         async (messageId: string) => {
@@ -911,11 +1007,23 @@ const ChatInterface = memo(
               connection: connectionObj,
               sessionId,
             };
+
+            // Create a new AbortController for this request
+            const controller = new AbortController();
+            setActiveRequestController(controller); // Store it in state
+
             const response = await axios.post(
               `${CHATBOT_API_URL}/ask`,
-              payload
+              payload,
+              {
+                signal: controller.signal, // <-- Pass the signal here
+              }
             );
+
+            // If we get here, the request was NOT cancelled
+            setActiveRequestController(null);
             const botResponseContent = JSON.stringify(response.data, null, 2);
+            console.log("Bot Response Content:", botResponseContent);
 
             await axios.put(
               `${API_URL}/api/messages/${originalBotMessageId}`,
@@ -936,34 +1044,47 @@ const ChatInterface = memo(
             });
             setTimeout(() => scrollToMessage(originalBotMessageId), 100);
           } catch (error) {
-            console.error("Error retrying message:", error);
-            const errorContent = "Sorry, an error occurred. Please try again.";
+            // Clear the controller
+            setActiveRequestController(null);
 
-            await axios
-              .put(
-                `${API_URL}/api/messages/${originalBotMessageId}`,
-                {
-                  token,
+            // Check if the error was from cancellation
+            if (
+              axios.isCancel(error) ||
+              (error as Error).name === "CanceledError"
+            ) {
+              console.log("Retry request cancelled by AbortController.");
+              // Message was updated by handleStopRequest
+            } else {
+              console.error("Error retrying message:", error);
+              const errorContent =
+                "Sorry, an error occurred. Please try again.";
+
+              await axios
+                .put(
+                  `${API_URL}/api/messages/${originalBotMessageId}`,
+                  {
+                    token,
+                    content: errorContent,
+                    timestamp: new Date().toISOString(),
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                )
+                .catch((updateError) =>
+                  console.error(
+                    "Failed to update message to error state on server (retry):",
+                    updateError
+                  )
+                );
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: originalBotMessageId,
+                message: {
                   content: errorContent,
                   timestamp: new Date().toISOString(),
                 },
-                { headers: { "Content-Type": "application/json" } }
-              )
-              .catch((updateError) =>
-                console.error(
-                  "Failed to update message to error state on server (retry):",
-                  updateError
-                )
-              );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: originalBotMessageId,
-              message: {
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-              },
-            });
-            setTimeout(() => scrollToMessage(originalBotMessageId), 100);
+              });
+              setTimeout(() => scrollToMessage(originalBotMessageId), 100);
+            }
           }
         },
         [
@@ -1091,10 +1212,21 @@ const ChatInterface = memo(
               connection: connectionObj,
               sessionId,
             };
+
+            // Create a new AbortController for this request
+            const controller = new AbortController();
+            setActiveRequestController(controller); // Store it in state
+
             const response = await axios.post(
               `${CHATBOT_API_URL}/ask`,
-              payload
+              payload,
+              {
+                signal: controller.signal, // <-- Pass the signal here
+              }
             );
+
+            // If we get here, the request was NOT cancelled
+            setActiveRequestController(null);
             const botResponseContent = JSON.stringify(response.data, null, 2);
 
             await axios.put(
@@ -1116,37 +1248,50 @@ const ChatInterface = memo(
             });
             setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
           } catch (error) {
-            console.error(
-              "Error getting bot response for edited message:",
-              error
-            );
-            const errorContent = "Sorry, an error occurred. Please try again.";
+            // Clear the controller
+            setActiveRequestController(null);
 
-            await axios
-              .put(
-                `${API_URL}/api/messages/${botMessageToUpdateId}`,
-                {
-                  token,
+            // Check if the error was from cancellation
+            if (
+              axios.isCancel(error) ||
+              (error as Error).name === "CanceledError"
+            ) {
+              console.log("Edit request cancelled by AbortController.");
+              // Message was updated by handleStopRequest
+            } else {
+              console.error(
+                "Error getting bot response for edited message:",
+                error
+              );
+              const errorContent =
+                "Sorry, an error occurred. Please try again.";
+
+              await axios
+                .put(
+                  `${API_URL}/api/messages/${botMessageToUpdateId}`,
+                  {
+                    token,
+                    content: errorContent,
+                    timestamp: new Date().toISOString(),
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                )
+                .catch((updateError) =>
+                  console.error(
+                    "Failed to update message to error state on server (edit):",
+                    updateError
+                  )
+                );
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: botMessageToUpdateId,
+                message: {
                   content: errorContent,
                   timestamp: new Date().toISOString(),
                 },
-                { headers: { "Content-Type": "application/json" } }
-              )
-              .catch((updateError) =>
-                console.error(
-                  "Failed to update message to error state on server (edit):",
-                  updateError
-                )
-              );
-            dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: botMessageToUpdateId,
-              message: {
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-              },
-            });
-            setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
+              });
+              setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
+            }
           }
         } catch (error) {
           console.error("Error handling edit message (outer scope):", error);
@@ -1170,6 +1315,7 @@ const ChatInterface = memo(
           const potentialErrorMessages = [
             "Sorry, an error occurred. Please try again.",
             "An unknown error occurred. Please try again.",
+            "Request cancelled by user.", // Add our new error message
           ];
           if (
             potentialErrorMessages.includes(botResponse.content) ||
@@ -1545,6 +1691,7 @@ const ChatInterface = memo(
                   onInputChange={setInput}
                   onSubmit={handleSubmit}
                   disabled={!!sessionConnectionError}
+                  onStopRequest={handleStopRequest}
                 />
               </div>
             </div>

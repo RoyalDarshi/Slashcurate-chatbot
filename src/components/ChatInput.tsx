@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { Send, Mic, MicOff } from "lucide-react"; // Import Mic and MicOff icons
+import { Send, Mic, MicOff, XSquare } from "lucide-react";
 import { ChatInputProps } from "../types"; // Assuming this type exists
 import { useTheme } from "../ThemeContext"; // Assuming this context exists
 import MiniLoader from "./MiniLoader"; // Assuming this component exists
@@ -14,7 +14,14 @@ declare global {
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
-  ({ input, isSubmitting, onInputChange, onSubmit, disabled }) => {
+  ({
+    input,
+    isSubmitting,
+    onInputChange,
+    onSubmit,
+    disabled,
+    onStopRequest,
+  }) => {
     const { theme } = useTheme();
     const isDisabled = isSubmitting || disabled;
     const inputRef = useRef<HTMLInputElement>(null);
@@ -270,34 +277,52 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             }}
           />
 
-          {/* Send Button */}
-          <CustomTooltip title="Ask Question" position="top">
-            <button
-              type="submit"
-              disabled={
-                isDisabled || isRecording || micPermissionStatus === "denied"
-              } // Disable send button while recording or if denied
-              className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
-              style={{
-                background:
+          {/* Send / Stop Button */}
+          {isSubmitting ? (
+            <CustomTooltip title="Stop Request" position="top">
+              <button
+                type="button" // Important: type="button" to prevent form submission
+                onClick={onStopRequest}
+                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
+                style={{
+                  background: theme.colors.error, // Use error color for stop
+                  color: "white",
+                  boxShadow: `0 0 10px ${theme.colors.error}40`,
+                }}
+                aria-label="Stop generating response"
+              >
+                <XSquare size={18} />
+              </button>
+            </CustomTooltip>
+          ) : (
+            <CustomTooltip title="Ask Question" position="top">
+              <button
+                type="submit"
+                disabled={
                   isDisabled || isRecording || micPermissionStatus === "denied"
-                    ? `${theme.colors.text}20`
-                    : theme.colors.accent,
-                color: "white",
-                boxShadow:
-                  isDisabled || isRecording || micPermissionStatus === "denied"
-                    ? "none"
-                    : `0 0 10px ${theme.colors.accent}40`,
-              }}
-              aria-label="Send message"
-            >
-              {isSubmitting ? (
-                <MiniLoader />
-              ) : (
+                }
+                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
+                style={{
+                  background:
+                    isDisabled ||
+                    isRecording ||
+                    micPermissionStatus === "denied"
+                      ? `${theme.colors.text}20`
+                      : theme.colors.accent,
+                  color: "white",
+                  boxShadow:
+                    isDisabled ||
+                    isRecording ||
+                    micPermissionStatus === "denied"
+                      ? "none"
+                      : `0 0 10px ${theme.colors.accent}40`,
+                }}
+                aria-label="Send message"
+              >
                 <Send size={18} className="transition-transform duration-300" />
-              )}
-            </button>
-          </CustomTooltip>
+              </button>
+            </CustomTooltip>
+          )}
         </div>
       </form>
     );

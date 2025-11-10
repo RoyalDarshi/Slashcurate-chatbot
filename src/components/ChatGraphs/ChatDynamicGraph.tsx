@@ -829,10 +829,6 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                     Number(d[key]) > 0 ? Number(d[key]) : 0
                   ),
 
-<<<<<<< HEAD
-            // ✅ Bar width logic for 1–3 bars
-=======
->>>>>>> 3c8b5d3e19b825957fa870acdf2c01ea3c74bfd2
             barCategoryGap:
               chartType === "bar" ? (isFewBars ? "40%" : "10%") : undefined,
             barGap:
@@ -840,19 +836,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             barWidth:
               chartType === "bar"
                 ? barCount === 1
-<<<<<<< HEAD
-                  ? 120 // thinner for single bar
-                  : barCount === 2
-                  ? 120 // slightly wider
-                  : barCount === 3
-                  ? 120 // still controlled
-=======
                   ? 60
                   : barCount === 2
                   ? 60
                   : barCount === 3
                   ? 50
->>>>>>> 3c8b5d3e19b825957fa870acdf2c01ea3c74bfd2
                   : undefined
                 : undefined,
 

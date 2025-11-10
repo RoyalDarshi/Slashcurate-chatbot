@@ -14,8 +14,13 @@ import {
   Table2,
   Mic,
   MicOff,
+  XSquare, // Import the stop icon
 } from "lucide-react";
-import { ChatInputProps as DashboardInputProps, Connection, DatabaseSchema } from "../types";
+import {
+  ChatInputProps as DashboardInputProps,
+  Connection,
+  DatabaseSchema,
+} from "../types";
 import { useTheme } from "../ThemeContext";
 import MiniLoader from "./MiniLoader";
 import { FaFilePdf } from "react-icons/fa";
@@ -41,6 +46,7 @@ interface Table {
 interface ExtendedDashboardInputProps extends DashboardInputProps {
   isDbExplorerOpen: boolean;
   setIsDbExplorerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onStopRequest?: () => void; // Add the onStopRequest prop
 }
 
 const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
@@ -55,6 +61,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
     disabled,
     isDbExplorerOpen,
     setIsDbExplorerOpen,
+    onStopRequest, // Destructure the prop
   }) => {
     const { theme } = useTheme();
     const isDisabled = isSubmitting || disabled;
@@ -64,15 +71,21 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
 
     // State for microphone functionality
     const [isRecording, setIsRecording] = useState(false);
-    const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+    const [recognition, setRecognition] = useState<SpeechRecognition | null>(
+      null
+    );
     const [voiceInputStatus, setVoiceInputStatus] = useState("");
-    const [micPermissionStatus, setMicPermissionStatus] = useState<"prompt" | "granted" | "denied" | "unsupported">("prompt");
+    const [micPermissionStatus, setMicPermissionStatus] = useState<
+      "prompt" | "granted" | "denied" | "unsupported"
+    >("prompt");
 
-    const [databaseSchemas, setDatabaseSchemas] = useState<DatabaseSchema[]>(schemaSampleData);
+    const [databaseSchemas, setDatabaseSchemas] =
+      useState<DatabaseSchema[]>(schemaSampleData);
 
     // Initialize SpeechRecognition on component mount
     useEffect(() => {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
       let newRecognitionInstance: SpeechRecognition | null = null;
 
       if (SpeechRecognition) {
@@ -102,7 +115,10 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
           console.error("Speech recognition error:", event.error);
           setIsRecording(false);
           setVoiceInputStatus(`Error: ${event.error}`);
-          if (event.error === "not-allowed" || event.error === "permission-denied") {
+          if (
+            event.error === "not-allowed" ||
+            event.error === "permission-denied"
+          ) {
             setMicPermissionStatus("denied");
             console.error("Microphone access denied by user.");
           } else if (event.error === "no-speech") {
@@ -130,15 +146,23 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
             .getUserMedia({ audio: true })
             .then(() => setMicPermissionStatus("granted"))
             .catch((err) => {
-              if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+              if (
+                err.name === "NotAllowedError" ||
+                err.name === "PermissionDeniedError"
+              ) {
                 setMicPermissionStatus("denied");
               } else {
                 setMicPermissionStatus("prompt");
-                console.warn("Could not determine microphone permission or other media error:", err);
+                console.warn(
+                  "Could not determine microphone permission or other media error:",
+                  err
+                );
               }
             });
         } else {
-          console.warn("navigator.mediaDevices is not available in this browser/context.");
+          console.warn(
+            "navigator.mediaDevices is not available in this browser/context."
+          );
           setMicPermissionStatus("unsupported");
           setVoiceInputStatus("");
         }
@@ -330,41 +354,57 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
               }}
             />
 
-            {/* Send Button */}
-            <CustomTooltip title="Ask Question" position="top">
-              <button
-                type="submit"
-                disabled={
-                  isDisabled || isRecording || micPermissionStatus === "denied"
-                }
-                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
-                style={{
-                  background:
+            {/* Send Button / Stop Button */}
+            {isSubmitting ? (
+              <CustomTooltip title="Stop Request" position="top">
+                <button
+                  type="button" // Important: type="button" to prevent form submission
+                  onClick={onStopRequest}
+                  className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
+                  style={{
+                    background: theme.colors.error, // Use error color for stop
+                    color: "white",
+                    boxShadow: `0 0 10px ${theme.colors.error}40`,
+                  }}
+                  aria-label="Stop generating response"
+                >
+                  <XSquare size={18} />
+                </button>
+              </CustomTooltip>
+            ) : (
+              <CustomTooltip title="Ask Question" position="top">
+                <button
+                  type="submit"
+                  disabled={
                     isDisabled ||
                     isRecording ||
                     micPermissionStatus === "denied"
-                      ? `${theme.colors.text}20`
-                      : theme.colors.accent,
-                  color: "white",
-                  boxShadow:
-                    isDisabled ||
-                    isRecording ||
-                    micPermissionStatus === "denied"
-                      ? "none"
-                      : `0 0 10px ${theme.colors.accent}40`,
-                }}
-                aria-label="Send message"
-              >
-                {isSubmitting ? (
-                  <MiniLoader />
-                ) : (
+                  }
+                  className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
+                  style={{
+                    background:
+                      isDisabled ||
+                      isRecording ||
+                      micPermissionStatus === "denied"
+                        ? `${theme.colors.text}20`
+                        : theme.colors.accent,
+                    color: "white",
+                    boxShadow:
+                      isDisabled ||
+                      isRecording ||
+                      micPermissionStatus === "denied"
+                        ? "none"
+                        : `0 0 10px ${theme.colors.accent}40`,
+                  }}
+                  aria-label="Send message"
+                >
                   <Send
                     size={18}
                     className="transition-transform duration-300"
                   />
-                )}
-              </button>
-            </CustomTooltip>
+                </button>
+              </CustomTooltip>
+            )}
           </div>
         </div>
 
@@ -399,7 +439,8 @@ const areEqual = (
     prevProps.onInputChange === nextProps.onInputChange &&
     prevProps.onSelect === nextProps.onSelect &&
     prevProps.disabled === nextProps.disabled &&
-    prevProps.isDbExplorerOpen === nextProps.isDbExplorerOpen
+    prevProps.isDbExplorerOpen === nextProps.isDbExplorerOpen &&
+    prevProps.onStopRequest === nextProps.onStopRequest // Add to comparison
   );
 };
 

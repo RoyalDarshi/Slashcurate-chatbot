@@ -33,6 +33,7 @@ export interface ChatInputProps {
   isSubmitting: boolean;
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onStopRequest: () => void;
   connections: Connection[];
   selectedConnection: string | null;
   onSelect: (option: any) => void;
