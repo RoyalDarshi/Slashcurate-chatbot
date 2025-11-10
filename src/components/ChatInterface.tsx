@@ -39,7 +39,12 @@ export type ChatInterfaceHandle = {
   ) => void;
 };
 
-const getErrorMessage = (error: unknown): string => {
+// --- UPDATED FUNCTION ---
+const getErrorMessage = (error: any): string => {
+  // Check for axios cancel
+  if (axios.isCancel(error) || (error as Error).name === "CanceledError") {
+    return "Request cancelled by user.";
+  }
   let extractedErrorMessage = "Sorry, an error occurred. Please try again.";
   if (axios.isAxiosError(error)) {
     if (error.response && error.response.data) {
@@ -65,6 +70,7 @@ const getErrorMessage = (error: unknown): string => {
     extractedErrorMessage || "An unknown error occurred. Please try again."
   );
 };
+// --- END UPDATED FUNCTION ---
 
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
@@ -490,6 +496,8 @@ const ChatInterface = memo(
             } catch (error) {
               // Clear the controller
               setActiveRequestController(null);
+              const errorContent = getErrorMessage(error); // <-- Use new function
+              const errorStatus = "error";
 
               // Check if the error was from cancellation
               if (
@@ -502,9 +510,6 @@ const ChatInterface = memo(
               } else {
                 // This is a *real* error
                 console.error("Error getting bot response:", error);
-                const errorContent =
-                  "Sorry, an error occurred. Please try again.";
-                const errorStatus = "error"; // <-- ADDED
 
                 if (botMessageId) {
                   await axios
@@ -868,7 +873,9 @@ const ChatInterface = memo(
                 questionContent: questionMessage.content,
                 currentConnection: currentConnectionForAction,
                 responseQuery:
-                  responseMessage && responseMessage.status === "normal"
+                  responseMessage &&
+                  responseMessage.status === "normal" &&
+                  !getErrorMessage(null).includes(responseMessage.content)
                     ? JSON.parse(responseMessage.content).sql_query
                     : null,
               },
@@ -1063,6 +1070,8 @@ const ChatInterface = memo(
           } catch (error) {
             // Clear the controller
             setActiveRequestController(null);
+            const errorContent = getErrorMessage(error); // <-- Use new function
+            const errorStatus = "error";
 
             // Check if the error was from cancellation
             if (
@@ -1073,9 +1082,6 @@ const ChatInterface = memo(
               // Message was updated by handleStopRequest
             } else {
               console.error("Error retrying message:", error);
-              const errorContent =
-                "Sorry, an error occurred. Please try again.";
-              const errorStatus = "error"; // <-- ADDED
 
               await axios
                 .put(
@@ -1278,6 +1284,8 @@ const ChatInterface = memo(
           } catch (error) {
             // Clear the controller
             setActiveRequestController(null);
+            const errorContent = getErrorMessage(error); // <-- Use new function
+            const errorStatus = "error";
 
             // Check if the error was from cancellation
             if (
@@ -1291,9 +1299,6 @@ const ChatInterface = memo(
                 "Error getting bot response for edited message:",
                 error
               );
-              const errorContent =
-                "Sorry, an error occurred. Please try again.";
-              const errorStatus = "error"; // <-- ADDED
 
               await axios
                 .put(
