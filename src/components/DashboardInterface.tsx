@@ -1145,7 +1145,6 @@ const DashboardInterface = memo(
 
         // 6. Update submitting state
         setIsSubmitting(false);
-        toast.info("Request cancelled.");
       }, [
         isSubmitting,
         messages,

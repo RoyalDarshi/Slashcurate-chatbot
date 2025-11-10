@@ -865,6 +865,7 @@ const ChatInterface = memo(
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId
             );
+            console.log(responseMessage);
             await axios.post(
               `${API_URL}/favorite`,
               {
@@ -873,9 +874,7 @@ const ChatInterface = memo(
                 questionContent: questionMessage.content,
                 currentConnection: currentConnectionForAction,
                 responseQuery:
-                  responseMessage &&
-                  responseMessage.status === "normal" &&
-                  !getErrorMessage(null).includes(responseMessage.content)
+                  responseMessage && responseMessage.status === "normal"
                     ? JSON.parse(responseMessage.content).sql_query
                     : null,
               },
