@@ -1,10 +1,5 @@
 import axios, { AxiosResponse } from "axios";
-import {
-  API_URL,
-  DBCON_API_URL,
-  CHATBOT_CON_DETAILS_API_URL,
-  CHATBOT_API_URL,
-} from "./config";
+import { API_URL, CHATBOT_API_URL } from "./config";
 
 // Interfaces
 interface ConnectionDetails {
@@ -42,13 +37,6 @@ interface ApiResponse {
   message: string;
 }
 
-interface FavouriteMessage {
-  id: number;
-  message: string;
-  query: string;
-  uid: string;
-}
-
 interface LDAPConfigResponse {
   LDAP_SERVER: string;
   LDAP_PORT: number;
@@ -59,16 +47,6 @@ interface LDAPConfigResponse {
 // Axios Instances
 const api = axios.create({
   baseURL: API_URL,
-  headers: { "Content-Type": "application/json" },
-});
-
-// const testApi = axios.create({
-//   baseURL: DBCON_API_URL,
-//   headers: { "Content-Type": "application/json" },
-// });
-
-const chatbotApi = axios.create({
-  baseURL: CHATBOT_CON_DETAILS_API_URL,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -126,18 +104,6 @@ export const deleteConnection = async (
 ): Promise<AxiosResponse<ApiResponse>> =>
   api.post("/connections/delete", { token: token, connectionId });
 
-// export const getFavouriteMessage=async (
-//   token:string,
-// ):
-
-export const getConnectionDetails = async (
-  token: string,
-  selectedConnectionObj: object
-): Promise<AxiosResponse<ApiResponse>> =>
-  chatbotApi.post("/connection_details", {
-    token,
-    connection: selectedConnectionObj,
-  });
 
 export const storeLdapConfig = async (
   token: string,
