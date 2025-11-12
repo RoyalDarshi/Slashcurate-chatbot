@@ -75,6 +75,13 @@ export interface DashboardItem {
   isError: boolean;
 }
 
+// Added this interface
+interface QueuedQuestion {
+  question: string;
+  connection: string;
+  query?: string;
+}
+
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const initialEmptyKpiData: KpiData = {
@@ -273,6 +280,10 @@ const DashboardInterface = memo(
       const [isSubmitting, setIsSubmitting] = useState(false);
       const [activeRequestController, setActiveRequestController] =
         useState<AbortController | null>(null);
+
+      // Added this state
+      const [queuedQuestion, setQueuedQuestion] =
+        useState<QueuedQuestion | null>(null);
 
       const options = [
         {
@@ -1064,6 +1075,37 @@ const DashboardInterface = memo(
         ]
       );
 
+      // --- **** THIS IS THE FIX **** ---
+      // This useEffect was moved from before askQuestion to *after* it,
+      // resolving the ReferenceError.
+      useEffect(() => {
+        // Check if a question is queued, not already submitting, and connections are loaded
+        if (queuedQuestion && !isSubmitting && connections.length > 0) {
+          // Find the connection object
+          const connectionObj = connections.find(
+            (conn) => conn.connectionName === queuedQuestion.connection
+          );
+
+          if (connectionObj) {
+            // State is now clean from handleNewChat() in the previous render.
+            // We can safely call the *current* askQuestion function,
+            // which has been recreated with the correct empty state.
+            askQuestion(
+              queuedQuestion.question,
+              queuedQuestion.connection,
+              queuedQuestion.query
+            );
+          } else {
+            // This should be rare, as handleAskFavoriteQuestion checks, but good to have
+            toast.error(`Connection "${queuedQuestion.connection}" not found.`);
+          }
+
+          // Clear the queue regardless
+          setQueuedQuestion(null);
+        }
+      }, [queuedQuestion, isSubmitting, connections, askQuestion]); // Dependencies
+      // --- **** END OF FIX **** ---
+
       const handleStopRequest = useCallback(async () => {
         if (!isSubmitting) return;
 
@@ -1153,8 +1195,10 @@ const DashboardInterface = memo(
         activeRequestController,
       ]);
 
+      // This function is now correct. It just sets state.
       const handleAskFavoriteQuestion = useCallback(
         async (question: string, connection: string, query?: string) => {
+          // Check if connection exists
           const connectionObj = connections.find(
             (conn) => conn.connectionName === connection
           );
@@ -1164,12 +1208,20 @@ const DashboardInterface = memo(
             );
             return;
           }
+
+          // 1. Clear all state. This triggers a re-render.
           handleNewChat();
+
+          // wait for the re-render to complete
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // 2. Set the new connection. This is batched with the clear.
           setSelectedConnection(connection);
-          await new Promise<void>((resolve) => setTimeout(resolve, 0));
-          await askQuestion(question, connection, query);
+
+          // 3. Queue the question to be asked *after* the re-render is complete.
+          setQueuedQuestion({ question, connection, query });
         },
-        [connections, askQuestion, handleNewChat, setSelectedConnection]
+        [connections, handleNewChat, setSelectedConnection]
       );
 
       useEffect(() => {
@@ -2158,12 +2210,12 @@ const DashboardInterface = memo(
                   );
                 }
                 return (
-                  <div className="flex flex-col items-center justify-start flex-grow text-center px-4 pt-12">
+                  <div className="flex flex-col items-center justify-center h-full text-center">
                     <h1
                       className={`text-3xl font-bold mb-4`}
                       style={{ marginTop: "10vh", color: theme.colors.text }}
                     >
-                      Hello there! How can I help you today?
+                      Hello! I’m your Data Assistant. How can I help you today?
                     </h1>
                     {!selectedConnection && connections.length > 0 && (
                       <div className="flex flex-col items-center mb-6">
