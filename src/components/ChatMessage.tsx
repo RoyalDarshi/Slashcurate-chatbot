@@ -88,7 +88,6 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
     const dislikeRef = useRef<HTMLDivElement>(null);
     const resolutionRef = useRef<HTMLDivElement>(null);
     const chartOptionsRef = useRef<HTMLDivElement>(null);
-    const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
     const { chatFontSize } = useSettings();
 
     const parsedData = React.useMemo(() => {
@@ -1212,7 +1211,7 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(
                     })}
                   </span>
                   <div className="flex items-center gap-2">
-                    {!disabled && (
+                    {!disabled && !isSubmitting && (
                       <CustomTooltip title="Edit message" position="bottom">
                         <motion.button
                           whileHover={{ scale: 1.1 }}

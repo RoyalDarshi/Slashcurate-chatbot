@@ -77,7 +77,6 @@ const ChatInterface = memo(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
       const token = sessionStorage.getItem("token") ?? "";
-      const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
       const {
         connections,
@@ -604,7 +603,7 @@ const ChatInterface = memo(
           handleNewChat();
           await new Promise<void>((resolve) => setTimeout(resolve, 0));
           setSelectedConnection(connection);
-          await askQuestion(question, connection, true, query);
+          await askQuestion(question, connection, false, query);
           // }
         },
         [

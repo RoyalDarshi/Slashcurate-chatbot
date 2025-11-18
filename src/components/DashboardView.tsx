@@ -359,7 +359,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     color: "white",
                   }}
                 >
-                  Save
+                  Update
                 </button>
               </div>
             </div>
