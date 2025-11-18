@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTheme } from "../ThemeContext";
 import { useSettings } from "../SettingsContext";
+import ChangePasswordModal from "./ChangePasswordModal"; // Import the new component
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
@@ -9,10 +10,12 @@ const Settings = () => {
     setChatFontSize,
     notificationsEnabled,
     setNotificationsEnabled,
-    currentView, // Get currentView from settings context
-    setCurrentView, // Get setCurrentView from settings context
+    currentView,
+    setCurrentView,
   } = useSettings();
-  const [autoSaveChats, setAutoSaveChats] = useState(true);
+
+  // Only need state to toggle visibility now
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const handleSetNotification = () => {
     setNotificationsEnabled(!notificationsEnabled);
@@ -22,17 +25,13 @@ const Settings = () => {
     setChatFontSize(e.target.value as "small" | "medium" | "large");
   };
 
-  // Handler for view preference change
   const handleViewChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCurrentView(e.target.value as "chat" | "dashboard");
   };
 
   const renderAppearanceSection = () => (
     <div className="space-y-4 mb-6">
-      <h3
-        className="text-lg font-semibold"
-        style={{ color: theme.colors.text }}
-      >
+      <h3 className="text-lg font-semibold" style={{ color: theme.colors.text }}>
         Appearance
       </h3>
       <div className="flex items-center justify-between">
@@ -42,7 +41,7 @@ const Settings = () => {
             type="checkbox"
             className="sr-only"
             onChange={toggleTheme}
-            checked={theme.mode === "dark"} // Dark theme background color
+            checked={theme.mode === "dark"}
             aria-label="Toggle dark mode"
           />
           <span
@@ -85,10 +84,7 @@ const Settings = () => {
   );
 
   return (
-    <div
-      className="h-full px-4"
-      style={{ backgroundColor: theme.colors.background }}
-    >
+    <div className="h-full px-4" style={{ backgroundColor: theme.colors.background }}>
       <div
         className="p-6 rounded-lg shadow-md w-full max-w-lg mx-auto mt-6"
         style={{
@@ -97,22 +93,15 @@ const Settings = () => {
           borderRadius: theme.borderRadius.default,
         }}
       >
-        <h2
-          className="text-2xl font-bold mb-6"
-          style={{ color: theme.colors.text }}
-        >
+        <h2 className="text-2xl font-bold mb-6" style={{ color: theme.colors.text }}>
           Settings
         </h2>
 
-        {/* Appearance Section */}
         {renderAppearanceSection()}
 
-        {/* View Preference Section - New */}
+        {/* View Preference Section */}
         <div className="space-y-4 mb-6">
-          <h3
-            className="text-lg font-semibold"
-            style={{ color: theme.colors.text }}
-          >
+          <h3 className="text-lg font-semibold" style={{ color: theme.colors.text }}>
             View Preference
           </h3>
           <div className="flex items-center justify-between">
@@ -136,16 +125,11 @@ const Settings = () => {
 
         {/* Notifications Section */}
         <div className="space-y-4 mb-6">
-          <h3
-            className="text-lg font-semibold"
-            style={{ color: theme.colors.text }}
-          >
+          <h3 className="text-lg font-semibold" style={{ color: theme.colors.text }}>
             Quick Tips
           </h3>
           <div className="flex items-center justify-between">
-            <p style={{ color: theme.colors.textSecondary }}>
-              Enable Quick Tips
-            </p>
+            <p style={{ color: theme.colors.textSecondary }}>Enable Quick Tips</p>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -176,10 +160,7 @@ const Settings = () => {
 
         {/* Account Section */}
         <div className="space-y-4">
-          <h3
-            className="text-lg font-semibold"
-            style={{ color: theme.colors.text }}
-          >
+          <h3 className="text-lg font-semibold" style={{ color: theme.colors.text }}>
             Account
           </h3>
           <button
@@ -190,14 +171,18 @@ const Settings = () => {
               borderRadius: theme.borderRadius.default,
               boxShadow: `0 4px 6px ${theme.colors.text}20`,
             }}
-            onClick={() => {
-              /* Replaced alert with custom modal logic if needed later */
-            }}
+            onClick={() => setIsPasswordModalOpen(true)} 
           >
             Change Password
           </button>
         </div>
       </div>
+
+      {/* Reusable Modal Component */}
+      <ChangePasswordModal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => setIsPasswordModalOpen(false)} 
+      />
     </div>
   );
 };
