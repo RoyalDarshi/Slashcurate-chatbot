@@ -82,7 +82,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
   ) => {
     const [graphType, setGraphType] = useState("bar");
     const [groupBy, setGroupBy] = useState<string | null>(null);
-    const [aggregate, setAggregate] = useState<"sum" | "count">("sum");
+    const [aggregate, setAggregate] = useState<"sum" | "count" | "avg" | "min" | "max">("sum");
     const [valueKey, setValueKey] = useState<string | null>(null);
     const [showSummaryModal, setShowSummaryModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -539,7 +539,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             <select
                               value={aggregate}
                               onChange={(e) =>
-                                setAggregate(e.target.value as "sum" | "count")
+                                setAggregate(e.target.value as "sum" | "count" | "avg" | "min" | "max")
                               }
                               className="px-2 py-1 rounded-md border"
                               style={{
@@ -550,9 +550,12 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             >
                               <option value="count">Count</option>
                               <option value="sum">Sum</option>
+                              <option value="avg">Average</option>
+                              <option value="min">Minimum</option>
+                              <option value="max">Maximum</option>
                             </select>
                           </div>
-                          {aggregate === "sum" && (
+                          {(aggregate === "sum" || aggregate === "avg" || aggregate === "min" || aggregate === "max") && (
                             <div className="flex items-center gap-2">
                               <label
                                 style={{ color: theme.colors.textSecondary }}
@@ -708,7 +711,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 <div className="flex-1">
                   {graphType === "bar" && (
                     <DynamicBarGraph
-                      graphKey={dashboardItem.questionMessageId}
                       data={dashboardItem.mainViewData.chartData}
                       groupBy={groupBy}
                       setGroupBy={setGroupBy}

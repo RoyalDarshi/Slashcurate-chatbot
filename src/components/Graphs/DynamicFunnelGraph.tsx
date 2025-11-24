@@ -18,8 +18,8 @@ interface ModernFunnelGraphProps {
   data: any[];
   groupBy: string | null; // This will be the "name" or stage
   setGroupBy: React.Dispatch<React.SetStateAction<string | null>>;
-  aggregate: "sum" | "count";
-  setAggregate: React.Dispatch<React.SetStateAction<"sum" | "count">>;
+  aggregate: "sum" | "count" | "avg" | "min" | "max";
+  setAggregate: React.Dispatch<React.SetStateAction<"sum" | "count" | "avg" | "min" | "max">>;
   valueKey: string | null; // This will be the "value" for the stage
   setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
 }
