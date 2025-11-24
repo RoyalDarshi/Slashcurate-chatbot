@@ -356,20 +356,61 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     setIsEditing(false);
   };
 
-  const handleDownloadTableXLSX = () => {
+  const handleDownloadCSV = () => {
     try {
       const data = JSON.parse(message.content);
-      const tableData = Array.isArray(data.answer)
-        ? data.answer
-        : [data.answer];
-      const worksheet = XLSX.utils.json_to_sheet(tableData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-      XLSX.writeFile(workbook, "table_data.xlsx");
+      const tableData = Array.isArray(data.answer) ? data.answer : [data.answer];
+      if (!tableData || tableData.length === 0) return;
+
+      // 1. Get headers
+      const headers = Object.keys(tableData[0]);
+
+      // 2. Convert to CSV string
+      const csvContent = [
+        headers.join(","), // Header row
+        ...tableData.map((row) =>
+          headers
+            .map((header) => {
+              const cellValue = row[header];
+
+              // Handle null or undefined
+              const stringValue =
+                cellValue === null || cellValue === undefined
+                  ? ""
+                  : String(cellValue);
+
+              // Escape double quotes (") and wrap when necessary
+              if (stringValue.search(/("|,|\n)/g) >= 0) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+              }
+              return stringValue;
+            })
+            .join(",")
+        ),
+      ].join("\n");
+
+      // 3. Create blob and trigger download
+      const blob = new Blob(["\uFEFF" + csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `table_export_${new Date().toISOString().split("T")[0]}.csv`
+      );
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error downloading XLSX:", error);
+      console.error("Error downloading CSV:", error);
     }
   };
+
 
   const handleDownloadGraph = async (resolution: "low" | "high") => {
     if (graphRef.current) {
@@ -803,13 +844,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       {currentView === "table" &&
                         csvData.length > 0 && (
                           <CustomTooltip
-                            title="Download XLSX"
+                            title="Download Table Data"
                             position="top"
                           >
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.95 }}
-                              onClick={handleDownloadTableXLSX}
+                              onClick={handleDownloadCSV}
                               className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
                               style={{ background: theme.colors.surface }}
                             >
