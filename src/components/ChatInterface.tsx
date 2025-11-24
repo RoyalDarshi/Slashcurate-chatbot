@@ -70,6 +70,20 @@ const getErrorMessage = (error: any): string => {
     extractedErrorMessage || "An unknown error occurred. Please try again."
   );
 };
+
+// Utility function to limit data to 500 rows for backend storage
+const limitDataForBackend = (responseData: any): any => {
+  const MAX_ROWS = 500;
+  // Create a deep copy to avoid mutating the original
+  const limitedData = { ...responseData };
+
+  // Limit the answer array to 500 rows if it exists
+  if (Array.isArray(limitedData.answer) && limitedData.answer.length > MAX_ROWS) {
+    limitedData.answer = limitedData.answer.slice(0, MAX_ROWS);
+  }
+
+  return limitedData;
+};
 // --- END UPDATED FUNCTION ---
 
 const ChatInterface = memo(
@@ -448,16 +462,16 @@ const ChatInterface = memo(
 
               const payload = query
                 ? {
-                    question,
-                    sql_query: query,
-                    connection: connectionObj,
-                    sessionId: currentSessionId,
-                  }
+                  question,
+                  sql_query: query,
+                  connection: connectionObj,
+                  sessionId: currentSessionId,
+                }
                 : {
-                    question,
-                    connection: connectionObj,
-                    sessionId: currentSessionId,
-                  };
+                  question,
+                  connection: connectionObj,
+                  sessionId: currentSessionId,
+                };
               const response = await axios.post(
                 `${CHATBOT_API_URL}/ask`,
                 payload,
@@ -468,13 +482,19 @@ const ChatInterface = memo(
 
               // If we get here, the request was NOT cancelled
               setActiveRequestController(null);
+
+              // Keep full data for frontend (downloads, display)
               const botResponseContent = JSON.stringify(response.data, null, 2);
+
+              // Create limited data for backend storage (500 rows max)
+              const limitedResponseData = limitDataForBackend(response.data);
+              const botResponseContentForBackend = JSON.stringify(limitedResponseData, null, 2);
 
               await axios.put(
                 `${API_URL}/api/messages/${botMessageId}`,
                 {
                   token,
-                  content: botResponseContent,
+                  content: botResponseContentForBackend,
                   timestamp: new Date().toISOString(),
                   status: "normal",
                 },
@@ -1450,12 +1470,12 @@ const ChatInterface = memo(
                     padding: "8px 16px",
                   }}
                   onMouseOver={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.accentHover)
+                  (e.currentTarget.style.backgroundColor =
+                    theme.colors.accentHover)
                   }
                   onMouseOut={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.accent)
+                  (e.currentTarget.style.backgroundColor =
+                    theme.colors.accent)
                   }
                 >
                   Create Connection
@@ -1671,9 +1691,8 @@ const ChatInterface = memo(
                       !selectedConnection ||
                       !!sessionConnectionError
                     }
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
-                      isDbExplorerOpen ? "schema-active" : ""
-                    }`}
+                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${isDbExplorerOpen ? "schema-active" : ""
+                      }`}
                     style={{
                       background: theme.colors.surface,
                       color: theme.colors.accent,
@@ -1756,7 +1775,7 @@ const areEqual = (
     prevProps.onSessionSelected === nextProps.onSessionSelected &&
     prevProps.initialQuestion?.text === nextProps.initialQuestion?.text &&
     prevProps.initialQuestion?.connection ===
-      nextProps.initialQuestion?.connection &&
+    nextProps.initialQuestion?.connection &&
     prevProps.initialQuestion?.query === nextProps.initialQuestion?.query &&
     prevProps.onQuestionAsked === nextProps.onQuestionAsked
   );

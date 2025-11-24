@@ -63,7 +63,7 @@ export const useGraphOptions = ({
             animation: false, // Disable animation for smoother tooltips
             color: theme.colors.barColors,
             tooltip: {
-                trigger: "item", // Default to item, overridden for axis-based charts
+                trigger: chartType === "bar" || chartType === "line" || chartType === "area" ? "axis" : "item",
                 confine: true,
                 axisPointer: {
                     type:
@@ -148,10 +148,65 @@ export const useGraphOptions = ({
           `;
 
                     payload.forEach((entry: any, index: number) => {
-                        const value =
-                            chartType === "radar"
-                                ? entry.value[yKeys.indexOf(entry.seriesName)]
-                                : entry.value;
+                        let value;
+
+                        if (chartType === "radar") {
+                            // For radar, we want to show all indicators with their values
+                            if (Array.isArray(entry.value)) {
+                                // Display all indicators for this radar series
+                                entry.value.forEach((val: any, idx: number) => {
+                                    const indicatorName = yKeys[idx] || `Indicator ${idx + 1}`;
+                                    const indicatorValue = !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+
+                                    html += `
+                      <div style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: ${idx < entry.value.length - 1 || index < payload.length - 1 ? theme.spacing.md : 0};
+                        padding: ${theme.spacing.md};
+                        border-radius: ${theme.borderRadius.default};
+                        background: ${entry.color}15;
+                        border: 1px solid ${entry.color}30;
+                        transition: all 0.2s ease;
+                      ">
+                        <div style="display: flex; align-items: center;">
+                          <div style="
+                            width: 14px;
+                            height: 14px;
+                            background: ${entry.color};
+                            border-radius: 50%;
+                            margin-right: ${theme.spacing.md};
+                            box-shadow: ${theme.shadow.sm};
+                            border: 2px solid ${theme.colors.surface};
+                          "></div>
+                          <span style="
+                            font-weight: ${theme.typography.weight.medium};
+                            font-size: 14px;
+                          ">${formatKey(indicatorName)}</span>
+                        </div>
+                        <span style="
+                          font-weight: ${theme.typography.weight.bold};
+                          color: ${theme.colors.text};
+                          font-size: 15px;
+                          background: ${theme.gradients.primary};
+                          -webkit-background-clip: text;
+                          -webkit-text-fill-color: transparent;
+                          background-clip: text;
+                        ">${indicatorValue.toLocaleString()}</span>
+                      </div>
+                    `;
+                                });
+                                return; // Skip the regular entry rendering below
+                            }
+                        } else {
+                            value = entry.value;
+                        }
+
+                        // Ensure value is a valid number
+                        if (value === null || value === undefined || isNaN(Number(value))) {
+                            value = 0;
+                        }
 
                         html += `
               <div style="
@@ -201,16 +256,17 @@ export const useGraphOptions = ({
                 ? {
                     orient: "horizontal",
                     left: "center",
-                    bottom: 0,
+                    bottom: "1%",
                     textStyle: {
-                        fontSize: 13,
+                        fontSize: 12,
                         fontFamily: theme.typography.fontFamily,
                         fontWeight: theme.typography.weight.medium,
                         color: theme.colors.text,
                     },
                     icon: "circle",
-                    itemWidth: 14,
-                    itemHeight: 14,
+                    itemWidth: 12,
+                    itemHeight: 12,
+                    itemGap: 16,
                     formatter: (name: string) => formatKey(name),
                 }
                 : { show: false },
@@ -223,7 +279,7 @@ export const useGraphOptions = ({
                     ? {
                         name: "Pie",
                         type: "pie",
-                        radius: ["40%", "70%"], // Donut style for modern look
+                        radius: ["42%", "70%"],
                         center: ["50%", "50%"],
                         itemStyle: {
                             borderRadius: 10,
@@ -233,21 +289,21 @@ export const useGraphOptions = ({
                         label: {
                             show: true,
                             formatter: "{b}: {d}%",
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: theme.typography.weight.medium,
                             fontFamily: theme.typography.fontFamily,
                             color: theme.colors.textSecondary,
                         },
-                        labelLine: { show: true },
+                        labelLine: { show: true, length: 10, length2: 8 },
                     }
                     : chartType === "funnel"
                         ? {
                             name: "Funnel",
                             type: "funnel",
-                            left: "10%",
-                            top: "10%",
-                            bottom: "10%",
-                            width: "80%",
+                            left: "5%",
+                            top: "5%",
+                            bottom: showLegend ? "15%" : "5%",
+                            width: "90%",
                             min: 0,
                             max: Math.max(...graphData.map((d) => d.value)),
                             minSize: "0%",
@@ -258,15 +314,19 @@ export const useGraphOptions = ({
                                 show: true,
                                 position: "inside",
                                 formatter: "{b}",
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: theme.typography.weight.medium,
                                 fontFamily: theme.typography.fontFamily,
-                                color: "#fff", // White text inside funnel
+                                color: "#fff",
                             },
                         }
                         : {
                             name: "Treemap",
                             type: "treemap",
+                            left: "1%",
+                            top: "1%",
+                            right: "1%",
+                            bottom: showLegend ? "12%" : "1%",
                             leafDepth: 1,
                             levels: [
                                 {
@@ -280,10 +340,10 @@ export const useGraphOptions = ({
                             label: {
                                 show: true,
                                 formatter: "{b}: {c}",
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: theme.typography.weight.medium,
                                 fontFamily: theme.typography.fontFamily,
-                                color: theme.colors.textSecondary,
+                                color: "#ffffff",
                             },
                         };
 
@@ -314,14 +374,14 @@ export const useGraphOptions = ({
                 ...baseOption,
                 radar: {
                     center: ["50%", "50%"],
-                    radius: "60%",
+                    radius: "65%",
                     indicator: yKeys.map((key) => ({
                         name: formatKey(key),
                         max: maxValue,
                     })),
                     axisName: {
                         color: theme.colors.textSecondary,
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: theme.typography.weight.medium,
                         fontFamily: theme.typography.fontFamily,
                     },
@@ -337,25 +397,25 @@ export const useGraphOptions = ({
                         },
                     },
                 },
-                series: [
-                    {
-                        name: "Radar",
-                        type: "radar",
-                        data: graphData.map((d) => ({
-                            value: yKeys.map((key) =>
-                                Number(d.values && d.values[key] ? d.values[key] : 0)
-                            ),
+                series: graphData.map((d) => ({
+                    type: "radar",
+                    data: [
+                        {
+                            value: yKeys.map((key) => {
+                                const val = d.values && d.values[key] ? d.values[key] : 0;
+                                return !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+                            }),
                             name: formatKey(d[xKey]),
-                            areaStyle: {
-                                opacity: 0.2,
-                            },
-                        })),
-                        symbolSize: 8,
-                        lineStyle: {
-                            width: 2,
                         },
+                    ],
+                    symbolSize: 8,
+                    lineStyle: {
+                        width: 2,
                     },
-                ],
+                    areaStyle: {
+                        opacity: 0.2,
+                    },
+                })),
             };
         }
 
@@ -381,7 +441,7 @@ export const useGraphOptions = ({
             axisLabel: {
                 rotate: xTickRotation,
                 align: xTickRotation > 0 ? "right" : "center",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: theme.typography.weight.medium,
                 fontFamily: theme.typography.fontFamily,
                 color: theme.colors.textSecondary,
@@ -410,7 +470,7 @@ export const useGraphOptions = ({
             axisLabel: {
                 rotate: yTickRotation,
                 align: yTickRotation > 0 ? "right" : "center",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: theme.typography.weight.medium,
                 fontFamily: theme.typography.fontFamily,
                 color: theme.colors.textSecondary,
@@ -432,10 +492,10 @@ export const useGraphOptions = ({
                 trigger: 'axis',
             },
             grid: {
-                left: "3%",
-                right: "4%",
-                bottom: showLegend ? 30 : 10,
-                top: "10%",
+                left: "1%",
+                right: "1%",
+                bottom: showLegend ? "12%" : "3%",
+                top: "2%",
                 containLabel: true,
             },
             xAxis: xAxisConfig,
@@ -445,7 +505,11 @@ export const useGraphOptions = ({
 
                 const commonSeries = {
                     name: formatKey(key),
-                    data: graphData.map((d) => d[key] || 0),
+                    data: graphData.map((d) => {
+                        const val = d[key];
+                        const numVal = !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+                        return numVal || 0;
+                    }),
                     color: color,
                 };
 
@@ -484,7 +548,13 @@ export const useGraphOptions = ({
                         ...commonSeries,
                         type: "scatter",
                         symbolSize: 12,
-                        data: graphData.map((d) => [d[xKey], d[key]]),
+                        data: graphData.map((d) => {
+                            const xVal = d[xKey];
+                            const yVal = d[key];
+                            const xNum = !isNaN(Number(xVal)) && xVal !== null && xVal !== undefined ? Number(xVal) : 0;
+                            const yNum = !isNaN(Number(yVal)) && yVal !== null && yVal !== undefined ? Number(yVal) : 0;
+                            return [xNum, yNum];
+                        }),
                         itemStyle: {
                             shadowBlur: 10,
                             shadowColor: hexToRgba(color, 0.5),

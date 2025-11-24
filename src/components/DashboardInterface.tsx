@@ -155,6 +155,20 @@ const getErrorMessage = (error: any): string => {
   );
 };
 
+// Utility function to limit data to 500 rows for backend storage
+const limitDataForBackend = (responseData: any): any => {
+  const MAX_ROWS = 500;
+  // Create a deep copy to avoid mutating the original
+  const limitedData = { ...responseData };
+
+  // Limit the answer array to 500 rows if it exists
+  if (Array.isArray(limitedData.answer) && limitedData.answer.length > MAX_ROWS) {
+    limitedData.answer = limitedData.answer.slice(0, MAX_ROWS);
+  }
+
+  return limitedData;
+};
+
 const sanitizeReaction = (reaction: any): "like" | "dislike" | null => {
   return reaction === "like" || reaction === "dislike" ? reaction : null;
 };
@@ -867,13 +881,19 @@ const DashboardInterface = memo(
 
               // If we get here, the request was NOT cancelled
               setActiveRequestController(null);
+
+              // Keep full data for frontend (downloads, display)
               const botResponseContent = JSON.stringify(response.data, null, 2);
+
+              // Create limited data for backend storage (500 rows max)
+              const limitedResponseData = limitDataForBackend(response.data);
+              const botResponseContentForBackend = JSON.stringify(limitedResponseData, null, 2);
 
               await axios.put(
                 `${API_URL}/api/messages/${botMessageId}`,
                 {
                   token,
-                  content: botResponseContent,
+                  content: botResponseContentForBackend,
                   timestamp: new Date().toISOString(),
                   status: "normal", // <-- MODIFIED
                 },
@@ -1539,13 +1559,19 @@ const DashboardInterface = memo(
 
               // If we get here, the request was NOT cancelled
               setActiveRequestController(null);
+
+              // Keep full data for frontend (downloads, display)
               const botResponseContent = JSON.stringify(response.data, null, 2);
+
+              // Create limited data for backend storage (500 rows max)
+              const limitedResponseData = limitDataForBackend(response.data);
+              const botResponseContentForBackend = JSON.stringify(limitedResponseData, null, 2);
 
               await axios.put(
                 `${API_URL}/api/messages/${botMessageToUpdateId}`,
                 {
                   token,
-                  content: botResponseContent,
+                  content: botResponseContentForBackend,
                   timestamp: new Date().toISOString(),
                   status: "normal", // <-- MODIFIED
                 }
@@ -1800,14 +1826,20 @@ const DashboardInterface = memo(
               );
 
               setActiveRequestController(null);
+
+              // Keep full data for frontend (downloads, display)
               const botResponseContent = JSON.stringify(response.data, null, 2);
+
+              // Create limited data for backend storage (500 rows max)
+              const limitedResponseData = limitDataForBackend(response.data);
+              const botResponseContentForBackend = JSON.stringify(limitedResponseData, null, 2);
 
               // 5. Handle Success
               await axios.put(
                 `${API_URL}/api/messages/${botMessageToUpdateId}`,
                 {
                   token,
-                  content: botResponseContent,
+                  content: botResponseContentForBackend,
                   timestamp: new Date().toISOString(),
                   status: "normal", // <-- MODIFIED
                 }

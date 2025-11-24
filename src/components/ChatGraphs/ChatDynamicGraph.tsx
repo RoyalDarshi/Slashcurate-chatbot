@@ -433,7 +433,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         // ✅ Set the global color palette from the theme
         color: theme.colors.barColors,
         tooltip: {
-          trigger: "item",
+          trigger: chartType === "area" ? "axis" : "item",
           confine: true,
           axisPointer: {
             type:
@@ -466,6 +466,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             payload = payload.filter(
               (p: any) => p.value !== 0 && p.value !== undefined
             );
+
             if (payload.length === 0) return "";
             const label = formatKey(
               chartType === "radar"
@@ -515,10 +516,65 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 </div>
             `;
             payload.forEach((entry: any, index: number) => {
-              const value =
-                chartType === "radar"
-                  ? entry.value[yKeys.indexOf(entry.seriesName)]
-                  : entry.value;
+              let value;
+
+              if (chartType === "radar") {
+                // For radar, we want to show all indicators with their values
+                if (Array.isArray(entry.value)) {
+                  // Display all indicators for this radar series
+                  entry.value.forEach((val: any, idx: number) => {
+                    const indicatorName = yKeys[idx] || `Indicator ${idx + 1}`;
+                    const indicatorValue = !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+
+                    html += `
+                      <div style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: ${idx < entry.value.length - 1 || index < payload.length - 1 ? theme.spacing.md : 0};
+                        padding: ${theme.spacing.md};
+                        border-radius: ${theme.borderRadius.default};
+                        background: ${entry.color}15;
+                        border: 1px solid ${entry.color}30;
+                        transition: all 0.2s ease;
+                      ">
+                        <div style="display: flex; align-items: center;">
+                          <div style="
+                            width: 14px;
+                            height: 14px;
+                            background: ${entry.color};
+                            border-radius: 50%;
+                            margin-right: ${theme.spacing.md};
+                            box-shadow: ${theme.shadow.sm};
+                            border: 2px solid ${theme.colors.surface};
+                          "></div>
+                          <span style="
+                            font-weight: ${theme.typography.weight.medium};
+                            font-size: 14px;
+                          ">${formatKey(indicatorName)}</span>
+                        </div>
+                        <span style="
+                          font-weight: ${theme.typography.weight.bold};
+                          color: ${theme.colors.text};
+                          font-size: 15px;
+                          background: ${theme.gradients.primary};
+                          -webkit-background-clip: text;
+                          -webkit-text-fill-color: transparent;
+                          background-clip: text;
+                        ">${indicatorValue.toLocaleString()}</span>
+                      </div>
+                    `;
+                  });
+                  return; // Skip the regular entry rendering below
+                }
+              } else {
+                value = entry.value;
+              }
+
+              // Ensure value is a valid number
+              if (value === null || value === undefined || isNaN(Number(value))) {
+                value = 0;
+              }
               html += `
                 <div style="
                   display: flex;
@@ -567,16 +623,17 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           ? {
             orient: "horizontal",
             left: "center",
-            bottom: 0,
+            bottom: "1%",
             textStyle: {
-              fontSize: 13,
+              fontSize: 12,
               fontFamily: theme.typography.fontFamily,
               fontWeight: theme.typography.weight.medium,
               color: theme.colors.text,
             },
             icon: "circle",
-            itemWidth: 14,
-            itemHeight: 14,
+            itemWidth: 12,
+            itemHeight: 12,
+            itemGap: 16,
             formatter: (name: string) => formatKey(name),
           }
           : { show: false },
@@ -592,26 +649,26 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             ? {
               name: "Pie",
               type: "pie",
-              radius: "50%",
+              radius: ["42%", "70%"],
               center: ["50%", "50%"],
               label: {
                 show: true,
-                formatter: "{b}: {c}",
-                fontSize: 13,
+                formatter: "{b}: {d}%",
+                fontSize: 12,
                 fontWeight: theme.typography.weight.medium,
                 fontFamily: theme.typography.fontFamily,
                 color: theme.colors.textSecondary,
               },
-              labelLine: { show: true },
+              labelLine: { show: true, length: 10, length2: 8 },
             }
             : chartType === "funnel"
               ? {
                 name: "Funnel",
                 type: "funnel",
-                left: "10%",
-                top: "10%",
-                bottom: "10%",
-                width: "80%",
+                left: "5%",
+                top: "5%",
+                bottom: showLegend ? "15%" : "5%",
+                width: "90%",
                 min: 0,
                 max: Math.max(...graphData.map((d) => d.value)),
                 minSize: "0%",
@@ -621,16 +678,20 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 label: {
                   show: true,
                   position: "inside",
-                  formatter: "{b}: {c}",
-                  fontSize: 13,
+                  formatter: "{b}",
+                  fontSize: 12,
                   fontWeight: theme.typography.weight.medium,
                   fontFamily: theme.typography.fontFamily,
-                  color: theme.colors.textSecondary,
+                  color: "#fff",
                 },
               }
               : {
                 name: "Treemap",
                 type: "treemap",
+                left: "1%",
+                top: "1%",
+                right: "1%",
+                bottom: showLegend ? "12%" : "1%",
                 leafDepth: 1,
                 levels: [
                   {
@@ -644,10 +705,10 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 label: {
                   show: true,
                   formatter: "{b}: {c}",
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: theme.typography.weight.medium,
                   fontFamily: theme.typography.fontFamily,
-                  color: theme.colors.textSecondary,
+                  color: "#ffffff",
                 },
               };
 
@@ -685,14 +746,14 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           yAxis: undefined,
           radar: {
             center: ["50%", "50%"],
-            radius: "60%",
+            radius: "65%",
             indicator: yKeys.map((key) => ({
               name: formatKey(key),
               max: maxValue,
             })),
             axisName: {
               color: theme.colors.textSecondary,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: theme.typography.weight.medium,
               fontFamily: theme.typography.fontFamily,
             },
@@ -710,21 +771,20 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           },
           series: [
             {
-              name: "Radar",
               type: "radar",
               data: graphData.map((d) => ({
-                value: yKeys.map((key) =>
-                  Number(d.values && d.values[key] ? d.values[key] : 0)
-                ),
+                value: yKeys.map((key) => {
+                  const val = d.values && d.values[key] ? d.values[key] : 0;
+                  return !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+                }),
                 name: formatKey(d[xKey]),
-                // ✅ Removed explicit itemStyle color
-                areaStyle: {
-                  opacity: 0.2, // This will use the series color with opacity
-                },
               })),
               symbolSize: 8,
               lineStyle: {
                 width: 2,
+              },
+              areaStyle: {
+                opacity: 0.2,
               },
             },
           ],
@@ -752,7 +812,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         axisLabel: {
           rotate: xTickRotation,
           align: xTickRotation > 0 ? "right" : "center",
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: theme.typography.weight.medium,
           fontFamily: theme.typography.fontFamily,
           color: theme.colors.textSecondary,
@@ -781,7 +841,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         axisLabel: {
           rotate: yTickRotation,
           align: yTickRotation > 0 ? "right" : "center",
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: theme.typography.weight.medium,
           fontFamily: theme.typography.fontFamily,
           color: theme.colors.textSecondary,
@@ -798,14 +858,61 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       return {
         ...baseOption,
         grid: {
-          left: !isVertical ? "20%" : "3%",
-          right: !isVertical ? "4%" : "4%",
-          bottom: isVertical ? "20%" : "10%",
-          top: "3%",
+          left: "1%",
+          right: "1%",
+          bottom: showLegend ? "12%" : "3%",
+          top: "2%",
           containLabel: true,
         },
-        xAxis: chartType !== "scatter" ? xAxisConfig : { type: "value" },
-        yAxis: chartType !== "scatter" ? yAxisConfig : { type: "value" },
+        xAxis: chartType !== "scatter" ? xAxisConfig : {
+          type: "category",
+          data: graphData.map((d) => {
+            const value = d[xKey];
+            const formattedValue = formatKey(value);
+            return formattedValue.length > 14
+              ? formattedValue.slice(0, 12) + "…"
+              : formattedValue;
+          }),
+          axisTick: { show: false },
+          axisLine: {
+            lineStyle: {
+              color: `${theme.colors.accent}4D`,
+              width: 2,
+            },
+          },
+          axisLabel: {
+            rotate: graphData.length > 8 ? 45 : 0,
+            align: graphData.length > 8 ? "right" : "center",
+            fontSize: 12,
+            fontWeight: theme.typography.weight.medium,
+            fontFamily: theme.typography.fontFamily,
+            color: theme.colors.textSecondary,
+          },
+          splitLine: { show: false },
+        },
+        yAxis: chartType !== "scatter" ? yAxisConfig : {
+          type: "value",
+          axisTick: { show: false },
+          axisLine: {
+            lineStyle: {
+              color: `${theme.colors.accent}4D`,
+              width: 2,
+            },
+          },
+          axisLabel: {
+            fontSize: 12,
+            fontWeight: theme.typography.weight.medium,
+            fontFamily: theme.typography.fontFamily,
+            color: theme.colors.textSecondary,
+          },
+          splitLine: {
+            lineStyle: {
+              type: "dashed",
+              color: `${theme.colors.accent}33`,
+              opacity: 0.8,
+            },
+          },
+        },
         series: yKeys.map((key, keyIndex) => {
           const barCount = graphData.length;
           const isFewBars = chartType === "bar" && barCount <= 3;
@@ -815,14 +922,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             type: chartType === "area" ? "line" : chartType,
             stack:
               chartType === "bar" || chartType === "area" ? "a" : undefined,
-            data:
-              chartType === "scatter"
-                ? graphData.map((d, index) => ({
-                  value: [index, Number(d[key]) > 0 ? Number(d[key]) : 0],
-                }))
-                : graphData.map((d) =>
-                  Number(d[key]) > 0 ? Number(d[key]) : 0
-                ),
+            data: graphData.map((d) => {
+              const val = d[key];
+              const numVal = !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+              return numVal > 0 ? numVal : 0;
+            }),
 
             barCategoryGap:
               chartType === "bar" ? (isFewBars ? "40%" : "10%") : undefined,
