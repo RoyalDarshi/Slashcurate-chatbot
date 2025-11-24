@@ -483,35 +483,84 @@ const ChatInterface = memo(
               // If we get here, the request was NOT cancelled
               setActiveRequestController(null);
 
-              // Keep full data for frontend (downloads, display)
-              const botResponseContent = JSON.stringify(response.data, null, 2);
+              const responseData = response.data;
 
-              // Create limited data for backend storage (500 rows max)
-              const limitedResponseData = limitDataForBackend(response.data);
-              const botResponseContentForBackend = JSON.stringify(limitedResponseData, null, 2);
+              // Check for structured error response
+              if (
+                responseData.execution_status === "Failed" ||
+                responseData.data_availability === "Execution Error"
+              ) {
+                let errorMsg = "Query execution failed.";
+                if (responseData.answer && responseData.answer.error) {
+                  errorMsg = responseData.answer.error.message || errorMsg;
+                  if (responseData.answer.error.db2_raw) {
+                    errorMsg += `\n\nDetails: ${responseData.answer.error.db2_raw}`;
+                  }
+                }
 
-              await axios.put(
-                `${API_URL}/api/messages/${botMessageId}`,
-                {
-                  token,
-                  content: botResponseContentForBackend,
+                // Treat as an error
+                const errorContent = errorMsg;
+                const errorStatus = "error";
+
+                await axios.put(
+                  `${API_URL}/api/messages/${botMessageId}`,
+                  {
+                    token,
+                    content: errorContent,
+                    timestamp: new Date().toISOString(),
+                    status: errorStatus,
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+
+                const errorMessageUpdate: Partial<Message> = {
+                  content: errorContent,
+                  timestamp: new Date().toISOString(),
+                  status: errorStatus,
+                };
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessageId!,
+                  message: errorMessageUpdate,
+                });
+                setTimeout(() => scrollToMessage(botMessageId!), 100);
+
+              } else {
+                // Success case
+                // Keep full data for frontend (downloads, display)
+                const botResponseContent = JSON.stringify(responseData, null, 2);
+
+                // Create limited data for backend storage (500 rows max)
+                const limitedResponseData = limitDataForBackend(responseData);
+                const botResponseContentForBackend = JSON.stringify(
+                  limitedResponseData,
+                  null,
+                  2
+                );
+
+                await axios.put(
+                  `${API_URL}/api/messages/${botMessageId}`,
+                  {
+                    token,
+                    content: botResponseContentForBackend,
+                    timestamp: new Date().toISOString(),
+                    status: "normal",
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+
+                const updatedBotMessage: Partial<Message> = {
+                  content: botResponseContent,
                   timestamp: new Date().toISOString(),
                   status: "normal",
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-
-              const updatedBotMessage: Partial<Message> = {
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-                status: "normal",
-              };
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: botMessageId!,
-                message: updatedBotMessage,
-              });
-              setTimeout(() => scrollToMessage(botMessageId!), 100);
+                };
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessageId!,
+                  message: updatedBotMessage,
+                });
+                setTimeout(() => scrollToMessage(botMessageId!), 100);
+              }
             } catch (error) {
               // Clear the controller
               setActiveRequestController(null);

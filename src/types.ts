@@ -10,6 +10,7 @@ export interface Message {
   reaction?: string | null;
   dislike_reason?: string | null;
   parentId: string | null;
+  status?: "loading" | "normal" | "error";
 }
 
 export interface Connection {
@@ -220,9 +221,4 @@ export interface TableInfo {
   name: string;
   columns: ColumnInfo[];
   sampleData?: Record<string, any>[];
-}
-
-export interface DatabaseSchema {
-  name: string;
-  tables: TableInfo[];
 }

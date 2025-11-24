@@ -775,7 +775,7 @@ const DashboardInterface = memo(
             timestamp: new Date().toISOString(),
             isFavorited: false,
             parentId: null,
-            status: "normal", // <-- MODIFIED
+            status: "normal",
           };
 
           let finalUserMessageId: string = "";
@@ -790,7 +790,7 @@ const DashboardInterface = memo(
                 content: question,
                 isBot: false,
                 parentId: null,
-                status: "normal", // <-- MODIFIED
+                status: "normal",
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -814,7 +814,7 @@ const DashboardInterface = memo(
                 isBot: true,
                 isFavorited: false,
                 parentId: finalUserMessage.id,
-                status: "loading", // <-- MODIFIED
+                status: "loading",
               },
               { headers: { "Content-Type": "application/json" } }
             );
@@ -826,7 +826,7 @@ const DashboardInterface = memo(
               timestamp: new Date().toISOString(),
               isFavorited: false,
               parentId: finalUserMessage.id,
-              status: "loading", // <-- MODIFIED
+              status: "loading",
             };
             dispatchMessages({
               type: "ADD_MESSAGE",
@@ -882,94 +882,136 @@ const DashboardInterface = memo(
               // If we get here, the request was NOT cancelled
               setActiveRequestController(null);
 
-              // Keep full data for frontend (downloads, display)
-              const botResponseContent = JSON.stringify(response.data, null, 2);
+              const responseData = response.data;
 
-              // Create limited data for backend storage (500 rows max)
-              const limitedResponseData = limitDataForBackend(response.data);
-              const botResponseContentForBackend = JSON.stringify(limitedResponseData, null, 2);
+              // Check for structured error response
+              if (
+                responseData.execution_status === "Failed" ||
+                responseData.data_availability === "Execution Error"
+              ) {
+                let errorMsg = "Query execution failed.";
+                if (responseData.answer && responseData.answer.error) {
+                  errorMsg = responseData.answer.error.message || errorMsg;
+                  if (responseData.answer.error.db2_raw) {
+                    errorMsg += `\n\nDetails: ${responseData.answer.error.db2_raw}`;
+                  }
+                }
 
-              await axios.put(
-                `${API_URL}/api/messages/${botMessageId}`,
-                {
-                  token,
-                  content: botResponseContentForBackend,
+                // Treat as an error
+                const errorContent = errorMsg;
+                const errorStatus = "error";
+
+                await axios.put(
+                  `${API_URL}/api/messages/${botMessageId}`,
+                  {
+                    token,
+                    content: errorContent,
+                    timestamp: new Date().toISOString(),
+                    status: errorStatus,
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+
+                const errorMessageUpdate: Partial<Message> = {
+                  content: errorContent,
                   timestamp: new Date().toISOString(),
-                  status: "normal", // <-- MODIFIED
-                },
-                { headers: { "Content-Type": "application/json" } }
-              );
-
-              const updatedBotMessage: Partial<Message> = {
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-                status: "normal", // <-- MODIFIED
-              };
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: botMessageId!,
-                message: updatedBotMessage,
-              });
-
-              // Update dashboard item with response
-              try {
-                const botResponseContentParsed = JSON.parse(botResponseContent);
-                const actualKpiData =
-                  botResponseContentParsed.kpiData || initialEmptyKpiData;
-                const actualMainViewData = {
-                  chartData: Array.isArray(botResponseContentParsed.answer)
-                    ? botResponseContentParsed.answer
-                    : [],
-                  tableData: Array.isArray(botResponseContentParsed.answer)
-                    ? botResponseContentParsed.answer
-                    : [],
-                  queryData:
-                    typeof botResponseContentParsed.sql_query === "string"
-                      ? botResponseContentParsed.sql_query
-                      : "No query available.",
+                  status: errorStatus,
                 };
-                const actualTextualSummary =
-                  botResponseContentParsed.textualSummary ||
-                  `Here is the analysis for: "${question}"`;
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessageId!,
+                  message: errorMessageUpdate,
+                });
 
                 setDashboardHistory((prev) =>
                   prev.map((item) =>
-                    item.id === newLoadingEntryId
+                    item.botResponseId === botMessageId
                       ? {
                         ...item,
-                        kpiData: actualKpiData,
-                        mainViewData: actualMainViewData,
-                        textualSummary: actualTextualSummary,
-                        isError: false,
-                      }
-                      : item
-                  )
-                );
-              } catch (parseError) {
-                console.error(
-                  "Failed to parse bot response content:",
-                  parseError
-                );
-                setDashboardHistory((prev) =>
-                  prev.map((item) =>
-                    item.id === newLoadingEntryId
-                      ? {
-                        ...item,
-                        ...getDashboardErrorState(
-                          question,
-                          "Sorry, an error occurred. Please try again."
-                        ),
+                        ...getDashboardErrorState(question, errorContent),
                         isError: true,
                       }
                       : item
                   )
                 );
+
+              } else {
+                // Success case
+                // Keep full data for frontend (downloads, display)
+                const botResponseContent = JSON.stringify(responseData, null, 2);
+
+                // Create limited data for backend storage (500 rows max)
+                const limitedResponseData = limitDataForBackend(responseData);
+                const botResponseContentForBackend = JSON.stringify(
+                  limitedResponseData,
+                  null,
+                  2
+                );
+
+                await axios.put(
+                  `${API_URL}/api/messages/${botMessageId}`,
+                  {
+                    token,
+                    content: botResponseContentForBackend,
+                    timestamp: new Date().toISOString(),
+                    status: "normal",
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+
+                const updatedBotMessage: Partial<Message> = {
+                  content: botResponseContent,
+                  timestamp: new Date().toISOString(),
+                  status: "normal",
+                };
+                dispatchMessages({
+                  type: "UPDATE_MESSAGE",
+                  id: botMessageId!,
+                  message: updatedBotMessage,
+                });
+
+                // Update dashboard history with success data
+                try {
+                  const actualKpiData =
+                    responseData.kpiData || initialEmptyKpiData;
+                  const actualMainViewData = {
+                    chartData: Array.isArray(responseData.answer)
+                      ? responseData.answer
+                      : [],
+                    tableData: Array.isArray(responseData.answer)
+                      ? responseData.answer
+                      : [],
+                    queryData:
+                      typeof responseData.sql_query === "string"
+                        ? responseData.sql_query
+                        : "No query available.",
+                  };
+                  const actualTextualSummary =
+                    responseData.textualSummary ||
+                    `Here is the analysis for: "${question}"`;
+
+                  setDashboardHistory((prev) =>
+                    prev.map((item) =>
+                      item.botResponseId === botMessageId
+                        ? {
+                          ...item,
+                          kpiData: actualKpiData,
+                          mainViewData: actualMainViewData,
+                          textualSummary: actualTextualSummary,
+                          isError: false,
+                        }
+                        : item
+                    )
+                  );
+                } catch (parseError) {
+                  console.error("Error parsing bot response for dashboard:", parseError);
+                }
               }
             } catch (error) {
               // Clear the controller
               setActiveRequestController(null);
-              const errorContent = getErrorMessage(error); // Get smart error message
-              const errorStatus = "error"; // <-- ADDED
+              const errorContent = getErrorMessage(error);
+              const errorStatus = "error";
 
               // Check if the error was from cancellation
               if (
@@ -996,25 +1038,6 @@ const DashboardInterface = memo(
                 // This is a *real* error
                 console.error("Error getting bot response:", error);
 
-                setDashboardHistory((prev) =>
-                  prev.map((item) =>
-                    item.id === newLoadingEntryId // Update only the loading item
-                      ? {
-                        ...item,
-                        ...getDashboardErrorState(question, errorContent),
-                        textualSummary: errorContent,
-                        isFavorited: item.isFavorited,
-                        questionMessageId: finalUserMessageId, // Ensure IDs are set
-                        connectionName: connection,
-                        reaction: null,
-                        dislike_reason: null,
-                        botResponseId: botMessageId, // Ensure IDs are set
-                        isError: true,
-                      }
-                      : item
-                  )
-                );
-
                 if (botMessageId) {
                   await axios
                     .put(
@@ -1023,9 +1046,7 @@ const DashboardInterface = memo(
                         token,
                         content: errorContent,
                         timestamp: new Date().toISOString(),
-                        reaction: null,
-                        dislike_reason: null,
-                        status: errorStatus, // <-- MODIFIED
+                        status: errorStatus,
                       },
                       { headers: { "Content-Type": "application/json" } }
                     )
@@ -1039,32 +1060,28 @@ const DashboardInterface = memo(
                   const errorMessageUpdate: Partial<Message> = {
                     content: errorContent,
                     timestamp: new Date().toISOString(),
-                    reaction: null,
-                    dislike_reason: null,
-                    status: errorStatus, // <-- MODIFIED
+                    status: errorStatus,
                   };
                   dispatchMessages({
                     type: "UPDATE_MESSAGE",
                     id: botMessageId,
                     message: errorMessageUpdate,
                   });
-                } else {
-                  console.error(
-                    "botMessageId is null when trying to update with error for /ask"
+
+                  setDashboardHistory((prev) =>
+                    prev.map((item) =>
+                      item.botResponseId === botMessageId
+                        ? {
+                          ...item,
+                          ...getDashboardErrorState(question, errorContent),
+                          isError: true,
+                        }
+                        : item
+                    )
                   );
-                  const generalErrorMessage: Message = {
-                    id: `error-${Date.now().toString()}`,
-                    content: errorContent,
-                    isBot: true,
-                    timestamp: new Date().toISOString(),
-                    isFavorited: false,
-                    parentId: finalUserMessageId,
-                    status: errorStatus, // <-- MODIFIED
-                  };
-                  dispatchMessages({
-                    type: "ADD_MESSAGE",
-                    message: generalErrorMessage,
-                  });
+                } else {
+                  // Fallback if botMessageId is missing (unlikely here)
+                  toast.error(`Error: ${errorContent}`);
                 }
               }
             }
@@ -1091,7 +1108,7 @@ const DashboardInterface = memo(
           selectedConnection,
           currentHistoryIndex,
           startNewSession,
-          messages.length, // Added dependency
+          messages.length,
         ]
       );
 
