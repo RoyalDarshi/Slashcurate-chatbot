@@ -647,6 +647,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       series: yKeys.map((key, keyIndex) => ({
         name: formatKey(key),
         type: "bar",
+        cursor: "default",
         stack: "a",
         data: graphData.map((d) => (Number(d[key]) > 0 ? Number(d[key]) : 0)),
         color: theme.colors.barColors[keyIndex % theme.colors.barColors.length],

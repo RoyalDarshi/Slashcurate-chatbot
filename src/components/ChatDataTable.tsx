@@ -136,8 +136,8 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     column.getIsSorted() === "asc"
                       ? 0
                       : column.getIsSorted() === "desc"
-                      ? 180
-                      : 0,
+                        ? 180
+                        : 0,
                   opacity: column.getIsSorted() ? 1 : 0.4,
                   scale: column.getIsSorted() ? 1 : 0.9,
                 }}
@@ -250,9 +250,8 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
 
       {(filteredData.length > 20 || showControls) && (
         <div
-          className={`flex ${
-            isMobile ? "flex-col space-y-2" : "items-center justify-between"
-          } px-3 py-2 border-b`}
+          className={`flex ${isMobile ? "flex-col space-y-2" : "items-center justify-between"
+            } px-3 py-2 border-b`}
           style={{
             borderColor: `${theme.colors.text}10`,
             backgroundColor: `${theme.colors.surface}`,
@@ -389,6 +388,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           {/* --- Virtualized Table Body --- */}
           <tbody
             style={{
+              display: "grid",
               height: `${rowVirtualizer.getTotalSize()}px`, // Virtual height
               position: "relative",
             }}
@@ -398,16 +398,18 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               const row = rows[virtualRow.index];
               return (
                 <motion.tr
+                  ref={rowVirtualizer.measureElement}
+                  data-index={virtualRow.index}
                   key={row.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1, y: virtualRow.start }}
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   style={{
+                    display: "flex",
                     position: "absolute",
                     top: 0,
                     left: 0,
                     width: "100%", // Row spans full table width
-                    height: `${virtualRow.size}px`,
                   }}
                   onMouseEnter={() => setHoveredRow(row.id)}
                   onMouseLeave={() => setHoveredRow(null)}
@@ -417,8 +419,11 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                       key={cell.id}
                       className="px-6 py-5 text-md"
                       style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         color: theme.colors.text,
-                        textAlign: "center !important",
+                        textAlign: "center",
                         width: cell.column.getSize(), // Set specific column width
                       }}
                     >
