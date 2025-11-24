@@ -28,7 +28,6 @@ import DynamicGraph, { formatKey } from "./ChatGraphs/ChatDynamicGraph";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import html2canvas from "html2canvas";
-import * as XLSX from "xlsx";
 import EditableMessage from "./EditableMessage";
 import { motion } from "framer-motion";
 import { useTheme } from "../ThemeContext";
