@@ -689,13 +689,13 @@ const DashboardInterface = memo(
                 prev.map((item) =>
                   item.id === newLoadingEntryId
                     ? {
-                        ...item,
-                        ...getDashboardErrorState(
-                          question,
-                          "No valid session connection found."
-                        ),
-                        isError: true,
-                      }
+                      ...item,
+                      ...getDashboardErrorState(
+                        question,
+                        "No valid session connection found."
+                      ),
+                      isError: true,
+                    }
                     : item
                 )
               );
@@ -722,13 +722,13 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.id === newLoadingEntryId
                       ? {
-                          ...item,
-                          ...getDashboardErrorState(
-                            question,
-                            "Could not create session."
-                          ),
-                          isError: true,
-                        }
+                        ...item,
+                        ...getDashboardErrorState(
+                          question,
+                          "Could not create session."
+                        ),
+                        isError: true,
+                      }
                       : item
                   )
                 );
@@ -740,13 +740,13 @@ const DashboardInterface = memo(
                 prev.map((item) =>
                   item.id === newLoadingEntryId
                     ? {
-                        ...item,
-                        ...getDashboardErrorState(
-                          question,
-                          getErrorMessage(error)
-                        ),
-                        isError: true,
-                      }
+                      ...item,
+                      ...getDashboardErrorState(
+                        question,
+                        getErrorMessage(error)
+                      ),
+                      isError: true,
+                    }
                     : item
                 )
               );
@@ -823,10 +823,10 @@ const DashboardInterface = memo(
               prev.map((item) =>
                 item.id === newLoadingEntryId
                   ? {
-                      ...item,
-                      questionMessageId: finalUserMessageId,
-                      botResponseId: botMessageId,
-                    }
+                    ...item,
+                    questionMessageId: finalUserMessageId,
+                    botResponseId: botMessageId,
+                  }
                   : item
               )
             );
@@ -847,16 +847,16 @@ const DashboardInterface = memo(
 
               const payload = query
                 ? {
-                    question,
-                    sql_query: query,
-                    connection: connectionObj,
-                    sessionId: currentSessionId,
-                  }
+                  question,
+                  sql_query: query,
+                  connection: connectionObj,
+                  sessionId: currentSessionId,
+                }
                 : {
-                    question,
-                    connection: connectionObj,
-                    sessionId: currentSessionId,
-                  };
+                  question,
+                  connection: connectionObj,
+                  sessionId: currentSessionId,
+                };
               const response = await axios.post(
                 `${CHATBOT_API_URL}/ask`,
                 payload,
@@ -916,12 +916,12 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.id === newLoadingEntryId
                       ? {
-                          ...item,
-                          kpiData: actualKpiData,
-                          mainViewData: actualMainViewData,
-                          textualSummary: actualTextualSummary,
-                          isError: false,
-                        }
+                        ...item,
+                        kpiData: actualKpiData,
+                        mainViewData: actualMainViewData,
+                        textualSummary: actualTextualSummary,
+                        isError: false,
+                      }
                       : item
                   )
                 );
@@ -934,13 +934,13 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.id === newLoadingEntryId
                       ? {
-                          ...item,
-                          ...getDashboardErrorState(
-                            question,
-                            "Sorry, an error occurred. Please try again."
-                          ),
-                          isError: true,
-                        }
+                        ...item,
+                        ...getDashboardErrorState(
+                          question,
+                          "Sorry, an error occurred. Please try again."
+                        ),
+                        isError: true,
+                      }
                       : item
                   )
                 );
@@ -963,10 +963,10 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.id === newLoadingEntryId
                       ? {
-                          ...item,
-                          ...getDashboardErrorState(question, errorContent),
-                          isError: true,
-                        }
+                        ...item,
+                        ...getDashboardErrorState(question, errorContent),
+                        isError: true,
+                      }
                       : item
                   )
                 );
@@ -980,17 +980,17 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.id === newLoadingEntryId // Update only the loading item
                       ? {
-                          ...item,
-                          ...getDashboardErrorState(question, errorContent),
-                          textualSummary: errorContent,
-                          isFavorited: item.isFavorited,
-                          questionMessageId: finalUserMessageId, // Ensure IDs are set
-                          connectionName: connection,
-                          reaction: null,
-                          dislike_reason: null,
-                          botResponseId: botMessageId, // Ensure IDs are set
-                          isError: true,
-                        }
+                        ...item,
+                        ...getDashboardErrorState(question, errorContent),
+                        textualSummary: errorContent,
+                        isFavorited: item.isFavorited,
+                        questionMessageId: finalUserMessageId, // Ensure IDs are set
+                        connectionName: connection,
+                        reaction: null,
+                        dislike_reason: null,
+                        botResponseId: botMessageId, // Ensure IDs are set
+                        isError: true,
+                      }
                       : item
                   )
                 );
@@ -1154,10 +1154,10 @@ const DashboardInterface = memo(
               prev.map((item) =>
                 item.botResponseId === loadingBotMessageId
                   ? {
-                      ...item,
-                      ...getDashboardErrorState(item.question, errorMessage),
-                      isError: true,
-                    }
+                    ...item,
+                    ...getDashboardErrorState(item.question, errorMessage),
+                    isError: true,
+                  }
                   : item
               )
             );
@@ -1174,10 +1174,10 @@ const DashboardInterface = memo(
               return prev.map((item) =>
                 item.id === lastItem.id
                   ? {
-                      ...item,
-                      ...getDashboardErrorState(item.question, errorMessage),
-                      isError: true,
-                    }
+                    ...item,
+                    ...getDashboardErrorState(item.question, errorMessage),
+                    isError: true,
+                  }
                   : item
               );
             }
@@ -1445,11 +1445,11 @@ const DashboardInterface = memo(
               prev.map((item) =>
                 item.questionMessageId === questionMessageId
                   ? {
-                      ...item,
-                      question: newQuestion,
-                      ...getDashboardLoadingState(), // Set to loading
-                      isError: false,
-                    }
+                    ...item,
+                    question: newQuestion,
+                    ...getDashboardLoadingState(), // Set to loading
+                    isError: false,
+                  }
                   : item
               )
             );
@@ -1585,12 +1585,12 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.questionMessageId === questionMessageId
                       ? {
-                          ...item,
-                          kpiData: actualKpiData,
-                          mainViewData: actualMainViewData,
-                          textualSummary: actualTextualSummary,
-                          isError: false,
-                        }
+                        ...item,
+                        kpiData: actualKpiData,
+                        mainViewData: actualMainViewData,
+                        textualSummary: actualTextualSummary,
+                        isError: false,
+                      }
                       : item
                   )
                 );
@@ -1603,13 +1603,13 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.questionMessageId === questionMessageId
                       ? {
-                          ...item,
-                          ...getDashboardErrorState(
-                            newQuestion,
-                            "Sorry, an error occurred. Please try again."
-                          ),
-                          isError: true,
-                        }
+                        ...item,
+                        ...getDashboardErrorState(
+                          newQuestion,
+                          "Sorry, an error occurred. Please try again."
+                        ),
+                        isError: true,
+                      }
                       : item
                   )
                 );
@@ -1650,10 +1650,10 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.questionMessageId === questionMessageId
                       ? {
-                          ...item,
-                          ...getDashboardErrorState(newQuestion, errorContent),
-                          isError: true,
-                        }
+                        ...item,
+                        ...getDashboardErrorState(newQuestion, errorContent),
+                        isError: true,
+                      }
                       : item
                   )
                 );
@@ -1717,10 +1717,10 @@ const DashboardInterface = memo(
               prev.map((item) =>
                 item.questionMessageId === questionMessageId
                   ? {
-                      ...item,
-                      ...getDashboardLoadingState(),
-                      isError: false,
-                    }
+                    ...item,
+                    ...getDashboardLoadingState(),
+                    isError: false,
+                  }
                   : item
               )
             );
@@ -1846,12 +1846,12 @@ const DashboardInterface = memo(
                 prev.map((item) =>
                   item.questionMessageId === questionMessageId
                     ? {
-                        ...item,
-                        kpiData: actualKpiData,
-                        mainViewData: actualMainViewData,
-                        textualSummary: actualTextualSummary,
-                        isError: false,
-                      }
+                      ...item,
+                      kpiData: actualKpiData,
+                      mainViewData: actualMainViewData,
+                      textualSummary: actualTextualSummary,
+                      isError: false,
+                    }
                     : item
                 )
               );
@@ -1890,13 +1890,13 @@ const DashboardInterface = memo(
                   prev.map((item) =>
                     item.questionMessageId === questionMessageId
                       ? {
-                          ...item,
-                          ...getDashboardErrorState(
-                            questionContent,
-                            errorContent
-                          ),
-                          isError: true,
-                        }
+                        ...item,
+                        ...getDashboardErrorState(
+                          questionContent,
+                          errorContent
+                        ),
+                        isError: true,
+                      }
                       : item
                   )
                 );
@@ -1911,10 +1911,10 @@ const DashboardInterface = memo(
               prev.map((item) =>
                 item.questionMessageId === questionMessageId
                   ? {
-                      ...item,
-                      ...getDashboardErrorState(questionContent, errorMsg),
-                      isError: true,
-                    }
+                    ...item,
+                    ...getDashboardErrorState(questionContent, errorMsg),
+                    isError: true,
+                  }
                   : item
               )
             );
@@ -2155,7 +2155,7 @@ const DashboardInterface = memo(
                   if (
                     isSubmitting &&
                     currentDashboardView.textualSummary ===
-                      "Processing your request..."
+                    "Processing your request..."
                   ) {
                     return (
                       <DashboardSkeletonLoader
@@ -2375,9 +2375,8 @@ const DashboardInterface = memo(
                       !selectedConnection ||
                       !!sessionConnectionError
                     }
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
-                      isDbExplorerOpen ? "schema-active" : ""
-                    }`}
+                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${isDbExplorerOpen ? "schema-active" : ""
+                      }`}
                     style={{
                       background: theme.colors.surface,
                       color: theme.colors.accent,
@@ -2444,7 +2443,7 @@ const DashboardInterface = memo(
                 </CustomTooltip>
                 {showDashboardContent &&
                   !currentDashboardView.isError &&
-                  currentDashboardView.mainViewData.chartData.length > 0 && (
+                  currentDashboardView.mainViewData.chartData.length > 0 && false && (
                     <CustomTooltip title="Summarize Graph" position="top">
                       <button
                         type="button"
@@ -2453,7 +2452,7 @@ const DashboardInterface = memo(
                         disabled={
                           isSubmitting ||
                           currentDashboardView.mainViewData.chartData.length ===
-                            0
+                          0
                         }
                         className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
                         style={{
@@ -2503,7 +2502,7 @@ const areEqual = (
     prevProps.onCreateConSelected === nextProps.onCreateConSelected &&
     prevProps.initialQuestion?.text === nextProps.initialQuestion?.text &&
     prevProps.initialQuestion?.connection ===
-      nextProps.initialQuestion?.connection &&
+    nextProps.initialQuestion?.connection &&
     prevProps.initialQuestion?.query === nextProps.initialQuestion?.query &&
     prevProps.onQuestionAsked === nextProps.onQuestionAsked
   );

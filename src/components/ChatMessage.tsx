@@ -671,9 +671,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
       {message.isBot ? (
         <div
-          className={`flex w-full items-start ${
-            currentView === "graph" ? "max-w-[90%]" : "w-max"
-          } gap-2`}
+          className={`flex w-full items-start ${currentView === "graph" ? "max-w-[90%]" : "w-max"
+            } gap-2`}
           style={{ position: "relative" }}
         >
           <div
@@ -864,12 +863,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                                     backgroundColor: "transparent",
                                   }}
                                   onMouseEnter={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      `${theme.colors.accent}20`)
+                                  (e.currentTarget.style.backgroundColor =
+                                    `${theme.colors.accent}20`)
                                   }
                                   onMouseLeave={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      "transparent")
+                                  (e.currentTarget.style.backgroundColor =
+                                    "transparent")
                                   }
                                 >
                                   Low Resolution
@@ -882,12 +881,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                                     backgroundColor: "transparent",
                                   }}
                                   onMouseEnter={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      `${theme.colors.accent}20`)
+                                  (e.currentTarget.style.backgroundColor =
+                                    `${theme.colors.accent}20`)
                                   }
                                   onMouseLeave={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      "transparent")
+                                  (e.currentTarget.style.backgroundColor =
+                                    "transparent")
                                   }
                                 >
                                   High Resolution
@@ -898,7 +897,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                         )}
                       {currentView === "graph" &&
                         hasNumericData &&
-                        onSummarizeGraph && (
+                        onSummarizeGraph && false && (
                           <CustomTooltip
                             title="Summarize Graph"
                             position="top"
@@ -1132,12 +1131,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                                 backgroundColor: "transparent",
                               }}
                               onMouseEnter={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  `${theme.colors.accent}20`)
+                              (e.currentTarget.style.backgroundColor =
+                                `${theme.colors.accent}20`)
                               }
                               onMouseLeave={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  "transparent")
+                              (e.currentTarget.style.backgroundColor =
+                                "transparent")
                               }
                             >
                               {reason}
@@ -1172,11 +1171,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   <CustomTooltip
                     title={
                       responseStatus === "loading" ||
-                      responseStatus === "error"
+                        responseStatus === "error"
                         ? "Cannot favorite while response is loading or failed"
                         : isFavorited
-                        ? "Remove from favorites"
-                        : "Add to favorites"
+                          ? "Remove from favorites"
+                          : "Add to favorites"
                     }
                     position="top"
                   >
@@ -1184,14 +1183,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       whileHover={{
                         scale:
                           responseStatus === "loading" ||
-                          responseStatus === "error"
+                            responseStatus === "error"
                             ? 1
                             : 1.1,
                       }}
                       whileTap={{
                         scale:
                           responseStatus === "loading" ||
-                          responseStatus === "error"
+                            responseStatus === "error"
                             ? 1
                             : 0.95,
                       }}
@@ -1203,12 +1202,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           : "rgba(255,255,255,0.8)",
                         cursor:
                           responseStatus === "loading" ||
-                          responseStatus === "error"
+                            responseStatus === "error"
                             ? "not-allowed"
                             : "pointer",
                         opacity:
                           responseStatus === "loading" ||
-                          responseStatus === "error"
+                            responseStatus === "error"
                             ? 0.5
                             : 1,
                       }}

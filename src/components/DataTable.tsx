@@ -334,7 +334,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         }}
       >
         <table
-          className="w-full"
+          className="mx-auto"
           style={{
             tableLayout: "fixed",
             width: table.getTotalSize(), // Set total width
@@ -378,7 +378,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         }}
       >
         <table
-          className="w-full"
+          className="mx-auto"
           style={{
             tableLayout: "fixed",
             width: table.getTotalSize(), // Set total width
