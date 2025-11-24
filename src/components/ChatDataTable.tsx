@@ -220,7 +220,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       }}
     >
       {/* --- CONTROLS SECTION (Unchanged) --- */}
-      {filteredData.length <= 20 && (
+      {/* {filteredData.length <= 20 && (
         <div className="flex justify-end ">
           <button
             onClick={toggleControls}
@@ -246,12 +246,12 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             </svg>
           </button>
         </div>
-      )}
+      )} */}
 
-      {(filteredData.length > 20 || showControls) && (
+      {(filteredData || showControls) && (
         <div
           className={`flex ${isMobile ? "flex-col space-y-2" : "items-center justify-between"
-            } px-3 py-2 border-b`}
+            } pb-1 border-b`}
           style={{
             borderColor: `${theme.colors.text}10`,
             backgroundColor: `${theme.colors.surface}`,

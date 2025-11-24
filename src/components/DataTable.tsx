@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { Download } from "lucide-react";
 import {
   createColumnHelper,
   flexRender,
@@ -211,6 +212,67 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     setShowControls(!showControls);
   };
 
+  const downloadCSV = () => {
+    if (!sortedData || sortedData.length === 0) return;
+
+    // 1. Get headers
+    const headers = Object.keys(sortedData[0]);
+
+    // 2. Convert to CSV string
+    const csvContent = [
+      headers.join(","), // Header row
+      ...sortedData.map((row) =>
+        headers.map((header) => {
+          const cellValue = row[header];
+          // Handle strings with commas or quotes
+          const stringValue = String(cellValue ?? "");
+          if (
+            stringValue.includes(",") ||
+            stringValue.includes('"') ||
+            stringValue.includes("\n")
+          ) {
+            return `"${stringValue.replace(/"/g, '""')}"`;
+          }
+          return stringValue;
+        }).join(",")
+      ),
+    ].join("\n");
+
+    // 3. Create blob and download link
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `table_export_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // ... (existing imports)
+
+  // ... (inside DataTable component)
+
+  const DownloadButton = () => (
+    <button
+      onClick={downloadCSV}
+      className="flex items-center gap-1 px-3 py-1.5 rounded-lg rounded-t-none rounded-br-none text-sm font-medium transition-all duration-200"
+      style={{
+        backgroundColor: `${theme.colors.accent}1A`,
+        color: theme.colors.accent,
+        border: `1px solid ${theme.colors.accent}33`,
+      }}
+      title="Export CSV"
+    >
+      <Download size={16} />
+      <span>Export</span>
+    </button>
+  );
+
   return (
     <div
       className="rounded-lg overflow-hidden h-full flex flex-col"
@@ -221,8 +283,9 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       }}
     >
       {/* --- CONTROLS SECTION (Unchanged) --- */}
-      {filteredData.length <= 20 && (
-        <div className="flex justify-end ">
+      {/* {filteredData.length <= 10 && (
+        <div className="flex justify-end items-center gap-2 px-2 py-1">
+          <DownloadButton />
           <button
             onClick={toggleControls}
             className="text-xs flex items-center py-1 px-2 rounded-md transition-colors"
@@ -247,12 +310,12 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             </svg>
           </button>
         </div>
-      )}
+      )} */}
 
-      {(filteredData.length > 20 || showControls) && (
+      {(filteredData || showControls) && (
         <div
           className={`flex ${isMobile ? "flex-col space-y-2" : "items-center justify-between"
-            } px-3 py-2 border-b`}
+            } pl-3 py-2 border-b`}
           style={{
             borderColor: `${theme.colors.text}10`,
             backgroundColor: `${theme.colors.surface}`,
@@ -312,15 +375,18 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
             </motion.div>
 
             <div
-              className={`${isMobile ? "mt-2" : "ml-4"} text-sm`}
+              className={`${isMobile ? "mt-2" : "ml-4"} text-sm flex items-center gap-4`}
               style={{ color: theme.colors.textSecondary }}
             >
               <span>
                 {filteredData.length}{" "}
                 {filteredData.length === 1 ? "record" : "records"}
               </span>
+
+
             </div>
           </div>
+          {filteredData && <DownloadButton />}
         </div>
       )}
 
