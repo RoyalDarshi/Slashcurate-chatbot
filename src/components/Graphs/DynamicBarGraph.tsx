@@ -167,7 +167,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         keys.includes("branch_name") &&
         !excludeFn("branch_name") &&
         new Set(sample.map((row) => row["branch_name"]).filter(Boolean)).size >
-          1
+        1
       ) {
         return "branch_name";
       }
@@ -300,8 +300,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
       // Get unique stack values
       const allStackValues = stackByKey
         ? [...new Set(rawData.map((row) => row[stackByKey]))].filter(
-            (v) => v !== undefined && v !== null
-          )
+          (v) => v !== undefined && v !== null
+        )
         : ["value"];
 
       // Group and aggregate data
@@ -537,7 +537,8 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         },
       },
       tooltip: {
-        trigger: "axis",
+        trigger: "item",
+        confine: true,
         axisPointer: {
           type: "shadow",
           shadowStyle: {
@@ -551,9 +552,12 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
         padding: 0,
         extraCssText: `box-shadow: none;`,
         formatter: (params: any) => {
-          if (!params || params.length === 0) return "";
-          const label = formatKey(params[0].axisValue);
-          const accentColor = params[0].color || theme.colors.accent;
+          if (!params) return "";
+          const payload = Array.isArray(params) ? params : [params];
+          if (payload.length === 0) return "";
+
+          const label = formatKey(payload[0].name || payload[0].axisValue);
+          const accentColor = payload[0].color || theme.colors.accent;
           let html = `
             <div style="
               padding: ${theme.spacing.lg};
@@ -594,16 +598,15 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
                 ${label}
               </div>
           `;
-          params.forEach((entry: any, index: number) => {
+          payload.forEach((entry: any, index: number) => {
             if (entry.value <= 0) return;
             html += `
               <div style="
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                margin-bottom: ${
-                  index < params.length - 1 ? theme.spacing.md : 0
-                };
+                margin-bottom: ${index < payload.length - 1 ? theme.spacing.md : 0
+              };
                 padding: ${theme.spacing.md};
                 border-radius: ${theme.borderRadius.default};
                 background: ${entry.color}15;
@@ -675,7 +678,7 @@ const DynamicBarGraph: React.FC<ModernBarGraphProps> = React.memo(
           };
         },
       })),
-    }; 
+    };
     return (
       <div>
         <div
