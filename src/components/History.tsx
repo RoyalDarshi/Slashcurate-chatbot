@@ -19,6 +19,20 @@ import { API_URL } from "../config";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+/* ----------------------------------------------------------
+   TIMESTAMP FIX — ALWAYS PARSES MISSING TIMEZONE AS UTC
+-----------------------------------------------------------*/
+const parseTimestamp = (ts: string | number) => {
+  if (!ts) return new Date();
+
+  // If string AND missing timezone (no Z or ±HH:MM)
+  if (typeof ts === "string" && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(ts)) {
+    return new Date(ts + "Z"); // Treat as UTC
+  }
+
+  return new Date(ts);
+};
+
 interface Session {
   id: string;
   messages: Message[];
@@ -248,7 +262,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
     thirtyDaysAgo.setDate(today.getDate() - 30);
 
     const filtered = sessions.filter((session) => {
-      const sessionDate = new Date(session.timestamp);
+      const sessionDate = parseTimestamp(session.timestamp); // FIXED
       const sessionDay = new Date(
         sessionDate.getFullYear(),
         sessionDate.getMonth(),
@@ -310,7 +324,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
   };
 
   const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
+    const date = parseTimestamp(timestamp); // FIXED
     const now = new Date();
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -757,36 +771,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                               <Pencil className="h-4 w-4" />
                             </motion.button>
                           </CustomTooltip>
-
-                          {/* <CustomTooltip title="Share chat">
-                            <motion.button
-                              variants={buttonVariants}
-                              whileHover="hover"
-                              whileTap="tap"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toast.info("Sharing feature coming soon!", {
-                                  style: {
-                                    background: theme.colors.surface,
-                                    color: theme.colors.accent,
-                                    border: `1px solid ${theme.colors.accent}20`,
-                                    borderRadius: theme.borderRadius.default,
-                                  },
-                                  theme:
-                                    theme.colors.background === "#0F172A"
-                                      ? "dark"
-                                      : "light",
-                                });
-                              }}
-                              className="p-1 rounded-full"
-                              style={{
-                                color: theme.colors.textSecondary,
-                                background: theme.colors.surface + "80",
-                              }}
-                            >
-                              <Share2 className="h-4 w-4" />
-                            </motion.button>
-                          </CustomTooltip> */}
 
                           <CustomTooltip title="Delete session">
                             <motion.button

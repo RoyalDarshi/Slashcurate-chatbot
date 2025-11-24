@@ -9,14 +9,14 @@ interface DynamicGraphProps {
   data: any[];
   isValidGraph: (validData: boolean) => void;
   chartType:
-    | "bar"
-    | "line"
-    | "pie"
-    | "area"
-    | "scatter"
-    | "radar"
-    | "funnel"
-    | "treemap";
+  | "bar"
+  | "line"
+  | "pie"
+  | "area"
+  | "scatter"
+  | "radar"
+  | "funnel"
+  | "treemap";
   groupBy: string | null;
   aggregate: "sum" | "count" | "avg" | "min" | "max" | null;
   valueKey: string | null;
@@ -433,31 +433,27 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         // ✅ Set the global color palette from the theme
         color: theme.colors.barColors,
         tooltip: {
-          trigger:
-            chartType === "pie" ||
-            chartType === "funnel" ||
-            chartType === "treemap"
-              ? "item"
-              : "axis",
+          trigger: "item",
+          confine: true,
           axisPointer: {
             type:
               chartType === "line" || chartType === "area" ? "line" : "shadow",
             shadowStyle:
               chartType !== "line" &&
-              chartType !== "area" &&
-              chartType !== "scatter"
+                chartType !== "area" &&
+                chartType !== "scatter"
                 ? {
-                    color: `${theme.colors.accent}1A`,
-                    borderColor: `${theme.colors.accent}4D`,
-                    borderWidth: 2,
-                  }
+                  color: `${theme.colors.accent}1A`,
+                  borderColor: `${theme.colors.accent}4D`,
+                  borderWidth: 2,
+                }
                 : undefined,
             lineStyle:
               chartType === "line" || chartType === "area"
                 ? {
-                    color: `${theme.colors.accent}4D`,
-                    width: 2,
-                  }
+                  color: `${theme.colors.accent}4D`,
+                  width: 2,
+                }
                 : undefined,
           },
           backgroundColor: "transparent",
@@ -475,8 +471,8 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               chartType === "radar"
                 ? payload[0].name
                 : isVertical
-                ? payload[0].axisValue
-                : payload[0].name || payload[0].axisValue
+                  ? payload[0].axisValue
+                  : payload[0].name || payload[0].axisValue
             );
             let html = `
               <div style="
@@ -528,9 +524,8 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                   display: flex;
                   align-items: center;
                   justify-content: space-between;
-                  margin-bottom: ${
-                    index < payload.length - 1 ? theme.spacing.md : 0
-                  };
+                  margin-bottom: ${index < payload.length - 1 ? theme.spacing.md : 0
+                };
                   padding: ${theme.spacing.md};
                   border-radius: ${theme.borderRadius.default};
                   background: ${entry.color}15;
@@ -570,20 +565,20 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         },
         legend: showLegend
           ? {
-              orient: "horizontal",
-              left: "center",
-              bottom: 0,
-              textStyle: {
-                fontSize: 13,
-                fontFamily: theme.typography.fontFamily,
-                fontWeight: theme.typography.weight.medium,
-                color: theme.colors.text,
-              },
-              icon: "circle",
-              itemWidth: 14,
-              itemHeight: 14,
-              formatter: (name: string) => formatKey(name),
-            }
+            orient: "horizontal",
+            left: "center",
+            bottom: 0,
+            textStyle: {
+              fontSize: 13,
+              fontFamily: theme.typography.fontFamily,
+              fontWeight: theme.typography.weight.medium,
+              color: theme.colors.text,
+            },
+            icon: "circle",
+            itemWidth: 14,
+            itemHeight: 14,
+            formatter: (name: string) => formatKey(name),
+          }
           : { show: false },
       };
 
@@ -595,22 +590,22 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         const seriesConfig =
           chartType === "pie"
             ? {
-                name: "Pie",
-                type: "pie",
-                radius: "50%",
-                center: ["50%", "50%"],
-                label: {
-                  show: true,
-                  formatter: "{b}: {c}",
-                  fontSize: 13,
-                  fontWeight: theme.typography.weight.medium,
-                  fontFamily: theme.typography.fontFamily,
-                  color: theme.colors.textSecondary,
-                },
-                labelLine: { show: true },
-              }
+              name: "Pie",
+              type: "pie",
+              radius: "50%",
+              center: ["50%", "50%"],
+              label: {
+                show: true,
+                formatter: "{b}: {c}",
+                fontSize: 13,
+                fontWeight: theme.typography.weight.medium,
+                fontFamily: theme.typography.fontFamily,
+                color: theme.colors.textSecondary,
+              },
+              labelLine: { show: true },
+            }
             : chartType === "funnel"
-            ? {
+              ? {
                 name: "Funnel",
                 type: "funnel",
                 left: "10%",
@@ -633,7 +628,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                   color: theme.colors.textSecondary,
                 },
               }
-            : {
+              : {
                 name: "Treemap",
                 type: "treemap",
                 leafDepth: 1,
@@ -740,12 +735,12 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         type: isVertical ? "category" : "value",
         data: isVertical
           ? graphData.map((d) => {
-              const value = d[xKey];
-              const formattedValue = formatKey(value);
-              return formattedValue.length > 14
-                ? formattedValue.slice(0, 12) + "…"
-                : formattedValue;
-            })
+            const value = d[xKey];
+            const formattedValue = formatKey(value);
+            return formattedValue.length > 14
+              ? formattedValue.slice(0, 12) + "…"
+              : formattedValue;
+          })
           : undefined,
         axisTick: { show: false },
         axisLine: {
@@ -769,12 +764,12 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         type: isVertical ? "value" : "category",
         data: !isVertical
           ? graphData.map((d) => {
-              const value = d[xKey];
-              const formattedValue = formatKey(value);
-              return formattedValue.length > 14
-                ? formattedValue.slice(0, 12) + "…"
-                : formattedValue;
-            })
+            const value = d[xKey];
+            const formattedValue = formatKey(value);
+            return formattedValue.length > 14
+              ? formattedValue.slice(0, 12) + "…"
+              : formattedValue;
+          })
           : undefined,
         axisTick: { show: false },
         axisLine: {
@@ -823,11 +818,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             data:
               chartType === "scatter"
                 ? graphData.map((d, index) => ({
-                    value: [index, Number(d[key]) > 0 ? Number(d[key]) : 0],
-                  }))
+                  value: [index, Number(d[key]) > 0 ? Number(d[key]) : 0],
+                }))
                 : graphData.map((d) =>
-                    Number(d[key]) > 0 ? Number(d[key]) : 0
-                  ),
+                  Number(d[key]) > 0 ? Number(d[key]) : 0
+                ),
 
             barCategoryGap:
               chartType === "bar" ? (isFewBars ? "40%" : "10%") : undefined,
@@ -838,10 +833,10 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 ? barCount === 1
                   ? 60
                   : barCount === 2
-                  ? 60
-                  : barCount === 3
-                  ? 50
-                  : undefined
+                    ? 60
+                    : barCount === 3
+                      ? 50
+                      : undefined
                 : undefined,
 
             symbolSize:
@@ -853,68 +848,68 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             areaStyle:
               chartType === "area"
                 ? {
-                    opacity: 0.3,
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                      {
-                        offset: 0,
-                        color: hexToRgba(
-                          theme.colors.barColors[
-                            keyIndex % theme.colors.barColors.length
-                          ],
-                          0.7
-                        ),
-                      },
-                      {
-                        offset: 1,
-                        color: hexToRgba(
-                          theme.colors.barColors[
-                            keyIndex % theme.colors.barColors.length
-                          ],
-                          0.1
-                        ),
-                      },
-                    ]),
-                  }
+                  opacity: 0.3,
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    {
+                      offset: 0,
+                      color: hexToRgba(
+                        theme.colors.barColors[
+                        keyIndex % theme.colors.barColors.length
+                        ],
+                        0.7
+                      ),
+                    },
+                    {
+                      offset: 1,
+                      color: hexToRgba(
+                        theme.colors.barColors[
+                        keyIndex % theme.colors.barColors.length
+                        ],
+                        0.1
+                      ),
+                    },
+                  ]),
+                }
                 : undefined,
             lineStyle:
               chartType === "line" || chartType === "area"
                 ? {
-                    width: 2,
-                  }
+                  width: 2,
+                }
                 : undefined,
             itemStyle:
               chartType === "line" ||
-              chartType === "area" ||
-              chartType === "scatter"
+                chartType === "area" ||
+                chartType === "scatter"
                 ? // ✅ Removed explicit color for markers, it will inherit from the global palette
-                  {}
+                {}
                 : (params: any) => {
-                    if (chartType !== "bar") return {};
-                    // ✅ Updated to use the color provided by ECharts in the params object
-                    const { dataIndex, color } = params;
-                    const payload = graphData[dataIndex];
-                    const topMostKey = [...yKeys]
-                      .reverse()
-                      .find((k) => Number(payload[k]) > 0);
-                    const isTopBar = key === topMostKey;
-                    const solidColor = color; // Use the ECharts-assigned color
-                    const radius = 6;
-                    return {
-                      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: hexToRgba(solidColor, 1) },
-                        { offset: 1, color: hexToRgba(solidColor, 0.7) },
-                      ]),
-                      borderColor: theme.colors.surfaceGlass,
-                      borderWidth: 1,
-                      borderRadius: isVertical
-                        ? isTopBar
-                          ? [radius, radius, 0, 0]
-                          : [0, 0, 0, 0]
-                        : isTopBar
+                  if (chartType !== "bar") return {};
+                  // ✅ Updated to use the color provided by ECharts in the params object
+                  const { dataIndex, color } = params;
+                  const payload = graphData[dataIndex];
+                  const topMostKey = [...yKeys]
+                    .reverse()
+                    .find((k) => Number(payload[k]) > 0);
+                  const isTopBar = key === topMostKey;
+                  const solidColor = color; // Use the ECharts-assigned color
+                  const radius = 6;
+                  return {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                      { offset: 0, color: hexToRgba(solidColor, 1) },
+                      { offset: 1, color: hexToRgba(solidColor, 0.7) },
+                    ]),
+                    borderColor: theme.colors.surfaceGlass,
+                    borderWidth: 1,
+                    borderRadius: isVertical
+                      ? isTopBar
+                        ? [radius, radius, 0, 0]
+                        : [0, 0, 0, 0]
+                      : isTopBar
                         ? [0, radius, radius, 0]
                         : [0, 0, 0, 0],
-                    };
-                  },
+                  };
+                },
           };
           return seriesBase;
         }),
