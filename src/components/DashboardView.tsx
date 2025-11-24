@@ -13,13 +13,7 @@ import {
   BsHandThumbsUpFill,
 } from "react-icons/bs";
 import KPICard from "./KPICard";
-import DynamicBarGraph from "./Graphs/DynamicBarGraph";
-import DynamicLineGraph from "./Graphs/DynamicLineGraph";
-import DynamicPieGraph from "./Graphs/DynamicPieGraph";
-import DynamicScatterGraph from "./Graphs/DynamicScatterGraph";
-import DynamicAreaGraph from "./Graphs/DynamicAreaGraph";
-import DynamicRadarGraph from "./Graphs/DynamicRadarGraph";
-import DynamicFunnelGraph from "./Graphs/DynamicFunnelGraph";
+import DynamicGraph from "./Graphs/DynamicGraph";
 import DataTable from "./DataTable";
 import QueryDisplay from "./QueryDisplay";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
@@ -709,83 +703,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                   </div>
                 )}
                 <div className="flex-1">
-                  {graphType === "bar" && (
-                    <DynamicBarGraph
-                      data={dashboardItem.mainViewData.chartData}
-                      groupBy={groupBy}
-                      setGroupBy={setGroupBy}
-                      aggregate={aggregate}
-                      setAggregate={setAggregate}
-                      valueKey={valueKey}
-                      setValueKey={setValueKey}
-                    />
-                  )}
-                  {graphType === "line" && (
-                    <DynamicLineGraph
-                      data={dashboardItem.mainViewData.chartData}
-                      groupBy={groupBy}
-                      setGroupBy={setGroupBy}
-                      aggregate={aggregate}
-                      setAggregate={setAggregate}
-                      valueKey={valueKey}
-                      setValueKey={setValueKey}
-                    />
-                  )}
-                  {graphType === "area" && (
-                    <DynamicAreaGraph
-                      data={dashboardItem.mainViewData.chartData}
-                      groupBy={groupBy}
-                      setGroupBy={setGroupBy}
-                      aggregate={aggregate}
-                      setAggregate={setAggregate}
-                      valueKey={valueKey}
-                      setValueKey={setValueKey}
-                    />
-                  )}
-                  {graphType === "pie" && (
-                    <DynamicPieGraph
-                      data={dashboardItem.mainViewData.chartData}
-                      groupBy={groupBy}
-                      setGroupBy={setGroupBy}
-                      aggregate={aggregate}
-                      setAggregate={setAggregate}
-                      valueKey={valueKey}
-                      setValueKey={setValueKey}
-                    />
-                  )}
-                  {graphType === "scatter" && (
-                    <DynamicScatterGraph
-                      data={dashboardItem.mainViewData.chartData}
-                      groupBy={groupBy}
-                      setGroupBy={setGroupBy}
-                      aggregate={aggregate}
-                      setAggregate={setAggregate}
-                      valueKey={valueKey}
-                      setValueKey={setValueKey}
-                    />
-                  )}
-                  {graphType === "radar" && (
-                    <DynamicRadarGraph
-                      data={dashboardItem.mainViewData.chartData}
-                      groupBy={groupBy}
-                      setGroupBy={setGroupBy}
-                      aggregate={aggregate}
-                      setAggregate={setAggregate}
-                      valueKey={valueKey}
-                      setValueKey={setValueKey}
-                    />
-                  )}
-                  {graphType === "funnel" && (
-                    <DynamicFunnelGraph
-                      data={dashboardItem.mainViewData.chartData}
-                      groupBy={groupBy}
-                      setGroupBy={setGroupBy}
-                      aggregate={aggregate}
-                      setAggregate={setAggregate}
-                      valueKey={valueKey}
-                      setValueKey={setValueKey}
-                    />
-                  )}
+                  <DynamicGraph
+                    data={dashboardItem.mainViewData.chartData}
+                    graphType={graphType}
+                    groupBy={groupBy}
+                    setGroupBy={setGroupBy}
+                    aggregate={aggregate}
+                    setAggregate={setAggregate}
+                    valueKey={valueKey}
+                    setValueKey={setValueKey}
+                  />
                 </div>
               </div>
 
