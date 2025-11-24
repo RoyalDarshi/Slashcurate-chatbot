@@ -350,7 +350,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-6 py-3 text-center text-sm font-medium"
+                    className="px-3 py-2 text-center text-sm font-medium"
                     onClick={header.column.getToggleSortingHandler()}
                     style={{
                       width: header.getSize(), // Set specific column width
@@ -417,7 +417,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-6 py-5 text-md"
+                      className="px-3 py-2 text-md"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -447,7 +447,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
               <tr>
                 <td
                   colSpan={headers.length}
-                  className="px-6 py-12 text-center text-sm"
+                  className="px-3 py-2 text-center text-sm"
                   style={{ color: theme.colors.textSecondary }}
                 >
                   <div className="flex flex-col items-center justify-center space-y-2">
