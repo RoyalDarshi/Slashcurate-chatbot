@@ -188,7 +188,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => 65, // Adjust this to your actual row height
-    overscan: 5,
+    overscan: 25,
   });
 
   // --- NEW: Ref for the header container ---
@@ -441,6 +441,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         className="w-full overflow-auto flex-1 scrollbar-thin" // Handles V and H scroll
         style={{
           scrollbarColor: `${theme.colors.accent}40 ${theme.colors.surface}`,
+          scrollBehavior: 'smooth',
         }}
       >
         <table
