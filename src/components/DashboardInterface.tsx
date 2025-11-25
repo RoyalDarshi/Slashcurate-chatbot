@@ -596,13 +596,8 @@ const DashboardInterface = memo(
             "currentDashboardQuestionId",
             currentDashboardView.questionMessageId
           );
-        } else if (
-          dashboardHistory.length === 1 &&
-          currentDashboardView.id === initialDashboardState.id
-        ) {
-          localStorage.removeItem("currentDashboardQuestionId");
         }
-      }, [currentDashboardView, dashboardHistory, initialDashboardState]);
+      }, [currentDashboardView]);
 
       useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -1983,53 +1978,68 @@ const DashboardInterface = memo(
           dispatchMessages,
         ]
       );
-      // --- END FIXED handleRetry ---
 
       const handleSelectPrevQuestion = useCallback(
         async (messageId: string) => {
-          const selectedUserMessage = messages.find(
-            (m) => m.id === messageId && !m.isBot
+          // 1. Try to find the question in the currently loaded dashboard history
+          const targetIndex = dashboardHistory.findIndex(
+            (item) => item.questionMessageId === messageId
           );
-          if (selectedUserMessage) {
-            const correspondingBotMessages = messages.filter(
-              (m) => m.isBot && m.parentId === messageId
-            );
-            const latestBotMessage = correspondingBotMessages.sort(
-              (a, b) =>
-                new Date(b.timestamp).getTime() -
-                new Date(a.timestamp).getTime()
-            )[0];
 
-            const newEntry = createDashboardItemFromMessages(
-              selectedUserMessage,
-              latestBotMessage,
-              selectedConnection
-            );
-            if (newEntry) {
-              setDashboardHistory((prev) => {
-                const newHistory =
-                  currentHistoryIndex === prev.length - 1
-                    ? [...prev, newEntry]
-                    : [...prev.slice(0, currentHistoryIndex + 1), newEntry];
-                return newHistory;
-              });
-              setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
-              localStorage.setItem(
-                "currentDashboardQuestionId",
-                selectedUserMessage.id
-              );
-              setCurrentQuestionId(selectedUserMessage.id);
-            }
+          if (targetIndex !== -1) {
+            // Found it! Switch to this view
+            setCurrentHistoryIndex(targetIndex);
+            setCurrentQuestionId(messageId);
+
+            // Persist immediately
+            localStorage.setItem("currentDashboardQuestionId", messageId);
+
+            // Restore the view type (graph/table/query) that was used for this item
+            setCurrentMainViewType(dashboardHistory[targetIndex].lastViewType || "table");
+            setGraphSummary(null);
           } else {
-            console.error(
-              "User message not found in session by ID:",
-              messageId
+            // 2. Edge Case: If not in history stack (rare), reconstruct it from messages
+            const selectedUserMessage = messages.find(
+              (m) => m.id === messageId && !m.isBot
             );
-            toast.error("Could not load the selected previous question.");
+
+            if (selectedUserMessage) {
+              const correspondingBotMessages = messages.filter(
+                (m) => m.isBot && m.parentId === messageId
+              );
+              const latestBotMessage = correspondingBotMessages.sort(
+                (a, b) =>
+                  new Date(b.timestamp).getTime() -
+                  new Date(a.timestamp).getTime()
+              )[0];
+
+              const newEntry = createDashboardItemFromMessages(
+                selectedUserMessage,
+                latestBotMessage,
+                selectedConnection
+              );
+
+              if (newEntry) {
+                setDashboardHistory((prev) => {
+                  const newHistory = [...prev, newEntry];
+                  setCurrentHistoryIndex(newHistory.length - 1); // Go to new last item
+                  return newHistory;
+                });
+
+                localStorage.setItem(
+                  "currentDashboardQuestionId",
+                  selectedUserMessage.id
+                );
+                setCurrentQuestionId(selectedUserMessage.id);
+              }
+            } else {
+              console.error("User message not found in session by ID:", messageId);
+              toast.error("Could not load the selected previous question.");
+            }
           }
           setShowPrevQuestionsModal(false);
         },
-        [messages, selectedConnection, currentHistoryIndex] // Removed askQuestion
+        [dashboardHistory, messages, selectedConnection]
       );
 
       const navigateDashboardHistory = useCallback(
