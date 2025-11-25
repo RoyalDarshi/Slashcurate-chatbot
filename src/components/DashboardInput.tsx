@@ -270,10 +270,10 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                     >
                       {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                     </button>
-                    <span
+                    {/* <span
                       className={`absolute top-0 right-0 block w-3 h-3 rounded-full ring-2 ring-white ${getPermissionIndicatorColor()}`}
                       title={`Microphone status: ${micPermissionStatus}`}
-                    ></span>
+                    ></span> */}
                   </div>
                 </CustomTooltip>
               )}

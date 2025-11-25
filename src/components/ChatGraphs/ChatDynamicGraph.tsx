@@ -67,7 +67,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     const [yKeys, setYKeys] = useState<string[]>([]);
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
     const containerRef = useRef<HTMLDivElement>(null);
-    const isVertical = chartType === "bar" ? propIsVertical : true;
+    const isVertical = ["bar", "line", "area"].includes(chartType) ? propIsVertical : true;
 
     // Resize observer for container
     useEffect(() => {

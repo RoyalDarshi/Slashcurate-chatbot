@@ -537,10 +537,15 @@ export const useGraphOptions = ({
                         lineStyle: { width: 3 },
                         areaStyle: chartType === "area" ? {
                             opacity: 0.3,
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: hexToRgba(color, 0.5) },
-                                { offset: 1, color: hexToRgba(color, 0.0) },
-                            ]),
+                            color: isVertical
+                                ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: hexToRgba(color, 0.5) },
+                                    { offset: 1, color: hexToRgba(color, 0.0) },
+                                ])
+                                : new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                    { offset: 0, color: hexToRgba(color, 0.5) },
+                                    { offset: 1, color: hexToRgba(color, 0.0) },
+                                ]),
                         } : undefined,
                     };
                 } else if (chartType === "scatter") {

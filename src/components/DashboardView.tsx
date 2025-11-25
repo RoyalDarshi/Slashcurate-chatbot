@@ -78,6 +78,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const [groupBy, setGroupBy] = useState<string | null>(null);
     const [aggregate, setAggregate] = useState<"sum" | "count" | "avg" | "min" | "max">("sum");
     const [valueKey, setValueKey] = useState<string | null>(null);
+    const [isVertical, setIsVertical] = useState(true);
     const [showSummaryModal, setShowSummaryModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedQuestion, setEditedQuestion] = useState(
@@ -468,19 +469,20 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 }}
               >
                 {dashboardItem.mainViewData.chartData?.length > 0 && (
-                  <div className="p-2 flex flex-wrap gap-3">
-                    <div className="flex items-center gap-2">
+                  <div className="p-1.5 flex flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5">
                       <label
                         htmlFor="graph-type-select"
+                        className="text-sm"
                         style={{ color: theme.colors.textSecondary }}
                       >
-                        Graph Type:
+                        Type:
                       </label>
                       <select
                         id="graph-type-select"
                         value={graphType}
                         onChange={(e) => setGraphType(e.target.value)}
-                        className="px-2 py-1 rounded-md border"
+                        className="px-2 py-1 text-sm rounded-md border"
                         style={{
                           backgroundColor: theme.colors.surface,
                           color: theme.colors.text,
@@ -496,19 +498,45 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         <option value="funnel">Funnel</option>
                       </select>
                     </div>
+                    {["bar", "line", "area"].includes(graphType) && (
+                      <div className="flex items-center gap-1.5">
+                        <label
+                          className="text-sm"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          Orient:
+                        </label>
+                        <select
+                          value={isVertical ? "vertical" : "horizontal"}
+                          onChange={(e) =>
+                            setIsVertical(e.target.value === "vertical")
+                          }
+                          className="px-2 py-1 text-sm rounded-md border"
+                          style={{
+                            backgroundColor: theme.colors.surface,
+                            color: theme.colors.text,
+                            borderColor: theme.colors.border,
+                          }}
+                        >
+                          <option value="vertical">Vertical</option>
+                          <option value="horizontal">Horizontal</option>
+                        </select>
+                      </div>
+                    )}
                     {["bar", "line", "area", "pie"].includes(graphType) &&
                       groupBy && (
                         <>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <label
+                              className="text-sm"
                               style={{ color: theme.colors.textSecondary }}
                             >
-                              Group By:
+                              Group:
                             </label>
                             <select
                               value={groupBy || ""}
                               onChange={(e) => setGroupBy(e.target.value)}
-                              className="px-2 py-1 rounded-md border"
+                              className="px-2 py-1 text-sm rounded-md border"
                               style={{
                                 backgroundColor: theme.colors.surface,
                                 color: theme.colors.text,
@@ -524,18 +552,19 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               ))}
                             </select>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <label
+                              className="text-sm"
                               style={{ color: theme.colors.textSecondary }}
                             >
-                              Aggregate:
+                              Agg:
                             </label>
                             <select
                               value={aggregate}
                               onChange={(e) =>
                                 setAggregate(e.target.value as "sum" | "count" | "avg" | "min" | "max")
                               }
-                              className="px-2 py-1 rounded-md border"
+                              className="px-2 py-1 text-sm rounded-md border"
                               style={{
                                 backgroundColor: theme.colors.surface,
                                 color: theme.colors.text,
@@ -550,16 +579,17 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             </select>
                           </div>
                           {(aggregate === "sum" || aggregate === "avg" || aggregate === "min" || aggregate === "max") && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <label
+                                className="text-sm"
                                 style={{ color: theme.colors.textSecondary }}
                               >
-                                Value Key:
+                                Value:
                               </label>
                               <select
                                 value={valueKey || ""}
                                 onChange={(e) => setValueKey(e.target.value)}
-                                className="px-2 py-1 rounded-md border"
+                                className="px-2 py-1 text-sm rounded-md border"
                                 style={{
                                   backgroundColor: theme.colors.surface,
                                   color: theme.colors.text,
@@ -712,6 +742,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     setAggregate={setAggregate}
                     valueKey={valueKey}
                     setValueKey={setValueKey}
+                    isVertical={isVertical}
                   />
                 </div>
               </div>

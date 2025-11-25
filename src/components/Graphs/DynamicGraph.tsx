@@ -25,6 +25,7 @@ interface DynamicGraphProps {
     >;
     valueKey: string | null;
     setValueKey: React.Dispatch<React.SetStateAction<string | null>>;
+    isVertical?: boolean;
 }
 
 // Helper function to convert hex to rgba
@@ -64,6 +65,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         setGroupBy,
         setValueKey,
         valueKey,
+        isVertical: propIsVertical = true,
     }) => {
         const { theme } = useTheme();
         const [showResolutionOptions, setShowResolutionOptions] = useState(false);
@@ -75,8 +77,8 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         const [yKeys, setYKeys] = useState<string[]>([]);
         const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
 
-        // In DashboardView, graphType is passed as "bar", "line", etc.
-        const isVertical = true;
+        // Support orientation for bar, line, and area charts
+        const isVertical = ["bar", "line", "area"].includes(graphType) ? propIsVertical : true;
         const chartType = graphType;
 
         // Resize observer for container

@@ -205,7 +205,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   useEffect(() => {
     const shouldShowToggle =
-      chartType === "bar" && hasNumericData && csvData.length > 0;
+      ["bar", "line", "area"].includes(chartType) && hasNumericData && csvData.length > 0;
     setShowOrientationToggle(shouldShowToggle);
     if (!shouldShowToggle) {
       setIsVertical(true);
@@ -558,10 +558,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           {currentView === "graph" && hasNumericData && (
             <div ref={graphRef} style={{ width: "100%" }}>
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-1.5 mb-2 flex-wrap">
                 <select
                   value={chartType}
                   onChange={(e) => setChartType(e.target.value as any)}
+                  className="text-sm"
                   style={{
                     background: theme.colors.surface,
                     color: theme.colors.text,
@@ -582,6 +583,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 <select
                   value={groupBy || ""}
                   onChange={(e) => setGroupBy(e.target.value || null)}
+                  className="text-sm"
                   style={{
                     background: theme.colors.surface,
                     color: theme.colors.text,
@@ -600,6 +602,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 <select
                   value={aggregate || ""}
                   onChange={(e) => setAggregate(e.target.value as any)}
+                  className="text-sm"
                   style={{
                     background: theme.colors.surface,
                     color: theme.colors.text,
@@ -618,6 +621,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 <select
                   value={valueKey || ""}
                   onChange={(e) => setValueKey(e.target.value || null)}
+                  className="text-sm"
                   style={{
                     background: theme.colors.surface,
                     color: theme.colors.text,
@@ -641,6 +645,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     onChange={(e) =>
                       setIsVertical(e.target.value === "vertical")
                     }
+                    className="text-sm"
                     style={{
                       background: theme.colors.surface,
                       color: theme.colors.text,
@@ -649,8 +654,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       padding: theme.spacing.sm,
                     }}
                   >
-                    <option value="vertical">Vertical Bar</option>
-                    <option value="horizontal">Horizontal Bar</option>
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
                   </select>
                 )}
               </div>
