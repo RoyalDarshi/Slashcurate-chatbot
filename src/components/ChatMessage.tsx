@@ -25,6 +25,7 @@ import { ChatMessageProps } from "../types";
 import DataTable from "./ChatDataTable";
 import CustomTooltip from "./CustomTooltip";
 import DynamicGraph, { formatKey } from "./ChatGraphs/ChatDynamicGraph";
+import { autoDetectGraphType } from "../hooks/useGraphData";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import html2canvas from "html2canvas";
@@ -180,13 +181,27 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             );
 
             // Only set defaults if not already set by user
-            setValueKey((prev) => prev || numericKeys[0] || null);
-            setGroupBy((prev) => {
-              if (prev) return prev;
+            const initialValueKey = numericKeys[0] || null;
+            const initialGroupBy = (() => {
               if (stringKeys.includes("branch_name")) return "branch_name";
               return stringKeys[1] || stringKeys[0] || null;
+            })();
+
+            setValueKey((prev) => prev || initialValueKey);
+            setGroupBy((prev) => {
+              if (prev) return prev;
+              return initialGroupBy;
             });
             setAggregate((prev) => prev || "sum");
+
+            // Auto-detect chart type
+            // We use the calculated initial values. If user has already set something (prev), we might want to respect it?
+            // But since this effect runs on new data, we likely want to auto-detect for the new data.
+            // However, to be safe against re-renders, we can check if chartType is still default 'bar' or just set it.
+            // Given the user request, let's set it.
+            const autoType = autoDetectGraphType(tableData, initialGroupBy, initialValueKey);
+            setChartType((prev) => prev === "bar" ? (autoType as any) : prev);
+
             setCurrentView("table");
           } else if (tableData.length > 0) {
             setCurrentView("table");

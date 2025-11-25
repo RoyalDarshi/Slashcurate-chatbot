@@ -15,10 +15,89 @@ interface GraphDataResult {
     isValidGraphData: boolean;
     autoGroupBy: string | null;
     autoValueKey: string | null;
+    autoChartType: string;
     validValueKeys: string[];
     groupByOptions: string[];
     formatKey: (key: any) => string;
 }
+
+// Auto-detect best numeric keys for scatter
+export const autoDetectScatterKeys = (rows: any[]): { x: string | null; y: string | null } => {
+    if (!rows.length) return { x: null, y: null };
+    const keys = Object.keys(rows[0]);
+
+    // Helper to exclude irrelevant keys (duplicated from inside hook, should be shared)
+    const isKeyExcluded = (key: string) => {
+        const lowerKey = key.toLowerCase();
+        return (
+            /(id|code|number)$/.test(lowerKey) ||
+            lowerKey.includes("date") ||
+            lowerKey.includes("email") ||
+            lowerKey.includes("address") ||
+            lowerKey === "first_name" ||
+            lowerKey === "last_name" ||
+            lowerKey === "name" ||
+            lowerKey.length < 3
+        );
+    };
+
+    const numeric = keys.filter(
+        (key) =>
+            !isKeyExcluded(key) &&
+            rows.every(
+                (row) =>
+                    typeof row[key] === "number" ||
+                    row[key] === null ||
+                    row[key] === undefined
+            )
+    );
+    if (numeric.length >= 2) {
+        return { x: numeric[0], y: numeric[1] };
+    }
+    return { x: null, y: null };
+};
+
+// Auto-detect best Chart Type
+export const autoDetectGraphType = (rows: any[], groupBy: string | null, valueKey: string | null): string => {
+    if (!rows || rows.length === 0) return "bar";
+
+    // 1. Check for Time-Series (Line Chart)
+    // If the grouping key looks like a date/time
+    if (groupBy) {
+        const lowerGroup = groupBy.toLowerCase();
+        if (
+            lowerGroup.includes("date") ||
+            lowerGroup.includes("time") ||
+            lowerGroup.includes("year") ||
+            lowerGroup.includes("month") ||
+            lowerGroup.includes("day")
+        ) {
+            return "line";
+        }
+    }
+
+    // 2. Check for Scatter
+    // If we have no explicit grouping (or it's high cardinality) and multiple numeric values
+    // Or if the user hasn't selected a groupBy but we found scatter keys
+    if (!groupBy && valueKey) {
+        const { x, y } = autoDetectScatterKeys(rows);
+        if (x && y) return "scatter";
+    }
+
+    // 3. Check for Pie/Donut
+    // If low cardinality of grouping (e.g. < 6) and simple value
+    if (groupBy) {
+        const uniqueGroups = new Set(rows.map(r => r[groupBy])).size;
+        if (uniqueGroups > 0 && uniqueGroups <= 5) {
+            // Could be pie, but bar is also fine. 
+            // Let's prefer Pie for very small sets if it's not time-based
+            return "pie";
+        }
+    }
+
+    // Default to Bar
+    return "bar";
+};
 
 export const useGraphData = ({
     data,
@@ -33,6 +112,7 @@ export const useGraphData = ({
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(false);
     const [autoGroupBy, setAutoGroupBy] = useState<string | null>(null);
     const [autoValueKey, setAutoValueKey] = useState<string | null>(null);
+    const [autoChartType, setAutoChartType] = useState<string>("bar");
 
     // Helper to exclude irrelevant keys
     const isKeyExcluded = useCallback((key: string) => {
@@ -99,28 +179,8 @@ export const useGraphData = ({
         [isKeyExcluded]
     );
 
-    // Auto-detect best numeric keys for scatter
-    const autoDetectScatterKeys = useCallback(
-        (rows: any[]): { x: string | null; y: string | null } => {
-            if (!rows.length) return { x: null, y: null };
-            const keys = Object.keys(rows[0]);
-            const numeric = keys.filter(
-                (key) =>
-                    !isKeyExcluded(key) &&
-                    rows.every(
-                        (row) =>
-                            typeof row[key] === "number" ||
-                            row[key] === null ||
-                            row[key] === undefined
-                    )
-            );
-            if (numeric.length >= 2) {
-                return { x: numeric[0], y: numeric[1] };
-            }
-            return { x: null, y: null };
-        },
-        [isKeyExcluded]
-    );
+
+
 
     // Transform data logic
     const transformDynamicData = useCallback(
@@ -408,6 +468,10 @@ export const useGraphData = ({
             }
         }
 
+        // Auto-detect chart type
+        const detectedChartType = autoDetectGraphType(data, effectiveGroupBy || null, effectiveValueKey || null);
+        setAutoChartType(detectedChartType);
+
         try {
             const {
                 data: processedData,
@@ -448,7 +512,7 @@ export const useGraphData = ({
             console.error("Data processing error:", error);
             setIsValidGraphData(false);
         }
-    }, [data, groupBy, aggregate, valueKey, chartType, autoDetectBestGroupBy, autoDetectScatterKeys, isKeyExcluded, transformDynamicData]);
+    }, [data, groupBy, aggregate, valueKey, chartType, autoDetectBestGroupBy, isKeyExcluded, transformDynamicData]);
 
     // Helper to format keys for display
     const formatKey = useCallback((key: any): string => {
@@ -491,6 +555,7 @@ export const useGraphData = ({
         isValidGraphData,
         autoGroupBy,
         autoValueKey,
+        autoChartType,
         validValueKeys,
         groupByOptions,
         formatKey

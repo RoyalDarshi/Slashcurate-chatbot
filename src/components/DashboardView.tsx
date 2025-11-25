@@ -24,6 +24,7 @@ import CustomTooltip from "./CustomTooltip";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { API_URL } from "../config";
+import { autoDetectGraphType } from "../hooks/useGraphData";
 
 export interface DashboardViewHandle {
   getGraphContainer: () => HTMLDivElement | null;
@@ -130,10 +131,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       ) {
         const chartData = dashboardItem.mainViewData.chartData;
         const validKeys = getValidValueKeys(chartData);
-        setGroupBy(getValidCategoricalKeys(chartData)[0] || null);
-        setValueKey(validKeys[0] || null);
+        const initialGroupBy = getValidCategoricalKeys(chartData)[0] || null;
+        const initialValueKey = validKeys[0] || null;
+
+        setGroupBy(initialGroupBy);
+        setValueKey(initialValueKey);
         setAggregate("sum");
-        setGraphType("bar");
+
+        // Auto-detect graph type
+        const autoType = autoDetectGraphType(chartData, initialGroupBy, initialValueKey);
+        setGraphType(autoType);
       } else {
         setGroupBy(null);
         setValueKey(null);
