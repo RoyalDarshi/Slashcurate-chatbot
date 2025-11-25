@@ -187,7 +187,7 @@ const DataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 65, // Adjust this to your actual row height
+    estimateSize: () => 44, // Adjust this to your actual row height
     overscan: 25,
   });
 
