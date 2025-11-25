@@ -1,11 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Send, Mic, MicOff, XSquare } from "lucide-react";
-import { ChatInputProps } from "../types"; // Assuming this type exists
-import { useTheme } from "../ThemeContext"; // Assuming this context exists
-import MiniLoader from "./MiniLoader"; // Assuming this component exists
-import CustomTooltip from "./CustomTooltip"; // Assuming this component exists
+import { ChatInputProps } from "../types";
+import { useTheme } from "../ThemeContext";
+import CustomTooltip from "./CustomTooltip";
 
-// Define the SpeechRecognition interface for TypeScript
 declare global {
   interface Window {
     SpeechRecognition: typeof SpeechRecognition;
@@ -25,35 +23,39 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const { theme } = useTheme();
     const isDisabled = isSubmitting || disabled;
     const inputRef = useRef<HTMLInputElement>(null);
-    const MAX_CHARS = 500;
+    const onInputChangeRef = useRef(onInputChange);
+    const onSubmitRef = useRef(onSubmit);
 
-    // State for microphone functionality
     const [isRecording, setIsRecording] = useState(false);
     const [recognition, setRecognition] = useState<SpeechRecognition | null>(
       null
     );
-    const [voiceInputStatus, setVoiceInputStatus] = useState(""); // e.g., "Listening...", "Processing..."
+    const [voiceInputStatus, setVoiceInputStatus] = useState("");
     const [micPermissionStatus, setMicPermissionStatus] = useState<
       "prompt" | "granted" | "denied" | "unsupported"
-    >("prompt"); // New state for permission status
+    >("prompt");
 
-    // Initialize SpeechRecognition on component mount
+    useEffect(() => {
+      onInputChangeRef.current = onInputChange;
+      onSubmitRef.current = onSubmit;
+    });
+
     useEffect(() => {
       const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
-      let newRecognitionInstance: SpeechRecognition | null = null; // Declare outside the if block
+      let newRecognitionInstance: SpeechRecognition | null = null;
 
       if (SpeechRecognition) {
-        newRecognitionInstance = new SpeechRecognition(); // Assign here
-        newRecognitionInstance.continuous = false; // Stop after a single utterance
-        newRecognitionInstance.interimResults = false; // Only return final results
-        newRecognitionInstance.lang = "en-US"; // Set language
+        newRecognitionInstance = new SpeechRecognition();
+        newRecognitionInstance.continuous = false;
+        newRecognitionInstance.interimResults = false;
+        newRecognitionInstance.lang = "en-US";
 
         newRecognitionInstance.onstart = () => {
           setIsRecording(true);
           setVoiceInputStatus("Listening...");
           console.log("Voice recognition started.");
-          setMicPermissionStatus("granted"); // Assume granted if it starts
+          setMicPermissionStatus("granted");
         };
 
         newRecognitionInstance.onresult = (event) => {
@@ -61,7 +63,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             .map((result) => result[0])
             .map((result) => result.transcript)
             .join("");
-          onInputChange(transcript); // Update the input field with the transcript
+          onInputChangeRef.current(transcript);
           setVoiceInputStatus("Processing...");
           console.log("Transcript:", transcript);
         };
@@ -89,15 +91,13 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           setIsRecording(false);
           setVoiceInputStatus("");
           console.log("Voice recognition ended.");
-          // If there's content in the input after transcription, submit it automatically
           if (inputRef.current?.value && inputRef.current.value.length > 0) {
-            onSubmit(new Event("submit", { cancelable: true }));
+            onSubmitRef.current(new Event("submit", { cancelable: true }));
           }
         };
 
         setRecognition(newRecognitionInstance);
 
-        // Check initial permission status (though this might not trigger a prompt)
         if (navigator.mediaDevices) {
           navigator.mediaDevices
             .getUserMedia({ audio: true })
@@ -109,7 +109,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               ) {
                 setMicPermissionStatus("denied");
               } else {
-                setMicPermissionStatus("prompt"); // Or 'unsupported' if other errors
+                setMicPermissionStatus("prompt");
                 console.warn(
                   "Could not determine microphone permission or other media error:",
                   err
@@ -125,42 +125,32 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       } else {
         console.warn("Speech Recognition API not supported in this browser.");
         setMicPermissionStatus("unsupported");
-        // setVoiceInputStatus("Voice input not supported in this browser.");
       }
-
-      // Cleanup on unmount
       return () => {
         if (newRecognitionInstance) {
           newRecognitionInstance.stop();
         }
       };
-    }, [onInputChange, onSubmit]); // Depend on onInputChange and onSubmit to ensure correct closure
-
-    // Focus input on mount
+    }, []);
     useEffect(() => {
       if (inputRef.current) {
         inputRef.current.focus();
       }
     }, []);
 
-    // Handle microphone button click
     const handleMicToggle = useCallback(() => {
       if (!recognition) return;
 
       if (isRecording) {
         recognition.stop();
       } else {
-        // Clear previous input when starting recording
         onInputChange("");
-        setVoiceInputStatus("Starting voice input..."); // Provide immediate feedback
+        setVoiceInputStatus("Starting voice input...");
         recognition.start();
       }
     }, [isRecording, recognition, onInputChange]);
 
-    // Determine if the mic button should be visible
     const showMicButton = !input && !isSubmitting;
-
-    // Determine permission indicator color
     const getPermissionIndicatorColor = () => {
       switch (micPermissionStatus) {
         case "granted":
@@ -192,7 +182,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             padding: "5px",
           }}
         >
-          {/* Microphone button */}
           {showMicButton &&
             recognition &&
             micPermissionStatus !== "unsupported" && (
@@ -202,20 +191,19 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               >
                 <div className="relative">
                   <button
-                    type="button" // Important: type="button" to prevent form submission
+                    type="button"
                     onClick={handleMicToggle}
                     disabled={
                       isDisabled ||
                       !recognition ||
                       micPermissionStatus === "denied"
-                    } // Disable if denied
-                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0 ${
-                      isRecording ? "animate-pulse" : ""
-                    }`}
+                    }
+                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0 ${isRecording ? "animate-pulse" : ""
+                      }`}
                     style={{
                       background: isRecording
-                        ? theme.colors.error // Use a distinct color for recording
-                        : theme.colors.accent, // Changed from theme.colors.primary to theme.colors.accent for consistency
+                        ? theme.colors.error
+                        : theme.colors.accent,
                       color: "white",
                       boxShadow: isRecording
                         ? `0 0 15px ${theme.colors.error}60`
@@ -227,7 +215,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                   >
                     {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                   </button>
-                  {/* Permission status indicator */}
                   <span
                     className={`absolute top-0 right-0 block w-3 h-3 rounded-full ring-2 ring-white ${getPermissionIndicatorColor()}`}
                     title={`Microphone status: ${micPermissionStatus}`}
@@ -236,18 +223,14 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               </CustomTooltip>
             )}
 
-          {/* Input field */}
           <input
             ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => {
-              if (e.target.value.length <= MAX_CHARS) {
-                onInputChange(e.target.value);
-                // If user starts typing, stop recording
-                if (isRecording && recognition) {
-                  recognition.stop();
-                }
+              onInputChange(e.target.value);
+              if (isRecording && recognition) {
+                recognition.stop();
               }
             }}
             placeholder={voiceInputStatus || "Ask about your data..."}
@@ -265,7 +248,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             }}
             disabled={
               isDisabled || isRecording || micPermissionStatus === "denied"
-            } // Disable text input while recording or if denied
+            }
             aria-disabled={
               isDisabled || isRecording || micPermissionStatus === "denied"
             }
@@ -277,15 +260,14 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             }}
           />
 
-          {/* Send / Stop Button */}
           {isSubmitting ? (
             <CustomTooltip title="Stop Request" position="top">
               <button
-                type="button" // Important: type="button" to prevent form submission
+                type="button"
                 onClick={onStopRequest}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
                 style={{
-                  background: theme.colors.error, // Use error color for stop
+                  background: theme.colors.error,
                   color: "white",
                   boxShadow: `0 0 10px ${theme.colors.error}40`,
                 }}
@@ -305,15 +287,15 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                 style={{
                   background:
                     isDisabled ||
-                    isRecording ||
-                    micPermissionStatus === "denied"
+                      isRecording ||
+                      micPermissionStatus === "denied"
                       ? `${theme.colors.text}20`
                       : theme.colors.accent,
                   color: "white",
                   boxShadow:
                     isDisabled ||
-                    isRecording ||
-                    micPermissionStatus === "denied"
+                      isRecording ||
+                      micPermissionStatus === "denied"
                       ? "none"
                       : `0 0 10px ${theme.colors.accent}40`,
                 }}
