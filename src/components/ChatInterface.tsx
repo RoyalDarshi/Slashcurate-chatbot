@@ -228,7 +228,9 @@ const ChatInterface = memo(
           return;
         }
         setIsSubmitting(true);
-        const interval = setInterval(async () => {
+
+        // Define an async function inside useEffect
+        const pollMessages = async () => {
           try {
             for (const msg of loadingMessages) {
               const response = await axios.post(
@@ -253,8 +255,10 @@ const ChatInterface = memo(
             setIsSubmitting(false);
             console.error("Error polling message updates:", error);
           }
-        }, 2000);
-        return () => clearInterval(interval);
+        };
+
+        // Call the async function
+        pollMessages();
       }, [messages, token, dispatchMessages]);
 
       useEffect(() => {

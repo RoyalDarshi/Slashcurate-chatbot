@@ -359,9 +359,17 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
 
   const getFirstMessage = (messages: Message[]) => {
     if (!messages || messages.length === 0) return "No messages";
+
+    // Find the first message with actual content (backend only sends content for first user message)
+    const firstMessageWithContent = messages.find(msg => msg.content && msg.content.trim().length > 0);
+
+    if (!firstMessageWithContent || !firstMessageWithContent.content) {
+      return "No messages";
+    }
+
     return (
-      messages[0].content.substring(0, 60) +
-      (messages[0].content.length > 60 ? "..." : "")
+      firstMessageWithContent.content.substring(0, 60) +
+      (firstMessageWithContent.content.length > 60 ? "..." : "")
     );
   };
 
@@ -533,11 +541,10 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                     ? theme.colors.accent
                     : theme.colors.surface,
                 color: activeFilter === filter.id ? "white" : theme.colors.text,
-                border: `1px solid ${
-                  activeFilter === filter.id
+                border: `1px solid ${activeFilter === filter.id
                     ? theme.colors.accent
                     : theme.colors.border
-                }`,
+                  }`,
                 borderRadius: theme.borderRadius.pill,
                 fontFamily: theme.typography.fontFamily,
                 fontSize: theme.typography.size.sm,
@@ -611,11 +618,10 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                         session.id === currentSessionId
                           ? `linear-gradient(135deg, ${theme.colors.surface}, ${theme.colors.accent}10)`
                           : theme.colors.surface,
-                      border: `1px solid ${
-                        session.id === currentSessionId
+                      border: `1px solid ${session.id === currentSessionId
                           ? theme.colors.accent + "40"
                           : theme.colors.border
-                      }`,
+                        }`,
                       borderRadius: theme.borderRadius.default,
                       boxShadow:
                         session.id === currentSessionId

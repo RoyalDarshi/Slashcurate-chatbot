@@ -24,7 +24,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
   const { theme } = useTheme();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false); // Start closed by default
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isMobile, setIsMobile] = useState(false);
@@ -68,6 +68,13 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
       ? Object.keys(firstItem)
       : ["Value"];
   }, [normalizedData]);
+
+  // Close search bar when there's only one column
+  useEffect(() => {
+    if (headers.length > 2) {
+      setIsSearchOpen(true);
+    }
+  }, [headers.length]);
 
   const processedData = useMemo(() => {
     if (headers.length === 0) return [];
