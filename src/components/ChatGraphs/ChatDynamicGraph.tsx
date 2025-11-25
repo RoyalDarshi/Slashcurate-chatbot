@@ -477,7 +477,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             );
             let html = `
               <div style="
-                padding: ${theme.spacing.lg};
+                padding: ${theme.spacing.md};
                 background: ${theme.colors.surface};
                 backdrop-filter: blur(20px) saturate(180%);
                 -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -488,7 +488,6 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 border: 1px solid ${theme.colors.border};
                 font-family: ${theme.typography.fontFamily};
                 min-width: 200px;
-                max-width: 280px;
                 position: relative;
                 overflow: hidden;
               ">
@@ -501,7 +500,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                   background: ${theme.gradients.primary};
                 "></div>
                 <div style="
-                  margin-bottom: ${theme.spacing.md};
+                  margin-bottom: ${theme.spacing.sm};
                   font-weight: ${theme.typography.weight.bold};
                   color: ${theme.colors.text};
                   font-size: 16px;
@@ -594,7 +593,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                       height: 14px;
                       background: ${entry.color};
                       border-radius: 50%;
-                      margin-right: ${theme.spacing.md};
+                      margin-right: ${theme.spacing.sm};
                       box-shadow: ${theme.shadow.sm};
                       border: 2px solid ${theme.colors.surface};
                     "></div>
@@ -607,6 +606,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                     font-weight: ${theme.typography.weight.bold};
                     color: ${theme.colors.text};
                     font-size: 15px;
+                    margin-left: ${theme.spacing.sm};
                     background: ${theme.gradients.primary};
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;

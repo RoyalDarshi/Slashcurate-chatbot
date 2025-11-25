@@ -472,8 +472,15 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                               color: theme.colors.accent,
                             }}
                           >
-                            {/* USE NEW COUNT FIELD */}
-                            {session.messageCount / 2 ?? 0} {session.messageCount / 2 === 1 ? "chat" : "chats"}
+                            {/* Compute a safe count (defaults to 0) */}
+                            {(() => {
+                              const count = (session?.messageCount ?? 0) / 2;   // <-- default to 0 first
+                              return (
+                                <>
+                                  {count} {count === 1 ? "chat" : "chats"}
+                                </>
+                              );
+                            })()}
                           </span>
 
                           <CustomTooltip title="Edit title">
