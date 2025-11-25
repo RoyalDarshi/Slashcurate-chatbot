@@ -223,7 +223,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                 tokens.push({
                   type: "operator",
                   value: char,
-                  color: theme.colors.accent,
+                  color: null,
                 });
               } else if (/\s/.test(char)) {
                 if (currentToken) {
@@ -312,14 +312,121 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
           }
         };
 
+        // Process the lexed tokens for second-pass context analysis
+        const processTokens = (tokens: any[]) => {
+          let inFrom = false;
+
+          // Function to identify a token sequence as a table reference
+          const isTableReference = (index: number) => {
+            // In the FROM clause, any identifier is a table
+            if (inFrom) {
+              return (
+                tokens[index].type === "identifier" ||
+                tokens[index].type === "quotedIdentifier"
+              );
+            }
+
+            // Check for table.column pattern
+            if (index + 2 < tokens.length) {
+              const isIdentifier =
+                tokens[index].type === "identifier" ||
+                tokens[index].type === "quotedIdentifier";
+              const isDot = tokens[index + 1].value === ".";
+              const isNextIdentifier =
+                tokens[index + 2].type === "identifier" ||
+                tokens[index + 2].type === "quotedIdentifier";
+
+              return isIdentifier && isDot && isNextIdentifier;
+            }
+
+            return false;
+          };
+
+          // Special handling for compound keywords like INNER JOIN and ORDER BY
+          const handleCompoundKeywords = () => {
+            for (let i = 0; i < tokens.length - 2; i++) {
+              // Handle "INNER JOIN"
+              if (
+                tokens[i].type === "keyword" &&
+                tokens[i].value.toUpperCase() === "INNER" &&
+                i + 2 < tokens.length &&
+                tokens[i + 2].type === "keyword" &&
+                tokens[i + 2].value.toUpperCase() === "JOIN"
+              ) {
+                // Ensure INNER has the same color as other keywords
+                tokens[i].color = theme.colors.accent;
+              }
+
+              // Handle "ORDER BY"
+              if (
+                tokens[i].type === "keyword" &&
+                tokens[i].value.toUpperCase() === "ORDER" &&
+                i + 2 < tokens.length &&
+                tokens[i + 2].type === "keyword" &&
+                tokens[i + 2].value.toUpperCase() === "BY"
+              ) {
+                // Ensure ORDER has the same color as other keywords
+                tokens[i].color = theme.colors.accent;
+                tokens[i + 2].color = theme.colors.accent;
+              }
+            }
+          };
+
+          // Second pass - identify tables and mark qualified columns
+          for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+
+            // Track context
+            if (token.type === "keyword") {
+              const upperValue = token.value.toUpperCase();
+
+              if (upperValue === "FROM") {
+                inFrom = true;
+              } else if (upperValue === "JOIN") {
+                inFrom = true;
+              } else if (upperValue === "ON") {
+                inFrom = false;
+              } else if (
+                ["WHERE", "GROUP", "ORDER", "HAVING", "LIMIT"].includes(
+                  upperValue
+                )
+              ) {
+                inFrom = false;
+              }
+
+              // Force all keywords to have the accent color
+              token.color = theme.colors.accent;
+            }
+
+            // Identify table references in FROM/JOIN
+            if (isTableReference(i)) {
+              if (inFrom) {
+                // This is a table name
+                tokens[i].color = theme.colors.warning;
+                tokens[i].type = "table";
+              } else if (i + 2 < tokens.length && tokens[i + 1].value === ".") {
+                // This is a table name in a qualified column reference
+                tokens[i].color = theme.colors.warning;
+                tokens[i].type = "table";
+              }
+            }
+          }
+
+          // Handle compound keywords like INNER JOIN and ORDER BY
+          handleCompoundKeywords();
+
+          return tokens;
+        };
+
         const lexedTokens = lexSQL(formattedQuery);
+        // Process tokens for contextual highlighting
+        const processedTokens = processTokens(lexedTokens);
 
         let html = "";
-        for (const token of lexedTokens) {
+        for (const token of processedTokens) {
           if (token.color) {
-            html += `<span style="color: ${token.color}; font-weight: ${
-              token.type === "keyword" ? "600" : "normal"
-            }">${token.value}</span>`;
+            html += `<span style="color: ${token.color}; font-weight: ${token.type === "keyword" ? "600" : "normal"
+              }">${token.value}</span>`;
           } else {
             html += token.value;
           }

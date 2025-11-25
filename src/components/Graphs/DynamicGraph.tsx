@@ -443,10 +443,13 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                     return <FunnelIcon size={48} color="white" />;
                 case "area":
                     return <AreaChartIcon size={48} color="white" />;
+                case "treemap":
+                    return <PieChartIcon size={48} color="white" />;
                 default:
                     return <BarChart3 size={48} color="white" />;
             }
         };
+
 
         if (!isValidGraphData || !xKey || yKeys.length === 0) {
             return (

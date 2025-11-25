@@ -496,6 +496,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         <option value="scatter">Scatter</option>
                         <option value="radar">Radar</option>
                         <option value="funnel">Funnel</option>
+                        <option value="treemap">Treemap</option>
                       </select>
                     </div>
                     {["bar", "line", "area"].includes(graphType) && (
@@ -523,7 +524,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         </select>
                       </div>
                     )}
-                    {["bar", "line", "area", "pie"].includes(graphType) &&
+                    {["bar", "line", "area", "pie", "treemap"].includes(graphType) &&
                       groupBy && (
                         <>
                           <div className="flex items-center gap-1.5">
