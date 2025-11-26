@@ -160,13 +160,14 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
               className="mr-3"
               style={{ color: theme.colors.accent }}
             />
+
             <h1
-              className="text-2xl md:text-3xl font-bold"
+              className="text-2xl md:text-3xl font-bold flex items-center gap-2"
               style={{ color: theme.colors.text }}
             >
               Favorites
               <span
-                className="ml-2 px-3 py-1 text-sm rounded-full"
+                className="mt-1 text-sm font-semibold flex items-center justify-center rounded-full min-w-[24px] h-[24px] leading-none"
                 style={{
                   backgroundColor: theme.colors.accent,
                   color: "#ffffff",
@@ -184,9 +185,8 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
             >
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === "grid" ? "opacity-100" : "opacity-50"
-                }`}
+                className={`p-2 rounded-md transition-colors ${viewMode === "grid" ? "opacity-100" : "opacity-50"
+                  }`}
                 style={{
                   backgroundColor:
                     viewMode === "grid" ? theme.colors.accent : "transparent",
@@ -212,9 +212,8 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === "list" ? "opacity-100" : "opacity-50"
-                }`}
+                className={`p-2 rounded-md transition-colors ${viewMode === "list" ? "opacity-100" : "opacity-50"
+                  }`}
                 style={{
                   backgroundColor:
                     viewMode === "list" ? theme.colors.accent : "transparent",
@@ -319,9 +318,8 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                   return (
                     <div
                       key={message.id}
-                      className={`rounded-lg overflow-hidden transition-all group relative ${
-                        hasConnection ? "hover:scale-[1.02]" : "opacity-75"
-                      }`}
+                      className={`rounded-lg overflow-hidden transition-all group relative ${hasConnection ? "hover:scale-[1.02]" : "opacity-75"
+                        }`}
                       style={{
                         backgroundColor: theme.colors.surface,
                         border: `1px solid ${theme.colors.border}`,
@@ -335,19 +333,18 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                       }}
                     >
                       <div
-                        className={`p-5 ${
-                          hasConnection
-                            ? "cursor-pointer"
-                            : "cursor-not-allowed"
-                        }`}
+                        className={`p-5 ${hasConnection
+                          ? "cursor-pointer"
+                          : "cursor-not-allowed"
+                          }`}
                         onClick={
                           hasConnection
                             ? () =>
-                                onFavoriteSelected(
-                                  message.text,
-                                  message.connection,
-                                  message.query
-                                )
+                              onFavoriteSelected(
+                                message.text,
+                                message.connection,
+                                message.query
+                              )
                             : undefined
                         }
                         role="button"
@@ -478,11 +475,10 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                   return (
                     <div
                       key={message.id}
-                      className={`p-4 rounded-lg flex items-center justify-between gap-4 transition-all group relative ${
-                        hasConnection
-                          ? "cursor-pointer hover:scale-[1.01]"
-                          : "cursor-not-allowed opacity-75"
-                      }`}
+                      className={`p-4 rounded-lg flex items-center justify-between gap-4 transition-all group relative ${hasConnection
+                        ? "cursor-pointer hover:scale-[1.01]"
+                        : "cursor-not-allowed opacity-75"
+                        }`}
                       style={{
                         backgroundColor: theme.colors.surface,
                         border: `1px solid ${theme.colors.border}`,
@@ -497,11 +493,11 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
                       onClick={
                         hasConnection
                           ? () =>
-                              onFavoriteSelected(
-                                message.text,
-                                message.connection,
-                                message.query
-                              )
+                            onFavoriteSelected(
+                              message.text,
+                              message.connection,
+                              message.query
+                            )
                           : undefined
                       }
                       role="button"
