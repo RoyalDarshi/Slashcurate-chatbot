@@ -289,10 +289,15 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
             className="text-2xl font-bold whitespace-nowrap flex items-center gap-2"
             style={{ color: theme.colors.text }}
           >
-            <MessageSquare className="w-6 h-6" style={{ color: theme.colors.accent }} />
-            Chat History
+            <MessageSquare
+              className="w-6 h-6"
+              style={{ color: theme.colors.accent }}
+            />
+            <span className="flex items-center pb-2">
+              Chat History
+            </span>
             <span
-              className="text-sm px-2 py-1 rounded-full"
+              className="text-sm font-semibold flex items-center justify-center rounded-full min-w-[24px] h-[24px] leading-none"
               style={{
                 background: theme.colors.accent + "20",
                 color: theme.colors.accent,

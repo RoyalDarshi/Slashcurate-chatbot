@@ -2172,29 +2172,34 @@ const DashboardInterface = memo(
                 }
                 if (connections.length === 0 && !connectionsLoading) {
                   return (
-                    <div className="flex flex-col items-center justify-center flex-grow text-center">
-                      <h1
-                        className={`text-2xl font-semibold mb-4`}
-                        style={{ color: theme.colors.text }}
-                      >
+                    <div
+                      className="flex flex-col items-center justify-center h-full text-center"
+                      style={{ color: theme.colors.text }}
+                    >
+                      <p className="text-2xl font-semibold mb-4">
                         No Connections Found
-                      </h1>
-                      <p
-                        className={`mb-6`}
-                        style={{ color: theme.colors.textSecondary }}
-                      >
-                        Please create a connection to start interacting with
-                        your data assistant.
+                      </p>
+                      <p className="text-lg">
+                        Please create a connection to start interacting with your data
+                        assistant.
                       </p>
                       <button
                         onClick={onCreateConSelected}
-                        className="px-6 py-2 font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+                        className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
                         style={{
+                          color: "white",
                           backgroundColor: theme.colors.accent,
-                          color: theme.colors.surface,
-                          boxShadow: theme.shadow.md,
-                          transition: theme.transition.default,
+                          borderRadius: theme.borderRadius.pill,
+                          padding: "8px 16px",
                         }}
+                        onMouseOver={(e) =>
+                        (e.currentTarget.style.backgroundColor =
+                          theme.colors.accentHover)
+                        }
+                        onMouseOut={(e) =>
+                        (e.currentTarget.style.backgroundColor =
+                          theme.colors.accent)
+                        }
                       >
                         Create Connection
                       </button>

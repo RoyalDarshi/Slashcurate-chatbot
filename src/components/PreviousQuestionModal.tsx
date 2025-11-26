@@ -197,9 +197,8 @@ const PreviousQuestionsModal: React.FC<PreviousQuestionsModalProps> = ({
                     onClick={() => handleSelectPrevQuestion(msg.id)}
                     className={`w-full text-left p-4 rounded-xl transition-all duration-300 
                     hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 
-                    group relative overflow-hidden ${
-                      isCurrentQuestion ? "ring-2" : ""
-                    }
+                    group relative overflow-hidden ${isCurrentQuestion ? "ring-2" : ""
+                      }
                     `}
                     style={{
                       backgroundColor: isCurrentQuestion
@@ -208,11 +207,10 @@ const PreviousQuestionsModal: React.FC<PreviousQuestionsModalProps> = ({
                       color: isCurrentQuestion
                         ? theme.colors.accent
                         : theme.colors.bubbleBotText,
-                      border: `1px solid ${
-                        isCurrentQuestion
-                          ? theme.colors.accent
-                          : theme.colors.border
-                      }40`,
+                      border: `1px solid ${isCurrentQuestion
+                        ? theme.colors.accent
+                        : theme.colors.border
+                        }40`,
                       boxShadow: isCurrentQuestion
                         ? `0 8px 25px -5px ${theme.colors.accent}40, 0 0 0 1px ${theme.colors.accent}30`
                         : `0 4px 15px -3px rgba(0, 0, 0, 0.1)`,
@@ -232,7 +230,7 @@ const PreviousQuestionsModal: React.FC<PreviousQuestionsModalProps> = ({
                               className="px-2 py-1 rounded-full text-xs font-medium"
                               style={{
                                 backgroundColor: theme.colors.accent,
-                                color: theme.colors.surface,
+                                color: "white",
                               }}
                             >
                               Current
@@ -318,7 +316,7 @@ const PreviousQuestionsModal: React.FC<PreviousQuestionsModalProps> = ({
             hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 group"
             style={{
               background: `linear-gradient(135deg, ${theme.colors.accent}, ${theme.colors.accent}e0)`,
-              color: theme.colors.surface,
+              color: "white",
               boxShadow: `0 4px 15px -3px ${theme.colors.accent}40`,
               ringColor: theme.colors.accent,
             }}
