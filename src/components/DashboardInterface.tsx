@@ -659,23 +659,30 @@ const DashboardInterface = memo(
 
       const askQuestion = useCallback(
         async (question: string, connection: string, query?: string) => {
+          // 1. Validation
           if (!connection) {
             toast.error("No connection provided.");
             return;
           }
 
+          // 2. Generate Temporary IDs for Optimistic UI
+          const tempUserMsgId = `temp-user-${Date.now()}`;
+          const tempBotMsgId = `temp-bot-${Date.now()}`;
           const newLoadingEntryId = generateId();
+
+          // 3. Optimistic Dashboard History Update
+          // Add the "Loading" card to the dashboard immediately
           const newLoadingEntry: DashboardItem = {
             id: newLoadingEntryId,
             question: question,
-            questionMessageId: "",
+            questionMessageId: tempUserMsgId, // Use Temp ID
             connectionName: connection,
             ...getDashboardLoadingState(),
             lastViewType: "table",
             isFavorited: false,
             reaction: null,
             dislike_reason: null,
-            botResponseId: "",
+            botResponseId: tempBotMsgId, // Use Temp ID
             isError: false,
           };
 
@@ -689,98 +696,91 @@ const DashboardInterface = memo(
           setCurrentHistoryIndex((prevIndex) => prevIndex + 1);
           setGraphSummary(null);
 
+          // 4. Optimistic Global Message State Update
+          // Add User Message to Chat Context
+          dispatchMessages({
+            type: "ADD_MESSAGE",
+            message: {
+              id: tempUserMsgId,
+              content: question,
+              isBot: false,
+              timestamp: new Date().toISOString(),
+              isFavorited: false,
+              parentId: null,
+              status: "normal",
+            },
+          });
+
+          // Add Bot Loading Message to Chat Context
+          dispatchMessages({
+            type: "ADD_MESSAGE",
+            message: {
+              id: tempBotMsgId,
+              isBot: true,
+              content: "loading...",
+              timestamp: new Date().toISOString(),
+              isFavorited: false,
+              parentId: tempUserMsgId,
+              status: "loading",
+            },
+          });
+
+          // 5. Handle Session Logic
           let currentSessionId = sessionId;
+
+          // Check if we need to restore a session or connection
           if (currentSessionId && !sessionConnection) {
             const currentSessionInfo = connections.find(
               (c) => c.connectionName === selectedConnection
             );
             if (!currentSessionInfo && messages.length > 0) {
-              toast.error(
-                "This session does not have a valid connection. Cannot ask new questions."
-              );
+              toast.error("This session does not have a valid connection.");
+              // Mark optimistic item as error
               setDashboardHistory((prev) =>
                 prev.map((item) =>
                   item.id === newLoadingEntryId
-                    ? {
-                      ...item,
-                      ...getDashboardErrorState(
-                        question,
-                        "No valid session connection found."
-                      ),
-                      isError: true,
-                    }
+                    ? { ...item, ...getDashboardErrorState(question, "Invalid connection"), isError: true }
                     : item
                 )
               );
+              setIsSubmitting(false);
               return;
             }
           }
 
-          if (!currentSessionId) {
-            try {
-              const newSessId: any = await startNewSession(
-                connection,
-                question
-              );
-              if (newSessId) {
-                currentSessionId = newSessId;
-                dispatchMessages({
-                  type: "SET_SESSION",
-                  sessionId: currentSessionId,
-                  messages: [],
-                  connection: connection,
-                });
-              } else {
-                setDashboardHistory((prev) =>
-                  prev.map((item) =>
-                    item.id === newLoadingEntryId
-                      ? {
-                        ...item,
-                        ...getDashboardErrorState(
-                          question,
-                          "Could not create session."
-                        ),
-                        isError: true,
-                      }
-                      : item
-                  )
-                );
-                return;
-              }
-            } catch (error) {
-              console.error("Error creating session:", error);
-              setDashboardHistory((prev) =>
-                prev.map((item) =>
-                  item.id === newLoadingEntryId
-                    ? {
-                      ...item,
-                      ...getDashboardErrorState(
-                        question,
-                        getErrorMessage(error)
-                      ),
-                      isError: true,
-                    }
-                    : item
-                )
-              );
-              return;
-            }
-          }
-
-          const userMessage: Message = {
-            id: Date.now().toString(),
-            content: question,
-            isBot: false,
-            timestamp: new Date().toISOString(),
-            isFavorited: false,
-            parentId: null,
-            status: "normal",
-          };
-
-          let finalUserMessageId: string = "";
-          let botMessageId: string = "";
+          // Variables to track Real IDs as we get them
+          let realUserMsgId = "";
+          let realBotMsgId = "";
 
           try {
+            // Create New Session if needed
+            if (!currentSessionId) {
+              try {
+                // Re-using your startNewSession logic manually here to ensure we catch errors
+                const response = await axios.post(
+                  `${API_URL}/api/sessions`,
+                  {
+                    token,
+                    currentConnection: connection,
+                    title: question.substring(0, 50) + "...",
+                  },
+                  { headers: { "Content-Type": "application/json" } }
+                );
+                currentSessionId = response.data.id;
+                localStorage.setItem("currentSessionId", currentSessionId || "");
+
+                dispatchMessages({
+                  type: "SET_SESSION",
+                  sessionId: currentSessionId || "",
+                  messages: [], // We will re-add our optimistic messages via local state if needed, but usually we just keep appending
+                  connection: connection,
+                });
+              } catch (error) {
+                throw new Error("Failed to create session: " + getErrorMessage(error));
+              }
+            }
+
+            // 6. Send User Message to Backend
             const userResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -788,22 +788,33 @@ const DashboardInterface = memo(
                 session_id: currentSessionId,
                 content: question,
                 isBot: false,
+                isFavorited: false, // Default
                 parentId: null,
                 status: "normal",
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            const finalUserMessage = {
-              ...userMessage,
-              id: userResponse.data.id,
-              isFavorited: userResponse.data.isFavorited,
-            };
-            finalUserMessageId = finalUserMessage.id;
+
+            realUserMsgId = userResponse.data.id;
+            const isFavorited = userResponse.data.isFavorited;
+
+            // SWAP 1: Replace Temp User ID with Real User ID in Reducer
             dispatchMessages({
-              type: "ADD_MESSAGE",
-              message: finalUserMessage,
+              type: "REPLACE_MESSAGE_ID",
+              oldId: tempUserMsgId,
+              newId: realUserMsgId,
             });
 
+            // Update Dashboard History with Real User ID
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.id === newLoadingEntryId
+                  ? { ...item, questionMessageId: realUserMsgId, isFavorited }
+                  : item
+              )
+            );
+
+            // 7. Send Bot Loading Message to Backend
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -812,302 +823,200 @@ const DashboardInterface = memo(
                 content: "loading...",
                 isBot: true,
                 isFavorited: false,
-                parentId: finalUserMessage.id,
+                parentId: realUserMsgId, // Link to REAL User ID
                 status: "loading",
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            botMessageId = botLoadingResponse.data.id;
-            const botLoadingMessage: Message = {
-              id: botMessageId,
-              isBot: true,
-              content: "loading...",
-              timestamp: new Date().toISOString(),
-              isFavorited: false,
-              parentId: finalUserMessage.id,
-              status: "loading",
-            };
+
+            realBotMsgId = botLoadingResponse.data.id;
+
+            // SWAP 2: Replace Temp Bot ID with Real Bot ID in Reducer
             dispatchMessages({
-              type: "ADD_MESSAGE",
-              message: botLoadingMessage,
+              type: "REPLACE_MESSAGE_ID",
+              oldId: tempBotMsgId,
+              newId: realBotMsgId,
             });
 
+            // Update Dashboard History with Real Bot ID
+            setDashboardHistory((prev) =>
+              prev.map((item) =>
+                item.id === newLoadingEntryId
+                  ? { ...item, botResponseId: realBotMsgId }
+                  : item
+              )
+            );
+
+            // 8. Call Chatbot API (The heavy lifting)
+            const connectionObj = connections.find(
+              (conn) => conn.connectionName === connection
+            );
+            if (!connectionObj) throw new Error("Connection not found.");
+
+            const controller = new AbortController();
+            setActiveRequestController(controller);
+
+            const payload = query
+              ? { question, sql_query: query, connection: connectionObj, sessionId: currentSessionId }
+              : { question, connection: connectionObj, sessionId: currentSessionId };
+
+            const response = await axios.post(`${CHATBOT_API_URL}/ask`, payload, {
+              signal: controller.signal,
+            });
+
+            setActiveRequestController(null);
+            const responseData = response.data;
+
+            // 9. Handle Response Data
+            let finalStatus = "normal";
+            let finalContent = "";
+
+            // Check for Python-side logic errors
+            if (
+              responseData.execution_status === "Failed" ||
+              responseData.data_availability === "Execution Error"
+            ) {
+              finalStatus = "error";
+              let errorMsg = "Query execution failed.";
+              if (responseData.answer && responseData.answer.error) {
+                errorMsg = responseData.answer.error.message || errorMsg;
+                if (responseData.answer.error.db2_raw) {
+                  errorMsg += `\n\nDetails: ${responseData.answer.error.db2_raw}`;
+                }
+              }
+              finalContent = errorMsg;
+            } else {
+              finalContent = JSON.stringify(responseData, null, 2);
+            }
+
+            // 10. Save Final Result to Backend
+            // Create limited data for backend storage (500 rows max) if successful
+            const contentForBackend = finalStatus === "normal"
+              ? JSON.stringify(limitDataForBackend(responseData), null, 2)
+              : finalContent;
+
+            await axios.put(
+              `${API_URL}/api/messages/${realBotMsgId}`,
+              {
+                token,
+                content: contentForBackend,
+                timestamp: new Date().toISOString(),
+                status: finalStatus,
+              },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
+            // 11. Update Global Messages with Final Result
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: realBotMsgId,
+              message: {
+                content: finalContent,
+                timestamp: new Date().toISOString(),
+                status: finalStatus,
+              },
+            });
+
+            // 12. Update Dashboard History with Final Result
+            if (finalStatus === "error") {
+              setDashboardHistory((prev) =>
+                prev.map((item) =>
+                  item.botResponseId === realBotMsgId
+                    ? { ...item, ...getDashboardErrorState(question, finalContent), isError: true }
+                    : item
+                )
+              );
+            } else {
+              // Parse Success Data
+              const actualKpiData = responseData.kpiData || initialEmptyKpiData;
+              const actualMainViewData = {
+                chartData: Array.isArray(responseData.answer) ? responseData.answer : [],
+                tableData: Array.isArray(responseData.answer) ? responseData.answer : [],
+                queryData: typeof responseData.sql_query === "string" ? responseData.sql_query : "No query available.",
+              };
+              const actualTextualSummary = responseData.textualSummary || `Here is the analysis for: "${question}"`;
+
+              setDashboardHistory((prev) =>
+                prev.map((item) =>
+                  item.botResponseId === realBotMsgId
+                    ? {
+                      ...item,
+                      kpiData: actualKpiData,
+                      mainViewData: actualMainViewData,
+                      textualSummary: actualTextualSummary,
+                      isError: false,
+                    }
+                    : item
+                )
+              );
+            }
+
+          } catch (error) {
+            // 13. Error Handling
+            setActiveRequestController(null);
+
+            // If cancelled, stop processing (Dashboard handleStopRequest will take over UI update)
+            if (axios.isCancel(error) || (error as Error).name === "CanceledError") {
+              return;
+            }
+
+            console.error("AskQuestion Error:", error);
+            const errorContent = getErrorMessage(error);
+
+            // Determine which Bot ID to update (Real or Temp if Real never happened)
+            const targetBotId = realBotMsgId || tempBotMsgId;
+
+            // Update Backend to Error State (Only if we have a Real ID)
+            if (realBotMsgId) {
+              await axios.put(`${API_URL}/api/messages/${realBotMsgId}`, {
+                token,
+                content: errorContent,
+                timestamp: new Date().toISOString(),
+                status: "error",
+              }).catch(e => console.error("Failed to sync error to backend", e));
+            }
+
+            // Update Global Messages UI
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: targetBotId,
+              message: {
+                content: errorContent,
+                timestamp: new Date().toISOString(),
+                status: "error",
+              },
+            });
+
+            // Update Dashboard History UI
             setDashboardHistory((prev) =>
               prev.map((item) =>
                 item.id === newLoadingEntryId
                   ? {
                     ...item,
-                    questionMessageId: finalUserMessageId,
-                    botResponseId: botMessageId,
+                    ...getDashboardErrorState(question, errorContent),
+                    isError: true,
+                    // Ensure IDs are synced even if failed before swap
+                    questionMessageId: realUserMsgId || item.questionMessageId,
+                    botResponseId: targetBotId,
                   }
                   : item
               )
             );
-
-            try {
-              const connectionObj = connections.find(
-                (conn) => conn.connectionName === connection
-              );
-              if (!connectionObj) {
-                throw new Error(
-                  `Connection '${connection}' not found during askQuestion.`
-                );
-              }
-
-              // Create a new AbortController for this request
-              const controller = new AbortController();
-              setActiveRequestController(controller); // Store it in state
-
-              const payload = query
-                ? {
-                  question,
-                  sql_query: query,
-                  connection: connectionObj,
-                  sessionId: currentSessionId,
-                }
-                : {
-                  question,
-                  connection: connectionObj,
-                  sessionId: currentSessionId,
-                };
-              const response = await axios.post(
-                `${CHATBOT_API_URL}/ask`,
-                payload,
-                {
-                  signal: controller.signal, // <-- Pass the signal here
-                }
-              );
-
-              // If we get here, the request was NOT cancelled
-              setActiveRequestController(null);
-
-              const responseData = response.data;
-
-              // Check for structured error response
-              if (
-                responseData.execution_status === "Failed" ||
-                responseData.data_availability === "Execution Error"
-              ) {
-                let errorMsg = "Query execution failed.";
-                if (responseData.answer && responseData.answer.error) {
-                  errorMsg = responseData.answer.error.message || errorMsg;
-                  if (responseData.answer.error.db2_raw) {
-                    errorMsg += `\n\nDetails: ${responseData.answer.error.db2_raw}`;
-                  }
-                }
-
-                // Treat as an error
-                const errorContent = errorMsg;
-                const errorStatus = "error";
-
-                await axios.put(
-                  `${API_URL}/api/messages/${botMessageId}`,
-                  {
-                    token,
-                    content: errorContent,
-                    timestamp: new Date().toISOString(),
-                    status: errorStatus,
-                  },
-                  { headers: { "Content-Type": "application/json" } }
-                );
-
-                const errorMessageUpdate: Partial<Message> = {
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                  status: errorStatus,
-                };
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessageId!,
-                  message: errorMessageUpdate,
-                });
-
-                setDashboardHistory((prev) =>
-                  prev.map((item) =>
-                    item.botResponseId === botMessageId
-                      ? {
-                        ...item,
-                        ...getDashboardErrorState(question, errorContent),
-                        isError: true,
-                      }
-                      : item
-                  )
-                );
-
-              } else {
-                // Success case
-                // Keep full data for frontend (downloads, display)
-                const botResponseContent = JSON.stringify(responseData, null, 2);
-
-                // Create limited data for backend storage (500 rows max)
-                const limitedResponseData = limitDataForBackend(responseData);
-                const botResponseContentForBackend = JSON.stringify(
-                  limitedResponseData,
-                  null,
-                  2
-                );
-
-                await axios.put(
-                  `${API_URL}/api/messages/${botMessageId}`,
-                  {
-                    token,
-                    content: botResponseContentForBackend,
-                    timestamp: new Date().toISOString(),
-                    status: "normal",
-                  },
-                  { headers: { "Content-Type": "application/json" } }
-                );
-
-                const updatedBotMessage: Partial<Message> = {
-                  content: botResponseContent,
-                  timestamp: new Date().toISOString(),
-                  status: "normal",
-                };
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessageId!,
-                  message: updatedBotMessage,
-                });
-
-                // Update dashboard history with success data
-                try {
-                  const actualKpiData =
-                    responseData.kpiData || initialEmptyKpiData;
-                  const actualMainViewData = {
-                    chartData: Array.isArray(responseData.answer)
-                      ? responseData.answer
-                      : [],
-                    tableData: Array.isArray(responseData.answer)
-                      ? responseData.answer
-                      : [],
-                    queryData:
-                      typeof responseData.sql_query === "string"
-                        ? responseData.sql_query
-                        : "No query available.",
-                  };
-                  const actualTextualSummary =
-                    responseData.textualSummary ||
-                    `Here is the analysis for: "${question}"`;
-
-                  setDashboardHistory((prev) =>
-                    prev.map((item) =>
-                      item.botResponseId === botMessageId
-                        ? {
-                          ...item,
-                          kpiData: actualKpiData,
-                          mainViewData: actualMainViewData,
-                          textualSummary: actualTextualSummary,
-                          isError: false,
-                        }
-                        : item
-                    )
-                  );
-                } catch (parseError) {
-                  console.error("Error parsing bot response for dashboard:", parseError);
-                }
-              }
-            } catch (error) {
-              // Clear the controller
-              setActiveRequestController(null);
-              const errorContent = getErrorMessage(error);
-              const errorStatus = "error";
-
-              // Check if the error was from cancellation
-              if (
-                axios.isCancel(error) ||
-                (error as Error).name === "CanceledError"
-              ) {
-                console.log("Request cancelled by AbortController.");
-                // The message will be updated by handleStopRequest,
-                // but we must ensure the dashboard state is also updated.
-                setDashboardHistory((prev) =>
-                  prev.map((item) =>
-                    item.id === newLoadingEntryId
-                      ? {
-                        ...item,
-                        ...getDashboardErrorState(question, errorContent),
-                        isError: true,
-                      }
-                      : item
-                  )
-                );
-                // The handleStopRequest will update the message,
-                // so we only update it here if it *wasn't* a cancel.
-              } else {
-                // This is a *real* error
-                console.error("Error getting bot response:", error);
-
-                if (botMessageId) {
-                  await axios
-                    .put(
-                      `${API_URL}/api/messages/${botMessageId}`,
-                      {
-                        token,
-                        content: errorContent,
-                        timestamp: new Date().toISOString(),
-                        status: errorStatus,
-                      },
-                      { headers: { "Content-Type": "application/json" } }
-                    )
-                    .catch((updateError) =>
-                      console.error(
-                        "Failed to update message to error state on server:",
-                        updateError
-                      )
-                    );
-
-                  const errorMessageUpdate: Partial<Message> = {
-                    content: errorContent,
-                    timestamp: new Date().toISOString(),
-                    status: errorStatus,
-                  };
-                  dispatchMessages({
-                    type: "UPDATE_MESSAGE",
-                    id: botMessageId,
-                    message: errorMessageUpdate,
-                  });
-
-                  setDashboardHistory((prev) =>
-                    prev.map((item) =>
-                      item.botResponseId === botMessageId
-                        ? {
-                          ...item,
-                          ...getDashboardErrorState(question, errorContent),
-                          isError: true,
-                        }
-                        : item
-                    )
-                  );
-                } else {
-                  // Fallback if botMessageId is missing (unlikely here)
-                  toast.error(`Error: ${errorContent}`);
-                }
-              }
-            }
-          } catch (error) {
-            console.error(
-              "Error saving user message or creating bot loading message:",
-              error
-            );
-            toast.error(`Failed to send message: ${getErrorMessage(error)}`);
-
-            setDashboardHistory((prev) =>
-              prev.filter((item) => item.id !== newLoadingEntryId)
-            );
-            setCurrentHistoryIndex((prevIndex) => Math.max(0, prevIndex - 1));
+          } finally {
+            // 14. Always release the lock
+            setIsSubmitting(false);
           }
         },
         [
           sessionId,
-          sessionConnection,
           connections,
           token,
           dispatchMessages,
-          loadSession,
           selectedConnection,
-          currentHistoryIndex,
-          startNewSession,
-          messages.length,
+          sessionConnection,
+          currentHistoryIndex, // Needed for history update logic
+          messages.length, // Needed for session validation check
+          // Add other dependencies as required by your linting rules
         ]
       );
 
@@ -1318,6 +1227,7 @@ const DashboardInterface = memo(
         (e: React.FormEvent) => {
           e.preventDefault();
           if (!input.trim() || !selectedConnection || isSubmitting) return;
+          setIsSubmitting(true);
           askQuestion(input, selectedConnection);
           setInput("");
         },

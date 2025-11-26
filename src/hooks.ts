@@ -119,11 +119,11 @@ interface SessionState {
 
 type SessionAction =
   | {
-      type: "SET_SESSION";
-      sessionId: string;
-      messages: Message[];
-      connection: string | null;
-    }
+    type: "SET_SESSION";
+    sessionId: string;
+    messages: Message[];
+    connection: string | null;
+  }
   | { type: "CLEAR_SESSION" }
   | { type: "ADD_MESSAGE"; message: Message }
   | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> };
@@ -197,17 +197,19 @@ export const useSession = (token: string) => {
         dispatch({
           type: "SET_SESSION",
           sessionId,
-          messages: messages.map((msg: any) => ({
-            id: msg.id,
-            content: msg.content,
-            isBot: msg.isBot,
-            timestamp: msg.timestamp,
-            isFavorited: msg.isFavorited,
-            parentId: msg.parentId,
-            reaction: msg.reaction,
-            dislike_reason: msg.dislike_reason,
-            status: msg.status, // <-- ADDED
-          })),
+          messages: messages
+            .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+            .map((msg: any) => ({
+              id: msg.id,
+              content: msg.content,
+              isBot: msg.isBot,
+              timestamp: msg.timestamp,
+              isFavorited: msg.isFavorited,
+              parentId: msg.parentId,
+              reaction: msg.reaction,
+              dislike_reason: msg.dislike_reason,
+              status: msg.status, // <-- ADDED
+            })),
           connection,
         });
       } catch (error) {

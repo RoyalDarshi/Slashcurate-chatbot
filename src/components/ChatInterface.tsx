@@ -317,6 +317,7 @@ const ChatInterface = memo(
         setShowSummaryModal(false);
       }, [clearSession]);
 
+      // Replace your existing askQuestion with this:
       const askQuestion = useCallback(
         async (
           question: string,
@@ -324,11 +325,13 @@ const ChatInterface = memo(
           isFavorited: boolean,
           query?: string
         ) => {
+          // ... (Keep your existing session/connection validation logic here) ...
+          // START VALIDATION BLOCK
           if (!connection) {
             toast.error("No connection provided.");
+            setIsSubmitting(false); // Release lock
             return;
           }
-
           let currentSessionId = sessionId;
           if (currentSessionId && !sessionConnection) {
             const currentSessionInfo = connections.find(
@@ -379,12 +382,19 @@ const ChatInterface = memo(
               });
             } catch (error) {
               console.error("Error creating session:", error);
+              setIsSubmitting(false); // Release lock on error
               return;
             }
           }
+          // END VALIDATION BLOCK
 
-          const userMessage: Message = {
-            id: Date.now().toString(),
+          // 1. OPTIMISTIC UPDATE: Create temporary IDs
+          const tempUserMsgId = Date.now().toString();
+          const tempBotMsgId = (Date.now() + 1).toString();
+
+          // 2. Add User message to UI IMMEDIATELY (Before API call)
+          const optimisticUserMessage: Message = {
+            id: tempUserMsgId,
             content: question,
             isBot: false,
             timestamp: new Date().toISOString(),
@@ -392,11 +402,28 @@ const ChatInterface = memo(
             parentId: null,
             status: "normal",
           };
+          dispatchMessages({ type: "ADD_MESSAGE", message: optimisticUserMessage });
 
-          let finalUserMessageId: string | null = null;
-          let botMessageId: string | null = null;
+          // 3. Add Bot "Loading" message to UI IMMEDIATELY
+          const optimisticBotMessage: Message = {
+            id: tempBotMsgId,
+            isBot: true,
+            content: "loading...",
+            timestamp: new Date().toISOString(),
+            isFavorited: false,
+            parentId: tempUserMsgId,
+            status: "loading",
+          };
+          dispatchMessages({ type: "ADD_MESSAGE", message: optimisticBotMessage });
+
+          // Scroll to bottom
+          setTimeout(() => scrollToMessage(tempBotMsgId), 100);
+
+          let finalUserMessageId = tempUserMsgId;
+          let finalBotMessageId = tempBotMsgId;
 
           try {
+            // 4. Save User Message to Backend
             const userResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -410,16 +437,19 @@ const ChatInterface = memo(
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            const finalUserMessage = {
-              ...userMessage,
-              id: userResponse.data.id,
-            };
+
+            // 5. Update UI with REAL User Message ID from DB
             finalUserMessageId = userResponse.data.id;
+            // You need a reducer action like "UPDATE_MESSAGE_ID" or just remove and re-add.
+            // If your reducer doesn't support ID updates, it's safer to just update properties.
+            // However, for strict consistency:
             dispatchMessages({
-              type: "ADD_MESSAGE",
-              message: finalUserMessage,
+              type: "UPDATE_MESSAGE",
+              id: tempUserMsgId,
+              message: { id: finalUserMessageId } as any // Assuming your reducer handles ID updates
             });
 
+            // 6. Create Bot Entry in Backend
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -428,221 +458,105 @@ const ChatInterface = memo(
                 content: "loading...",
                 isBot: true,
                 isFavorited: false,
-                parentId: finalUserMessage.id,
-                status: "loading", // <-- MODIFIED
+                parentId: finalUserMessageId, // Link to REAL User ID
+                status: "loading",
               },
               { headers: { "Content-Type": "application/json" } }
             );
-            botMessageId = botLoadingResponse.data.id;
-            const botLoadingMessage: Message = {
-              id: botMessageId || "",
-              isBot: true,
-              content: "loading...",
-              timestamp: new Date().toISOString(),
-              isFavorited: false,
-              parentId: finalUserMessage.id,
-              status: "loading", // <-- MODIFIED
-            };
-            setIsSubmitting(true);
+
+            finalBotMessageId = botLoadingResponse.data.id;
+
+            // Update the optimistic bot message with the REAL ID
             dispatchMessages({
-              type: "ADD_MESSAGE",
-              message: botLoadingMessage,
+              type: "UPDATE_MESSAGE",
+              id: tempBotMsgId,
+              message: { id: finalBotMessageId, parentId: finalUserMessageId } as any
             });
-            setTimeout(() => scrollToMessage(botMessageId!), 100);
 
-            try {
-              // Create a new AbortController for this request
-              const controller = new AbortController();
-              setActiveRequestController(controller); // Store it in state
+            // 7. Call the Chatbot API (Heavy lifting)
+            const controller = new AbortController();
+            setActiveRequestController(controller);
 
-              const connectionObj = connections.find(
-                (conn) => conn.connectionName === connection
-              );
-              if (!connectionObj) {
-                throw new Error(
-                  `Connection '${connection}' not found during askQuestion.`
-                );
-              }
+            const connectionObj = connections.find(c => c.connectionName === connection);
 
-              const payload = query
-                ? {
-                  question,
-                  sql_query: query,
-                  connection: connectionObj,
-                  sessionId: currentSessionId,
-                }
-                : {
-                  question,
-                  connection: connectionObj,
-                  sessionId: currentSessionId,
-                };
-              const response = await axios.post(
-                `${CHATBOT_API_URL}/ask`,
-                payload,
-                {
-                  signal: controller.signal, // <-- Pass the signal here
-                }
-              );
+            const payload = query
+              ? { question, sql_query: query, connection: connectionObj, sessionId: currentSessionId }
+              : { question, connection: connectionObj, sessionId: currentSessionId };
 
-              // If we get here, the request was NOT cancelled
-              setActiveRequestController(null);
+            const response = await axios.post(`${CHATBOT_API_URL}/ask`, payload, {
+              signal: controller.signal,
+            });
 
-              const responseData = response.data;
+            setActiveRequestController(null);
+            const responseData = response.data;
 
-              // Check for structured error response
-              if (
-                responseData.execution_status === "Failed" ||
-                responseData.data_availability === "Execution Error"
-              ) {
-                let errorMsg = "Query execution failed.";
-                if (responseData.answer && responseData.answer.error) {
-                  errorMsg = responseData.answer.error.message || errorMsg;
-                  if (responseData.answer.error.db2_raw) {
-                    errorMsg += `\n\nDetails: ${responseData.answer.error.db2_raw}`;
-                  }
-                }
+            // 8. Handle Success/Error from Python
+            let finalContent = "";
+            let finalStatus = "normal";
 
-                // Treat as an error
-                const errorContent = errorMsg;
-                const errorStatus = "error";
-
-                await axios.put(
-                  `${API_URL}/api/messages/${botMessageId}`,
-                  {
-                    token,
-                    content: errorContent,
-                    timestamp: new Date().toISOString(),
-                    status: errorStatus,
-                  },
-                  { headers: { "Content-Type": "application/json" } }
-                );
-
-                const errorMessageUpdate: Partial<Message> = {
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                  status: errorStatus,
-                };
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessageId!,
-                  message: errorMessageUpdate,
-                });
-                setTimeout(() => scrollToMessage(botMessageId!), 100);
-
-              } else {
-                // Success case
-                // Keep full data for frontend (downloads, display)
-                const botResponseContent = JSON.stringify(responseData, null, 2);
-
-                // Create limited data for backend storage (500 rows max)
-                const limitedResponseData = limitDataForBackend(responseData);
-                const botResponseContentForBackend = JSON.stringify(
-                  limitedResponseData,
-                  null,
-                  2
-                );
-
-                await axios.put(
-                  `${API_URL}/api/messages/${botMessageId}`,
-                  {
-                    token,
-                    content: botResponseContentForBackend,
-                    timestamp: new Date().toISOString(),
-                    status: "normal",
-                  },
-                  { headers: { "Content-Type": "application/json" } }
-                );
-
-                const updatedBotMessage: Partial<Message> = {
-                  content: botResponseContent,
-                  timestamp: new Date().toISOString(),
-                  status: "normal",
-                };
-                dispatchMessages({
-                  type: "UPDATE_MESSAGE",
-                  id: botMessageId!,
-                  message: updatedBotMessage,
-                });
-                setTimeout(() => scrollToMessage(botMessageId!), 100);
-              }
-            } catch (error) {
-              // Clear the controller
-              setActiveRequestController(null);
-              const errorContent = getErrorMessage(error); // <-- Use new function
-              const errorStatus = "error";
-
-              // Check if the error was from cancellation
-              if (
-                axios.isCancel(error) ||
-                (error as Error).name === "CanceledError"
-              ) {
-                console.log("Request cancelled by AbortController.");
-                // The message was already updated by handleStopRequest,
-                // so we just need to NOT proceed to the error logic below.
-              } else {
-                // This is a *real* error
-                console.error("Error getting bot response:", error);
-
-                if (botMessageId) {
-                  await axios
-                    .put(
-                      `${API_URL}/api/messages/${botMessageId}`,
-                      {
-                        token,
-                        content: errorContent,
-                        timestamp: new Date().toISOString(),
-                        status: errorStatus, // <-- MODIFIED
-                      },
-                      { headers: { "Content-Type": "application/json" } }
-                    )
-                    .catch((updateError) =>
-                      console.error(
-                        "Failed to update message to error state on server:",
-                        updateError
-                      )
-                    );
-
-                  const errorMessageUpdate: Partial<Message> = {
-                    content: errorContent,
-                    timestamp: new Date().toISOString(),
-                    status: errorStatus, // <-- MODIFIED
-                  };
-                  dispatchMessages({
-                    type: "UPDATE_MESSAGE",
-                    id: botMessageId,
-                    message: errorMessageUpdate,
-                  });
-                  setTimeout(
-                    () => botMessageId && scrollToMessage(botMessageId),
-                    100
-                  );
-                } else {
-                  const generalErrorMessage: Message = {
-                    id: `error-${Date.now().toString()}`,
-                    content: errorContent,
-                    isBot: true,
-                    timestamp: new Date().toISOString(),
-                    isFavorited: false,
-                    parentId: finalUserMessageId,
-                    status: errorStatus, // <-- MODIFIED
-                  };
-                  dispatchMessages({
-                    type: "ADD_MESSAGE",
-                    message: generalErrorMessage,
-                  });
-                  setTimeout(
-                    () => scrollToMessage(generalErrorMessage.id),
-                    100
-                  );
-                }
-              }
+            if (
+              responseData.execution_status === "Failed" ||
+              responseData.data_availability === "Execution Error"
+            ) {
+              finalStatus = "error";
+              finalContent = responseData.answer?.error?.message || "Query execution failed.";
+            } else {
+              finalContent = JSON.stringify(responseData, null, 2);
             }
-          } catch (error) {
-            console.error(
-              "Error saving user message or creating bot loading message:",
-              error
+
+            // 9. Update Backend with Final Answer
+            const limitedData = limitDataForBackend(responseData);
+            await axios.put(
+              `${API_URL}/api/messages/${finalBotMessageId}`,
+              {
+                token,
+                content: finalStatus === "error" ? finalContent : JSON.stringify(limitedData, null, 2),
+                timestamp: new Date().toISOString(),
+                status: finalStatus,
+              },
+              { headers: { "Content-Type": "application/json" } }
             );
-            toast.error(`Failed to send message: ${getErrorMessage(error)}`);
+
+            // 10. Update UI with Final Answer
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: finalBotMessageId, // Use the real ID
+              message: {
+                content: finalContent,
+                timestamp: new Date().toISOString(),
+                status: finalStatus,
+              },
+            });
+            setIsSubmitting(false); // Done!
+
+          } catch (error) {
+            setActiveRequestController(null);
+            const errorContent = getErrorMessage(error);
+
+            // If connection was cancelled, stop.
+            if (axios.isCancel(error) || (error as Error).name === "CanceledError") {
+              return;
+            }
+
+            // CRITICAL: Update the OPTIMISTIC Bot Message to be an Error message
+            // Instead of creating a NEW orphaned error message.
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: tempBotMsgId, // Update the one we already showed
+              message: {
+                content: errorContent,
+                status: "error",
+              },
+            });
+
+            // Try to sync error state to backend if we have a real ID
+            if (finalBotMessageId !== tempBotMsgId) {
+              await axios.put(`${API_URL}/api/messages/${finalBotMessageId}`, {
+                token, content: errorContent, status: "error"
+              }).catch(e => console.error("Failed to save error state", e));
+            }
+
+            setIsSubmitting(false);
           }
         },
         [
@@ -829,21 +743,24 @@ const ChatInterface = memo(
       const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
           e.preventDefault();
+          // 1. Check lock immediately
           if (!input.trim() || isSubmitting) return;
           if (!selectedConnection) {
             toast.error("No connection selected.");
             return;
           }
 
+          // 2. Lock UI immediately
           setIsSubmitting(true);
           const question = input;
           setInput("");
 
           try {
             await askQuestion(question, selectedConnection, false);
-          } finally {
-            // Keep submitting true until the "loading..." message is replaced
-            setTimeout(() => setIsSubmitting(false), 1500);
+          } catch (error) {
+            // If critical failure, unlock
+            setIsSubmitting(false);
+            console.error(error);
           }
         },
         [input, isSubmitting, selectedConnection, askQuestion]
