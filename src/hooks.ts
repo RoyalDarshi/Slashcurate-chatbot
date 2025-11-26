@@ -126,7 +126,8 @@ type SessionAction =
   }
   | { type: "CLEAR_SESSION" }
   | { type: "ADD_MESSAGE"; message: Message }
-  | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> };
+  | { type: "UPDATE_MESSAGE"; id: string; message: Partial<Message> }
+  | { type: "REPLACE_MESSAGE_ID"; oldId: string; newId: string };
 
 const sessionReducer = (
   state: SessionState,
@@ -169,6 +170,20 @@ const sessionReducer = (
         messages: state.messages.map((msg) =>
           msg.id === action.id ? { ...msg, ...action.message } : msg
         ),
+      };
+    case "REPLACE_MESSAGE_ID":
+      console.log("Replacing message ID:", action.oldId, "with", action.newId);
+      return {
+        ...state,
+        messages: state.messages.map((msg) => {
+          if (msg.id === action.oldId) {
+            return { ...msg, id: action.newId };
+          }
+          if (msg.parentId === action.oldId) {
+            return { ...msg, parentId: action.newId };
+          }
+          return msg;
+        }),
       };
     default:
       return state;

@@ -221,7 +221,11 @@ const ChatInterface = memo(
 
       useEffect(() => {
         const loadingMessages = messages.filter(
-          (msg) => msg.isBot && msg.status === "loading"
+          (msg) =>
+            msg.isBot &&
+            msg.status === "loading" &&
+            msg.id.includes("-") &&
+            !msg.id.startsWith("temp-")
         );
         if (loadingMessages.length === 0) {
           setIsSubmitting(false);
@@ -389,8 +393,8 @@ const ChatInterface = memo(
           // END VALIDATION BLOCK
 
           // 1. OPTIMISTIC UPDATE: Create temporary IDs
-          const tempUserMsgId = Date.now().toString();
-          const tempBotMsgId = (Date.now() + 1).toString();
+          const tempUserMsgId = `temp-user-${Date.now()}`;
+          const tempBotMsgId = `temp-bot-${Date.now() + 1}`;
 
           // 2. Add User message to UI IMMEDIATELY (Before API call)
           const optimisticUserMessage: Message = {
@@ -440,13 +444,10 @@ const ChatInterface = memo(
 
             // 5. Update UI with REAL User Message ID from DB
             finalUserMessageId = userResponse.data.id;
-            // You need a reducer action like "UPDATE_MESSAGE_ID" or just remove and re-add.
-            // If your reducer doesn't support ID updates, it's safer to just update properties.
-            // However, for strict consistency:
             dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: tempUserMsgId,
-              message: { id: finalUserMessageId } as any // Assuming your reducer handles ID updates
+              type: "REPLACE_MESSAGE_ID",
+              oldId: tempUserMsgId,
+              newId: finalUserMessageId,
             });
 
             // 6. Create Bot Entry in Backend
@@ -468,9 +469,9 @@ const ChatInterface = memo(
 
             // Update the optimistic bot message with the REAL ID
             dispatchMessages({
-              type: "UPDATE_MESSAGE",
-              id: tempBotMsgId,
-              message: { id: finalBotMessageId, parentId: finalUserMessageId } as any
+              type: "REPLACE_MESSAGE_ID",
+              oldId: tempBotMsgId,
+              newId: finalBotMessageId,
             });
 
             // 7. Call the Chatbot API (Heavy lifting)
@@ -492,7 +493,7 @@ const ChatInterface = memo(
 
             // 8. Handle Success/Error from Python
             let finalContent = "";
-            let finalStatus = "normal";
+            let finalStatus: Message["status"] = "normal";
 
             if (
               responseData.execution_status === "Failed" ||
@@ -542,7 +543,7 @@ const ChatInterface = memo(
             // Instead of creating a NEW orphaned error message.
             dispatchMessages({
               type: "UPDATE_MESSAGE",
-              id: tempBotMsgId, // Update the one we already showed
+              id: finalBotMessageId, // Update the correct ID (Real or Temp)
               message: {
                 content: errorContent,
                 status: "error",
@@ -1035,11 +1036,15 @@ const ChatInterface = memo(
             const botResponseContent = JSON.stringify(response.data, null, 2);
             console.log("Bot Response Content:", botResponseContent);
 
+            // Create limited data for backend storage (500 rows max)
+            const limitedResponseData = limitDataForBackend(response.data);
+            const botResponseContentForBackend = JSON.stringify(limitedResponseData, null, 2);
+
             await axios.put(
               `${API_URL}/api/messages/${originalBotMessageId}`,
               {
                 token,
-                content: botResponseContent,
+                content: botResponseContentForBackend,
                 timestamp: new Date().toISOString(),
                 status: "normal", // <-- MODIFIED
               },

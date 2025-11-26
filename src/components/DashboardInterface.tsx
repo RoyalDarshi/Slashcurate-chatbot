@@ -53,7 +53,7 @@ interface KpiData {
   kpi3: { label: string; value: string | number | null; change: number };
 }
 
-interface MainViewData {
+export interface MainViewData {
   chartData: any[];
   tableData: any[];
   queryData: string;
@@ -349,7 +349,11 @@ const DashboardInterface = memo(
 
       useEffect(() => {
         const loadingMessages = messages.filter(
-          (msg) => msg.isBot && msg.status === "loading" // <-- MODIFIED
+          (msg) =>
+            msg.isBot &&
+            msg.status === "loading" &&
+            msg.id.includes("-") &&
+            !msg.id.startsWith("temp-")
         );
         if (loadingMessages.length === 0) {
           setIsSubmitting(false);
@@ -868,7 +872,7 @@ const DashboardInterface = memo(
             const responseData = response.data;
 
             // 9. Handle Response Data
-            let finalStatus = "normal";
+            let finalStatus: Message["status"] = "normal";
             let finalContent = "";
 
             // Check for Python-side logic errors
@@ -1457,7 +1461,7 @@ const DashboardInterface = memo(
             setDashboardHistory((prev) =>
               prev.map((item) =>
                 item.questionMessageId === questionMessageId
-                  ? { ...item, botResponseId: botMessageToUpdateId }
+                  ? { ...item, botResponseId: botMessageToUpdateId! }
                   : item
               )
             );

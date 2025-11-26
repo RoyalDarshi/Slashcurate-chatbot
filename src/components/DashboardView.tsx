@@ -1,9 +1,10 @@
-import React, {
-  useState,
-  useEffect,
+import {
   forwardRef,
+  useCallback,
+  useEffect,
   useImperativeHandle,
   useRef,
+  useState,
 } from "react";
 import { HelpCircle, Heart, Database, Table } from "lucide-react";
 import {
@@ -12,17 +13,24 @@ import {
   BsHandThumbsUp,
   BsHandThumbsUpFill,
 } from "react-icons/bs";
-import KPICard from "./KPICard";
+import {
+  FaChartBar,
+  FaChartLine,
+  FaChartPie,
+  FaTable,
+  FaTerminal,
+} from "react-icons/fa";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { useTheme } from "../ThemeContext";
+import { DashboardItem, MainViewData } from "./DashboardInterface";
+import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
 import DynamicGraph from "./Graphs/DynamicGraph";
 import DataTable from "./DataTable";
 import QueryDisplay from "./QueryDisplay";
-import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
-import { Theme } from "../types";
-import { DashboardItem } from "./DashboardInterface";
 import SummaryModal from "./SummaryModal";
 import CustomTooltip from "./CustomTooltip";
-import { toast } from "react-toastify";
-import axios from "axios";
+import { Theme } from "../types";
 import { API_URL } from "../config";
 import { autoDetectGraphType } from "../hooks/useGraphData";
 
@@ -124,28 +132,44 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     };
 
+    const lastProcessedItemId = useRef<string | null>(null);
+
     useEffect(() => {
       if (
         dashboardItem?.mainViewData?.chartData &&
         dashboardItem.mainViewData.chartData.length > 0
       ) {
-        const chartData = dashboardItem.mainViewData.chartData;
-        const validKeys = getValidValueKeys(chartData);
-        const initialGroupBy = getValidCategoricalKeys(chartData)[0] || null;
-        const initialValueKey = validKeys[0] || null;
+        // Only run auto-detection if we haven't processed this item yet
+        if (lastProcessedItemId.current !== dashboardItem.id) {
+          const chartData = dashboardItem.mainViewData.chartData;
+          const validKeys = getValidValueKeys(chartData);
+          const initialGroupBy = getValidCategoricalKeys(chartData)[0] || null;
+          const initialValueKey = validKeys[0] || null;
 
-        setGroupBy(initialGroupBy);
-        setValueKey(initialValueKey);
-        setAggregate("sum");
+          setGroupBy(initialGroupBy);
+          setValueKey(initialValueKey);
+          setAggregate("sum");
 
-        // Auto-detect graph type
-        const autoType = autoDetectGraphType(chartData, initialGroupBy, initialValueKey);
-        setGraphType(autoType);
+          // Auto-detect graph type
+          const autoType = autoDetectGraphType(
+            chartData,
+            initialGroupBy,
+            initialValueKey
+          );
+          setGraphType(autoType);
+
+          // Mark this item as processed
+          lastProcessedItemId.current = dashboardItem.id;
+        }
       } else {
-        setGroupBy(null);
-        setValueKey(null);
+        // If no data, reset (or if we switched to an empty item)
+        if (lastProcessedItemId.current !== dashboardItem?.id) {
+          setGroupBy(null);
+          setValueKey(null);
+          lastProcessedItemId.current = dashboardItem?.id || null;
+        }
       }
-    }, [dashboardItem?.mainViewData?.chartData]);
+    }, [dashboardItem?.mainViewData?.chartData, dashboardItem?.id]);
 
     useEffect(() => {
       if (graphSummary) setShowSummaryModal(true);
@@ -374,7 +398,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       <div className="h-full">
         {isSubmitting ? (
           <DashboardSkeletonLoader
-            theme={theme}
             question={dashboardItem.question}
           />
         ) : (
