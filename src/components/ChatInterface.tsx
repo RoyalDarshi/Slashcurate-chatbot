@@ -378,6 +378,31 @@ const ChatInterface = memo(
             }
           }
 
+          // 1. OPTIMISTIC UPDATE: Create temporary IDs
+          const tempUserMsgId = `temp-user-${Date.now()}`;
+          const tempBotMsgId = `temp-bot-${Date.now() + 1}`;
+
+          // Prepare Optimistic Messages
+          const optimisticUserMessage: Message = {
+            id: tempUserMsgId,
+            content: question,
+            isBot: false,
+            timestamp: new Date().toISOString(),
+            isFavorited,
+            parentId: null,
+            status: "normal",
+          };
+
+          const optimisticBotMessage: Message = {
+            id: tempBotMsgId,
+            isBot: true,
+            content: "loading...",
+            timestamp: new Date().toISOString(),
+            isFavorited: false,
+            parentId: tempUserMsgId,
+            status: "loading",
+          };
+
           if (!currentSessionId) {
             try {
               const response = await axios.post(
@@ -394,7 +419,7 @@ const ChatInterface = memo(
               dispatchMessages({
                 type: "SET_SESSION",
                 sessionId: currentSessionId || "",
-                messages: [],
+                messages: [optimisticUserMessage, optimisticBotMessage],
                 connection: connection,
               });
             } catch (error) {
@@ -402,36 +427,14 @@ const ChatInterface = memo(
               setIsSubmitting(false); // Release lock on error
               return;
             }
+          } else {
+            // 2. Add User message to UI IMMEDIATELY (Before API call)
+            dispatchMessages({ type: "ADD_MESSAGE", message: optimisticUserMessage });
+
+            // 3. Add Bot "Loading" message to UI IMMEDIATELY
+            dispatchMessages({ type: "ADD_MESSAGE", message: optimisticBotMessage });
           }
           // END VALIDATION BLOCK
-
-          // 1. OPTIMISTIC UPDATE: Create temporary IDs
-          const tempUserMsgId = `temp-user-${Date.now()}`;
-          const tempBotMsgId = `temp-bot-${Date.now() + 1}`;
-
-          // 2. Add User message to UI IMMEDIATELY (Before API call)
-          const optimisticUserMessage: Message = {
-            id: tempUserMsgId,
-            content: question,
-            isBot: false,
-            timestamp: new Date().toISOString(),
-            isFavorited,
-            parentId: null,
-            status: "normal",
-          };
-          dispatchMessages({ type: "ADD_MESSAGE", message: optimisticUserMessage });
-
-          // 3. Add Bot "Loading" message to UI IMMEDIATELY
-          const optimisticBotMessage: Message = {
-            id: tempBotMsgId,
-            isBot: true,
-            content: "loading...",
-            timestamp: new Date().toISOString(),
-            isFavorited: false,
-            parentId: tempUserMsgId,
-            status: "loading",
-          };
-          dispatchMessages({ type: "ADD_MESSAGE", message: optimisticBotMessage });
 
           // Scroll to bottom
           setTimeout(() => scrollToMessage(tempBotMsgId), 100);
@@ -650,7 +653,7 @@ const ChatInterface = memo(
         } else if (sessionId) {
           clearSession();
         }
-      }, [loadSession, token, clearSession, sessionId]);
+      }, [loadSession, token, clearSession]);
 
       useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
