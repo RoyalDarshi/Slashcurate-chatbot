@@ -348,23 +348,30 @@ const DashboardInterface = memo(
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
       useEffect(() => {
-        const loadingMessages = messages.filter(
-          (msg) =>
-            msg.isBot &&
-            msg.status === "loading" &&
-            msg.id.includes("-") &&
-            !msg.id.startsWith("temp-")
+        const allLoadingMessages = messages.filter(
+          (msg) => msg.isBot && msg.status === "loading"
         );
-        if (loadingMessages.length === 0) {
+
+        if (allLoadingMessages.length === 0) {
           setIsSubmitting(false);
           return;
         }
         setIsSubmitting(true);
 
+        const messagesToPoll = allLoadingMessages.filter(
+          (msg) =>
+            msg.id.includes("-") &&
+            !msg.id.startsWith("temp-")
+        );
+
+        if (messagesToPoll.length === 0) {
+          return;
+        }
+
         // Create an async function inside the useEffect
         const pollMessages = async () => {
           try {
-            for (const msg of loadingMessages) {
+            for (const msg of messagesToPoll) {
               const response = await axios.post(
                 `${API_URL}/api/getmessages/${msg.id}`,
                 { token },
@@ -669,6 +676,8 @@ const DashboardInterface = memo(
             return;
           }
 
+          setIsSubmitting(true);
+
           // 2. Generate Temporary IDs for Optimistic UI
           const tempUserMsgId = `temp-user-${Date.now()}`;
           const tempBotMsgId = `temp-bot-${Date.now()}`;
@@ -747,6 +756,17 @@ const DashboardInterface = memo(
                     : item
                 )
               );
+              dispatchMessages({
+                type: "UPDATE_MESSAGE",
+                id: tempBotMsgId,
+                message: {
+                  content: "This session does not have a valid connection.",
+                  timestamp: new Date().toISOString(),
+                  status: "error",
+                  reaction: null,
+                  dislike_reason: null,
+                },
+              });
               setIsSubmitting(false);
               return;
             }
@@ -776,7 +796,26 @@ const DashboardInterface = memo(
                 dispatchMessages({
                   type: "SET_SESSION",
                   sessionId: currentSessionId || "",
-                  messages: [], // We will re-add our optimistic messages via local state if needed, but usually we just keep appending
+                  messages: [
+                    {
+                      id: tempUserMsgId,
+                      content: question,
+                      isBot: false,
+                      timestamp: new Date().toISOString(),
+                      isFavorited: false,
+                      parentId: null,
+                      status: "normal",
+                    },
+                    {
+                      id: tempBotMsgId,
+                      isBot: true,
+                      content: "loading...",
+                      timestamp: new Date().toISOString(),
+                      isFavorited: false,
+                      parentId: tempUserMsgId,
+                      status: "loading",
+                    },
+                  ],
                   connection: connection,
                 });
               } catch (error) {
