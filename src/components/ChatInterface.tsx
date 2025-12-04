@@ -220,30 +220,37 @@ const ChatInterface = memo(
       );
 
       useEffect(() => {
-        const loadingMessages = messages.filter(
-          (msg) =>
-            msg.isBot &&
-            msg.status === "loading" &&
-            msg.id.includes("-") &&
-            !msg.id.startsWith("temp-")
-        );
-        if (loadingMessages.length === 0) {
-          setIsSubmitting(false);
-          return;
-        }
-        setIsSubmitting(true);
+        // Function to check loading status and poll
+        const checkAndPoll = async () => {
+          const allLoadingMessages = messages.filter(
+            (msg) => msg.isBot && msg.status === "loading"
+          );
 
-        // Define an async function inside useEffect
-        const pollMessages = async () => {
+          if (allLoadingMessages.length === 0) {
+            setIsSubmitting(false);
+            return;
+          }
+          setIsSubmitting(true);
+
+          const messagesToPoll = allLoadingMessages.filter(
+            (msg) =>
+              msg.id.includes("-") &&
+              !msg.id.startsWith("temp-")
+          );
+
+          if (messagesToPoll.length === 0) {
+            return;
+          }
+
           try {
-            for (const msg of loadingMessages) {
+            for (const msg of messagesToPoll) {
               const response = await axios.post(
                 `${API_URL}/api/getmessages/${msg.id}`,
                 { token },
                 { headers: { Authorization: `Bearer ${token}` } }
               );
+
               if (response.data.status !== "loading") {
-                setIsSubmitting(false);
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
                   id: msg.id,
@@ -256,13 +263,19 @@ const ChatInterface = memo(
               }
             }
           } catch (error) {
-            setIsSubmitting(false);
+            // Don't set isSubmitting to false here, let the next poll cycle handle it
             console.error("Error polling message updates:", error);
           }
         };
 
-        // Call the async function
-        pollMessages();
+        // Initial check
+        checkAndPoll();
+
+        // Set up interval
+        const intervalId = setInterval(checkAndPoll, 3000);
+
+        // Cleanup
+        return () => clearInterval(intervalId);
       }, [messages, token, dispatchMessages]);
 
       useEffect(() => {
