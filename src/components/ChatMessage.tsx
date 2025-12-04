@@ -750,7 +750,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 className="absolute -right-12 top-0 flex flex-col items-center"
                 style={{ gap: theme.spacing.sm }}
               >
-                {currentView === "error" && !disabled && message.parentId && (
+                {currentView === "error" && !disabled && !isSubmitting && message.parentId && (
                   <CustomTooltip title="Retry" position="top">
                     <motion.button
                       whileHover={{ scale: 1.1 }}
