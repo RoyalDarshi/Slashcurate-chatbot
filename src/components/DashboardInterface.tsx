@@ -348,28 +348,28 @@ const DashboardInterface = memo(
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
       useEffect(() => {
-        const allLoadingMessages = messages.filter(
-          (msg) => msg.isBot && msg.status === "loading"
-        );
+        // Function to check loading status and poll
+        const checkAndPoll = async () => {
+          const allLoadingMessages = messages.filter(
+            (msg) => msg.isBot && msg.status === "loading"
+          );
 
-        if (allLoadingMessages.length === 0) {
-          setIsSubmitting(false);
-          return;
-        }
-        setIsSubmitting(true);
+          if (allLoadingMessages.length === 0) {
+            setIsSubmitting(false);
+            return;
+          }
+          setIsSubmitting(true);
 
-        const messagesToPoll = allLoadingMessages.filter(
-          (msg) =>
-            msg.id.includes("-") &&
-            !msg.id.startsWith("temp-")
-        );
+          const messagesToPoll = allLoadingMessages.filter(
+            (msg) =>
+              msg.id.includes("-") &&
+              !msg.id.startsWith("temp-")
+          );
 
-        if (messagesToPoll.length === 0) {
-          return;
-        }
+          if (messagesToPoll.length === 0) {
+            return;
+          }
 
-        // Create an async function inside the useEffect
-        const pollMessages = async () => {
           try {
             for (const msg of messagesToPoll) {
               const response = await axios.post(
@@ -377,8 +377,8 @@ const DashboardInterface = memo(
                 { token },
                 { headers: { Authorization: `Bearer ${token}` } }
               );
+
               if (response.data.status !== "loading") {
-                // <-- MODIFIED
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
                   id: msg.id,
@@ -387,15 +387,15 @@ const DashboardInterface = memo(
                     timestamp: response.data.timestamp,
                     reaction: sanitizeReaction(response.data.reaction),
                     dislike_reason: response.data.dislike_reason ?? null,
-                    status: response.data.status, // <-- ADDED
+                    status: response.data.status,
                   },
                 });
+
                 // Update dashboardHistory based on the new bot content
                 setDashboardHistory((prev) =>
                   prev.map((item) => {
                     if (item.botResponseId === msg.id) {
                       if (response.data.status === "error") {
-                        // <-- MODIFIED
                         return {
                           ...item,
                           ...getDashboardErrorState(
@@ -405,7 +405,6 @@ const DashboardInterface = memo(
                           isError: true,
                         };
                       } else {
-                        // Assumes "normal"
                         try {
                           const botResponseContent = JSON.parse(
                             response.data.content
@@ -456,13 +455,20 @@ const DashboardInterface = memo(
               }
             }
           } catch (error) {
-            setIsSubmitting(false);
+            // Don't set isSubmitting to false here, let the next poll cycle handle it
+            // or let the user manually refresh if it's a persistent network error
             console.error("Error polling message updates:", error);
           }
         };
 
-        // Call the async function
-        pollMessages();
+        // Initial check
+        checkAndPoll();
+
+        // Set up interval
+        const intervalId = setInterval(checkAndPoll, 3000);
+
+        // Cleanup
+        return () => clearInterval(intervalId);
       }, [messages, token, dispatchMessages]);
 
       useEffect(() => {
