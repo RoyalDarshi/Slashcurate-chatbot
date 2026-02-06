@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Message } from "../types";
 import {
@@ -38,7 +37,7 @@ interface Session {
   connection: string;
   title: string;
   messageCount?: number; // Added
-  preview?: string;      // Added
+  preview?: string; // Added
 }
 
 interface HistoryProps {
@@ -55,7 +54,9 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
   const [editingTitle, setEditingTitle] = useState<string>("");
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
+  const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(
+    null
+  );
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const token = sessionStorage.getItem("token") ?? "";
@@ -96,7 +97,6 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
       const fetchedSessions = response.data;
       // We no longer need to map empty messages array manually or client-side filter
       setSessions(fetchedSessions);
-
     } catch (error) {
       console.error("Failed to load sessions from server", error);
       toast.error("Failed to load chat history.", {
@@ -123,7 +123,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
         },
       });
       // Remove locally
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
 
       if (localStorage.getItem("currentSessionId") === sessionId) {
         localStorage.removeItem("currentSessionId");
@@ -145,7 +145,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
     }
   };
 
-  // ... startEditing, saveTitle, cancelEditing remain mostly the same, 
+  // ... startEditing, saveTitle, cancelEditing remain mostly the same,
   // just update 'sessions' state directly instead of filteredSessions
 
   const startEditing = (session: Session, e: React.MouseEvent) => {
@@ -165,7 +165,11 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: editingTitle } : s));
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId ? { ...s, title: editingTitle } : s
+        )
+      );
       setEditingSessionId(null);
       toast.success("Title updated successfully.", {
         style: {
@@ -232,29 +236,61 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
     const isYesterday = date.toDateString() === yesterday.toDateString();
 
     if (isToday) {
-      return `Today at ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      return `Today at ${date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
     } else if (isYesterday) {
-      return `Yesterday at ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      return `Yesterday at ${date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
     } else {
       return (
-        date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) +
-        ` at ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+        date.toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }) +
+        ` at ${date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`
       );
     }
   };
 
   const filters = [
     { id: "today", label: "Today", icon: <Clock className="w-4 h-4" /> },
-    { id: "yesterday", label: "Yesterday", icon: <Clock className="w-4 h-4" /> },
-    { id: "last7days", label: "Last 7 Days", icon: <CalendarDays className="w-4 h-4" /> },
-    { id: "last1month", label: "Last Month", icon: <CalendarDays className="w-4 h-4" /> },
-    { id: "all", label: "All Chats", icon: <MessageSquare className="w-4 h-4" /> },
+    {
+      id: "yesterday",
+      label: "Yesterday",
+      icon: <Clock className="w-4 h-4" />,
+    },
+    {
+      id: "last7days",
+      label: "Last 7 Days",
+      icon: <CalendarDays className="w-4 h-4" />,
+    },
+    {
+      id: "last1month",
+      label: "Last Month",
+      icon: <CalendarDays className="w-4 h-4" />,
+    },
+    {
+      id: "all",
+      label: "All Chats",
+      icon: <MessageSquare className="w-4 h-4" />,
+    },
   ];
 
   // Animation variants remain the same...
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.5, staggerChildren: 0.1 } },
+    visible: {
+      opacity: 1,
+      transition: { duration: 0.5, staggerChildren: 0.1 },
+    },
   };
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -293,9 +329,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
               className="w-6 h-6"
               style={{ color: theme.colors.accent }}
             />
-            <span className="flex items-center pb-2">
-              Chat History
-            </span>
+            <span className="flex items-center pb-2">Chat History</span>
             <span
               className="text-sm font-semibold flex items-center justify-center rounded-full min-w-[24px] h-[24px] leading-none"
               style={{
@@ -323,7 +357,10 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                 boxShadow: theme.shadow.sm,
               }}
             />
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.colors.textSecondary }} />
+            <Search
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+              style={{ color: theme.colors.textSecondary }}
+            />
             {searchTerm && (
               <button
                 onClick={hanleClearSearch}
@@ -345,14 +382,29 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
               whileTap="tap"
               className="px-4 py-2 text-sm transition-all flex items-center gap-2"
               style={{
-                background: activeFilter === filter.id ? theme.colors.accent : theme.colors.surface,
+                background:
+                  activeFilter === filter.id
+                    ? theme.colors.accent
+                    : theme.colors.surface,
                 color: activeFilter === filter.id ? "white" : theme.colors.text,
-                border: `1px solid ${activeFilter === filter.id ? theme.colors.accent : theme.colors.border}`,
+                border: `1px solid ${
+                  activeFilter === filter.id
+                    ? theme.colors.accent
+                    : theme.colors.border
+                }`,
                 borderRadius: theme.borderRadius.pill,
-                boxShadow: activeFilter === filter.id ? theme.shadow.md : theme.shadow.sm,
+                boxShadow:
+                  activeFilter === filter.id
+                    ? theme.shadow.md
+                    : theme.shadow.sm,
               }}
             >
-              <span style={{ color: activeFilter === filter.id ? "white" : theme.colors.accent }}>
+              <span
+                style={{
+                  color:
+                    activeFilter === filter.id ? "white" : theme.colors.accent,
+                }}
+              >
                 {filter.icon}
               </span>
               {filter.label}
@@ -369,7 +421,10 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
             <div className="flex flex-col items-center">
               <div
                 className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin"
-                style={{ borderColor: `${theme.colors.accent}30`, borderTopColor: "transparent" }}
+                style={{
+                  borderColor: `${theme.colors.accent}30`,
+                  borderTopColor: "transparent",
+                }}
               />
               <p className="mt-4" style={{ color: theme.colors.textSecondary }}>
                 Loading conversations...
@@ -391,17 +446,27 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                     key={session.id}
                     variants={itemVariants}
                     initial="hidden"
-                    animate={selectedSession === session.id ? "selected" : "visible"}
+                    animate={
+                      selectedSession === session.id ? "selected" : "visible"
+                    }
                     exit="exit"
                     onClick={() => handleSessionClick(session)}
                     className="mb-4 p-4 rounded-lg overflow-hidden cursor-pointer group"
                     style={{
-                      background: session.id === currentSessionId
-                        ? `linear-gradient(135deg, ${theme.colors.surface}, ${theme.colors.accent}10)`
-                        : theme.colors.surface,
-                      border: `1px solid ${session.id === currentSessionId ? theme.colors.accent + "40" : theme.colors.border}`,
+                      background:
+                        session.id === currentSessionId
+                          ? `linear-gradient(135deg, ${theme.colors.surface}, ${theme.colors.accent}10)`
+                          : theme.colors.surface,
+                      border: `1px solid ${
+                        session.id === currentSessionId
+                          ? theme.colors.accent + "40"
+                          : theme.colors.border
+                      }`,
                       borderRadius: theme.borderRadius.default,
-                      boxShadow: session.id === currentSessionId ? theme.shadow.md : theme.shadow.sm,
+                      boxShadow:
+                        session.id === currentSessionId
+                          ? theme.shadow.md
+                          : theme.shadow.sm,
                     }}
                   >
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
@@ -428,8 +493,18 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                               }}
                             />
                             {/* Save/Cancel buttons... same as original code */}
-                            <motion.button onClick={(e) => saveTitle(session.id, e)} className="p-2 rounded-full bg-green-500 text-white"><Check size={16} /></motion.button>
-                            <motion.button onClick={cancelEditing} className="p-2 rounded-full bg-gray-500 text-white"><X size={16} /></motion.button>
+                            <motion.button
+                              onClick={(e) => saveTitle(session.id, e)}
+                              className="p-2 rounded-full bg-green-500 text-white"
+                            >
+                              <Check size={16} />
+                            </motion.button>
+                            <motion.button
+                              onClick={cancelEditing}
+                              className="p-2 rounded-full bg-gray-500 text-white"
+                            >
+                              <X size={16} />
+                            </motion.button>
                           </div>
                         ) : (
                           <>
@@ -443,7 +518,10 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                               {session.id === currentSessionId && (
                                 <span
                                   className="text-xs px-2 py-1 rounded-full"
-                                  style={{ background: theme.colors.accent, color: "white" }}
+                                  style={{
+                                    background: theme.colors.accent,
+                                    color: "white",
+                                  }}
                                 >
                                   Active
                                 </span>
@@ -459,8 +537,14 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                             </p>
 
                             <div className="flex items-center gap-2">
-                              <Clock className="w-3 h-3" style={{ color: theme.colors.textSecondary }} />
-                              <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                              <Clock
+                                className="w-3 h-3"
+                                style={{ color: theme.colors.textSecondary }}
+                              />
+                              <p
+                                className="text-xs"
+                                style={{ color: theme.colors.textSecondary }}
+                              >
                                 {formatTimestamp(session.timestamp)}
                               </p>
                             </div>
@@ -479,7 +563,7 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                           >
                             {/* Compute a safe count (defaults to 0) */}
                             {(() => {
-                              const count = (session?.messageCount ?? 0) / 2;   // <-- default to 0 first
+                              const count = (session?.messageCount ?? 0) / 2; // <-- default to 0 first
                               return (
                                 <>
                                   {count} {count === 1 ? "chat" : "chats"}
@@ -495,7 +579,10 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                               whileTap="tap"
                               onClick={(e) => startEditing(session, e)}
                               className="p-1 rounded-full"
-                              style={{ color: theme.colors.textSecondary, background: theme.colors.surface + "80" }}
+                              style={{
+                                color: theme.colors.textSecondary,
+                                background: theme.colors.surface + "80",
+                              }}
                             >
                               <Pencil className="h-4 w-4" />
                             </motion.button>
@@ -508,10 +595,13 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                               whileTap="tap"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setShowConfirmDelete(session.id);
+                                deleteSession(session.id);
                               }}
                               className="p-1 rounded-full"
-                              style={{ color: theme.colors.error, background: theme.colors.surface + "80" }}
+                              style={{
+                                color: theme.colors.error,
+                                background: theme.colors.surface + "80",
+                              }}
                             >
                               <Trash2 className="h-4 w-4" />
                             </motion.button>
@@ -528,14 +618,32 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           className="absolute inset-0 flex items-center justify-center z-10 p-2"
-                          style={{ background: theme.colors.surface + "E0", backdropFilter: "blur(4px)" }}
+                          style={{
+                            background: theme.colors.surface + "E0",
+                            backdropFilter: "blur(4px)",
+                          }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="text-center">
-                            <p className="mb-2 text-sm font-bold" style={{ color: theme.colors.text }}>Delete?</p>
+                            <p
+                              className="mb-2 text-sm font-bold"
+                              style={{ color: theme.colors.text }}
+                            >
+                              Delete?
+                            </p>
                             <div className="flex gap-2 justify-center">
-                              <button onClick={() => deleteSession(session.id)} className="px-3 py-1 bg-red-500 text-white rounded text-xs">Yes</button>
-                              <button onClick={() => setShowConfirmDelete(null)} className="px-3 py-1 bg-gray-500 text-white rounded text-xs">No</button>
+                              <button
+                                onClick={() => deleteSession(session.id)}
+                                className="px-3 py-1 bg-red-500 text-white rounded text-xs"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setShowConfirmDelete(null)}
+                                className="px-3 py-1 bg-gray-500 text-white rounded text-xs"
+                              >
+                                No
+                              </button>
                             </div>
                           </div>
                         </motion.div>
@@ -563,10 +671,16 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
                     border: `1px solid ${theme.colors.border}`,
                   }}
                 >
-                  <MessageSquare size={40} className="mx-auto mb-3" style={{ color: theme.colors.accent + "50" }} />
+                  <MessageSquare
+                    size={40}
+                    className="mx-auto mb-3"
+                    style={{ color: theme.colors.accent + "50" }}
+                  />
                   <h3 className="font-medium mb-2">No sessions found</h3>
                   <p className="text-sm">
-                    {searchTerm ? "No matches in this tab." : "No history for this time period."}
+                    {searchTerm
+                      ? "No matches in this tab."
+                      : "No history for this time period."}
                   </p>
                 </motion.div>
               )}
@@ -574,10 +688,21 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
           </motion.div>
         )}
         <style jsx global>{`
-          .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-          .custom-scrollbar::-webkit-scrollbar-track { background: ${theme.colors.background}80; border-radius: 8px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb { background: ${theme.colors.accent}30; border-radius: 8px; transition: all 0.3s ease; }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: ${theme.colors.accent}50; }
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: ${theme.colors.background}80;
+            border-radius: 8px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: ${theme.colors.accent}30;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: ${theme.colors.accent}50;
+          }
         `}</style>
       </motion.div>
     </div>
