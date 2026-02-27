@@ -9,14 +9,14 @@ interface DynamicGraphProps {
   data: any[];
   isValidGraph: (validData: boolean) => void;
   chartType:
-  | "bar"
-  | "line"
-  | "pie"
-  | "area"
-  | "scatter"
-  | "radar"
-  | "funnel"
-  | "treemap";
+    | "bar"
+    | "line"
+    | "pie"
+    | "area"
+    | "scatter"
+    | "radar"
+    | "funnel"
+    | "treemap";
   groupBy: string | null;
   aggregate: "sum" | "count" | "avg" | "min" | "max" | null;
   valueKey: string | null;
@@ -28,15 +28,15 @@ const hexToRgba = (hex: string, alpha: number = 1): string => {
   hex = hex.replace("#", "");
   const r = parseInt(
     hex.length === 3 ? hex.slice(0, 1).repeat(2) : hex.slice(0, 2),
-    16
+    16,
   );
   const g = parseInt(
     hex.length === 3 ? hex.slice(1, 2).repeat(2) : hex.slice(2, 4),
-    16
+    16,
   );
   const b = parseInt(
     hex.length === 3 ? hex.slice(2, 3).repeat(2) : hex.slice(4, 6),
-    16
+    16,
   );
   return `rgba(${r},${g},${b},${alpha})`;
 };
@@ -67,7 +67,9 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     const [yKeys, setYKeys] = useState<string[]>([]);
     const [isValidGraphData, setIsValidGraphData] = useState<boolean>(true);
     const containerRef = useRef<HTMLDivElement>(null);
-    const isVertical = ["bar", "line", "area"].includes(chartType) ? propIsVertical : true;
+    const isVertical = ["bar", "line", "area"].includes(chartType)
+      ? propIsVertical
+      : true;
 
     // Resize observer for container
     useEffect(() => {
@@ -111,7 +113,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
       // Find string keys for grouping and indexing
       let stringKeys = keys.filter(
-        (k) => typeof sample[k] === "string" && k !== effectiveValueKey
+        (k) => typeof sample[k] === "string" && k !== effectiveValueKey,
       );
 
       if (stringKeys.length === 0) {
@@ -144,7 +146,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         "transformDynamicData - indexByKey:",
         indexByKey,
         "effectiveGroupBy:",
-        effectiveGroupBy
+        effectiveGroupBy,
       );
 
       if (!indexByKey) {
@@ -339,7 +341,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               const value =
                 chartType === "radar" ? item.values[key] : item[key];
               return !isNaN(Number(value)) && Number(value) !== 0;
-            })
+            }),
           );
 
           if (!hasValidNumericData) {
@@ -440,20 +442,20 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               chartType === "line" || chartType === "area" ? "line" : "shadow",
             shadowStyle:
               chartType !== "line" &&
-                chartType !== "area" &&
-                chartType !== "scatter"
+              chartType !== "area" &&
+              chartType !== "scatter"
                 ? {
-                  color: `${theme.colors.accent}1A`,
-                  borderColor: `${theme.colors.accent}4D`,
-                  borderWidth: 2,
-                }
+                    color: `${theme.colors.accent}1A`,
+                    borderColor: `${theme.colors.accent}4D`,
+                    borderWidth: 2,
+                  }
                 : undefined,
             lineStyle:
               chartType === "line" || chartType === "area"
                 ? {
-                  color: `${theme.colors.accent}4D`,
-                  width: 2,
-                }
+                    color: `${theme.colors.accent}4D`,
+                    width: 2,
+                  }
                 : undefined,
           },
           backgroundColor: "transparent",
@@ -464,7 +466,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             if (!params) return "";
             let payload = Array.isArray(params) ? params : [params];
             payload = payload.filter(
-              (p: any) => p.value !== 0 && p.value !== undefined
+              (p: any) => p.value !== 0 && p.value !== undefined,
             );
 
             if (payload.length === 0) return "";
@@ -473,7 +475,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 ? payload[0].name
                 : isVertical
                   ? payload[0].axisValue
-                  : payload[0].name || payload[0].axisValue
+                  : payload[0].name || payload[0].axisValue,
             );
             let html = `
               <div style="
@@ -523,7 +525,10 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                   // Display all indicators for this radar series
                   entry.value.forEach((val: any, idx: number) => {
                     const indicatorName = yKeys[idx] || `Indicator ${idx + 1}`;
-                    const indicatorValue = !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+                    const indicatorValue =
+                      !isNaN(Number(val)) && val !== null && val !== undefined
+                        ? Number(val)
+                        : 0;
 
                     html += `
                       <div style="
@@ -571,7 +576,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               }
 
               // Ensure value is a valid number
-              if (value === null || value === undefined || isNaN(Number(value))) {
+              if (
+                value === null ||
+                value === undefined ||
+                isNaN(Number(value))
+              ) {
                 value = 0;
               }
               html += `
@@ -579,8 +588,9 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                   display: flex;
                   align-items: center;
                   justify-content: space-between;
-                  margin-bottom: ${index < payload.length - 1 ? theme.spacing.md : 0
-                };
+                  margin-bottom: ${
+                    index < payload.length - 1 ? theme.spacing.md : 0
+                  };
                   padding: ${theme.spacing.md};
                   border-radius: ${theme.borderRadius.default};
                   background: ${entry.color}15;
@@ -621,21 +631,21 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         },
         legend: showLegend
           ? {
-            orient: "horizontal",
-            left: "center",
-            bottom: "1%",
-            textStyle: {
-              fontSize: 12,
-              fontFamily: theme.typography.fontFamily,
-              fontWeight: theme.typography.weight.medium,
-              color: theme.colors.text,
-            },
-            icon: "circle",
-            itemWidth: 12,
-            itemHeight: 12,
-            itemGap: 16,
-            formatter: (name: string) => formatKey(name),
-          }
+              orient: "horizontal",
+              left: "center",
+              bottom: "1%",
+              textStyle: {
+                fontSize: 12,
+                fontFamily: theme.typography.fontFamily,
+                fontWeight: theme.typography.weight.medium,
+                color: theme.colors.text,
+              },
+              icon: "circle",
+              itemWidth: 12,
+              itemHeight: 12,
+              itemGap: 16,
+              formatter: (name: string) => formatKey(name),
+            }
           : { show: false },
       };
 
@@ -647,70 +657,70 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         const seriesConfig =
           chartType === "pie"
             ? {
-              name: "Pie",
-              type: "pie",
-              radius: ["42%", "70%"],
-              center: ["50%", "50%"],
-              label: {
-                show: true,
-                formatter: "{b}: {d}%",
-                fontSize: 12,
-                fontWeight: theme.typography.weight.medium,
-                fontFamily: theme.typography.fontFamily,
-                color: theme.colors.textSecondary,
-              },
-              labelLine: { show: true, length: 10, length2: 8 },
-            }
+                name: "Pie",
+                type: "pie",
+                radius: ["42%", "70%"],
+                center: ["50%", "50%"],
+                label: {
+                  show: true,
+                  formatter: "{b}: {d}%",
+                  fontSize: 12,
+                  fontWeight: theme.typography.weight.medium,
+                  fontFamily: theme.typography.fontFamily,
+                  color: theme.colors.textSecondary,
+                },
+                labelLine: { show: true, length: 10, length2: 8 },
+              }
             : chartType === "funnel"
               ? {
-                name: "Funnel",
-                type: "funnel",
-                left: "5%",
-                top: "5%",
-                bottom: showLegend ? "15%" : "5%",
-                width: "90%",
-                min: 0,
-                max: Math.max(...graphData.map((d) => d.value)),
-                minSize: "0%",
-                maxSize: "100%",
-                sort: "descending",
-                gap: 2,
-                label: {
-                  show: true,
-                  position: "inside",
-                  formatter: "{b}",
-                  fontSize: 12,
-                  fontWeight: theme.typography.weight.medium,
-                  fontFamily: theme.typography.fontFamily,
-                  color: "#fff",
-                },
-              }
-              : {
-                name: "Treemap",
-                type: "treemap",
-                left: "1%",
-                top: "1%",
-                right: "1%",
-                bottom: showLegend ? "12%" : "1%",
-                leafDepth: 1,
-                levels: [
-                  {
-                    itemStyle: {
-                      borderColor: theme.colors.surface,
-                      borderWidth: 2,
-                      gapWidth: 2,
-                    },
+                  name: "Funnel",
+                  type: "funnel",
+                  left: "5%",
+                  top: "5%",
+                  bottom: showLegend ? "15%" : "5%",
+                  width: "90%",
+                  min: 0,
+                  max: Math.max(...graphData.map((d) => d.value)),
+                  minSize: "0%",
+                  maxSize: "100%",
+                  sort: "descending",
+                  gap: 2,
+                  label: {
+                    show: true,
+                    position: "inside",
+                    formatter: "{b}",
+                    fontSize: 12,
+                    fontWeight: theme.typography.weight.medium,
+                    fontFamily: theme.typography.fontFamily,
+                    color: "#fff",
                   },
-                ],
-                label: {
-                  show: true,
-                  formatter: "{b}: {c}",
-                  fontSize: 12,
-                  fontWeight: theme.typography.weight.medium,
-                  fontFamily: theme.typography.fontFamily,
-                  color: "#ffffff",
-                },
-              };
+                }
+              : {
+                  name: "Treemap",
+                  type: "treemap",
+                  left: "1%",
+                  top: "1%",
+                  right: "1%",
+                  bottom: showLegend ? "12%" : "1%",
+                  leafDepth: 1,
+                  levels: [
+                    {
+                      itemStyle: {
+                        borderColor: theme.colors.surface,
+                        borderWidth: 2,
+                        gapWidth: 2,
+                      },
+                    },
+                  ],
+                  label: {
+                    show: true,
+                    formatter: "{b}: {c}",
+                    fontSize: 12,
+                    fontWeight: theme.typography.weight.medium,
+                    fontFamily: theme.typography.fontFamily,
+                    color: "#ffffff",
+                  },
+                };
 
         return {
           ...baseOption,
@@ -732,9 +742,9 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         const maxValues = yKeys.map((key) => {
           return Math.max(
             ...graphData.map((d) =>
-              Number(d.values && d.values[key] ? d.values[key] : 0)
+              Number(d.values && d.values[key] ? d.values[key] : 0),
             ),
-            1 // Ensure minimum max value
+            1, // Ensure minimum max value
           );
         });
         const maxValue = Math.max(...maxValues, 10); // Minimum max for visibility
@@ -775,7 +785,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               data: graphData.map((d) => ({
                 value: yKeys.map((key) => {
                   const val = d.values && d.values[key] ? d.values[key] : 0;
-                  return !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+                  return !isNaN(Number(val)) &&
+                    val !== null &&
+                    val !== undefined
+                    ? Number(val)
+                    : 0;
                 }),
                 name: formatKey(d[xKey]),
               })),
@@ -795,12 +809,12 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         type: isVertical ? "category" : "value",
         data: isVertical
           ? graphData.map((d) => {
-            const value = d[xKey];
-            const formattedValue = formatKey(value);
-            return formattedValue.length > 14
-              ? formattedValue.slice(0, 12) + "…"
-              : formattedValue;
-          })
+              const value = d[xKey];
+              const formattedValue = formatKey(value);
+              return formattedValue.length > 14
+                ? formattedValue.slice(0, 12) + "…"
+                : formattedValue;
+            })
           : undefined,
         axisTick: { show: false },
         axisLine: {
@@ -824,12 +838,12 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         type: isVertical ? "value" : "category",
         data: !isVertical
           ? graphData.map((d) => {
-            const value = d[xKey];
-            const formattedValue = formatKey(value);
-            return formattedValue.length > 14
-              ? formattedValue.slice(0, 12) + "…"
-              : formattedValue;
-          })
+              const value = d[xKey];
+              const formattedValue = formatKey(value);
+              return formattedValue.length > 14
+                ? formattedValue.slice(0, 12) + "…"
+                : formattedValue;
+            })
           : undefined,
         axisTick: { show: false },
         axisLine: {
@@ -864,55 +878,61 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           top: "2%",
           containLabel: true,
         },
-        xAxis: chartType !== "scatter" ? xAxisConfig : {
-          type: "category",
-          data: graphData.map((d) => {
-            const value = d[xKey];
-            const formattedValue = formatKey(value);
-            return formattedValue.length > 14
-              ? formattedValue.slice(0, 12) + "…"
-              : formattedValue;
-          }),
-          axisTick: { show: false },
-          axisLine: {
-            lineStyle: {
-              color: `${theme.colors.accent}4D`,
-              width: 2,
-            },
-          },
-          axisLabel: {
-            rotate: graphData.length > 8 ? 45 : 0,
-            align: graphData.length > 8 ? "right" : "center",
-            fontSize: 12,
-            fontWeight: theme.typography.weight.medium,
-            fontFamily: theme.typography.fontFamily,
-            color: theme.colors.textSecondary,
-          },
-          splitLine: { show: false },
-        },
-        yAxis: chartType !== "scatter" ? yAxisConfig : {
-          type: "value",
-          axisTick: { show: false },
-          axisLine: {
-            lineStyle: {
-              color: `${theme.colors.accent}4D`,
-              width: 2,
-            },
-          },
-          axisLabel: {
-            fontSize: 12,
-            fontWeight: theme.typography.weight.medium,
-            fontFamily: theme.typography.fontFamily,
-            color: theme.colors.textSecondary,
-          },
-          splitLine: {
-            lineStyle: {
-              type: "dashed",
-              color: `${theme.colors.accent}33`,
-              opacity: 0.8,
-            },
-          },
-        },
+        xAxis:
+          chartType !== "scatter"
+            ? xAxisConfig
+            : {
+                type: "category",
+                data: graphData.map((d) => {
+                  const value = d[xKey];
+                  const formattedValue = formatKey(value);
+                  return formattedValue.length > 14
+                    ? formattedValue.slice(0, 12) + "…"
+                    : formattedValue;
+                }),
+                axisTick: { show: false },
+                axisLine: {
+                  lineStyle: {
+                    color: `${theme.colors.accent}4D`,
+                    width: 2,
+                  },
+                },
+                axisLabel: {
+                  rotate: graphData.length > 8 ? 45 : 0,
+                  align: graphData.length > 8 ? "right" : "center",
+                  fontSize: 12,
+                  fontWeight: theme.typography.weight.medium,
+                  fontFamily: theme.typography.fontFamily,
+                  color: theme.colors.textSecondary,
+                },
+                splitLine: { show: false },
+              },
+        yAxis:
+          chartType !== "scatter"
+            ? yAxisConfig
+            : {
+                type: "value",
+                axisTick: { show: false },
+                axisLine: {
+                  lineStyle: {
+                    color: `${theme.colors.accent}4D`,
+                    width: 2,
+                  },
+                },
+                axisLabel: {
+                  fontSize: 12,
+                  fontWeight: theme.typography.weight.medium,
+                  fontFamily: theme.typography.fontFamily,
+                  color: theme.colors.textSecondary,
+                },
+                splitLine: {
+                  lineStyle: {
+                    type: "dashed",
+                    color: `${theme.colors.accent}33`,
+                    opacity: 0.8,
+                  },
+                },
+              },
         series: yKeys.map((key, keyIndex) => {
           const barCount = graphData.length;
           const isFewBars = chartType === "bar" && barCount <= 3;
@@ -924,7 +944,10 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               chartType === "bar" || chartType === "area" ? "a" : undefined,
             data: graphData.map((d) => {
               const val = d[key];
-              const numVal = !isNaN(Number(val)) && val !== null && val !== undefined ? Number(val) : 0;
+              const numVal =
+                !isNaN(Number(val)) && val !== null && val !== undefined
+                  ? Number(val)
+                  : 0;
               return numVal > 0 ? numVal : 0;
             }),
 
@@ -952,68 +975,68 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             areaStyle:
               chartType === "area"
                 ? {
-                  opacity: 0.3,
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    {
-                      offset: 0,
-                      color: hexToRgba(
-                        theme.colors.barColors[
-                        keyIndex % theme.colors.barColors.length
-                        ],
-                        0.7
-                      ),
-                    },
-                    {
-                      offset: 1,
-                      color: hexToRgba(
-                        theme.colors.barColors[
-                        keyIndex % theme.colors.barColors.length
-                        ],
-                        0.1
-                      ),
-                    },
-                  ]),
-                }
+                    opacity: 0.3,
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                      {
+                        offset: 0,
+                        color: hexToRgba(
+                          theme.colors.barColors[
+                            keyIndex % theme.colors.barColors.length
+                          ],
+                          0.7,
+                        ),
+                      },
+                      {
+                        offset: 1,
+                        color: hexToRgba(
+                          theme.colors.barColors[
+                            keyIndex % theme.colors.barColors.length
+                          ],
+                          0.1,
+                        ),
+                      },
+                    ]),
+                  }
                 : undefined,
             lineStyle:
               chartType === "line" || chartType === "area"
                 ? {
-                  width: 2,
-                }
+                    width: 2,
+                  }
                 : undefined,
             itemStyle:
               chartType === "line" ||
-                chartType === "area" ||
-                chartType === "scatter"
+              chartType === "area" ||
+              chartType === "scatter"
                 ? // ✅ Removed explicit color for markers, it will inherit from the global palette
-                {}
+                  {}
                 : (params: any) => {
-                  if (chartType !== "bar") return {};
-                  // ✅ Updated to use the color provided by ECharts in the params object
-                  const { dataIndex, color } = params;
-                  const payload = graphData[dataIndex];
-                  const topMostKey = [...yKeys]
-                    .reverse()
-                    .find((k) => Number(payload[k]) > 0);
-                  const isTopBar = key === topMostKey;
-                  const solidColor = color; // Use the ECharts-assigned color
-                  const radius = 6;
-                  return {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                      { offset: 0, color: hexToRgba(solidColor, 1) },
-                      { offset: 1, color: hexToRgba(solidColor, 0.7) },
-                    ]),
-                    borderColor: theme.colors.surfaceGlass,
-                    borderWidth: 1,
-                    borderRadius: isVertical
-                      ? isTopBar
-                        ? [radius, radius, 0, 0]
-                        : [0, 0, 0, 0]
-                      : isTopBar
-                        ? [0, radius, radius, 0]
-                        : [0, 0, 0, 0],
-                  };
-                },
+                    if (chartType !== "bar") return {};
+                    // ✅ Updated to use the color provided by ECharts in the params object
+                    const { dataIndex, color } = params;
+                    const payload = graphData[dataIndex];
+                    const topMostKey = [...yKeys]
+                      .reverse()
+                      .find((k) => Number(payload[k]) > 0);
+                    const isTopBar = key === topMostKey;
+                    const solidColor = color; // Use the ECharts-assigned color
+                    const radius = 6;
+                    return {
+                      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: hexToRgba(solidColor, 1) },
+                        { offset: 1, color: hexToRgba(solidColor, 0.7) },
+                      ]),
+                      borderColor: theme.colors.surfaceGlass,
+                      borderWidth: 1,
+                      borderRadius: isVertical
+                        ? isTopBar
+                          ? [radius, radius, 0, 0]
+                          : [0, 0, 0, 0]
+                        : isTopBar
+                          ? [0, radius, radius, 0]
+                          : [0, 0, 0, 0],
+                    };
+                  },
           };
           return seriesBase;
         }),
@@ -1022,7 +1045,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
     return (
       <div
-        className="flex flex-col"
+        className="flex flex-col w-full"
         style={{
           background: theme.colors.surface,
           backdropFilter: "blur(20px) saturate(180%)",
@@ -1031,7 +1054,11 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           transition: "all 0.4s ease",
         }}
       >
-        <div ref={containerRef} style={{ height: "65vh", width: "100%" }}>
+        {/* FIX: Replaced 65vh with a stable pixel height and minHeight to prevent 0-size collapse */}
+        <div
+          ref={containerRef}
+          style={{ height: "400px", minHeight: "350px", width: "100%" }}
+        >
           <div
             style={{
               height: "100%",
@@ -1045,6 +1072,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
               style={{ height: "100%", width: "100%" }}
               notMerge={true}
               lazyUpdate={true}
+              opts={{ renderer: "svg" }}
             />
           </div>
         </div>
@@ -1061,7 +1089,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
       prevProps.valueKey === nextProps.valueKey &&
       prevProps.isVertical === nextProps.isVertical
     );
-  }
+  },
 );
 
 export default DynamicGraph;
