@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import InputField from "./InputField"; // Assuming these are correctly implemented
-import PasswordField from "./PasswordField"; // Assuming these are correctly implemented
-import { API_URL } from "../config"; // Make sure this is correctly defined
-import { useTheme } from "../ThemeContext"; // Make sure this is correctly implemented
+import { useNavigate } from "react-router-dom"; // <-- ADDED IMPORT
+import InputField from "./InputField";
+import PasswordField from "./PasswordField";
+import { API_URL } from "../config";
+import { useTheme } from "../ThemeContext";
 
 interface LoginProps {
   onLoginSuccess: (token: string) => void;
@@ -21,8 +22,11 @@ const Login: React.FC<LoginProps> = ({
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
   const { theme } = useTheme();
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
+  
+  const navigate = useNavigate(); // <-- INITIALIZED HOOK
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -130,7 +134,7 @@ const Login: React.FC<LoginProps> = ({
               borderRadius: theme.borderRadius.default,
               focusRingColor: theme.colors.accent,
             }}
-            autoComplete="username" // Added autocomplete
+            autoComplete="username"
           />
         </div>
 
@@ -158,8 +162,8 @@ const Login: React.FC<LoginProps> = ({
               borderRadius: theme.borderRadius.default,
               focusRingColor: theme.colors.accent,
             }}
-            type="password" //redundant, but good to be explicit.
-            autoComplete="current-password" // Added autocomplete
+            type="password"
+            autoComplete="current-password"
           />
         </div>
 
@@ -182,13 +186,28 @@ const Login: React.FC<LoginProps> = ({
             !loading && (e.currentTarget.style.backgroundColor = "transparent")
           }
           disabled={loading}
-          title="Access your cosmic account" // Tooltip added
+          title="Access your cosmic account"
         >
           {loading ? "Processing..." : "Start Analyzing"}
         </button>
       </form>
 
-      {/* Links */}
+      {/* --- ADDED: Admin Login Link --- */}
+      <div className="flex flex-col items-center mt-6">
+        <button
+          type="button"
+          className="text-sm transition-all duration-200 hover:underline opacity-80 hover:opacity-100"
+          style={{ color: theme.colors.textSecondary }}
+          onClick={() => window.location.href = '/admin'}
+          disabled={loading}
+          title="Access the Admin Dashboard"
+        >
+          Are you an Admin? Login here
+        </button>
+      </div>
+      {/* ------------------------------- */}
+
+      {/* Links (Currently Commented Out) */}
       {/* <div className="flex flex-col items-center space-y-2 text-sm mt-4">
         <button
           type="button"
