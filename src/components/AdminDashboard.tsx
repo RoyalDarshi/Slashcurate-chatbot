@@ -4,8 +4,10 @@ import ConnectionForm from "./ConnectionForm";
 import LDAPForm from "./LDAPForm";
 import Setting from "./Settings";
 import ExistingConnections from "./ExistingConnections";
+import UserManagement from "./UserManagement"; // <-- Import the new component
 import { useTheme } from "../ThemeContext";
-import { Database, Key, Settings, LogOut, Link, Server } from "lucide-react";
+// <-- ADD 'User' to the lucide-react imports
+import { Database, Key, Settings, LogOut, Link, Server, User } from "lucide-react"; 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LDAPConfigDisplay from "./LDAPConfigDisplay";
@@ -32,7 +34,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     { id: "create-connection", label: "Create Connection", icon: Database },
     { id: "create-ldap", label: "Create LDAP Details", icon: Key },
     { id: "existing-connection", label: "Existing Connection", icon: Link },
-    // { id: "users", label: "Manage Users", icon: User },
+    { id: "users", label: "Manage Users", icon: User }, // <-- Uncommented this line
     { id: "ldap-config", label: "LDAP Config", icon: Server },
     { id: "settings", label: "Settings", icon: Settings },
     { id: "logout", label: "Logout", icon: LogOut },
@@ -109,16 +111,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         )}
         {activeMenu === "ldap-config" && <LDAPConfigDisplay />}
         {activeMenu === "users" && (
-          <div
-            className="p-6 rounded-lg shadow-md"
-            style={{
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-            }}
-          >
-            Manage Users (Placeholder)
-          </div>
+          <UserManagement token={token} />
         )}
+        
         {activeMenu === "settings" && <Setting />}
       </main>
     </div>
