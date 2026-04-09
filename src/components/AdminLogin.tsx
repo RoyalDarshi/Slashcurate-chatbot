@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useNavigate } from "react-router-dom";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
 import { useTheme } from "../ThemeContext";
@@ -16,6 +17,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,21 +45,23 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
       //   { email, password },
       //   { headers: { "Content-Type": "application/json" } }
       // );
-      const response = await loginAdmin(email, password)
+      const response = await loginAdmin(email, password);
 
-       if (response.status === 200 && response.data.token) {
+      if (response.status === 200 && response.data.token) {
         const token = response.data.token;
         sessionStorage.setItem("token", token); // Store token for ExistingConnections
         toast.success("Admin login successful!", { theme: mode });
         onLoginSuccess(token);
         setFormData({ email: "", password: "" }); // Clear form
       } else {
-        toast.error(`Error: ${response.data?.message || "Admin login failed"}`, {
-          theme: mode,
-        });
-      setLoading(false);
+        toast.error(
+          `Error: ${response.data?.message || "Admin login failed"}`,
+          {
+            theme: mode,
+          },
+        );
+        setLoading(false);
       }
-       
     } catch (error) {
       setLoading(false);
       const errorMsg =
@@ -219,6 +223,19 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
               {loading ? "Processing..." : "Start Managing"}
             </button>
           </form>
+
+          <div className="flex flex-col items-center mt-6">
+            <button
+              type="button"
+              className="text-sm transition-all duration-200 hover:underline opacity-80 hover:opacity-100"
+              style={{ color: theme.colors.textSecondary }}
+              onClick={() => navigate("/")} // Assuming you have a navigation function to switch to user login
+              disabled={loading}
+              title="Access the User Dashboard"
+            >
+              Are you an User? Login here
+            </button>
+          </div>
 
           {/* <div className="flex flex-col items-center space-y-2 text-sm mt-4">
             <button

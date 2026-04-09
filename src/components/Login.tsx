@@ -22,10 +22,10 @@ const Login: React.FC<LoginProps> = ({
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const { theme } = useTheme();
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
-  
+
   const navigate = useNavigate(); // <-- INITIALIZED HOOK
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,8 +50,8 @@ const Login: React.FC<LoginProps> = ({
       setLoading(true);
       const response = await axios.post(
         `${API_URL}/login/user`,
-        {email: username, password },
-        { headers: { "Content-Type": "application/json" } }
+        { email: username, password },
+        { headers: { "Content-Type": "application/json" } },
       );
       setLoading(false);
 
@@ -72,14 +72,14 @@ const Login: React.FC<LoginProps> = ({
       if (axios.isAxiosError(error)) {
         toast.error(
           `Error: ${error.response?.data?.message || error.message}`,
-          { theme: mode }
+          { theme: mode },
         );
       } else {
         toast.error(
           `Error: ${
             (error as Error).message || "An unexpected error occurred"
           }`,
-          { theme: mode }
+          { theme: mode },
         );
       }
     }
@@ -198,7 +198,7 @@ const Login: React.FC<LoginProps> = ({
           type="button"
           className="text-sm transition-all duration-200 hover:underline opacity-80 hover:opacity-100"
           style={{ color: theme.colors.textSecondary }}
-          onClick={() => window.location.href = '/admin'}
+          onClick={() => navigate("/admin")} // <-- NAVIGATE TO ADMIN LOGIN
           disabled={loading}
           title="Access the Admin Dashboard"
         >

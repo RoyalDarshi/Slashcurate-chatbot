@@ -171,7 +171,7 @@ const AppContent: React.FC<{
   dashboardRef: React.RefObject<DashboardInterfaceHandle>; // New prop for dashboard ref
   questionToAsk: { text: string; connection: string; query?: string } | null;
   setQuestionToAsk: (
-    question: { text: string; connection: string; query?: string } | null
+    question: { text: string; connection: string; query?: string } | null,
   ) => void;
   showTip: boolean;
   setShowTip: (show: boolean) => void;
