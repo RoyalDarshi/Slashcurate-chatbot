@@ -13,6 +13,7 @@ interface User {
   username: string;
   email: string;
   created_at: string;
+  allowed_to_create_connection?: boolean;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
@@ -23,7 +24,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
   // Form State
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ username: "", email: "", password: "" });
+  const [formData, setFormData] = useState({ username: "", email: "", password: "", allowedToCreateConnection: true });
 
   const fetchUsers = async () => {
     try {
@@ -98,10 +99,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
   const openModal = (user?: User) => {
     if (user) {
       setEditingId(user.id);
-      setFormData({ username: user.username, email: user.email, password: "" });
+      setFormData({ username: user.username, email: user.email, password: "", allowedToCreateConnection: user.allowed_to_create_connection ?? true });
     } else {
       setEditingId(null);
-      setFormData({ username: "", email: "", password: "" });
+      setFormData({ username: "", email: "", password: "", allowedToCreateConnection: true });
     }
     setShowModal(true);
   };
@@ -206,6 +207,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
                   className="w-full p-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }}
                 />
+              </div>
+
+              <div className="flex items-center gap-2 mt-4">
+                <input
+                  type="checkbox"
+                  id="allowedToCreateConnection"
+                  checked={formData.allowedToCreateConnection}
+                  onChange={(e) => setFormData({ ...formData, allowedToCreateConnection: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="allowedToCreateConnection" className="text-sm font-medium">
+                  Allowed to Create Connections
+                </label>
               </div>
               
               <div className="flex justify-end gap-3 mt-6">

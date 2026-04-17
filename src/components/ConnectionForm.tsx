@@ -44,6 +44,7 @@ interface FormData {
   username: string;
   password: string;
   selectedDB: string;
+  isPublic?: boolean;
 }
 
 interface Errors {
@@ -201,6 +202,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     username: "",
     password: "",
     selectedDB: "",
+    isPublic: false,
   });
   const [errors, setErrors] = useState<Errors>({});
   const [isTestButtonEnabled, setIsTestButtonEnabled] = useState(false);
@@ -511,6 +513,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       username: "",
       password: "",
       selectedDB: formData.selectedDB, // Retain selected DB
+      isPublic: false,
     });
     setErrors({});
     setIsTestButtonEnabled(false); // Will be re-enabled by useEffect if form becomes valid
@@ -728,6 +731,26 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
             {fieldConfigs.map((config) => renderInputField(config))}
+            
+            <div className="md:col-span-2 mt-2 p-3 rounded flex items-center gap-3" style={{ backgroundColor: `${theme.colors.accent}15`, border: `1px solid ${theme.colors.accent}40` }}>
+                <input
+                  type="checkbox"
+                  id="isPublic"
+                  checked={formData.isPublic || false}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, isPublic: e.target.checked }));
+                    setIsTestSuccessful(false); 
+                    setIsMetadataExtracted(false);
+                  }}
+                  className="w-5 h-5 rounded focus:ring-2"
+                  style={{ accentColor: theme.colors.accent }}
+                />
+                <label htmlFor="isPublic" className="font-medium cursor-pointer" style={{ color: theme.colors.text }}>
+                  Make this connection public
+                  <p className="text-xs font-normal" style={{ color: `${theme.colors.text}80` }}>Public connections are visible and accessible to all users in the system.</p>
+                </label>
+            </div>
+
             <div className="md:col-span-2 flex flex-wrap justify-end gap-4 mt-6">
               <button
                 type="button"

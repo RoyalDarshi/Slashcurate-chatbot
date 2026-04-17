@@ -1451,26 +1451,28 @@ const ChatInterface = memo(
                   Please create a connection to start interacting with your data
                   assistant.
                 </p>
-                <button
-                  onClick={onCreateConSelected}
-                  className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
-                  style={{
-                    color: "white",
-                    backgroundColor: theme.colors.accent,
-                    borderRadius: theme.borderRadius.pill,
-                    padding: "8px 16px",
-                  }}
-                  onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    theme.colors.accentHover)
-                  }
-                  onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    theme.colors.accent)
-                  }
-                >
-                  Create Connection
-                </button>
+                {localStorage.getItem("allowedToCreateConnection") !== "false" && (
+                  <button
+                    onClick={onCreateConSelected}
+                    className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
+                    style={{
+                      color: "white",
+                      backgroundColor: theme.colors.accent,
+                      borderRadius: theme.borderRadius.pill,
+                      padding: "8px 16px",
+                    }}
+                    onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor =
+                      theme.colors.accentHover)
+                    }
+                    onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor =
+                      theme.colors.accent)
+                    }
+                  >
+                    Create Connection
+                  </button>
+                )}
               </div>
             ) : messages.length === 0 &&
               !connectionError &&

@@ -57,6 +57,8 @@ const Login: React.FC<LoginProps> = ({
 
       if (response.status === 200) {
         const token = response.data.token;
+        const allowedToCreateConnection = response.data.allowed_to_create_connection;
+        localStorage.setItem("allowedToCreateConnection", String(allowedToCreateConnection));
         toast.success("Login successful!", { theme: mode });
         onLoginSuccess(token);
       } else {

@@ -236,7 +236,11 @@ const AppContent: React.FC<{
           <Sidebar
             onMenuClick={setActiveMenu}
             activeMenu={activeMenu}
-            defaultMenuItems={menuItems}
+            defaultMenuItems={
+              localStorage.getItem("allowedToCreateConnection") !== "false"
+                ? menuItems
+                : menuItems.filter(item => item.id !== "new-connection")
+            }
             onLogout={onLogout}
           />
           <main
