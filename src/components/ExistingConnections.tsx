@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Trash2, AlertTriangle } from "react-feather";
+import { Trash2, AlertTriangle, Edit2, X } from "react-feather";
 import { ClipboardList } from "lucide-react";
 import { useTheme } from "../ThemeContext";
 import {
@@ -13,6 +13,7 @@ import {
 import CustomTooltip from "./CustomTooltip";
 import { CHATBOT_API_URL } from "../config";
 import Loader from "./Loader";
+import ConnectionForm from "./ConnectionForm";
 
 interface Connection {
   id: number;
@@ -28,6 +29,8 @@ interface Connection {
   username: string;
   created_at: string;
   isAdmin: boolean;
+  uid?: string;
+  isPublic?: boolean;
 }
 
 interface ExistingConnectionsProps {
@@ -52,6 +55,9 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [connectionToDelete, setConnectionToDelete] =
     useState<Connection | null>(null);
+
+  // State for edit modal
+  const [editConnection, setEditConnection] = useState<Connection | null>(null);
 
   const fetchConnections = useCallback(async () => {
     if (!token) {
@@ -186,7 +192,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
         setLoading(false);
       }
     },
-    [mode, token]
+    [mode, token],
   );
 
   useEffect(() => {
@@ -525,51 +531,88 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                               />
                             </button>
                           </CustomTooltip>
-                          <CustomTooltip
-                            title={
-                              connection.isAdmin
-                                ? "Cannot delete default connections"
-                                : "Delete Connection"
-                            }
-                            position="top"
-                            variant="dark"
-                          >
-                            <button
-                              onClick={() =>
-                                confirmDeleteConnection(connection)
+                          {(!connection.uid ||
+                            connection.uid === localStorage.getItem("uid")) &&
+                            !connection.isAdmin && (
+                              <CustomTooltip
+                                title="Edit Connection"
+                                position="top"
+                                variant="dark"
+                              >
+                                <button
+                                  onClick={() => setEditConnection(connection)}
+                                  className="p-1.5 rounded-full focus:outline-none transition-colors duration-200"
+                                  aria-label="Edit connection"
+                                  style={{
+                                    color: "#3B82F6",
+                                    backgroundColor: "transparent",
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                      theme.colors.background === "#0F172A"
+                                        ? "rgba(59, 130, 246, 0.2)"
+                                        : "rgba(219, 234, 254, 1)";
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                      "transparent";
+                                  }}
+                                >
+                                  <Edit2
+                                    size={18}
+                                    style={{ color: "#3B82F6" }}
+                                  />
+                                </button>
+                              </CustomTooltip>
+                            )}
+                          {(!connection.uid ||
+                            connection.uid === localStorage.getItem("uid")) && (
+                            <CustomTooltip
+                              title={
+                                connection.isAdmin
+                                  ? "Cannot delete default connections"
+                                  : "Delete Connection"
                               }
-                              className="p-1.5 rounded-full focus:outline-none disabled:cursor-not-allowed transition-colors duration-200"
-                              aria-label="Delete connection"
-                              disabled={connection.isAdmin}
-                              style={{
-                                color: connection.isAdmin
-                                  ? theme.colors.disabled
-                                  : "#EF4444",
-                                backgroundColor: "transparent",
-                              }}
-                              onMouseOver={(e) => {
-                                if (!connection.isAdmin) {
-                                  e.currentTarget.style.backgroundColor =
-                                    theme.colors.background === "#0F172A"
-                                      ? "rgba(239, 68, 68, 0.2)"
-                                      : "rgba(254, 226, 226, 1)";
-                                }
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor =
-                                  "transparent";
-                              }}
+                              position="top"
+                              variant="dark"
                             >
-                              <Trash2
-                                size={18}
+                              <button
+                                onClick={() =>
+                                  confirmDeleteConnection(connection)
+                                }
+                                className="p-1.5 rounded-full focus:outline-none disabled:cursor-not-allowed transition-colors duration-200"
+                                aria-label="Delete connection"
+                                disabled={connection.isAdmin}
                                 style={{
                                   color: connection.isAdmin
                                     ? theme.colors.disabled
                                     : "#EF4444",
+                                  backgroundColor: "transparent",
                                 }}
-                              />
-                            </button>
-                          </CustomTooltip>
+                                onMouseOver={(e) => {
+                                  if (!connection.isAdmin) {
+                                    e.currentTarget.style.backgroundColor =
+                                      theme.colors.background === "#0F172A"
+                                        ? "rgba(239, 68, 68, 0.2)"
+                                        : "rgba(254, 226, 226, 1)";
+                                  }
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                }}
+                              >
+                                <Trash2
+                                  size={18}
+                                  style={{
+                                    color: connection.isAdmin
+                                      ? theme.colors.disabled
+                                      : "#EF4444",
+                                  }}
+                                />
+                              </button>
+                            </CustomTooltip>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -643,6 +686,81 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
 
       {/* Render confirmation modal */}
       <DeleteConfirmationModal />
+
+      {/* Edit Connection Modal */}
+      {editConnection && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-60 overflow-y-auto py-8">
+          <div
+            className="w-full max-w-3xl rounded-xl shadow-2xl relative"
+            style={{
+              backgroundColor: theme.colors.surface,
+              border: `1px solid ${theme.colors.accent}40`,
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              className="flex items-center justify-between px-6 py-4 rounded-t-xl"
+              style={{
+                borderBottom: `1px solid ${theme.colors.border}`,
+                backgroundColor: `${theme.colors.accent}15`,
+              }}
+            >
+              <div>
+                <h2
+                  className="text-xl font-bold"
+                  style={{ color: theme.colors.text }}
+                >
+                  Edit Connection
+                </h2>
+                <p
+                  className="text-sm mt-0.5"
+                  style={{ color: `${theme.colors.text}80` }}
+                >
+                  Editing: <strong>{editConnection.connectionName}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setEditConnection(null)}
+                className="p-2 rounded-full transition-colors duration-200"
+                style={{ color: theme.colors.text }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = `${theme.colors.text}15`;
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                aria-label="Close edit modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Render ConnectionForm in edit mode */}
+            <ConnectionForm
+              isAdmin={isAdmin}
+              token={token || ""}
+              editConnectionId={editConnection.id}
+              initialData={{
+                connectionName: editConnection.connectionName,
+                description: editConnection.description,
+                hostname: editConnection.hostname,
+                port: editConnection.port,
+                selectedDB: editConnection.selectedDB,
+                database: editConnection.database,
+                commandTimeout: editConnection.commandTimeout,
+                maxTransportObjects: editConnection.maxTransportObjects,
+                username: editConnection.username,
+                password: "",
+                isPublic: editConnection.isPublic || false,
+              }}
+              onSuccess={() => {
+                setEditConnection(null);
+                fetchConnections();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

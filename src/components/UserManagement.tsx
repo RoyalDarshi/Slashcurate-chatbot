@@ -14,6 +14,7 @@ interface User {
   email: string;
   created_at: string;
   allowed_to_create_connection?: boolean;
+  allowed_to_create_public_connection?: boolean;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
@@ -24,7 +25,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
   // Form State
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ username: "", email: "", password: "", allowedToCreateConnection: true });
+  const [formData, setFormData] = useState({ username: "", email: "", password: "", allowedToCreateConnection: true, allowedToCreatePublicConnection: true });
 
   const fetchUsers = async () => {
     try {
@@ -99,10 +100,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
   const openModal = (user?: User) => {
     if (user) {
       setEditingId(user.id);
-      setFormData({ username: user.username, email: user.email, password: "", allowedToCreateConnection: user.allowed_to_create_connection ?? true });
+      setFormData({ username: user.username, email: user.email, password: "", allowedToCreateConnection: user.allowed_to_create_connection ?? true, allowedToCreatePublicConnection: user.allowed_to_create_public_connection ?? true });
     } else {
       setEditingId(null);
-      setFormData({ username: "", email: "", password: "", allowedToCreateConnection: true });
+      setFormData({ username: "", email: "", password: "", allowedToCreateConnection: true, allowedToCreatePublicConnection: true });
     }
     setShowModal(true);
   };
@@ -219,6 +220,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
                 />
                 <label htmlFor="allowedToCreateConnection" className="text-sm font-medium">
                   Allowed to Create Connections
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="allowedToCreatePublicConnection"
+                  checked={formData.allowedToCreatePublicConnection}
+                  onChange={(e) => setFormData({ ...formData, allowedToCreatePublicConnection: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="allowedToCreatePublicConnection" className="text-sm font-medium">
+                  Allowed to Create Public Connections
                 </label>
               </div>
               

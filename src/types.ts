@@ -14,9 +14,11 @@ export interface Message {
 }
 
 export interface Connection {
+  id?: string | number;
   connectionName: string;
   value: string;
   isAdmin: boolean;
+  uid?: string;
 }
 
 export interface DatabaseTable {

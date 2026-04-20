@@ -29,6 +29,7 @@ import {
   createAdminConnection,
   createUserConnection,
   testConnection,
+  updateConnection,
 } from "../api";
 import { CHATBOT_API_URL } from "../config";
 
@@ -71,6 +72,8 @@ interface ConnectionFormProps {
   isAdmin: boolean; // Determines if creating admin default connection or user connection
   token: string; // Token from sessionStorage (JWT for user or admin)
   onSuccess?: () => void; // Optional callback after successful submission
+  editConnectionId?: number | null; // If set, form is in edit mode
+  initialData?: Partial<FormData> | null; // Pre-populated data for editing
 }
 
 const databaseOptions: DatabaseOption[] = [
@@ -188,6 +191,8 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   isAdmin,
   token,
   onSuccess,
+  editConnectionId = null,
+  initialData = null,
 }) => {
   const { theme } = useTheme();
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
@@ -267,6 +272,16 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
     };
   }, [formData]);
+
+  // Populate form when in edit mode
+  useEffect(() => {
+    if (initialData) {
+      setFormData((prev) => ({ ...prev, ...initialData }));
+      // In edit mode, allow submit without re-testing
+      setIsTestSuccessful(true);
+      setIsMetadataExtracted(true);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -373,9 +388,11 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
     try {
       setLoading(true);
-      setLoadingText("Submitting connection, please wait...");
-      let response = {};
-      if (isAdmin) {
+      setLoadingText(editConnectionId ? "Updating connection, please wait..." : "Submitting connection, please wait...");
+      let response: any;
+      if (editConnectionId) {
+        response = await updateConnection(token, editConnectionId, formData);
+      } else if (isAdmin) {
         response = await createAdminConnection(token, formData);
       } else {
         response = await createUserConnection(token, formData);
@@ -384,10 +401,12 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
       if (response.status === 200) {
         toast.success(
-          `${isAdmin ? "Default" : "User"} connection created successfully.`,
+          editConnectionId
+            ? "Connection updated successfully."
+            : `${isAdmin ? "Default" : "User"} connection created successfully.`,
           { theme: mode },
         );
-        handleClearForm();
+        if (!editConnectionId) handleClearForm();
         if (onSuccess) onSuccess();
       } else {
         toast.error(`Error: ${response.data.message || "Unknown error"}`, {
@@ -732,43 +751,45 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
           >
             {fieldConfigs.map((config) => renderInputField(config))}
 
-            <div
-              className="md:col-span-2 mt-2 p-3 rounded flex items-center gap-3"
-              style={{
-                backgroundColor: `${theme.colors.accent}15`,
-                border: `1px solid ${theme.colors.accent}40`,
-              }}
-            >
-              <input
-                type="checkbox"
-                id="isPublic"
-                checked={formData.isPublic || false}
-                onChange={(e) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    isPublic: e.target.checked,
-                  }));
-                  setIsTestSuccessful(false);
-                  setIsMetadataExtracted(false);
+            {(isAdmin || localStorage.getItem("allowedToCreatePublicConnection") !== "false") && (
+              <div
+                className="md:col-span-2 mt-2 p-3 rounded flex items-center gap-3"
+                style={{
+                  backgroundColor: `${theme.colors.accent}15`,
+                  border: `1px solid ${theme.colors.accent}40`,
                 }}
-                className="w-5 h-5 rounded focus:ring-2"
-                style={{ accentColor: theme.colors.accent }}
-              />
-              <label
-                htmlFor="isPublic"
-                className="font-medium cursor-pointer"
-                style={{ color: theme.colors.text }}
               >
-                Make this connection public
-                <p
-                  className="text-xs font-normal"
-                  style={{ color: `${theme.colors.text}80` }}
+                <input
+                  type="checkbox"
+                  id="isPublic"
+                  checked={formData.isPublic || false}
+                  onChange={(e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      isPublic: e.target.checked,
+                    }));
+                    setIsTestSuccessful(false);
+                    setIsMetadataExtracted(false);
+                  }}
+                  className="w-5 h-5 rounded focus:ring-2"
+                  style={{ accentColor: theme.colors.accent }}
+                />
+                <label
+                  htmlFor="isPublic"
+                  className="font-medium cursor-pointer"
+                  style={{ color: theme.colors.text }}
                 >
-                  Public connections are visible and accessible to all users in
-                  the system.
-                </p>
-              </label>
-            </div>
+                  Make this connection public
+                  <p
+                    className="text-xs font-normal"
+                    style={{ color: `${theme.colors.text}80` }}
+                  >
+                    Public connections are visible and accessible to all users in
+                    the system.
+                  </p>
+                </label>
+              </div>
+            )}
 
             <div className="md:col-span-2 flex flex-wrap justify-end gap-4 mt-6">
               <button
@@ -876,7 +897,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
                   cursor: isSubmitButtonEnabled ? "pointer" : "not-allowed",
                 }}
               >
-                Create Connection
+                {editConnectionId ? "Save Changes" : "Create Connection"}
               </button>
             </div>
             {loading && (

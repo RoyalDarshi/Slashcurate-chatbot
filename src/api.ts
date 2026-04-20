@@ -104,6 +104,13 @@ export const deleteConnection = async (
 ): Promise<AxiosResponse<ApiResponse>> =>
   api.post("/connections/delete", { token: token, connectionId });
 
+export const updateConnection = async (
+  token: string,
+  connectionId: number,
+  connectionDetails: ConnectionDetails
+): Promise<AxiosResponse<ApiResponse>> =>
+  api.post("/connections/update", { token, connectionId, connectionDetails });
+
 
 export const storeLdapConfig = async (
   token: string,

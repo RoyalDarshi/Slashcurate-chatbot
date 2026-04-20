@@ -410,6 +410,7 @@ const ChatInterface = memo(
                 {
                   token,
                   currentConnection: connection,
+                  con_id: connectionObj?.id,
                   title: question.substring(0, 50) + "...",
                 },
                 { headers: { "Content-Type": "application/json" } }
@@ -879,6 +880,7 @@ const ChatInterface = memo(
                 questionId: messageId,
                 questionContent: questionMessage.content,
                 currentConnection: currentConnectionForAction,
+                con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id,
                 responseQuery:
                   responseMessage && responseMessage.status === "normal"
                     ? JSON.parse(responseMessage.content).sql_query
@@ -931,6 +933,7 @@ const ChatInterface = memo(
               {
                 token,
                 currentConnection: currentConnectionForAction,
+                con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id,
                 questionContent: message?.content,
                 questionId: messageId,
               },
