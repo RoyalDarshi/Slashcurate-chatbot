@@ -224,12 +224,12 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       formData;
     return Boolean(
       connectionName &&
-        hostname &&
-        port &&
-        database &&
-        username &&
-        password &&
-        !Object.values(errors).some((error) => error)
+      hostname &&
+      port &&
+      database &&
+      username &&
+      password &&
+      !Object.values(errors).some((error) => error),
     );
   }, [formData, errors]);
 
@@ -254,7 +254,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
     timeoutIdRef.current = setTimeout(() => {
       const isModified = Object.entries(formData).some(
-        ([key, value]) => key !== "selectedDB" && !!value
+        ([key, value]) => key !== "selectedDB" && !!value,
       );
       setIsFormModified(isModified);
       if (isModified) {
@@ -288,33 +288,33 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
           error = !value
             ? "Hostname is required."
             : !/^(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}$/.test(
-                value
-              ) && !/^(\d{1,3}\.){3}\d{1,3}$/.test(value)
-            ? "Invalid hostname or IP."
-            : "";
+                  value,
+                ) && !/^(\d{1,3}\.){3}\d{1,3}$/.test(value)
+              ? "Invalid hostname or IP."
+              : "";
           break;
         case "port":
           error = !value
             ? "Port is required."
             : !/^\d+$/.test(value) ||
-              parseInt(value, 10) < 1024 ||
-              parseInt(value, 10) > 65535
-            ? "Port must be 1024-65535."
-            : "";
+                parseInt(value, 10) < 1024 ||
+                parseInt(value, 10) > 65535
+              ? "Port must be 1024-65535."
+              : "";
           break;
         case "database":
           error = !value
             ? "Database is required."
             : !/^\w+$/.test(value)
-            ? "Letters, numbers, and underscores only."
-            : "";
+              ? "Letters, numbers, and underscores only."
+              : "";
           break;
         case "username":
           error = !value
             ? "Username is required."
             : /\s/.test(value)
-            ? "No spaces allowed."
-            : "";
+              ? "No spaces allowed."
+              : "";
           break;
         case "password":
           error = !value ? "Password is required." : "";
@@ -324,11 +324,11 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       }
       setErrors((prev) => ({ ...prev, [name]: error }));
     }, 300),
-    []
+    [],
   );
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -354,7 +354,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
         "Please test connection and extract metadata before creating.",
         {
           theme: mode,
-        }
+        },
       );
       return;
     }
@@ -385,7 +385,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       if (response.status === 200) {
         toast.success(
           `${isAdmin ? "Default" : "User"} connection created successfully.`,
-          { theme: mode }
+          { theme: mode },
         );
         handleClearForm();
         if (onSuccess) onSuccess();
@@ -402,7 +402,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             ? error.response?.data?.message || "Request failed"
             : (error as Error).message
         }`,
-        { theme: mode }
+        { theme: mode },
       );
     }
   };
@@ -434,7 +434,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
           }`,
           {
             theme: mode,
-          }
+          },
         );
         setIsTestSuccessful(false);
       }
@@ -446,7 +446,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             ? error.response?.data?.message || "Unknown error"
             : "Network error"
         }`,
-        { theme: mode }
+        { theme: mode },
       );
       setIsTestSuccessful(false);
     }
@@ -483,9 +483,9 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
           `Metadata extraction failed: ${
             response.data.message || "Unknown error"
           }`,
-          { theme: mode }
+          { theme: mode },
         );
-        setIsMetadataExtracted(false);
+        setIsMetadataExtracted(true);
       }
     } catch (error) {
       setLoading(false);
@@ -495,9 +495,9 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             ? error.response?.data?.message || "Request failed"
             : (error as Error).message
         }`,
-        { theme: mode }
+        { theme: mode },
       );
-      setIsMetadataExtracted(false);
+      setIsMetadataExtracted(true);
     }
   };
 
@@ -591,7 +591,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   );
 
   const selectedOption = databaseOptions.find(
-    (option) => option.value === formData.selectedDB
+    (option) => option.value === formData.selectedDB,
   );
 
   return (
@@ -731,24 +731,43 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
             {fieldConfigs.map((config) => renderInputField(config))}
-            
-            <div className="md:col-span-2 mt-2 p-3 rounded flex items-center gap-3" style={{ backgroundColor: `${theme.colors.accent}15`, border: `1px solid ${theme.colors.accent}40` }}>
-                <input
-                  type="checkbox"
-                  id="isPublic"
-                  checked={formData.isPublic || false}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, isPublic: e.target.checked }));
-                    setIsTestSuccessful(false); 
-                    setIsMetadataExtracted(false);
-                  }}
-                  className="w-5 h-5 rounded focus:ring-2"
-                  style={{ accentColor: theme.colors.accent }}
-                />
-                <label htmlFor="isPublic" className="font-medium cursor-pointer" style={{ color: theme.colors.text }}>
-                  Make this connection public
-                  <p className="text-xs font-normal" style={{ color: `${theme.colors.text}80` }}>Public connections are visible and accessible to all users in the system.</p>
-                </label>
+
+            <div
+              className="md:col-span-2 mt-2 p-3 rounded flex items-center gap-3"
+              style={{
+                backgroundColor: `${theme.colors.accent}15`,
+                border: `1px solid ${theme.colors.accent}40`,
+              }}
+            >
+              <input
+                type="checkbox"
+                id="isPublic"
+                checked={formData.isPublic || false}
+                onChange={(e) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    isPublic: e.target.checked,
+                  }));
+                  setIsTestSuccessful(false);
+                  setIsMetadataExtracted(false);
+                }}
+                className="w-5 h-5 rounded focus:ring-2"
+                style={{ accentColor: theme.colors.accent }}
+              />
+              <label
+                htmlFor="isPublic"
+                className="font-medium cursor-pointer"
+                style={{ color: theme.colors.text }}
+              >
+                Make this connection public
+                <p
+                  className="text-xs font-normal"
+                  style={{ color: `${theme.colors.text}80` }}
+                >
+                  Public connections are visible and accessible to all users in
+                  the system.
+                </p>
+              </label>
             </div>
 
             <div className="md:col-span-2 flex flex-wrap justify-end gap-4 mt-6">
