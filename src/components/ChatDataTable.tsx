@@ -88,7 +88,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
     const searchTermLower = debouncedSearchTerm.toLowerCase().trim();
     return processedData.filter((row) => {
       return Object.values(row).some((value) =>
-        String(value).toLowerCase().includes(searchTermLower)
+        String(value).toLowerCase().includes(searchTermLower),
       );
     });
   }, [processedData, debouncedSearchTerm]);
@@ -171,12 +171,21 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
           ),
           cell: (info) => {
             const cellValue = info.getValue();
-            // Just return the text directly
+
+            if (
+              typeof cellValue === "number" ||
+              (typeof cellValue === "string" &&
+                !isNaN(Number(cellValue.replace(/,/g, ""))))
+            ) {
+              const num = Number(String(cellValue).replace(/,/g, ""));
+              return num.toLocaleString("en-IN");
+            }
+
             return cellValue?.toString() || "N/A";
           },
-        })
+        }),
       ),
-    [headers, theme]
+    [headers, theme],
   );
 
   const table = useReactTable({
@@ -257,8 +266,9 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
 
       {(filteredData || showControls) && (
         <div
-          className={`flex ${isMobile ? "flex-col space-y-2" : "items-center justify-between"
-            } pb-1 border-b`}
+          className={`flex ${
+            isMobile ? "flex-col space-y-2" : "items-center justify-between"
+          } pb-1 border-b`}
           style={{
             borderColor: `${theme.colors.text}10`,
             backgroundColor: `${theme.colors.surface}`,
@@ -365,7 +375,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                   >
                     {flexRender(
                       header.column.columnDef.header,
-                      header.getContext()
+                      header.getContext(),
                     )}
                   </th>
                 ))}
@@ -381,7 +391,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
         className="max-w-3xl overflow-auto max-h-96 scrollbar-thin" // Handles V and H scroll
         style={{
           scrollbarColor: `${theme.colors.accent}40 ${theme.colors.surface}`,
-          scrollBehavior: 'smooth',
+          scrollBehavior: "smooth",
         }}
       >
         <table
@@ -437,7 +447,7 @@ const ChatDataTable: React.FC<DataTableProps> = React.memo(({ data }) => {
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </td>
                   ))}

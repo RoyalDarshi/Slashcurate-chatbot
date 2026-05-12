@@ -35,7 +35,7 @@ export type ChatInterfaceHandle = {
   handleAskFavoriteQuestion: (
     question: string,
     connection: string,
-    query?: string
+    query?: string,
   ) => void;
 };
 
@@ -78,7 +78,10 @@ const limitDataForBackend = (responseData: any): any => {
   const limitedData = { ...responseData };
 
   // Limit the answer array to 500 rows if it exists
-  if (Array.isArray(limitedData.answer) && limitedData.answer.length > MAX_ROWS) {
+  if (
+    Array.isArray(limitedData.answer) &&
+    limitedData.answer.length > MAX_ROWS
+  ) {
     limitedData.answer = limitedData.answer.slice(0, MAX_ROWS);
   }
 
@@ -123,7 +126,7 @@ const ChatInterface = memo(
       const connectionDropdownRef = useRef<HTMLDivElement>(null);
       const [isSubmitting, setIsSubmitting] = useState(false);
       const [editingMessageId, setEditingMessageId] = useState<string | null>(
-        null
+        null,
       );
       const [sessionConnectionError, setSessionConnectionError] = useState<
         string | null
@@ -159,7 +162,7 @@ const ChatInterface = memo(
             return;
           }
           const userMessage = messages.find(
-            (m) => m.id === botMessage.parentId
+            (m) => m.id === botMessage.parentId,
           );
           const question = userMessage
             ? userMessage.content
@@ -216,14 +219,14 @@ const ChatInterface = memo(
             setIsSubmitting(false);
           }
         },
-        [messages]
+        [messages],
       );
 
       useEffect(() => {
         // Function to check loading status and poll
         const checkAndPoll = async () => {
           const allLoadingMessages = messages.filter(
-            (msg) => msg.isBot && msg.status === "loading"
+            (msg) => msg.isBot && msg.status === "loading",
           );
 
           if (allLoadingMessages.length === 0) {
@@ -233,9 +236,7 @@ const ChatInterface = memo(
           setIsSubmitting(true);
 
           const messagesToPoll = allLoadingMessages.filter(
-            (msg) =>
-              msg.id.includes("-") &&
-              !msg.id.startsWith("temp-")
+            (msg) => msg.id.includes("-") && !msg.id.startsWith("temp-"),
           );
 
           if (messagesToPoll.length === 0) {
@@ -247,7 +248,7 @@ const ChatInterface = memo(
               const response = await axios.post(
                 `${API_URL}/api/getmessages/${msg.id}`,
                 { token },
-                { headers: { Authorization: `Bearer ${token}` } }
+                { headers: { Authorization: `Bearer ${token}` } },
               );
 
               if (response.data.status !== "loading") {
@@ -321,7 +322,7 @@ const ChatInterface = memo(
         return () =>
           document.removeEventListener(
             "visibilitychange",
-            handleVisibilityChange
+            handleVisibilityChange,
           );
       }, [token, loadSession, clearSession]);
 
@@ -340,7 +341,7 @@ const ChatInterface = memo(
           question: string,
           connection: string,
           isFavorited: boolean,
-          query?: string
+          query?: string,
         ) => {
           // ... (Keep your existing session/connection validation logic here) ...
           // START VALIDATION BLOCK
@@ -352,11 +353,11 @@ const ChatInterface = memo(
           let currentSessionId = sessionId;
           if (currentSessionId && !sessionConnection) {
             const currentSessionInfo = connections.find(
-              (c) => c.connectionName === selectedConnection
+              (c) => c.connectionName === selectedConnection,
             );
             if (!currentSessionInfo && messages.length > 0) {
               toast.error(
-                "This session does not have a valid connection. Cannot ask new questions."
+                "This session does not have a valid connection. Cannot ask new questions.",
               );
               return;
             }
@@ -371,7 +372,7 @@ const ChatInterface = memo(
               } catch (error) {
                 console.error(
                   "Failed to load stored session from localStorage (askQuestion):",
-                  error
+                  error,
                 );
                 localStorage.removeItem("currentSessionId");
               }
@@ -410,10 +411,12 @@ const ChatInterface = memo(
                 {
                   token,
                   currentConnection: connection,
-                  con_id: connectionObj?.id,
+                  con_id: connections.find(
+                    (c) => c.connectionName === connection,
+                  )?.id,
                   title: question.substring(0, 50) + "...",
                 },
-                { headers: { "Content-Type": "application/json" } }
+                { headers: { "Content-Type": "application/json" } },
               );
               currentSessionId = response.data.id;
               localStorage.setItem("currentSessionId", currentSessionId || "");
@@ -430,10 +433,16 @@ const ChatInterface = memo(
             }
           } else {
             // 2. Add User message to UI IMMEDIATELY (Before API call)
-            dispatchMessages({ type: "ADD_MESSAGE", message: optimisticUserMessage });
+            dispatchMessages({
+              type: "ADD_MESSAGE",
+              message: optimisticUserMessage,
+            });
 
             // 3. Add Bot "Loading" message to UI IMMEDIATELY
-            dispatchMessages({ type: "ADD_MESSAGE", message: optimisticBotMessage });
+            dispatchMessages({
+              type: "ADD_MESSAGE",
+              message: optimisticBotMessage,
+            });
           }
           // END VALIDATION BLOCK
 
@@ -456,7 +465,7 @@ const ChatInterface = memo(
                 parentId: null,
                 status: "normal",
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
 
             // 5. Update UI with REAL User Message ID from DB
@@ -479,7 +488,7 @@ const ChatInterface = memo(
                 parentId: finalUserMessageId, // Link to REAL User ID
                 status: "loading",
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
 
             finalBotMessageId = botLoadingResponse.data.id;
@@ -495,15 +504,30 @@ const ChatInterface = memo(
             const controller = new AbortController();
             setActiveRequestController(controller);
 
-            const connectionObj = connections.find(c => c.connectionName === connection);
+            const connectionObj = connections.find(
+              (c) => c.connectionName === connection,
+            );
 
             const payload = query
-              ? { question, sql_query: query, connection: connectionObj, sessionId: currentSessionId }
-              : { question, connection: connectionObj, sessionId: currentSessionId };
+              ? {
+                  question,
+                  sql_query: query,
+                  connection: connectionObj,
+                  sessionId: currentSessionId,
+                }
+              : {
+                  question,
+                  connection: connectionObj,
+                  sessionId: currentSessionId,
+                };
 
-            const response = await axios.post(`${CHATBOT_API_URL}/ask`, payload, {
-              signal: controller.signal,
-            });
+            const response = await axios.post(
+              `${CHATBOT_API_URL}/ask`,
+              payload,
+              {
+                signal: controller.signal,
+              },
+            );
 
             setActiveRequestController(null);
             const responseData = response.data;
@@ -517,7 +541,9 @@ const ChatInterface = memo(
               responseData.data_availability === "Execution Error"
             ) {
               finalStatus = "error";
-              finalContent = responseData.answer?.error?.message || "Query execution failed.";
+              finalContent =
+                responseData.answer?.error?.message ||
+                "Query execution failed.";
             } else {
               finalContent = JSON.stringify(responseData, null, 2);
             }
@@ -528,11 +554,14 @@ const ChatInterface = memo(
               `${API_URL}/api/messages/${finalBotMessageId}`,
               {
                 token,
-                content: finalStatus === "error" ? finalContent : JSON.stringify(limitedData, null, 2),
+                content:
+                  finalStatus === "error"
+                    ? finalContent
+                    : JSON.stringify(limitedData, null, 2),
                 timestamp: new Date().toISOString(),
                 status: finalStatus,
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
 
             // 10. Update UI with Final Answer
@@ -546,13 +575,16 @@ const ChatInterface = memo(
               },
             });
             setIsSubmitting(false); // Done!
-
+            setTimeout(() => scrollToMessage(finalBotMessageId), 150);
           } catch (error) {
             setActiveRequestController(null);
             const errorContent = getErrorMessage(error);
 
             // If connection was cancelled, stop.
-            if (axios.isCancel(error) || (error as Error).name === "CanceledError") {
+            if (
+              axios.isCancel(error) ||
+              (error as Error).name === "CanceledError"
+            ) {
               return;
             }
 
@@ -569,9 +601,13 @@ const ChatInterface = memo(
 
             // Try to sync error state to backend if we have a real ID
             if (finalBotMessageId !== tempBotMsgId) {
-              await axios.put(`${API_URL}/api/messages/${finalBotMessageId}`, {
-                token, content: errorContent, status: "error"
-              }).catch(e => console.error("Failed to save error state", e));
+              await axios
+                .put(`${API_URL}/api/messages/${finalBotMessageId}`, {
+                  token,
+                  content: errorContent,
+                  status: "error",
+                })
+                .catch((e) => console.error("Failed to save error state", e));
             }
 
             setIsSubmitting(false);
@@ -587,17 +623,17 @@ const ChatInterface = memo(
           dispatchMessages,
           loadSession,
           selectedConnection,
-        ]
+        ],
       );
 
       const handleAskFavoriteQuestion = useCallback(
         async (question: string, connection: string, query?: string) => {
           const connectionObj = connections.find(
-            (conn) => conn.connectionName === connection
+            (conn) => conn.connectionName === connection,
           );
           if (!connectionObj) {
             toast.error(
-              "The connection for this favorite question no longer exists."
+              "The connection for this favorite question no longer exists.",
             );
             return;
           }
@@ -618,7 +654,7 @@ const ChatInterface = memo(
           askQuestion,
           handleNewChat,
           setSelectedConnection,
-        ]
+        ],
       );
 
       useEffect(() => {
@@ -628,7 +664,7 @@ const ChatInterface = memo(
           setSessionConnectionError(null);
         } else if (sessionId && !sessionConnection) {
           setSessionConnectionError(
-            "This session was loaded but has no associated connection. You can view history or start a new chat."
+            "This session was loaded but has no associated connection. You can view history or start a new chat.",
           );
         }
       }, [
@@ -661,12 +697,12 @@ const ChatInterface = memo(
           let targetConnection = initialQuestion.connection;
           if (!connections.some((c) => c.connectionName === targetConnection)) {
             console.warn(
-              `Initial question's connection "${targetConnection}" not found. Using first available.`
+              `Initial question's connection "${targetConnection}" not found. Using first available.`,
             );
             targetConnection = connections[0]?.connectionName;
             if (!targetConnection) {
               toast.error(
-                "No connections available to ask the initial question."
+                "No connections available to ask the initial question.",
               );
               if (onQuestionAsked) onQuestionAsked();
               return;
@@ -675,7 +711,7 @@ const ChatInterface = memo(
           handleAskFavoriteQuestion(
             initialQuestion.text,
             targetConnection,
-            initialQuestion.query
+            initialQuestion.query,
           );
           if (onQuestionAsked) onQuestionAsked();
         }
@@ -700,7 +736,7 @@ const ChatInterface = memo(
             localStorage.removeItem("selectedConnection");
           } else {
             const selectedConnectionObj = connections.find(
-              (conn) => conn.connectionName === connection
+              (conn) => conn.connectionName === connection,
             );
             if (selectedConnectionObj) {
               if (
@@ -711,7 +747,7 @@ const ChatInterface = memo(
                 setSelectedConnection(selectedConnectionObj.connectionName);
                 localStorage.setItem(
                   "selectedConnection",
-                  selectedConnectionObj.connectionName
+                  selectedConnectionObj.connectionName,
                 );
               }
             } else {
@@ -729,7 +765,7 @@ const ChatInterface = memo(
           setSelectedConnection,
           sessionId,
           selectedConnection,
-        ]
+        ],
       );
 
       const handlePdfClick = useCallback(
@@ -741,7 +777,7 @@ const ChatInterface = memo(
               {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: "blob",
-              }
+              },
             );
             const pdfBlob = new Blob([response.data], {
               type: "application/pdf",
@@ -755,7 +791,7 @@ const ChatInterface = memo(
             toast.error(`Failed to open Data Atlas: ${getErrorMessage(error)}`);
           }
         },
-        [token]
+        [token],
       );
 
       const handleSubmit = useCallback(
@@ -781,7 +817,7 @@ const ChatInterface = memo(
             console.error(error);
           }
         },
-        [input, isSubmitting, selectedConnection, askQuestion]
+        [input, isSubmitting, selectedConnection, askQuestion],
       );
 
       const handleStopRequest = useCallback(async () => {
@@ -795,7 +831,7 @@ const ChatInterface = memo(
 
         // Find the message that is currently loading
         const loadingMessage = messages.find(
-          (msg) => msg.isBot && msg.status === "loading"
+          (msg) => msg.isBot && msg.status === "loading",
         );
 
         if (loadingMessage && loadingMessage.id) {
@@ -813,7 +849,7 @@ const ChatInterface = memo(
                 timestamp: new Date().toISOString(),
                 status: errorStatus, // <-- MODIFIED
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
 
             // 3. Update local state
@@ -862,7 +898,7 @@ const ChatInterface = memo(
             sessionConnection || selectedConnection;
           if (!token || !currentConnectionForAction) {
             toast.error(
-              "Cannot favorite message: Missing token or active connection."
+              "Cannot favorite message: Missing token or active connection.",
             );
             return;
           }
@@ -870,7 +906,7 @@ const ChatInterface = memo(
           if (!questionMessage || questionMessage.isBot) return;
           try {
             const responseMessage = messages.find(
-              (msg) => msg.parentId === messageId
+              (msg) => msg.parentId === messageId,
             );
             console.log(responseMessage);
             await axios.post(
@@ -880,13 +916,15 @@ const ChatInterface = memo(
                 questionId: messageId,
                 questionContent: questionMessage.content,
                 currentConnection: currentConnectionForAction,
-                con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id,
+                con_id: connections.find(
+                  (c) => c.connectionName === currentConnectionForAction,
+                )?.id,
                 responseQuery:
                   responseMessage && responseMessage.status === "normal"
                     ? JSON.parse(responseMessage.content).sql_query
                     : null,
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -903,7 +941,7 @@ const ChatInterface = memo(
           } catch (error) {
             console.error("Error favoriting message:", error);
             toast.error(
-              `Failed to favorite message: ${getErrorMessage(error)}`
+              `Failed to favorite message: ${getErrorMessage(error)}`,
             );
           }
         },
@@ -913,7 +951,7 @@ const ChatInterface = memo(
           selectedConnection,
           sessionConnection,
           dispatchMessages,
-        ]
+        ],
       );
 
       const handleUnfavoriteMessage = useCallback(
@@ -922,7 +960,7 @@ const ChatInterface = memo(
             sessionConnection || selectedConnection;
           if (!token || !currentConnectionForAction) {
             toast.error(
-              "Cannot unfavorite message: Token or active connection missing."
+              "Cannot unfavorite message: Token or active connection missing.",
             );
             return;
           }
@@ -933,14 +971,16 @@ const ChatInterface = memo(
               {
                 token,
                 currentConnection: currentConnectionForAction,
-                con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id,
+                con_id: connections.find(
+                  (c) => c.connectionName === currentConnectionForAction,
+                )?.id,
                 questionContent: message?.content,
                 questionId: messageId,
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
             const responseMessage = messages.find(
-              (msg) => msg.parentId === messageId
+              (msg) => msg.parentId === messageId,
             );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -957,7 +997,7 @@ const ChatInterface = memo(
           } catch (error) {
             console.error("Error unfavoriting message:", error);
             toast.error(
-              `Failed to unfavorite message: ${getErrorMessage(error)}`
+              `Failed to unfavorite message: ${getErrorMessage(error)}`,
             );
           }
         },
@@ -967,13 +1007,13 @@ const ChatInterface = memo(
           selectedConnection,
           sessionConnection,
           dispatchMessages,
-        ]
+        ],
       );
 
       const handleRetry = useCallback(
         async (userMessageId: string) => {
           const userMessage = messages.find(
-            (msg) => msg.id === userMessageId && !msg.isBot
+            (msg) => msg.id === userMessageId && !msg.isBot,
           );
           if (!userMessage) {
             toast.error("User message not found for retry.");
@@ -981,7 +1021,7 @@ const ChatInterface = memo(
           }
 
           const botMessage = messages.find(
-            (msg) => msg.parentId === userMessageId && msg.isBot
+            (msg) => msg.parentId === userMessageId && msg.isBot,
           );
           if (!botMessage) {
             toast.error("Bot response not found for retry.");
@@ -991,13 +1031,13 @@ const ChatInterface = memo(
           const connectionForRetry = sessionConnection || selectedConnection;
           if (!connectionForRetry) {
             toast.error(
-              "No active connection available for this session to retry."
+              "No active connection available for this session to retry.",
             );
             return;
           }
 
           const connectionObj = connections.find(
-            (conn) => conn.connectionName === connectionForRetry
+            (conn) => conn.connectionName === connectionForRetry,
           );
           if (!connectionObj) {
             toast.error("Connection details not found for retry.");
@@ -1020,7 +1060,7 @@ const ChatInterface = memo(
                 timestamp: new Date().toISOString(),
                 status: "loading", // <-- MODIFIED
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -1047,7 +1087,7 @@ const ChatInterface = memo(
               payload,
               {
                 signal: controller.signal, // <-- Pass the signal here
-              }
+              },
             );
 
             // If we get here, the request was NOT cancelled
@@ -1057,7 +1097,11 @@ const ChatInterface = memo(
 
             // Create limited data for backend storage (500 rows max)
             const limitedResponseData = limitDataForBackend(response.data);
-            const botResponseContentForBackend = JSON.stringify(limitedResponseData, null, 2);
+            const botResponseContentForBackend = JSON.stringify(
+              limitedResponseData,
+              null,
+              2,
+            );
 
             await axios.put(
               `${API_URL}/api/messages/${originalBotMessageId}`,
@@ -1067,7 +1111,7 @@ const ChatInterface = memo(
                 timestamp: new Date().toISOString(),
                 status: "normal", // <-- MODIFIED
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -1104,13 +1148,13 @@ const ChatInterface = memo(
                     timestamp: new Date().toISOString(),
                     status: errorStatus, // <-- MODIFIED
                   },
-                  { headers: { "Content-Type": "application/json" } }
+                  { headers: { "Content-Type": "application/json" } },
                 )
                 .catch((updateError) =>
                   console.error(
                     "Failed to update message to error state on server (retry):",
-                    updateError
-                  )
+                    updateError,
+                  ),
                 );
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
@@ -1134,7 +1178,7 @@ const ChatInterface = memo(
           dispatchMessages,
           scrollToMessage,
           sessionId,
-        ]
+        ],
       );
 
       async function handleEditMessage(id: string, content: string) {
@@ -1147,13 +1191,13 @@ const ChatInterface = memo(
         const connectionForEdit = sessionConnection || selectedConnection;
         if (!connectionForEdit) {
           toast.error(
-            "No active connection available for this session to edit."
+            "No active connection available for this session to edit.",
           );
           return;
         }
 
         const connectionObj = connections.find(
-          (conn) => conn.connectionName === connectionForEdit
+          (conn) => conn.connectionName === connectionForEdit,
         );
         if (!connectionObj) {
           toast.error("Connection details not found for edit.");
@@ -1167,7 +1211,7 @@ const ChatInterface = memo(
 
         let botMessageToUpdateId: string | null = null;
         const responseMessage = messages.find(
-          (msg) => msg.parentId === id && msg.isBot
+          (msg) => msg.parentId === id && msg.isBot,
         );
         if (responseMessage) {
           botMessageToUpdateId = responseMessage.id;
@@ -1182,7 +1226,7 @@ const ChatInterface = memo(
               timestamp: new Date().toISOString(),
               status: "normal",
             },
-            { headers: { "Content-Type": "application/json" } }
+            { headers: { "Content-Type": "application/json" } },
           );
           dispatchMessages({
             type: "UPDATE_MESSAGE",
@@ -1203,7 +1247,7 @@ const ChatInterface = memo(
                 timestamp: new Date().toISOString(),
                 status: "loading", // <-- MODIFIED
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -1226,7 +1270,7 @@ const ChatInterface = memo(
                 parentId: id,
                 status: "loading", // <-- MODIFIED
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
             botMessageToUpdateId = botLoadingResponse.data.id;
             const newBotLoadingMessage: Message = {
@@ -1246,7 +1290,7 @@ const ChatInterface = memo(
 
           if (!botMessageToUpdateId) {
             throw new Error(
-              "Failed to obtain a bot message ID for update/creation."
+              "Failed to obtain a bot message ID for update/creation.",
             );
           }
 
@@ -1266,7 +1310,7 @@ const ChatInterface = memo(
               payload,
               {
                 signal: controller.signal, // <-- Pass the signal here
-              }
+              },
             );
 
             // If we get here, the request was NOT cancelled
@@ -1281,7 +1325,7 @@ const ChatInterface = memo(
                 timestamp: new Date().toISOString(),
                 status: "normal", // <-- MODIFIED
               },
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -1309,7 +1353,7 @@ const ChatInterface = memo(
             } else {
               console.error(
                 "Error getting bot response for edited message:",
-                error
+                error,
               );
 
               await axios
@@ -1321,13 +1365,13 @@ const ChatInterface = memo(
                     timestamp: new Date().toISOString(),
                     status: errorStatus, // <-- MODIFIED
                   },
-                  { headers: { "Content-Type": "application/json" } }
+                  { headers: { "Content-Type": "application/json" } },
                 )
                 .catch((updateError) =>
                   console.error(
                     "Failed to update message to error state on server (edit):",
-                    updateError
-                  )
+                    updateError,
+                  ),
                 );
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
@@ -1353,10 +1397,10 @@ const ChatInterface = memo(
       }));
 
       const getMessageResponseStatus = (
-        userMessageId: string
+        userMessageId: string,
       ): "loading" | "success" | "error" | null => {
         const botResponse = messages.find(
-          (msg) => msg.isBot && msg.parentId === userMessageId
+          (msg) => msg.isBot && msg.parentId === userMessageId,
         );
         if (botResponse) {
           if (botResponse.status === "loading") return "loading";
@@ -1454,7 +1498,8 @@ const ChatInterface = memo(
                   Please create a connection to start interacting with your data
                   assistant.
                 </p>
-                {localStorage.getItem("allowedToCreateConnection") !== "false" && (
+                {localStorage.getItem("allowedToCreateConnection") !==
+                  "false" && (
                   <button
                     onClick={onCreateConSelected}
                     className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
@@ -1465,12 +1510,12 @@ const ChatInterface = memo(
                       padding: "8px 16px",
                     }}
                     onMouseOver={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.accentHover)
+                      (e.currentTarget.style.backgroundColor =
+                        theme.colors.accentHover)
                     }
                     onMouseOut={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.accent)
+                      (e.currentTarget.style.backgroundColor =
+                        theme.colors.accent)
                     }
                   >
                     Create Connection
@@ -1496,7 +1541,7 @@ const ChatInterface = memo(
                         handleAskFavoriteQuestion(
                           q,
                           c || selectedConnection,
-                          query
+                          query,
                         )
                       }
                     />
@@ -1687,8 +1732,9 @@ const ChatInterface = memo(
                       !selectedConnection ||
                       !!sessionConnectionError
                     }
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${isDbExplorerOpen ? "schema-active" : ""
-                      }`}
+                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
+                      isDbExplorerOpen ? "schema-active" : ""
+                    }`}
                     style={{
                       background: theme.colors.surface,
                       color: theme.colors.accent,
@@ -1758,20 +1804,20 @@ const ChatInterface = memo(
           )}
         </div>
       );
-    }
-  )
+    },
+  ),
 );
 
 const areEqual = (
   prevProps: ChatInterfaceProps,
-  nextProps: ChatInterfaceProps
+  nextProps: ChatInterfaceProps,
 ) => {
   return (
     prevProps.onCreateConSelected === nextProps.onCreateConSelected &&
     prevProps.onSessionSelected === nextProps.onSessionSelected &&
     prevProps.initialQuestion?.text === nextProps.initialQuestion?.text &&
     prevProps.initialQuestion?.connection ===
-    nextProps.initialQuestion?.connection &&
+      nextProps.initialQuestion?.connection &&
     prevProps.initialQuestion?.query === nextProps.initialQuestion?.query &&
     prevProps.onQuestionAsked === nextProps.onQuestionAsked
   );
