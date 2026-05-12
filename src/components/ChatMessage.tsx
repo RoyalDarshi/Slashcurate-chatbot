@@ -25,7 +25,12 @@ import { ChatMessageProps } from "../types";
 import DataTable from "./ChatDataTable";
 import CustomTooltip from "./CustomTooltip";
 import DynamicGraph, { formatKey } from "./ChatGraphs/ChatDynamicGraph";
-import { autoDetectGraphType } from "../hooks/useGraphData";
+import {
+  getSmartChartConfig,
+  toFiniteNumber,
+  type SmartAggregation,
+  type SmartChartType,
+} from "../utils/smartChart";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import html2canvas from "html2canvas";
@@ -89,10 +94,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const [canCopy, setCanCopy] = useState(true);
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
   const [copyTooltipTxt, setCopyTooltipTxt] = useState("Copy SQL Query");
-  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
+  const [chartType, setChartType] = useState<SmartChartType>("bar");
   const [groupBy, setGroupBy] = useState<string | null>(null);
   const [aggregate, setAggregate] = useState<
-    "sum" | "count" | "avg" | "min" | "max" | null
+    SmartAggregation | null
   >(null);
   const [valueKey, setValueKey] = useState<string | null>(null);
   const [showChartOptions, setShowChartOptions] = useState(false);
@@ -147,20 +152,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   lowerKey.includes("postal") ||
                   lowerKey === "phone_number";
 
-                const numericValue = (() => {
-                  if (typeof val === "number") return val;
-                  if (typeof val === "string") {
-                    const cleaned = val.replace(/,/g, "").trim();
-                    return /^\d+(\.\d+)?$/.test(cleaned)
-                      ? parseFloat(cleaned)
-                      : NaN;
-                  }
-                  return NaN;
-                })();
+                const numericValue = toFiniteNumber(val);
 
                 return (
                   !isExcludedKey &&
-                  !isNaN(numericValue) &&
+                  numericValue !== null &&
                   isFinite(numericValue)
                 );
               })
@@ -168,39 +164,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           setHasNumericData(hasGraphicalData);
 
           if (hasGraphicalData && tableData.length > 0) {
-            const sample = tableData[0];
-            const keys = Object.keys(sample);
-            const numericKeys = keys.filter(
-              (k) =>
-                typeof sample[k] === "number" ||
-                (typeof sample[k] === "string" &&
-                  /^\d+(\.\d+)?$/.test(sample[k].replace(/,/g, "").trim()))
-            );
-            const stringKeys = keys.filter(
-              (k) => typeof sample[k] === "string" && !numericKeys.includes(k)
-            );
+            const smartDefaults = getSmartChartConfig(tableData);
 
-            // Only set defaults if not already set by user
-            const initialValueKey = numericKeys[0] || null;
-            const initialGroupBy = (() => {
-              if (stringKeys.includes("branch_name")) return "branch_name";
-              return stringKeys[1] || stringKeys[0] || null;
-            })();
-
-            setValueKey((prev) => prev || initialValueKey);
-            setGroupBy((prev) => {
-              if (prev) return prev;
-              return initialGroupBy;
-            });
-            setAggregate((prev) => prev || "sum");
-
-            // Auto-detect chart type
-            // We use the calculated initial values. If user has already set something (prev), we might want to respect it?
-            // But since this effect runs on new data, we likely want to auto-detect for the new data.
-            // However, to be safe against re-renders, we can check if chartType is still default 'bar' or just set it.
-            // Given the user request, let's set it.
-            const autoType = autoDetectGraphType(tableData, initialGroupBy, initialValueKey);
-            setChartType((prev) => prev === "bar" ? (autoType as any) : prev);
+            setValueKey(smartDefaults.valueKey);
+            setGroupBy(smartDefaults.groupBy);
+            setAggregate(smartDefaults.aggregation);
+            setChartType(smartDefaults.chartType);
+            setIsVertical(smartDefaults.orientation === "vertical");
 
             setCurrentView("table");
           } else if (tableData.length > 0) {
@@ -449,14 +419,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   const availableKeys = React.useMemo(() => {
     if (csvData.length === 0) return { stringKeys: [], numericKeys: [] };
-    const sample = csvData[0];
-    const keys = Object.keys(sample);
+    const smartDefaults = getSmartChartConfig(csvData);
     return {
-      stringKeys: keys.filter((k) => typeof sample[k] === "string"),
-      numericKeys: keys.filter((k) => {
-        const val = sample[k];
-        return val !== null && val !== "" && !isNaN(Number(val));
-      }),
+      stringKeys: smartDefaults.groupByOptions,
+      numericKeys: smartDefaults.valueKeyOptions,
     };
   }, [csvData]);
 
@@ -576,7 +542,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               <div className="flex gap-1.5 mb-2 flex-wrap">
                 <select
                   value={chartType}
-                  onChange={(e) => setChartType(e.target.value as any)}
+                  onChange={(e) =>
+                    setChartType(e.target.value as SmartChartType)
+                  }
                   className="text-sm"
                   style={{
                     background: theme.colors.surface,
@@ -616,7 +584,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 </select>
                 <select
                   value={aggregate || ""}
-                  onChange={(e) => setAggregate(e.target.value as any)}
+                  onChange={(e) =>
+                    setAggregate(e.target.value as SmartAggregation)
+                  }
                   className="text-sm"
                   style={{
                     background: theme.colors.surface,

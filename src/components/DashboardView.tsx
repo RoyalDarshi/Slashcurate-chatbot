@@ -32,7 +32,12 @@ import SummaryModal from "./SummaryModal";
 import CustomTooltip from "./CustomTooltip";
 import { Theme } from "../types";
 import { API_URL } from "../config";
-import { autoDetectGraphType } from "../hooks/useGraphData";
+import {
+  getSmartChartConfig,
+  toFiniteNumber,
+  type SmartAggregation,
+  type SmartChartType,
+} from "../utils/smartChart";
 
 export interface DashboardViewHandle {
   getGraphContainer: () => HTMLDivElement | null;
@@ -83,9 +88,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     },
     ref
   ) => {
-    const [graphType, setGraphType] = useState("bar");
+    const [graphType, setGraphType] = useState<SmartChartType>("bar");
     const [groupBy, setGroupBy] = useState<string | null>(null);
-    const [aggregate, setAggregate] = useState<"sum" | "count" | "avg" | "min" | "max">("sum");
+    const [aggregate, setAggregate] = useState<SmartAggregation>("sum");
     const [valueKey, setValueKey] = useState<string | null>(null);
     const [isVertical, setIsVertical] = useState(true);
     const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -105,7 +110,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       const lowerKey = key.toLowerCase();
       return (
         /(id|code|number)$/.test(lowerKey) ||
-        lowerKey.includes("date") ||
         lowerKey.includes("email") ||
         lowerKey.includes("address") ||
         lowerKey === "first_name" ||
@@ -118,7 +122,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const getValidValueKeys = (data: any[]): string[] => {
       if (!data || data.length === 0) return [];
       return Object.keys(data[0]).filter(
-        (key) => !isKeyExcluded(key) && typeof data[0][key] === "number"
+        (key) => !isKeyExcluded(key) && toFiniteNumber(data[0][key]) !== null
       );
     };
 
@@ -128,7 +132,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         (key) =>
           !isKeyExcluded(key) &&
           (typeof data[0][key] === "string" ||
-            typeof data[0][key] === "boolean")
+            typeof data[0][key] === "boolean" ||
+            key.toLowerCase().includes("date") ||
+            key.toLowerCase().includes("month") ||
+            key.toLowerCase().includes("year") ||
+            key.toLowerCase().includes("time"))
       );
     };
 
@@ -142,21 +150,13 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         // Only run auto-detection if we haven't processed this item yet
         if (lastProcessedItemId.current !== dashboardItem.id) {
           const chartData = dashboardItem.mainViewData.chartData;
-          const validKeys = getValidValueKeys(chartData);
-          const initialGroupBy = getValidCategoricalKeys(chartData)[0] || null;
-          const initialValueKey = validKeys[0] || null;
+          const smartDefaults = getSmartChartConfig(chartData);
 
-          setGroupBy(initialGroupBy);
-          setValueKey(initialValueKey);
-          setAggregate("sum");
-
-          // Auto-detect graph type
-          const autoType = autoDetectGraphType(
-            chartData,
-            initialGroupBy,
-            initialValueKey
-          );
-          setGraphType(autoType);
+          setGroupBy(smartDefaults.groupBy);
+          setValueKey(smartDefaults.valueKey);
+          setAggregate(smartDefaults.aggregation);
+          setGraphType(smartDefaults.chartType);
+          setIsVertical(smartDefaults.orientation === "vertical");
 
           // Mark this item as processed
           lastProcessedItemId.current = dashboardItem.id;
@@ -511,7 +511,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                       <select
                         id="graph-type-select"
                         value={graphType}
-                        onChange={(e) => setGraphType(e.target.value)}
+                        onChange={(e) =>
+                          setGraphType(e.target.value as SmartChartType)
+                        }
                         className="px-2 py-1 text-sm rounded-md border"
                         style={{
                           backgroundColor: theme.colors.surface,
@@ -593,7 +595,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             <select
                               value={aggregate}
                               onChange={(e) =>
-                                setAggregate(e.target.value as "sum" | "count" | "avg" | "min" | "max")
+                                setAggregate(e.target.value as SmartAggregation)
                               }
                               className="px-2 py-1 text-sm rounded-md border"
                               style={{
@@ -746,7 +748,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                           <select
                             value={aggregate}
                             onChange={(e) =>
-                              setAggregate(e.target.value as "sum" | "count")
+                              setAggregate(e.target.value as SmartAggregation)
                             }
                             className="px-2 py-1 rounded-md border"
                             style={{
