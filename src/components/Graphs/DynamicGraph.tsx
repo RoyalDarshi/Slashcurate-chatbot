@@ -78,7 +78,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         aggregate,
         orientation: isVertical ? "vertical" : "horizontal",
       }),
-      [aggregate, graphType, groupBy, isVertical, valueKey]
+      [aggregate, graphType, groupBy, isVertical, valueKey],
     );
 
     const { config, option } = useSmartChart(data, smartOverrides);
@@ -114,7 +114,8 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }, [showResolutionOptions]);
 
     const handleDownloadGraph = async (resolution: "low" | "high") => {
@@ -206,7 +207,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             {config.insights.slice(0, 3).map((insight) => (
               <span
                 key={`${insight.kind}-${insight.label}`}
-                className="max-w-[260px] truncate px-3 py-1 text-xs font-medium"
+                className="max-w-[300px] truncate px-3 py-1 text-xs font-medium"
                 title={`${insight.label}: ${insight.value}`}
                 style={{
                   color:
@@ -285,7 +286,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 export { formatKey };

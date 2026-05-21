@@ -254,7 +254,7 @@ const normalizeRows = (data: unknown[]): Record<string, unknown>[] =>
     .map((row) => row);
 
 const normalizeChartType = (
-  chartType?: SmartChartType | string | null
+  chartType?: SmartChartType | string | null,
 ): SmartChartType | null => {
   if (!chartType) return null;
   return VALID_CHART_TYPES.includes(chartType as SmartChartType)
@@ -263,7 +263,7 @@ const normalizeChartType = (
 };
 
 const normalizeOrientation = (
-  orientation?: SmartOrientation | boolean | null
+  orientation?: SmartOrientation | boolean | null,
 ): SmartOrientation | null => {
   if (orientation === true) return "vertical";
   if (orientation === false) return "horizontal";
@@ -306,12 +306,12 @@ const isTimeFieldName = (key: string): boolean => TIME_FIELD_PATTERN.test(key);
 const isIdentifierKey = (
   key: string,
   uniqueCount: number,
-  rowCount: number
+  rowCount: number,
 ): boolean => {
   const lower = key.toLowerCase();
   if (
     /(id|uuid|guid|code|number|no|phone|mobile|email|address|pin|postal)$/i.test(
-      lower
+      lower,
     )
   ) {
     return true;
@@ -323,13 +323,14 @@ const isIdentifierKey = (
   ) {
     return true;
   }
-  return rowCount > 20 && uniqueCount > rowCount * 0.9 && !METRIC_FIELD_PATTERN.test(key);
+  return (
+    rowCount > 20 &&
+    uniqueCount > rowCount * 0.9 &&
+    !METRIC_FIELD_PATTERN.test(key)
+  );
 };
 
-export const parseDateValue = (
-  value: unknown,
-  key = ""
-): number | null => {
+export const parseDateValue = (value: unknown, key = ""): number | null => {
   const lowerKey = key.toLowerCase();
 
   if (value instanceof Date) {
@@ -354,12 +355,20 @@ export const parseDateValue = (
 
   const quarter = text.match(/^(\d{4})[-\s]?q([1-4])$/i);
   if (quarter) {
-    return new Date(Number(quarter[1]), (Number(quarter[2]) - 1) * 3, 1).getTime();
+    return new Date(
+      Number(quarter[1]),
+      (Number(quarter[2]) - 1) * 3,
+      1,
+    ).getTime();
   }
 
   const yearMonth = text.match(/^(\d{4})[-/](\d{1,2})$/);
   if (yearMonth) {
-    return new Date(Number(yearMonth[1]), Number(yearMonth[2]) - 1, 1).getTime();
+    return new Date(
+      Number(yearMonth[1]),
+      Number(yearMonth[2]) - 1,
+      1,
+    ).getTime();
   }
 
   const monthOnly = MONTH_INDEX[lower];
@@ -368,7 +377,7 @@ export const parseDateValue = (
   }
 
   const monthYear = text.match(
-    /^(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)[a-z]*[\s,-]+(\d{4})$/i
+    /^(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)[a-z]*[\s,-]+(\d{4})$/i,
   );
   if (monthYear) {
     const month = MONTH_INDEX[monthYear[1].toLowerCase()];
@@ -390,7 +399,7 @@ const getAllKeys = (rows: Record<string, unknown>[]): string[] => {
 };
 
 export const analyzeSmartFields = (
-  rows: Record<string, unknown>[]
+  rows: Record<string, unknown>[],
 ): SmartFieldAnalysis[] => {
   const sample = rows.slice(0, Math.min(rows.length, 250));
   const rowCount = Math.max(sample.length, 1);
@@ -416,7 +425,7 @@ export const analyzeSmartFields = (
     const identifier = isIdentifierKey(key, uniqueValues, rowCount);
     const metricName = METRIC_FIELD_PATTERN.test(key);
     const booleanCount = values.filter(
-      (value) => typeof value === "boolean"
+      (value) => typeof value === "boolean",
     ).length;
 
     let kind: SmartFieldKind = "unknown";
@@ -455,14 +464,14 @@ export const analyzeSmartFields = (
 
 const getField = (
   fields: SmartFieldAnalysis[],
-  key?: string | null
+  key?: string | null,
 ): SmartFieldAnalysis | null =>
-  key ? fields.find((field) => field.key === key) ?? null : null;
+  key ? (fields.find((field) => field.key === key) ?? null) : null;
 
 const chooseGroupField = (
   rows: Record<string, unknown>[],
   fields: SmartFieldAnalysis[],
-  override?: string | null
+  override?: string | null,
 ): SmartFieldAnalysis | null => {
   const overrideField = getField(fields, override);
   if (overrideField && !overrideField.isIdentifier) return overrideField;
@@ -484,7 +493,7 @@ const chooseGroupField = (
         cardinality <= 12 ? 32 - cardinality : Math.max(4, 28 - cardinality);
       const keywordScore =
         /(branch|city|state|region|zone|category|segment|department|product|status|stage|type|name)/i.test(
-          lower
+          lower,
         )
           ? 20
           : 0;
@@ -503,7 +512,7 @@ const chooseGroupField = (
 const chooseValueField = (
   fields: SmartFieldAnalysis[],
   groupField: SmartFieldAnalysis | null,
-  override?: string | null
+  override?: string | null,
 ): SmartFieldAnalysis | null => {
   const overrideField = getField(fields, override);
   if (overrideField?.kind === "numeric") return overrideField;
@@ -532,7 +541,7 @@ const chooseValueField = (
 const chooseSecondaryGroupField = (
   fields: SmartFieldAnalysis[],
   primary: SmartFieldAnalysis | null,
-  chartType: SmartChartType
+  chartType: SmartChartType,
 ): SmartFieldAnalysis | null => {
   if (!["bar", "line", "area", "treemap"].includes(chartType)) return null;
 
@@ -551,7 +560,7 @@ const hasHierarchy = (fields: SmartFieldAnalysis[]): boolean => {
     (field) =>
       !field.isIdentifier &&
       ["categorical", "boolean"].includes(field.kind) &&
-      HIERARCHY_FIELD_PATTERN.test(field.key)
+      HIERARCHY_FIELD_PATTERN.test(field.key),
   );
   return hierarchyFields.length >= 2;
 };
@@ -560,22 +569,22 @@ const detectAutoChartType = (
   rows: Record<string, unknown>[],
   fields: SmartFieldAnalysis[],
   groupField: SmartFieldAnalysis | null,
-  valueField: SmartFieldAnalysis | null
+  valueField: SmartFieldAnalysis | null,
 ): SmartChartType => {
   if (rows.length === 0) return "bar";
 
   const numericFields = fields.filter(
-    (field) => field.kind === "numeric" && !field.isIdentifier
+    (field) => field.kind === "numeric" && !field.isIdentifier,
   );
   const categoricalFields = fields.filter(
     (field) =>
-      ["categorical", "boolean"].includes(field.kind) && !field.isIdentifier
+      ["categorical", "boolean"].includes(field.kind) && !field.isIdentifier,
   );
   const timeField = fields.find((field) => field.kind === "temporal");
   const stageField = fields.find(
     (field) =>
       ["categorical", "boolean"].includes(field.kind) &&
-      STAGE_FIELD_PATTERN.test(field.key)
+      STAGE_FIELD_PATTERN.test(field.key),
   );
 
   if (stageField && valueField) return "funnel";
@@ -604,7 +613,7 @@ const detectAutoChartType = (
 
 const detectAggregation = (
   valueField: SmartFieldAnalysis | null,
-  override?: SmartAggregation | null
+  override?: SmartAggregation | null,
 ): SmartAggregation => {
   if (override) return override;
   if (!valueField) return "count";
@@ -628,7 +637,7 @@ const createCell = (): AggregateCell => ({
 const addToCell = (
   cell: AggregateCell,
   value: number | null,
-  aggregation: SmartAggregation
+  aggregation: SmartAggregation,
 ) => {
   if (aggregation === "count") {
     cell.sum += 1;
@@ -647,7 +656,7 @@ const addToCell = (
 
 const finalizeCell = (
   cell: AggregateCell | undefined,
-  aggregation: SmartAggregation
+  aggregation: SmartAggregation,
 ): number => {
   if (!cell) return 0;
   if (aggregation === "count") return cell.count;
@@ -660,10 +669,11 @@ const finalizeCell = (
 const getGroupLabel = (
   rawValue: unknown,
   field: SmartFieldAnalysis | null,
-  fallback: string
+  fallback: string,
 ): string => {
   if (!isPresent(rawValue)) return "Unknown";
-  const parsedDate = field?.kind === "temporal" ? parseDateValue(rawValue, field.key) : null;
+  const parsedDate =
+    field?.kind === "temporal" ? parseDateValue(rawValue, field.key) : null;
   if (parsedDate !== null) {
     const date = new Date(parsedDate);
     const lower = field?.key.toLowerCase() ?? "";
@@ -673,7 +683,10 @@ const getGroupLabel = (
     if (/month|quarter|period/.test(lower) && !/date|day/.test(lower)) {
       return new Intl.DateTimeFormat("en-IN", {
         month: "short",
-        year: parsedDate === new Date(2000, date.getMonth(), 1).getTime() ? undefined : "numeric",
+        year:
+          parsedDate === new Date(2000, date.getMonth(), 1).getTime()
+            ? undefined
+            : "numeric",
       }).format(date);
     }
     return new Intl.DateTimeFormat("en-IN", {
@@ -688,7 +701,7 @@ const getGroupLabel = (
 
 const getGroupSortValue = (
   rawValue: unknown,
-  field: SmartFieldAnalysis | null
+  field: SmartFieldAnalysis | null,
 ): number | undefined => {
   if (field?.kind !== "temporal") return undefined;
   return parseDateValue(rawValue, field.key) ?? undefined;
@@ -699,7 +712,7 @@ const aggregateRows = (
   groupField: SmartFieldAnalysis | null,
   valueField: SmartFieldAnalysis | null,
   secondaryField: SmartFieldAnalysis | null,
-  aggregation: SmartAggregation
+  aggregation: SmartAggregation,
 ): { data: SmartProcessedDatum[]; seriesKeys: string[] } => {
   const groupMap = new Map<
     string,
@@ -736,7 +749,7 @@ const aggregateRows = (
     addToCell(
       cell,
       valueField ? toFiniteNumber(row[valueField.key]) : null,
-      aggregation
+      aggregation,
     );
     group.cells.set(seriesKey, cell);
   });
@@ -768,7 +781,7 @@ const buildTreemapRows = (
   groupField: SmartFieldAnalysis | null,
   valueField: SmartFieldAnalysis | null,
   secondaryField: SmartFieldAnalysis | null,
-  aggregation: SmartAggregation
+  aggregation: SmartAggregation,
 ): SmartProcessedDatum[] => {
   if (!secondaryField) {
     return aggregateRows(rows, groupField, valueField, null, aggregation).data;
@@ -784,8 +797,15 @@ const buildTreemapRows = (
 
   rows.forEach((row, index) => {
     const rawGroup = groupField ? row[groupField.key] : `Group ${index + 1}`;
-    const parentName = getGroupLabel(rawGroup, groupField, `Group ${index + 1}`);
-    const existing = parentMap.get(parentName) ?? { rawName: rawGroup, rows: [] };
+    const parentName = getGroupLabel(
+      rawGroup,
+      groupField,
+      `Group ${index + 1}`,
+    );
+    const existing = parentMap.get(parentName) ?? {
+      rawName: rawGroup,
+      rows: [],
+    };
     existing.rows.push(row);
     parentMap.set(parentName, existing);
   });
@@ -796,7 +816,7 @@ const buildTreemapRows = (
       secondaryField,
       valueField,
       null,
-      aggregation
+      aggregation,
     ).data.sort((a, b) => b.total - a.total);
     const total = children.reduce((sum, child) => sum + child.total, 0);
     return {
@@ -816,28 +836,33 @@ const buildScatterRows = (
   rows: Record<string, unknown>[],
   fields: SmartFieldAnalysis[],
   groupField: SmartFieldAnalysis | null,
-  valueField: SmartFieldAnalysis | null
+  valueField: SmartFieldAnalysis | null,
 ): {
   data: SmartProcessedDatum[];
   xAxisKey: string | null;
   yAxisKey: string | null;
 } => {
   const numericFields = fields.filter(
-    (field) => field.kind === "numeric" && !field.isIdentifier
+    (field) => field.kind === "numeric" && !field.isIdentifier,
   );
   const xField =
-    groupField?.kind === "numeric" ? groupField : numericFields[0] ?? null;
+    groupField?.kind === "numeric" ? groupField : (numericFields[0] ?? null);
   const yField =
     valueField?.kind === "numeric" && valueField.key !== xField?.key
       ? valueField
-      : numericFields.find((field) => field.key !== xField?.key) ?? null;
+      : (numericFields.find((field) => field.key !== xField?.key) ?? null);
   const labelField =
     fields.find(
-      (field) => ["categorical", "boolean"].includes(field.kind) && !field.isIdentifier
+      (field) =>
+        ["categorical", "boolean"].includes(field.kind) && !field.isIdentifier,
     ) ?? null;
 
   if (!xField || !yField) {
-    return { data: [], xAxisKey: xField?.key ?? null, yAxisKey: yField?.key ?? null };
+    return {
+      data: [],
+      xAxisKey: xField?.key ?? null,
+      yAxisKey: yField?.key ?? null,
+    };
   }
 
   const data = rows
@@ -869,7 +894,7 @@ const buildRadarRows = (
   rows: Record<string, unknown>[],
   fields: SmartFieldAnalysis[],
   groupField: SmartFieldAnalysis | null,
-  aggregation: SmartAggregation
+  aggregation: SmartAggregation,
 ): { data: SmartProcessedDatum[]; metricKeys: string[] } => {
   const metricKeys = fields
     .filter((field) => field.kind === "numeric" && !field.isIdentifier)
@@ -881,7 +906,7 @@ const buildRadarRows = (
     groupField,
     null,
     null,
-    aggregation === "count" ? "count" : "sum"
+    aggregation === "count" ? "count" : "sum",
   );
 
   const groupMap = new Map<string, Map<string, AggregateCell>>();
@@ -905,7 +930,10 @@ const buildRadarRows = (
         acc[key] = finalizeCell(cells?.get(key), aggregation);
         return acc;
       }, {});
-      const total = Object.values(values).reduce((sum, value) => sum + value, 0);
+      const total = Object.values(values).reduce(
+        (sum, value) => sum + value,
+        0,
+      );
       return { ...datum, value: total, total, values };
     }),
   };
@@ -917,7 +945,7 @@ const applySortingAndTopN = (
   groupField: SmartFieldAnalysis | null,
   seriesKeys: string[],
   topNThreshold: number,
-  topNEnabled: boolean
+  topNEnabled: boolean,
 ): {
   data: SmartProcessedDatum[];
   sorting: SmartChartConfig["sorting"];
@@ -935,7 +963,8 @@ const applySortingAndTopN = (
       : { enabled: false, direction: "desc", by: "none" };
 
   if (shouldSortByValue) sorted.sort((a, b) => b.total - a.total);
-  if (isTemporal) sorted.sort((a, b) => (a.sortValue ?? 0) - (b.sortValue ?? 0));
+  if (isTemporal)
+    sorted.sort((a, b) => (a.sortValue ?? 0) - (b.sortValue ?? 0));
 
   const topNApplies =
     topNEnabled &&
@@ -978,8 +1007,13 @@ const applySortingAndTopN = (
   };
 };
 
-const applyPercentages = (data: SmartProcessedDatum[]): SmartProcessedDatum[] => {
-  const grandTotal = data.reduce((sum, datum) => sum + Math.abs(datum.total), 0);
+const applyPercentages = (
+  data: SmartProcessedDatum[],
+): SmartProcessedDatum[] => {
+  const grandTotal = data.reduce(
+    (sum, datum) => sum + Math.abs(datum.total),
+    0,
+  );
   return data.map((datum) => ({
     ...datum,
     percent: grandTotal ? (Math.abs(datum.total) / grandTotal) * 100 : 0,
@@ -999,12 +1033,16 @@ const detectPrecision = (values: number[]): number => {
 
 const detectNumberFormat = (
   valueKey: string | null,
-  values: number[]
+  values: number[],
 ): SmartNumberFormat => {
   const key = valueKey ?? "";
   const lower = key.toLowerCase();
-  const isPercent = AVERAGE_FIELD_PATTERN.test(lower) && /(percent|rate|ratio|margin|growth|conversion)/i.test(lower);
-  const isCurrency = MONEY_FIELD_PATTERN.test(lower) && !/(qty|quantity|count|orders?|users?|items?)$/i.test(lower);
+  const isPercent =
+    AVERAGE_FIELD_PATTERN.test(lower) &&
+    /(percent|rate|ratio|margin|growth|conversion)/i.test(lower);
+  const isCurrency =
+    MONEY_FIELD_PATTERN.test(lower) &&
+    !/(qty|quantity|count|orders?|users?|items?)$/i.test(lower);
 
   return {
     locale: "en-IN",
@@ -1022,7 +1060,7 @@ const trimTrailingZeroes = (value: string): string =>
 
 export const formatSmartNumber = (
   value: unknown,
-  format: SmartNumberFormat
+  format: SmartNumberFormat,
 ): string => {
   const numericValue = toFiniteNumber(value) ?? 0;
   const sign = numericValue < 0 ? "-" : "";
@@ -1030,7 +1068,9 @@ export const formatSmartNumber = (
 
   if (format.style === "percent") {
     const percentValue = abs <= 1 ? abs * 100 : abs;
-    const body = trimTrailingZeroes(percentValue.toFixed(Math.min(2, Math.max(1, format.precision))));
+    const body = trimTrailingZeroes(
+      percentValue.toFixed(Math.min(2, Math.max(1, format.precision))),
+    );
     return `${sign}${body}%`;
   }
 
@@ -1055,7 +1095,7 @@ const getInsights = (
   groupBy: string | null,
   valueKey: string | null,
   groupField: SmartFieldAnalysis | null,
-  numberFormat: SmartNumberFormat
+  numberFormat: SmartNumberFormat,
 ): SmartInsight[] => {
   if (data.length === 0) return [];
 
@@ -1082,7 +1122,10 @@ const getInsights = (
     });
   }
 
-  const grandTotal = data.reduce((sum, datum) => sum + Math.abs(datum.total), 0);
+  const grandTotal = data.reduce(
+    (sum, datum) => sum + Math.abs(datum.total),
+    0,
+  );
   if (grandTotal > 0) {
     insights.push({
       kind: "share",
@@ -1095,8 +1138,12 @@ const getInsights = (
   if (groupField?.kind === "temporal" && data.length >= 2) {
     const first = data[0];
     const last = data[data.length - 1];
-    const change = first.total === 0 ? 0 : ((last.total - first.total) / Math.abs(first.total)) * 100;
-    const direction = change > 0 ? "increased" : change < 0 ? "declined" : "remained flat";
+    const change =
+      first.total === 0
+        ? 0
+        : ((last.total - first.total) / Math.abs(first.total)) * 100;
+    const direction =
+      change > 0 ? "increased" : change < 0 ? "declined" : "remained flat";
     insights.push({
       kind: "trend",
       label: `${metricLabel} trend`,
@@ -1109,13 +1156,14 @@ const getInsights = (
   }
 
   if (data.length >= 5) {
-    const mean = data.reduce((sum, datum) => sum + datum.total, 0) / data.length;
+    const mean =
+      data.reduce((sum, datum) => sum + datum.total, 0) / data.length;
     const variance =
       data.reduce((sum, datum) => sum + Math.pow(datum.total - mean, 2), 0) /
       data.length;
     const deviation = Math.sqrt(variance);
     const outlier = sortedByValue.find(
-      (datum) => deviation > 0 && datum.total > mean + deviation * 2
+      (datum) => deviation > 0 && datum.total > mean + deviation * 2,
     );
     if (outlier) {
       insights.push({
@@ -1134,14 +1182,17 @@ const getEmptyState = (
   rows: Record<string, unknown>[],
   processedData: SmartProcessedDatum[],
   fields: SmartFieldAnalysis[],
-  chartType: SmartChartType
+  chartType: SmartChartType,
 ): SmartEmptyState => {
   if (rows.length === 0) {
     return {
       isEmpty: true,
       title: "No data to visualize",
       message: "The response did not return rows that can be plotted.",
-      suggestions: ["Switch to table view", "Ask for a grouped or numeric result"],
+      suggestions: [
+        "Switch to table view",
+        "Ask for a grouped or numeric result",
+      ],
     };
   }
 
@@ -1150,7 +1201,10 @@ const getEmptyState = (
       isEmpty: true,
       title: "No fields detected",
       message: "The rows do not contain named fields for a chart.",
-      suggestions: ["Switch to table view", "Ask for columns with labels and values"],
+      suggestions: [
+        "Switch to table view",
+        "Ask for columns with labels and values",
+      ],
     };
   }
 
@@ -1179,7 +1233,7 @@ const getEmptyState = (
 
 const getResponsiveSettings = (
   data: SmartProcessedDatum[],
-  orientation: SmartOrientation
+  orientation: SmartOrientation,
 ) => {
   const categoryCount = data.length;
   const isDense = categoryCount > 10;
@@ -1199,20 +1253,29 @@ const getResponsiveSettings = (
 
 export const getSmartChartConfig = (
   data: unknown[],
-  overrides: SmartChartOverrides = {}
+  overrides: SmartChartOverrides = {},
 ): SmartChartConfig => {
   const rawRows = normalizeRows(Array.isArray(data) ? data : []);
   const fields = analyzeSmartFields(rawRows);
   const requestedChartType = normalizeChartType(overrides.chartType);
   const groupField = chooseGroupField(rawRows, fields, overrides.groupBy);
   const valueField = chooseValueField(fields, groupField, overrides.valueKey);
-  const autoChartType = detectAutoChartType(rawRows, fields, groupField, valueField);
+  const autoChartType = detectAutoChartType(
+    rawRows,
+    fields,
+    groupField,
+    valueField,
+  );
   const chartType =
     requestedChartType && !overrides.forceAutoChartType
       ? requestedChartType
       : autoChartType;
   const aggregation = detectAggregation(valueField, overrides.aggregate);
-  const secondaryField = chooseSecondaryGroupField(fields, groupField, chartType);
+  const secondaryField = chooseSecondaryGroupField(
+    fields,
+    groupField,
+    chartType,
+  );
   const topNThreshold = overrides.topN ?? 10;
   const topNEnabled = overrides.enableTopN ?? true;
 
@@ -1239,8 +1302,8 @@ export const getSmartChartConfig = (
     const maxValue = Math.max(
       1,
       ...processedData.flatMap((datum) =>
-        radar.metricKeys.map((key) => Math.abs(datum.values[key] ?? 0))
-      )
+        radar.metricKeys.map((key) => Math.abs(datum.values[key] ?? 0)),
+      ),
     );
     radarIndicators = radar.metricKeys.map((key) => ({
       name: formatKey(key),
@@ -1252,7 +1315,7 @@ export const getSmartChartConfig = (
       groupField,
       valueField,
       secondaryField,
-      aggregation
+      aggregation,
     );
     processedData = treemapData;
     seriesKeys = ["value"];
@@ -1262,7 +1325,7 @@ export const getSmartChartConfig = (
       groupField,
       valueField,
       secondaryField,
-      aggregation
+      aggregation,
     );
     processedData = aggregated.data;
     seriesKeys = aggregated.seriesKeys;
@@ -1274,7 +1337,7 @@ export const getSmartChartConfig = (
     groupField,
     seriesKeys,
     topNThreshold,
-    topNEnabled
+    topNEnabled,
   );
   processedData = applyPercentages(sortedAndLimited.data);
 
@@ -1285,13 +1348,13 @@ export const getSmartChartConfig = (
         children: datum.children
           ? applyPercentages(datum.children.sort((a, b) => b.total - a.total))
           : undefined,
-      }))
+      })),
     );
   }
 
   const maxLabelLength = Math.max(
     0,
-    ...processedData.map((datum) => datum.name.length)
+    ...processedData.map((datum) => datum.name.length),
   );
   const categoryCount = processedData.length;
   const smartHorizontal =
@@ -1301,15 +1364,15 @@ export const getSmartChartConfig = (
     chartType === "bar"
       ? smartHorizontal
         ? "horizontal"
-        : requestedOrientation ?? "vertical"
-      : requestedOrientation ?? "vertical";
+        : (requestedOrientation ?? "vertical")
+      : (requestedOrientation ?? "vertical");
 
   const numericValues = processedData.flatMap((datum) =>
-    seriesKeys.map((key) => datum.values[key] ?? datum.total)
+    seriesKeys.map((key) => datum.values[key] ?? datum.total),
   );
   const numberFormat = detectNumberFormat(
     yAxisKey ?? valueField?.key ?? null,
-    numericValues
+    numericValues,
   );
   const responsive = getResponsiveSettings(processedData, orientation);
   const dense = responsive.isDense || maxLabelLength > 16;
@@ -1346,7 +1409,7 @@ export const getSmartChartConfig = (
     groupField?.key ?? null,
     yAxisKey ?? valueField?.key ?? null,
     groupField,
-    numberFormat
+    numberFormat,
   );
   const emptyState = getEmptyState(rawRows, processedData, fields, chartType);
 
@@ -1399,19 +1462,19 @@ const hexToRgba = (hex: string, alpha = 1): string => {
     normalized.length === 3
       ? normalized.slice(0, 1).repeat(2)
       : normalized.slice(0, 2),
-    16
+    16,
   );
   const g = parseInt(
     normalized.length === 3
       ? normalized.slice(1, 2).repeat(2)
       : normalized.slice(2, 4),
-    16
+    16,
   );
   const b = parseInt(
     normalized.length === 3
       ? normalized.slice(2, 3).repeat(2)
       : normalized.slice(4, 6),
-    16
+    16,
   );
   return `rgba(${r},${g},${b},${alpha})`;
 };
@@ -1422,7 +1485,7 @@ const getPalette = (theme: Theme): string[] =>
 const makeGradient = (
   color: string,
   orientation: SmartOrientation,
-  alpha = 1
+  alpha = 1,
 ) =>
   orientation === "horizontal"
     ? new echarts.graphic.LinearGradient(0, 0, 1, 0, [
@@ -1435,7 +1498,8 @@ const makeGradient = (
       ]);
 
 const makeTooltipFormatter =
-  (config: SmartChartConfig, theme: Theme) => (params: unknown): string => {
+  (config: SmartChartConfig, theme: Theme) =>
+  (params: unknown): string => {
     const payload = Array.isArray(params) ? params : [params];
     const entries = payload.filter(Boolean) as Array<{
       marker?: string;
@@ -1464,16 +1528,19 @@ const makeTooltipFormatter =
         const percent =
           entry.percent ??
           entry.data?.percent ??
-          config.processedData.find((datum) => datum.name === (entry.name ?? title))
-            ?.percent;
-        const label = entry.seriesName && entry.seriesName !== "value"
-          ? formatKey(entry.seriesName)
-          : formatKey(entry.name ?? entry.data?.name ?? "Value");
+          config.processedData.find(
+            (datum) => datum.name === (entry.name ?? title),
+          )?.percent;
+        const label =
+          entry.seriesName && entry.seriesName !== "value"
+            ? formatKey(entry.seriesName)
+            : formatKey(entry.name ?? entry.data?.name ?? "Value");
         const percentText =
           config.tooltip.showPercent && percent !== undefined
             ? `<span style="color:${theme.colors.textSecondary};margin-left:8px;">${trimTrailingZeroes(percent.toFixed(1))}%</span>`
             : "";
-        const color = typeof entry.color === "string" ? entry.color : theme.colors.accent;
+        const color =
+          typeof entry.color === "string" ? entry.color : theme.colors.accent;
         return `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid ${theme.colors.border};">
             <span style="display:flex;align-items:center;gap:8px;color:${theme.colors.textSecondary};">
@@ -1519,7 +1586,7 @@ const makeTooltipFormatter =
 const makeValueAxis = (
   config: SmartChartConfig,
   theme: Theme,
-  name?: string | null
+  name?: string | null,
 ) => ({
   type: "value",
   name: name ? formatKey(name) : undefined,
@@ -1545,7 +1612,7 @@ const makeValueAxis = (
 const makeCategoryAxis = (
   config: SmartChartConfig,
   theme: Theme,
-  axis: "x" | "y"
+  axis: "x" | "y",
 ) => ({
   type: "category",
   data: config.processedData.map((datum) => datum.name),
@@ -1563,7 +1630,8 @@ const makeCategoryAxis = (
     hideOverlap: true,
     overflow: "truncate",
     width: axis === "y" ? config.axis.gridLeft - 20 : undefined,
-    formatter: (value: string) => truncateLabel(value, config.axis.truncateLength),
+    formatter: (value: string) =>
+      truncateLabel(value, config.axis.truncateLength),
   },
 });
 
@@ -1571,7 +1639,7 @@ const getSeriesData = (
   config: SmartChartConfig,
   seriesKey: string,
   color: string,
-  theme: Theme
+  theme: Theme,
 ) =>
   config.processedData.map((datum) => {
     const value = datum.values[seriesKey] ?? datum.total;
@@ -1590,7 +1658,7 @@ const getSeriesData = (
 
 export const getSmartEChartsOption = (
   config: SmartChartConfig,
-  theme: Theme
+  theme: Theme,
 ): EChartsOption => {
   if (config.emptyState.isEmpty) return {};
 
@@ -1851,7 +1919,11 @@ export const getSmartEChartsOption = (
   }
 
   const isHorizontal = config.orientation === "horizontal";
-  const categoryAxis = makeCategoryAxis(config, theme, isHorizontal ? "y" : "x");
+  const categoryAxis = makeCategoryAxis(
+    config,
+    theme,
+    isHorizontal ? "y" : "x",
+  );
   const valueAxis = makeValueAxis(config, theme, config.yAxisKey);
 
   return {
@@ -1860,7 +1932,9 @@ export const getSmartEChartsOption = (
       left: config.axis.gridLeft,
       right: config.axis.gridRight,
       top: config.axis.gridTop,
-      bottom: showLegend ? Math.max(config.axis.gridBottom, 72) : config.axis.gridBottom,
+      bottom: showLegend
+        ? Math.max(config.axis.gridBottom, 72)
+        : config.axis.gridBottom,
       containLabel: true,
     },
     dataZoom: config.axis.dataZoom
@@ -1890,7 +1964,8 @@ export const getSmartEChartsOption = (
         name: seriesKey,
         type: isLine ? "line" : "bar",
         stack:
-          config.seriesKeys.length > 1 && ["bar", "area"].includes(config.chartType)
+          config.seriesKeys.length > 1 &&
+          ["bar", "area"].includes(config.chartType)
             ? "total"
             : undefined,
         smooth: isLine,

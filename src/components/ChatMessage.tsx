@@ -830,26 +830,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                             </motion.button>
                           </CustomTooltip>
                         )}
-                      {currentView === "table" &&
-                        csvData.length > 0 && (
-                          <CustomTooltip
-                            title="Download Table Data"
-                            position="top"
-                          >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={handleDownloadCSV}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                            >
-                              <Download
-                                size={20}
-                                style={{ color: theme.colors.accent }}
-                              />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
                       {currentView === "graph" &&
                         hasNumericData && (
                           <div className="relative" ref={resolutionRef}>

@@ -93,6 +93,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const [aggregate, setAggregate] = useState<SmartAggregation>("sum");
     const [valueKey, setValueKey] = useState<string | null>(null);
     const [isVertical, setIsVertical] = useState(true);
+    const [syncedTableRows, setSyncedTableRows] = useState<Record<string, unknown>[] | null>(null);
     const [showSummaryModal, setShowSummaryModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedQuestion, setEditedQuestion] = useState(
@@ -174,6 +175,10 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     useEffect(() => {
       if (graphSummary) setShowSummaryModal(true);
     }, [graphSummary]);
+
+    useEffect(() => {
+      setSyncedTableRows(null);
+    }, [dashboardItem?.id]);
 
     useImperativeHandle(ref, () => ({
       getGraphContainer: () => graphContainerRef.current,
@@ -767,7 +772,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 )}
                 <div className="flex-1">
                   <DynamicGraph
-                    data={dashboardItem.mainViewData.chartData}
+                    data={syncedTableRows ?? dashboardItem.mainViewData.chartData}
                     graphType={graphType}
                     groupBy={groupBy}
                     setGroupBy={setGroupBy}
@@ -782,7 +787,10 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
 
               <div className="lg:w-[40%] w-full mx-2 overflow-hidden flex flex-col">
                 {activeViewType === "table" && (
-                  <DataTable data={dashboardItem.mainViewData.tableData} />
+                  <DataTable
+                    data={dashboardItem.mainViewData.tableData}
+                    onRowsChange={setSyncedTableRows}
+                  />
                 )}
                 {activeViewType === "query" && (
                   <QueryDisplay

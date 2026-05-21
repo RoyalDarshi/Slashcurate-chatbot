@@ -40,7 +40,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         aggregate,
         orientation: isVertical ? "vertical" : "horizontal",
       }),
-      [aggregate, chartType, groupBy, isVertical, valueKey]
+      [aggregate, chartType, groupBy, isVertical, valueKey],
     );
 
     const { config, option } = useSmartChart(data, smartOverrides);
@@ -115,7 +115,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
             {config.insights.slice(0, 3).map((insight) => (
               <span
                 key={`${insight.kind}-${insight.label}`}
-                className="max-w-[240px] truncate px-3 py-1 text-xs font-medium"
+                className="px-3 py-1 text-xs font-medium"
                 title={`${insight.label}: ${insight.value}`}
                 style={{
                   color:
@@ -160,7 +160,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     prevProps.groupBy === nextProps.groupBy &&
     prevProps.aggregate === nextProps.aggregate &&
     prevProps.valueKey === nextProps.valueKey &&
-    prevProps.isVertical === nextProps.isVertical
+    prevProps.isVertical === nextProps.isVertical,
 );
 
 export { formatKey };

@@ -122,6 +122,7 @@ export interface MarkdownComponentProps {
 export interface DataTableProps {
   data: any;
   darkMode?: boolean;
+  onRowsChange?: (rows: Record<string, unknown>[]) => void;
 }
 
 export interface TableColumn {
