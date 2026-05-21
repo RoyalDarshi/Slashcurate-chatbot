@@ -57,18 +57,18 @@ interface DashboardViewProps {
     questionContent: string,
     responseQuery: string,
     currentConnection: string,
-    isCurrentlyFavorited: boolean
+    isCurrentlyFavorited: boolean,
   ) => Promise<void>;
   sessionConErr: boolean;
   graphSummary: string | null;
   onEditQuestion: (
     questionMessageId: string,
-    newQuestion: string
+    newQuestion: string,
   ) => Promise<void>;
   onUpdateReaction: (
     questionMessageId: string,
     reaction: "like" | "dislike" | null,
-    dislike_reason: string | null
+    dislike_reason: string | null,
   ) => void;
 }
 
@@ -86,18 +86,20 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       onEditQuestion,
       onUpdateReaction,
     },
-    ref
+    ref,
   ) => {
     const [graphType, setGraphType] = useState<SmartChartType>("bar");
     const [groupBy, setGroupBy] = useState<string | null>(null);
     const [aggregate, setAggregate] = useState<SmartAggregation>("sum");
     const [valueKey, setValueKey] = useState<string | null>(null);
     const [isVertical, setIsVertical] = useState(true);
-    const [syncedTableRows, setSyncedTableRows] = useState<Record<string, unknown>[] | null>(null);
+    const [syncedTableRows, setSyncedTableRows] = useState<
+      Record<string, unknown>[] | null
+    >(null);
     const [showSummaryModal, setShowSummaryModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedQuestion, setEditedQuestion] = useState(
-      dashboardItem?.question || ""
+      dashboardItem?.question || "",
     );
 
     const [showDislikeOptions, setShowDislikeOptions] = useState(false);
@@ -123,7 +125,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const getValidValueKeys = (data: any[]): string[] => {
       if (!data || data.length === 0) return [];
       return Object.keys(data[0]).filter(
-        (key) => !isKeyExcluded(key) && toFiniteNumber(data[0][key]) !== null
+        (key) => !isKeyExcluded(key) && toFiniteNumber(data[0][key]) !== null,
       );
     };
 
@@ -137,7 +139,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             key.toLowerCase().includes("date") ||
             key.toLowerCase().includes("month") ||
             key.toLowerCase().includes("year") ||
-            key.toLowerCase().includes("time"))
+            key.toLowerCase().includes("time")),
       );
     };
 
@@ -148,7 +150,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         dashboardItem?.mainViewData?.chartData &&
         dashboardItem.mainViewData.chartData.length > 0
       ) {
-        // Only run auto-detection if we haven't processed this item yet
         if (lastProcessedItemId.current !== dashboardItem.id) {
           const chartData = dashboardItem.mainViewData.chartData;
           const smartDefaults = getSmartChartConfig(chartData);
@@ -159,11 +160,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           setGraphType(smartDefaults.chartType);
           setIsVertical(smartDefaults.orientation === "vertical");
 
-          // Mark this item as processed
           lastProcessedItemId.current = dashboardItem.id;
         }
       } else {
-        // If no data, reset (or if we switched to an empty item)
         if (lastProcessedItemId.current !== dashboardItem?.id) {
           setGroupBy(null);
           setValueKey(null);
@@ -220,7 +219,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             token: sessionStorage.getItem("token"),
             reaction: newReaction,
             dislike_reason: null,
-          }
+          },
         );
         onUpdateReaction(dashboardItem.questionMessageId, newReaction, null);
       } catch (error) {
@@ -239,7 +238,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               token: sessionStorage.getItem("token"),
               reaction: null,
               dislike_reason: null,
-            }
+            },
           );
           onUpdateReaction(dashboardItem.questionMessageId, null, null);
         } catch (error) {
@@ -260,11 +259,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             token: sessionStorage.getItem("token"),
             reaction: "dislike",
             dislike_reason: reason,
-          }
+          },
         );
         onUpdateReaction(dashboardItem.questionMessageId, "dislike", reason);
-        setShowDislikeOptions(false); // <-- Close on submit
-        setShowCustomInput(false); // <-- Close on submit
+        setShowDislikeOptions(false);
+        setShowCustomInput(false);
       } catch (error) {
         console.error("Error setting dislike reaction:", error);
         toast.error("Failed to set dislike reaction.");
@@ -274,7 +273,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     if (!dashboardItem) {
       return (
         <div
-          className="flex flex-col items-center justify-center h-full p-4"
+          className="flex flex-col items-center justify-center h-full p-4 w-full"
           style={{ backgroundColor: theme.colors.background }}
         >
           <HelpCircle
@@ -298,14 +297,10 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     }
 
-    // **FIX: Simplified this check**
     if (dashboardItem.isError) {
-      // The DashboardError component is now rendered in DashboardInterface
-      // This logic is technically redundant if DashboardInterface is correct,
-      // but serves as a fallback.
       return (
         <div
-          className="flex flex-col items-center justify-center h-full p-4"
+          className="flex flex-col items-center justify-center h-full p-4 w-full"
           style={{ backgroundColor: theme.colors.background }}
         >
           <HelpCircle
@@ -335,7 +330,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 onClick={() =>
                   onEditQuestion(
                     dashboardItem.questionMessageId,
-                    dashboardItem.question
+                    dashboardItem.question,
                   )
                 }
                 className="px-4 py-2 rounded-md"
@@ -379,7 +374,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     if (editedQuestion.trim()) {
                       onEditQuestion(
                         dashboardItem.questionMessageId,
-                        editedQuestion
+                        editedQuestion,
                       );
                       setIsEditing(false);
                     }
@@ -400,18 +395,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     }
 
     return (
-      <div className="h-full">
+      <div className="flex-1 w-full flex flex-col min-h-0 overflow-hidden">
         {isSubmitting ? (
-          <DashboardSkeletonLoader
-            question={dashboardItem.question}
-          />
+          <DashboardSkeletonLoader question={dashboardItem.question} />
         ) : (
           <div
-            className="flex flex-col flex-grow h-full min-h-[500px] px-2 pt-2"
+            className="flex flex-col flex-grow min-h-0 px-2 pt-2 w-full overflow-hidden"
             style={{ backgroundColor: theme.colors.background }}
           >
             <div
-              className="w-full p-2 mb-2 rounded-xl shadow-md flex items-center justify-between"
+              className="w-full p-2 mb-2 rounded-xl flex-shrink-0 shadow-md flex items-center justify-between"
               style={{
                 backgroundColor: theme.colors.surface,
                 color: theme.colors.text,
@@ -450,7 +443,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         if (editedQuestion.trim()) {
                           onEditQuestion(
                             dashboardItem.questionMessageId,
-                            editedQuestion
+                            editedQuestion,
                           );
                           setIsEditing(false);
                         }
@@ -492,19 +485,18 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               )}
             </div>
 
-            <div className="flex flex-grow">
+            <div className="flex flex-col lg:flex-row flex-grow min-h-0 overflow-hidden w-full gap-3 pb-2">
               <div
                 ref={graphContainerRef}
-                className="flex-1 rounded-xl flex flex-col overflow-hidden"
+                className="flex-1 rounded-xl flex flex-col overflow-hidden min-w-0 min-h-0"
                 style={{
                   backgroundColor: theme.colors.surface,
                   boxShadow: theme.shadow.md,
                   borderRadius: theme.borderRadius.large,
-                  minHeight: "300px",
                 }}
               >
                 {dashboardItem.mainViewData.chartData?.length > 0 && (
-                  <div className="p-1.5 flex flex-wrap gap-2">
+                  <div className="p-1.5 flex flex-wrap gap-2 flex-shrink-0">
                     <div className="flex items-center gap-1.5">
                       <label
                         htmlFor="graph-type-select"
@@ -561,7 +553,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         </select>
                       </div>
                     )}
-                    {["bar", "line", "area", "pie", "treemap"].includes(graphType) &&
+                    {["bar", "line", "area", "pie", "treemap"].includes(
+                      graphType,
+                    ) &&
                       groupBy && (
                         <>
                           <div className="flex items-center gap-1.5">
@@ -582,7 +576,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               }}
                             >
                               {getValidCategoricalKeys(
-                                dashboardItem.mainViewData.chartData
+                                dashboardItem.mainViewData.chartData,
                               ).map((key) => (
                                 <option key={key} value={key}>
                                   {key.replace(/_/g, " ")}
@@ -616,7 +610,10 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               <option value="max">Maximum</option>
                             </select>
                           </div>
-                          {(aggregate === "sum" || aggregate === "avg" || aggregate === "min" || aggregate === "max") && (
+                          {(aggregate === "sum" ||
+                            aggregate === "avg" ||
+                            aggregate === "min" ||
+                            aggregate === "max") && (
                             <div className="flex items-center gap-1.5">
                               <label
                                 className="text-sm"
@@ -635,7 +632,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                 }}
                               >
                                 {getValidValueKeys(
-                                  dashboardItem.mainViewData.chartData
+                                  dashboardItem.mainViewData.chartData,
                                 ).map((key) => (
                                   <option key={key} value={key}>
                                     {key.replace(/_/g, " ")}
@@ -663,7 +660,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             }}
                           >
                             {getValidValueKeys(
-                              dashboardItem.mainViewData.chartData
+                              dashboardItem.mainViewData.chartData,
                             ).map((key) => (
                               <option key={key} value={key}>
                                 {key.replace(/_/g, " ")}
@@ -686,7 +683,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             }}
                           >
                             {getValidValueKeys(
-                              dashboardItem.mainViewData.chartData
+                              dashboardItem.mainViewData.chartData,
                             ).map((key) => (
                               <option key={key} value={key}>
                                 {key.replace(/_/g, " ")}
@@ -715,7 +712,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             }}
                           >
                             {getValidCategoricalKeys(
-                              dashboardItem.mainViewData.chartData
+                              dashboardItem.mainViewData.chartData,
                             ).map((key) => (
                               <option key={key} value={key}>
                                 {key.replace(/_/g, " ")}
@@ -738,7 +735,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             }}
                           >
                             {getValidValueKeys(
-                              dashboardItem.mainViewData.chartData
+                              dashboardItem.mainViewData.chartData,
                             ).map((key) => (
                               <option key={key} value={key}>
                                 {key.replace(/_/g, " ")}
@@ -770,9 +767,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     )}
                   </div>
                 )}
-                <div className="flex-1">
+                <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col items-center justify-center">
                   <DynamicGraph
-                    data={syncedTableRows ?? dashboardItem.mainViewData.chartData}
+                    data={
+                      syncedTableRows ?? dashboardItem.mainViewData.chartData
+                    }
                     graphType={graphType}
                     groupBy={groupBy}
                     setGroupBy={setGroupBy}
@@ -785,7 +784,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               </div>
 
-              <div className="lg:w-[40%] w-full mx-2 overflow-hidden flex flex-col">
+              <div className="lg:w-[40%] w-full overflow-hidden flex flex-col min-w-0 min-h-0">
                 {activeViewType === "table" && (
                   <DataTable
                     data={dashboardItem.mainViewData.tableData}
@@ -800,8 +799,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 )}
               </div>
 
-              <div className="flex flex-col justify-between items-center flex-shrink-0 mt-4 lg:mt-0">
-                {/* Table and Query buttons at the top */}
+              <div className="flex flex-row lg:flex-col justify-between items-center flex-shrink-0 mt-4 lg:mt-0 px-1">
                 <div className="flex flex-row lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2">
                   {(["table", "query"] as const).map((viewType) => (
                     <button
@@ -831,7 +829,6 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                   ))}
                 </div>
 
-                {/* Favorite, Like, and Dislike buttons at the bottom */}
                 {!sessionConErr && (
                   <div className="flex flex-row lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 mt-4">
                     <CustomTooltip
@@ -849,7 +846,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             dashboardItem.question,
                             dashboardItem.mainViewData.queryData,
                             dashboardItem.connectionName,
-                            dashboardItem.isFavorited
+                            dashboardItem.isFavorited,
                           )
                         }
                         disabled={isSubmitting}
@@ -996,8 +993,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                     (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
                                   }
                                   onMouseLeave={(e) =>
-                                  (e.currentTarget.style.backgroundColor =
-                                    "transparent")
+                                    (e.currentTarget.style.backgroundColor =
+                                      "transparent")
                                   }
                                 >
                                   {reason}
@@ -1024,7 +1021,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 export default DashboardView;

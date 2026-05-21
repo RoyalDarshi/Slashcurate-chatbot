@@ -27,10 +27,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTheme } from "../ThemeContext";
 import { useSmartTable } from "../hooks/useSmartTable";
 import { getCellRenderModel } from "../utils/tables/cellRenderer";
-import {
-  downloadSmartCsv,
-  downloadSmartExcel,
-} from "../utils/tables/export";
+import { downloadSmartCsv, downloadSmartExcel } from "../utils/tables/export";
 import { getColumnFilterPlaceholder } from "../utils/tables/filtering";
 import type {
   SmartTableColumn,
@@ -52,13 +49,7 @@ const badgeColors = {
   neutral: { bg: "#64748B1F", fg: "#64748B", border: "#64748B44" },
 };
 
-const HighlightedText = ({
-  text,
-  query,
-}: {
-  text: string;
-  query: string;
-}) => {
+const HighlightedText = ({ text, query }: { text: string; query: string }) => {
   if (!query.trim()) return <>{text}</>;
   const lowerText = text.toLowerCase();
   const lowerQuery = query.toLowerCase();
@@ -78,8 +69,8 @@ const HighlightedText = ({
 
 const getCellJustify = (column: SmartTableColumn) => {
   if (column.alignment === "right") return "flex-end";
-  if (column.alignment === "center") return "center";
-  return "flex-start";
+  if (column.alignment === "left") return "flex-start";
+  return "center"; // Changed to center as default
 };
 
 const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
@@ -92,7 +83,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
 
     useEffect(() => {
       const handler = (e: MouseEvent) => {
-        if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        if (
+          exportRef.current &&
+          !exportRef.current.contains(e.target as Node)
+        ) {
           setShowExport(false);
         }
       };
@@ -137,12 +131,14 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           header: () => {
             const isSorted = sorting?.key === column.key;
             const SortIcon = isSorted
-              ? sorting?.desc ? ArrowDown : ArrowUp
+              ? sorting?.desc
+                ? ArrowDown
+                : ArrowUp
               : ArrowUpDown;
             return (
               <button
                 type="button"
-                className="flex w-full items-center gap-1.5 text-left"
+                className="flex w-full items-center gap-1.5 text-center"
                 style={{
                   justifyContent: getCellJustify(column),
                   color: "rgba(255,255,255,0.92)",
@@ -156,7 +152,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                   setSorting((current) =>
                     current?.key === column.key
                       ? { key: column.key, desc: !current.desc }
-                      : { key: column.key, desc: column.isMetric }
+                      : { key: column.key, desc: column.isMetric },
                   );
                 }}
                 title={`Sort by ${column.label}`}
@@ -187,7 +183,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                     target={column.type === "url" ? "_blank" : undefined}
                     rel={column.type === "url" ? "noreferrer" : undefined}
                   >
-                    <HighlightedText text={model.displayValue} query={debouncedGlobalSearch} />
+                    <HighlightedText
+                      text={model.displayValue}
+                      query={debouncedGlobalSearch}
+                    />
                   </a>
                 );
               }
@@ -225,39 +224,47 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               }
               return (
                 <span className="truncate">
-                  <HighlightedText text={model.displayValue} query={debouncedGlobalSearch} />
+                  <HighlightedText
+                    text={model.displayValue}
+                    query={debouncedGlobalSearch}
+                  />
                 </span>
               );
             })();
 
             return (
               <div
-                className="relative flex min-w-0 items-center gap-2 overflow-hidden"
+                className="relative flex min-w-0 items-center gap-2 overflow-hidden w-full"
                 title={model.title}
                 style={{
                   justifyContent: getCellJustify(column),
                   color:
-                    // Only color negative values red on columns that imply direction (profit/loss/change etc)
-                    model.isNegative && /growth|profit|change|delta|diff|variance|gain|loss|return|yield/i.test(column.key)
+                    model.isNegative &&
+                    /growth|profit|change|delta|diff|variance|gain|loss|return|yield/i.test(
+                      column.key,
+                    )
                       ? theme.colors.error
-                      : model.isPositive && /growth|profit|change|delta/i.test(column.key)
+                      : model.isPositive &&
+                          /growth|profit|change|delta/i.test(column.key)
                         ? theme.colors.success
                         : theme.colors.text,
                   background: heatColor,
                   borderRadius: theme.borderRadius.default,
-                  width: "100%",
                 }}
               >
-                {model.kind === "number" && model.progressPercent !== undefined && (
-                  <span
-                    className="absolute bottom-0 left-0 h-0.5 rounded-full"
-                    style={{
-                      width: `${model.progressPercent}%`,
-                      background: model.isNegative ? theme.colors.error : theme.colors.accent,
-                      opacity: 0.5,
-                    }}
-                  />
-                )}
+                {model.kind === "number" &&
+                  model.progressPercent !== undefined && (
+                    <span
+                      className="absolute bottom-0 left-0 h-0.5 rounded-full"
+                      style={{
+                        width: `${model.progressPercent}%`,
+                        background: model.isNegative
+                          ? theme.colors.error
+                          : theme.colors.accent,
+                        opacity: 0.5,
+                      }}
+                    />
+                  )}
                 {model.isAnomaly && (
                   <span
                     className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
@@ -269,7 +276,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               </div>
             );
           },
-        })
+        }),
       );
     }, [
       columnHelper,
@@ -307,17 +314,19 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
         }));
     const totalTableWidth = Math.max(
       680,
-      visibleColumns.reduce((total, column) => total + column.width, 0)
+      visibleColumns.reduce((total, column) => total + column.width, 0),
     );
     const tableHeight = isVirtualized
       ? rowVirtualizer.getTotalSize()
       : rows.length * config.performance.estimatedRowHeight;
-    const maxHeight = variant === "chat" ? 420 : undefined;
 
-    const summaryByKey = new Map(summaries.map((summary) => [summary.key, summary]));
+    const summaryByKey = new Map(
+      summaries.map((summary) => [summary.key, summary]),
+    );
 
     const filterCount = Object.values(columnFilters).filter(Boolean).length;
-    const shownFrom = config.performance.mode === "paginated" ? pageIndex * pageSize + 1 : 1;
+    const shownFrom =
+      config.performance.mode === "paginated" ? pageIndex * pageSize + 1 : 1;
     const shownTo =
       config.performance.mode === "paginated"
         ? Math.min(sortedRows.length, (pageIndex + 1) * pageSize)
@@ -338,11 +347,16 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               onChange={(event) =>
                 updateColumnFilter(column.key, {
                   type: "numberRange",
-                  min: event.target.value ? Number(event.target.value) : undefined,
+                  min: event.target.value
+                    ? Number(event.target.value)
+                    : undefined,
                   max: filter?.max,
                 })
               }
-              style={{ background: theme.colors.surface, color: theme.colors.text }}
+              style={{
+                background: theme.colors.surface,
+                color: theme.colors.text,
+              }}
             />
             <input
               type="number"
@@ -353,10 +367,15 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 updateColumnFilter(column.key, {
                   type: "numberRange",
                   min: filter?.min,
-                  max: event.target.value ? Number(event.target.value) : undefined,
+                  max: event.target.value
+                    ? Number(event.target.value)
+                    : undefined,
                 })
               }
-              style={{ background: theme.colors.surface, color: theme.colors.text }}
+              style={{
+                background: theme.colors.surface,
+                color: theme.colors.text,
+              }}
             />
           </div>
         );
@@ -376,7 +395,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                   end: filter?.end,
                 })
               }
-              style={{ background: theme.colors.surface, color: theme.colors.text }}
+              style={{
+                background: theme.colors.surface,
+                color: theme.colors.text,
+              }}
             />
             <input
               type="date"
@@ -389,7 +411,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                   end: event.target.value,
                 })
               }
-              style={{ background: theme.colors.surface, color: theme.colors.text }}
+              style={{
+                background: theme.colors.surface,
+                color: theme.colors.text,
+              }}
             />
           </div>
         );
@@ -413,7 +438,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                     : event.target.value === "true",
               })
             }
-            style={{ background: theme.colors.surface, color: theme.colors.text }}
+            style={{
+              background: theme.colors.surface,
+              color: theme.colors.text,
+            }}
           >
             <option value="">All</option>
             <option value="true">Yes</option>
@@ -432,11 +460,14 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               updateColumnFilter(column.key, {
                 type: "multiSelect",
                 values: Array.from(event.target.selectedOptions).map(
-                  (option) => option.value
+                  (option) => option.value,
                 ),
               })
             }
-            style={{ background: theme.colors.surface, color: theme.colors.text }}
+            style={{
+              background: theme.colors.surface,
+              color: theme.colors.text,
+            }}
           >
             {column.stats.uniqueValues.slice(0, 30).map((value) => (
               <option key={value} value={value}>
@@ -468,7 +499,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
       return (
         <div
           className="flex h-full min-h-[280px] items-center justify-center rounded-lg p-8 text-center"
-          style={{ background: theme.colors.surface, color: theme.colors.textSecondary }}
+          style={{
+            background: theme.colors.surface,
+            color: theme.colors.textSecondary,
+          }}
         >
           No rows available for table view.
         </div>
@@ -482,17 +516,20 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           background: theme.colors.surface,
           border: `1px solid ${theme.colors.border}`,
           boxShadow: theme.shadow.sm,
-          maxHeight: variant === "chat" ? 480 : "calc(100vh - 120px)",
+          height: variant === "chat" ? "auto" : "100%",
+          maxHeight: variant === "chat" ? 480 : "100%",
           width: "100%",
           minWidth: 0,
+          flex: 1,
         }}
       >
-        {/* ── Toolbar ── */}
         <div
           className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
-          style={{ borderBottom: `1px solid ${theme.colors.border}`, flexShrink: 0 }}
+          style={{
+            borderBottom: `1px solid ${theme.colors.border}`,
+            flexShrink: 0,
+          }}
         >
-          {/* Left: search + row count */}
           <div className="flex min-w-0 items-center gap-2">
             <div
               className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
@@ -501,7 +538,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 border: `1px solid ${theme.colors.border}`,
               }}
             >
-              <Search size={13} style={{ color: theme.colors.textSecondary, flexShrink: 0 }} />
+              <Search
+                size={13}
+                style={{ color: theme.colors.textSecondary, flexShrink: 0 }}
+              />
               <input
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
@@ -515,20 +555,30 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 </button>
               )}
             </div>
-            <span className="text-xs" style={{ color: theme.colors.textSecondary }}>
+            <span
+              className="text-xs"
+              style={{ color: theme.colors.textSecondary }}
+            >
               {filteredRows.length.toLocaleString("en-IN")} rows
             </span>
           </div>
 
-          {/* Right: action buttons */}
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => { setShowFilters((v) => !v); setShowColumns(false); }}
+              onClick={() => {
+                setShowFilters((v) => !v);
+                setShowColumns(false);
+              }}
               className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
               style={{
-                color: showFilters || filterCount > 0 ? theme.colors.accent : theme.colors.textSecondary,
-                background: showFilters ? `${theme.colors.accent}14` : "transparent",
+                color:
+                  showFilters || filterCount > 0
+                    ? theme.colors.accent
+                    : theme.colors.textSecondary,
+                background: showFilters
+                  ? `${theme.colors.accent}14`
+                  : "transparent",
                 border: `1px solid ${showFilters || filterCount > 0 ? theme.colors.accent + "44" : theme.colors.border}`,
               }}
             >
@@ -538,11 +588,18 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
 
             <button
               type="button"
-              onClick={() => { setShowColumns((v) => !v); setShowFilters(false); }}
+              onClick={() => {
+                setShowColumns((v) => !v);
+                setShowFilters(false);
+              }}
               className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
               style={{
-                color: showColumns ? theme.colors.accent : theme.colors.textSecondary,
-                background: showColumns ? `${theme.colors.accent}14` : "transparent",
+                color: showColumns
+                  ? theme.colors.accent
+                  : theme.colors.textSecondary,
+                background: showColumns
+                  ? `${theme.colors.accent}14`
+                  : "transparent",
                 border: `1px solid ${showColumns ? theme.colors.accent + "44" : theme.colors.border}`,
               }}
             >
@@ -550,9 +607,11 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               Columns
             </button>
 
-            <div className="mx-1 h-5 w-px" style={{ background: theme.colors.border }} />
+            <div
+              className="mx-1 h-5 w-px"
+              style={{ background: theme.colors.border }}
+            />
 
-            {/* Export dropdown */}
             <div ref={exportRef} style={{ position: "relative" }}>
               <button
                 type="button"
@@ -586,22 +645,54 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                     type="button"
                     className="flex w-full items-center gap-2 px-3 py-2 text-xs"
                     style={{ color: theme.colors.text }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.background)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    onClick={() => { downloadSmartCsv(sortedRows, visibleColumns, summaries, config.exportConfig.fileBaseName); setShowExport(false); }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background =
+                        theme.colors.background)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                    onClick={() => {
+                      downloadSmartCsv(
+                        sortedRows,
+                        visibleColumns,
+                        summaries,
+                        config.exportConfig.fileBaseName,
+                      );
+                      setShowExport(false);
+                    }}
                   >
-                    <Download size={13} style={{ color: theme.colors.accent }} />
+                    <Download
+                      size={13}
+                      style={{ color: theme.colors.accent }}
+                    />
                     Download CSV
                   </button>
                   <button
                     type="button"
                     className="flex w-full items-center gap-2 px-3 py-2 text-xs"
                     style={{ color: theme.colors.text }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.background)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    onClick={() => { downloadSmartExcel(sortedRows, visibleColumns, summaries, config.exportConfig.fileBaseName); setShowExport(false); }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background =
+                        theme.colors.background)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                    onClick={() => {
+                      downloadSmartExcel(
+                        sortedRows,
+                        visibleColumns,
+                        summaries,
+                        config.exportConfig.fileBaseName,
+                      );
+                      setShowExport(false);
+                    }}
                   >
-                    <FileSpreadsheet size={13} style={{ color: theme.colors.accent }} />
+                    <FileSpreadsheet
+                      size={13}
+                      style={{ color: theme.colors.accent }}
+                    />
                     Download Excel
                   </button>
                 </div>
@@ -613,14 +704,22 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
         {showColumns && (
           <div
             className="border-b px-3 py-2.5"
-            style={{ borderColor: theme.colors.border, background: theme.colors.background }}
+            style={{
+              borderColor: theme.colors.border,
+              background: theme.colors.background,
+            }}
           >
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: theme.colors.textSecondary }}>
+            <div
+              className="mb-2 text-xs font-semibold uppercase tracking-wide"
+              style={{ color: theme.colors.textSecondary }}
+            >
               Show / Hide Columns
             </div>
             <div className="flex flex-wrap gap-1.5">
               {config.columns.map((column) => {
-                const visible = columnVisibility[column.key] ?? config.defaultVisibleColumnKeys.includes(column.key);
+                const visible =
+                  columnVisibility[column.key] ??
+                  config.defaultVisibleColumnKeys.includes(column.key);
                 return (
                   <button
                     key={column.key}
@@ -628,9 +727,13 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                     onClick={() => toggleColumnVisibility(column.key)}
                     className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
                     style={{
-                      color: visible ? theme.colors.accent : theme.colors.textSecondary,
+                      color: visible
+                        ? theme.colors.accent
+                        : theme.colors.textSecondary,
                       border: `1px solid ${visible ? theme.colors.accent + "44" : theme.colors.border}`,
-                      background: visible ? `${theme.colors.accent}10` : "transparent",
+                      background: visible
+                        ? `${theme.colors.accent}10`
+                        : "transparent",
                     }}
                   >
                     {visible ? <Eye size={11} /> : <EyeOff size={11} />}
@@ -650,12 +753,16 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               flexShrink: 0,
             }}
           >
-            {/* Header row */}
             <div
               className="flex items-center justify-between px-3 py-2"
               style={{ borderBottom: `1px solid ${theme.colors.border}` }}
             >
-              <span className="text-xs font-semibold" style={{ color: theme.colors.textSecondary }}>Filter columns</span>
+              <span
+                className="text-xs font-semibold"
+                style={{ color: theme.colors.textSecondary }}
+              >
+                Filter columns
+              </span>
               {filterCount > 0 && (
                 <button
                   type="button"
@@ -667,7 +774,6 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 </button>
               )}
             </div>
-            {/* Grid of column filters */}
             <div
               className="grid gap-2 px-3 py-2.5"
               style={{
@@ -694,7 +800,6 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           </div>
         )}
 
-        {/* Single scroll area: handles both horizontal (wide tables) and vertical scrolling */}
         <div
           ref={tableContainerRef}
           style={{
@@ -712,7 +817,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               tableLayout: "fixed",
               borderCollapse: "separate",
               borderSpacing: 0,
-              margin: "0 auto", // centers table when narrower than container
+              margin: "0 auto",
             }}
           >
             <thead
@@ -724,7 +829,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               }}
             >
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} style={{ display: "flex", width: totalTableWidth }}>
+                <tr
+                  key={headerGroup.id}
+                  style={{ display: "flex", width: totalTableWidth }}
+                >
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
@@ -737,7 +845,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                         borderRight: `1px solid ${theme.colors.surface}22`,
                       }}
                     >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -758,7 +869,9 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                   <tr
                     key={row.id}
                     data-index={virtualRow.index}
-                    ref={isVirtualized ? rowVirtualizer.measureElement : undefined}
+                    ref={
+                      isVirtualized ? rowVirtualizer.measureElement : undefined
+                    }
                     style={{
                       display: "flex",
                       position: "absolute",
@@ -782,7 +895,10 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                           borderColor: theme.colors.border,
                         }}
                       >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -810,7 +926,12 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                         width: column.width,
                         flexShrink: 0,
                         color: theme.colors.accent,
-                        justifyContent: column.alignment === "right" ? "flex-end" : column.alignment === "center" ? "center" : "flex-start",
+                        justifyContent:
+                          column.alignment === "right"
+                            ? "flex-end"
+                            : column.alignment === "left"
+                              ? "flex-start"
+                              : "center",
                         borderTop: `1px solid ${theme.colors.border}`,
                         background: `${theme.colors.accent}06`,
                       }}
@@ -829,13 +950,19 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               style={{ color: theme.colors.textSecondary }}
             >
               <Search size={32} style={{ opacity: 0.3 }} />
-              <div className="text-sm font-medium">No matching records found</div>
+              <div className="text-sm font-medium">
+                No matching records found
+              </div>
               {filterCount > 0 && (
                 <button
                   type="button"
                   onClick={clearFilters}
                   className="rounded-full px-3 py-1 text-xs font-medium"
-                  style={{ color: theme.colors.accent, background: `${theme.colors.accent}14`, border: `1px solid ${theme.colors.accent}44` }}
+                  style={{
+                    color: theme.colors.accent,
+                    background: `${theme.colors.accent}14`,
+                    border: `1px solid ${theme.colors.accent}44`,
+                  }}
                 >
                   Clear filters
                 </button>
@@ -849,17 +976,49 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
             className="flex items-center justify-between border-t px-3 py-2"
             style={{ borderColor: theme.colors.border }}
           >
-            <span className="text-xs" style={{ color: theme.colors.textSecondary }}>
-              Page <strong style={{ color: theme.colors.text }}>{pageIndex + 1}</strong> of {pageCount}
+            <span
+              className="text-xs"
+              style={{ color: theme.colors.textSecondary }}
+            >
+              Page{" "}
+              <strong style={{ color: theme.colors.text }}>
+                {pageIndex + 1}
+              </strong>{" "}
+              of {pageCount}
               {" · "}
-              <span>{shownFrom.toLocaleString("en-IN")}–{shownTo.toLocaleString("en-IN")} of {sortedRows.length.toLocaleString("en-IN")}</span>
+              <span>
+                {shownFrom.toLocaleString("en-IN")}–
+                {shownTo.toLocaleString("en-IN")} of{" "}
+                {sortedRows.length.toLocaleString("en-IN")}
+              </span>
             </span>
             <div className="flex items-center gap-0.5">
               {[
-                { icon: <ChevronsLeft size={15} />, onClick: () => setPageIndex(0), disabled: pageIndex === 0, title: "First" },
-                { icon: <ChevronLeft size={15} />, onClick: () => setPageIndex(Math.max(0, pageIndex - 1)), disabled: pageIndex === 0, title: "Previous" },
-                { icon: <ChevronRight size={15} />, onClick: () => setPageIndex(Math.min(pageCount - 1, pageIndex + 1)), disabled: pageIndex >= pageCount - 1, title: "Next" },
-                { icon: <ChevronsRight size={15} />, onClick: () => setPageIndex(pageCount - 1), disabled: pageIndex >= pageCount - 1, title: "Last" },
+                {
+                  icon: <ChevronsLeft size={15} />,
+                  onClick: () => setPageIndex(0),
+                  disabled: pageIndex === 0,
+                  title: "First",
+                },
+                {
+                  icon: <ChevronLeft size={15} />,
+                  onClick: () => setPageIndex(Math.max(0, pageIndex - 1)),
+                  disabled: pageIndex === 0,
+                  title: "Previous",
+                },
+                {
+                  icon: <ChevronRight size={15} />,
+                  onClick: () =>
+                    setPageIndex(Math.min(pageCount - 1, pageIndex + 1)),
+                  disabled: pageIndex >= pageCount - 1,
+                  title: "Next",
+                },
+                {
+                  icon: <ChevronsRight size={15} />,
+                  onClick: () => setPageIndex(pageCount - 1),
+                  disabled: pageIndex >= pageCount - 1,
+                  title: "Last",
+                },
               ].map(({ icon, onClick, disabled, title }) => (
                 <button
                   key={title}
@@ -869,7 +1028,9 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                   title={title}
                   className="rounded p-1 transition-colors"
                   style={{
-                    color: disabled ? theme.colors.textSecondary : theme.colors.accent,
+                    color: disabled
+                      ? theme.colors.textSecondary
+                      : theme.colors.accent,
                     opacity: disabled ? 0.35 : 1,
                     cursor: disabled ? "not-allowed" : "pointer",
                   }}
@@ -880,10 +1041,9 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
             </div>
           </div>
         )}
-
       </div>
     );
-  }
+  },
 );
 
 export default SmartDataTable;
