@@ -70,7 +70,7 @@ const HighlightedText = ({ text, query }: { text: string; query: string }) => {
 const getCellJustify = (column: SmartTableColumn) => {
   if (column.alignment === "right") return "flex-end";
   if (column.alignment === "left") return "flex-start";
-  return "center"; // Changed to center as default
+  return "center";
 };
 
 const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
@@ -312,9 +312,9 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           end: (index + 1) * config.performance.estimatedRowHeight,
           lane: 0,
         }));
-    const totalTableWidth = Math.max(
-      680,
-      visibleColumns.reduce((total, column) => total + column.width, 0),
+    const totalTableWidth = visibleColumns.reduce(
+      (total, column) => total + column.width,
+      0,
     );
     const tableHeight = isVirtualized
       ? rowVirtualizer.getTotalSize()
@@ -813,7 +813,6 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           <table
             style={{
               width: totalTableWidth,
-              minWidth: "100%",
               tableLayout: "fixed",
               borderCollapse: "separate",
               borderSpacing: 0,
@@ -840,6 +839,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                       style={{
                         display: "flex",
                         alignItems: "center",
+                        justifyContent: "center",
                         width: header.getSize(),
                         flexShrink: 0,
                         borderRight: `1px solid ${theme.colors.surface}22`,
@@ -860,6 +860,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 height: tableHeight,
                 minHeight: rows.length ? undefined : 160,
                 position: "relative",
+                width: totalTableWidth,
               }}
             >
               {virtualItems.map((virtualRow) => {
@@ -876,7 +877,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                       display: "flex",
                       position: "absolute",
                       transform: `translateY(${virtualRow.start}px)`,
-                      width: "100%",
+                      width: totalTableWidth,
                       minHeight: config.performance.estimatedRowHeight,
                       background:
                         virtualRow.index % 2 === 0
@@ -891,6 +892,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                         style={{
                           display: "flex",
                           alignItems: "center",
+                          justifyContent: "center",
                           width: cell.column.getSize(),
                           borderColor: theme.colors.border,
                         }}
@@ -926,12 +928,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                         width: column.width,
                         flexShrink: 0,
                         color: theme.colors.accent,
-                        justifyContent:
-                          column.alignment === "right"
-                            ? "flex-end"
-                            : column.alignment === "left"
-                              ? "flex-start"
-                              : "center",
+                        justifyContent: "center",
                         borderTop: `1px solid ${theme.colors.border}`,
                         background: `${theme.colors.accent}06`,
                       }}

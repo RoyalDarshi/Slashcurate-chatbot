@@ -69,6 +69,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     const [showResolutionOptions, setShowResolutionOptions] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const echartsRef = useRef<any>(null);
 
     const smartOverrides = useMemo(
       () => ({
@@ -82,6 +83,24 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     );
 
     const { config, option } = useSmartChart(data, smartOverrides);
+
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const resizeObserver = new ResizeObserver(() => {
+        if (echartsRef.current) {
+          const chartInstance = echartsRef.current.getEchartsInstance();
+          chartInstance?.resize();
+        }
+      });
+
+      resizeObserver.observe(container);
+
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }, []);
 
     useEffect(() => {
       if (!groupBy && config.groupBy) setGroupBy(config.groupBy);
@@ -272,12 +291,12 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           </div>
         </div>
 
-        <div className="flex-1" ref={containerRef}>
+        <div className="flex-1 min-h-0" ref={containerRef}>
           <ReactECharts
+            ref={echartsRef}
             option={option}
             style={{
-              height: config.responsive.height,
-              minHeight: config.responsive.minHeight,
+              height: "100%",
               width: "100%",
             }}
             notMerge

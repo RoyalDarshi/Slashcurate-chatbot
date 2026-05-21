@@ -2119,8 +2119,8 @@ const DashboardInterface = memo(
             </div>
           )}
 
-          <main className="flex-grow flex flex-col items-center overflow-y-auto">
-            <div className="w-full flex-grow flex flex-col">
+          <main className="flex-grow flex flex-col items-center overflow-hidden">
+            <div className="w-full flex-grow flex flex-col min-h-0">
               {(() => {
                 if (connectionsLoading) {
                   return (
@@ -2139,10 +2139,11 @@ const DashboardInterface = memo(
                         No Connections Found
                       </p>
                       <p className="text-lg">
-                        Please create a connection to start interacting with your data
-                        assistant.
+                        Please create a connection to start interacting with
+                        your data assistant.
                       </p>
-                      {localStorage.getItem("allowedToCreateConnection") !== "false" && (
+                      {localStorage.getItem("allowedToCreateConnection") !==
+                        "false" && (
                         <button
                           onClick={onCreateConSelected}
                           className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
@@ -2153,12 +2154,12 @@ const DashboardInterface = memo(
                             padding: "8px 16px",
                           }}
                           onMouseOver={(e) =>
-                          (e.currentTarget.style.backgroundColor =
-                            theme.colors.accentHover)
+                            (e.currentTarget.style.backgroundColor =
+                              theme.colors.accentHover)
                           }
                           onMouseOut={(e) =>
-                          (e.currentTarget.style.backgroundColor =
-                            theme.colors.accent)
+                            (e.currentTarget.style.backgroundColor =
+                              theme.colors.accent)
                           }
                         >
                           Create Connection
@@ -2184,7 +2185,7 @@ const DashboardInterface = memo(
                   if (
                     isSubmitting &&
                     currentDashboardView.textualSummary ===
-                    "Processing your request..."
+                      "Processing your request..."
                   ) {
                     return (
                       <DashboardSkeletonLoader
@@ -2202,7 +2203,7 @@ const DashboardInterface = memo(
                         onEditQuestion={(newQuestion) =>
                           handleEditQuestion(
                             currentDashboardView.questionMessageId,
-                            newQuestion
+                            newQuestion,
                           )
                         }
                         onRetry={() =>
@@ -2404,8 +2405,9 @@ const DashboardInterface = memo(
                       !selectedConnection ||
                       !!sessionConnectionError
                     }
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${isDbExplorerOpen ? "schema-active" : ""
-                      }`}
+                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
+                      isDbExplorerOpen ? "schema-active" : ""
+                    }`}
                     style={{
                       background: theme.colors.surface,
                       color: theme.colors.accent,
@@ -2472,7 +2474,8 @@ const DashboardInterface = memo(
                 </CustomTooltip>
                 {showDashboardContent &&
                   !currentDashboardView.isError &&
-                  currentDashboardView.mainViewData.chartData.length > 0 && false && (
+                  currentDashboardView.mainViewData.chartData.length > 0 &&
+                  false && (
                     <CustomTooltip title="Summarize Graph" position="top">
                       <button
                         type="button"
@@ -2481,7 +2484,7 @@ const DashboardInterface = memo(
                         disabled={
                           isSubmitting ||
                           currentDashboardView.mainViewData.chartData.length ===
-                          0
+                            0
                         }
                         className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
                         style={{

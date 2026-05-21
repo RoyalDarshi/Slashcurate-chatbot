@@ -485,10 +485,10 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               )}
             </div>
 
-            <div className="flex flex-col lg:flex-row flex-grow min-h-0 overflow-hidden w-full gap-3 pb-2">
+            <div className="flex flex-col lg:flex-row w-full gap-3 pb-2 flex-1 min-h-0">
               <div
                 ref={graphContainerRef}
-                className="flex-1 rounded-xl flex flex-col overflow-hidden min-w-0 min-h-0"
+                className="flex-1 rounded-xl flex flex-col overflow-hidden min-w-0 min-h-[300px] lg:h-full"
                 style={{
                   backgroundColor: theme.colors.surface,
                   boxShadow: theme.shadow.md,
@@ -767,7 +767,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     )}
                   </div>
                 )}
-                <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col items-center justify-center">
+                <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col items-stretch justify-end">
                   <DynamicGraph
                     data={
                       syncedTableRows ?? dashboardItem.mainViewData.chartData
@@ -784,7 +784,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               </div>
 
-              <div className="lg:w-[40%] w-full overflow-hidden flex flex-col min-w-0 min-h-0">
+              <div className="flex-1 lg:flex-none lg:w-[40%] w-full overflow-hidden flex flex-col min-w-0 min-h-[300px] lg:h-full">
                 {activeViewType === "table" && (
                   <DataTable
                     data={dashboardItem.mainViewData.tableData}
