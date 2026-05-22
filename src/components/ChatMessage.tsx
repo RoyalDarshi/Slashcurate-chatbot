@@ -1,4 +1,3 @@
-
 // ChatMessage.tsx
 import React, { useRef, useEffect, useState } from "react";
 import {
@@ -14,6 +13,7 @@ import {
   Heart,
   RefreshCw,
   ScanEye,
+  AlertCircle,
 } from "lucide-react";
 import {
   BsHandThumbsDown,
@@ -22,7 +22,7 @@ import {
   BsHandThumbsUpFill,
 } from "react-icons/bs";
 import { ChatMessageProps } from "../types";
-import DataTable from "./ChatDataTable";
+import SmartDataTable from "./SmartDataTable";
 import CustomTooltip from "./CustomTooltip";
 import DynamicGraph, { formatKey } from "./ChatGraphs/ChatDynamicGraph";
 import {
@@ -69,7 +69,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   responseStatus,
   disabled,
   onRetry,
-  onSummarizeGraph,
   isSubmitting,
 }) => {
   const { theme } = useTheme();
@@ -83,9 +82,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const [hasChanges, setHasChanges] = useState(false);
   const [showResolutionOptions, setShowResolutionOptions] = useState(false);
   const [isLiked, setIsLiked] = useState(message.reaction === "like");
-  const [isDisliked, setIsDisliked] = useState(
-    message.reaction === "dislike"
-  );
+  const [isDisliked, setIsDisliked] = useState(message.reaction === "dislike");
   const [dislikeReason, setDislikeReason] = useState(message.dislike_reason);
   const [showDislikeOptions, setShowDislikeOptions] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -96,9 +93,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const [copyTooltipTxt, setCopyTooltipTxt] = useState("Copy SQL Query");
   const [chartType, setChartType] = useState<SmartChartType>("bar");
   const [groupBy, setGroupBy] = useState<string | null>(null);
-  const [aggregate, setAggregate] = useState<
-    SmartAggregation | null
-  >(null);
+  const [aggregate, setAggregate] = useState<SmartAggregation | null>(null);
   const [valueKey, setValueKey] = useState<string | null>(null);
   const [showChartOptions, setShowChartOptions] = useState(false);
   const [isVertical, setIsVertical] = useState(true);
@@ -159,7 +154,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   numericValue !== null &&
                   isFinite(numericValue)
                 );
-              })
+              }),
             );
           setHasNumericData(hasGraphicalData);
 
@@ -190,7 +185,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   useEffect(() => {
     const shouldShowToggle =
-      ["bar", "line", "area"].includes(chartType) && hasNumericData && csvData.length > 0;
+      ["bar", "line", "area"].includes(chartType) &&
+      hasNumericData &&
+      csvData.length > 0;
     setShowOrientationToggle(shouldShowToggle);
     if (!shouldShowToggle) {
       setIsVertical(true);
@@ -225,8 +222,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     if (showDislikeOptions || showResolutionOptions || showChartOptions) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showDislikeOptions, showResolutionOptions, showChartOptions]);
 
   const handleEdit = () => setIsEditing(true);
@@ -255,7 +251,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           reaction: newReaction,
           dislike_reason: null,
         },
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } },
       );
       setIsLiked(!isLiked);
       setIsDisliked(false);
@@ -278,7 +274,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             reaction: null,
             dislike_reason: null,
           },
-          { headers: { "Content-Type": "application/json" } }
+          { headers: { "Content-Type": "application/json" } },
         );
         setIsDisliked(false);
         setDislikeReason(null);
@@ -302,7 +298,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           reaction: "dislike",
           dislike_reason: reason,
         },
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } },
       );
 
       setDislikeReason(reason);
@@ -343,7 +339,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const handleDownloadCSV = () => {
     try {
       const data = JSON.parse(message.content);
-      const tableData = Array.isArray(data.answer) ? data.answer : [data.answer];
+      const tableData = Array.isArray(data.answer)
+        ? data.answer
+        : [data.answer];
       if (!tableData || tableData.length === 0) return;
 
       // 1. Get headers
@@ -369,7 +367,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               }
               return stringValue;
             })
-            .join(",")
+            .join(","),
         ),
       ].join("\n");
 
@@ -383,7 +381,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       link.href = url;
       link.setAttribute(
         "download",
-        `table_export_${new Date().toISOString().split("T")[0]}.csv`
+        `table_export_${new Date().toISOString().split("T")[0]}.csv`,
       );
 
       document.body.appendChild(link);
@@ -394,7 +392,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       console.error("Error downloading CSV:", error);
     }
   };
-
 
   const handleDownloadGraph = async (resolution: "low" | "high") => {
     if (graphRef.current) {
@@ -429,23 +426,29 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const renderContent = () => {
     if (message.isBot && message.status === "loading") {
       return (
-        <div
-          className="p-4 shadow-md flex items-center justify-center"
-          style={{
-            background: theme.colors.surface,
-            borderRadius: theme.borderRadius.large,
-            borderTopLeftRadius: "0",
-          }}
-        >
-          <MiniLoader />
+        <div className="flex items-center gap-3 py-2 w-full opacity-80">
+          <div className="flex items-center gap-1">
+            <span
+              className="loading-dot"
+              style={{ backgroundColor: theme.colors.accent }}
+            />
+            <span
+              className="loading-dot"
+              style={{ backgroundColor: theme.colors.accent }}
+            />
+            <span
+              className="loading-dot"
+              style={{ backgroundColor: theme.colors.accent }}
+            />
+          </div>
           <span
-            className="ml-2"
+            className="font-medium text-xs"
             style={{
               color: theme.colors.textSecondary,
-              fontSize: chatFontSize,
+              fontFamily: theme.typography.fontFamily,
             }}
           >
-            Thinking...
+            Analyzing...
           </span>
         </div>
       );
@@ -454,13 +457,24 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     if (currentView === "error" || message.status === "error") {
       return (
         <div
-          className="p-4 shadow-md border-l-4 border-red-500"
+          className="flex flex-col gap-2 p-3 rounded-2xl"
           style={{
-            background: theme.colors.surface,
-            borderRadius: theme.borderRadius.large,
-            borderTopLeftRadius: 0,
+            backgroundColor:
+              theme.mode === "dark"
+                ? `${theme.colors.error}15`
+                : `${theme.colors.error}10`,
+            border: `1px solid ${theme.colors.error}30`,
           }}
         >
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} style={{ color: theme.colors.error }} />
+            <span
+              className="text-sm font-semibold"
+              style={{ color: theme.colors.error }}
+            >
+              Analysis Interrupted
+            </span>
+          </div>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -492,66 +506,44 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     }
 
     return (
-      <div className="relative">
-        <div
-          className="p-2 shadow-md"
-          style={{
-            background: theme.colors.surface,
-            borderRadius: theme.borderRadius.large,
-            borderTopLeftRadius: message.isBot ? "0" : undefined,
-            width: "100%",
-          }}
-        >
-          {currentView === "text" && (
-            <>
-              <p
-                style={{
-                  color: theme.colors.text,
-                  fontSize: chatFontSize,
-                }}
-              >
-                {parsedData?.content || "No records found."}
-              </p>
-              <div
-                className="mt-2 mr-2 text-right text-xs"
-                style={{ color: theme.colors.textSecondary }}
-              >
-                {parseTimestamp(message.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
-            </>
-          )}
+      <div className="relative w-full">
+        <div className="w-full">
           {currentView === "table" && csvData.length > 0 && (
-            <>
-              <DataTable data={csvData} />
-              <div
-                className="mt-2 mr-2 text-right text-xs"
-                style={{ color: theme.colors.textSecondary }}
-              >
-                {parseTimestamp(message.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
-            </>
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full flex-1"
+            >
+              <SmartDataTable
+                data={csvData}
+                variant="chat"
+                configOverrides={{
+                  performance: { mode: "virtualized", estimatedRowHeight: 36 },
+                }}
+              />
+            </motion.div>
           )}
           {currentView === "graph" && hasNumericData && (
-            <div ref={graphRef} style={{ width: "100%" }}>
-              <div className="flex gap-1.5 mb-2 flex-wrap">
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              ref={graphRef}
+              style={{ width: "100%" }}
+            >
+              <div className="flex gap-2 mb-4 flex-wrap">
                 <select
                   value={chartType}
                   onChange={(e) =>
                     setChartType(e.target.value as SmartChartType)
                   }
-                  className="text-sm"
+                  className="text-xs font-medium cursor-pointer transition-colors"
                   style={{
-                    background: theme.colors.surface,
+                    background: theme.colors.surfaceGlass,
                     color: theme.colors.text,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.borderRadius.default,
-                    padding: theme.spacing.sm,
+                    border: "none",
+                    borderRadius: theme.borderRadius.pill,
+                    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                    boxShadow: `0 1px 3px ${theme.colors.border}`,
                   }}
                 >
                   <option value="bar">Bar Chart</option>
@@ -566,13 +558,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 <select
                   value={groupBy || ""}
                   onChange={(e) => setGroupBy(e.target.value || null)}
-                  className="text-sm"
+                  className="text-xs font-medium cursor-pointer transition-colors"
                   style={{
-                    background: theme.colors.surface,
+                    background: theme.colors.surfaceGlass,
                     color: theme.colors.text,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.borderRadius.default,
-                    padding: theme.spacing.sm,
+                    border: "none",
+                    borderRadius: theme.borderRadius.pill,
+                    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                    boxShadow: `0 1px 3px ${theme.colors.border}`,
                   }}
                 >
                   <option value="">Select Group By</option>
@@ -587,13 +580,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   onChange={(e) =>
                     setAggregate(e.target.value as SmartAggregation)
                   }
-                  className="text-sm"
+                  className="text-xs font-medium cursor-pointer transition-colors"
                   style={{
-                    background: theme.colors.surface,
+                    background: theme.colors.surfaceGlass,
                     color: theme.colors.text,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.borderRadius.default,
-                    padding: theme.spacing.sm,
+                    border: "none",
+                    borderRadius: theme.borderRadius.pill,
+                    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                    boxShadow: `0 1px 3px ${theme.colors.border}`,
                   }}
                 >
                   <option value="">Select Aggregate</option>
@@ -606,13 +600,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 <select
                   value={valueKey || ""}
                   onChange={(e) => setValueKey(e.target.value || null)}
-                  className="text-sm"
+                  className="text-xs font-medium cursor-pointer transition-colors"
                   style={{
-                    background: theme.colors.surface,
+                    background: theme.colors.surfaceGlass,
                     color: theme.colors.text,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.borderRadius.default,
-                    padding: theme.spacing.sm,
+                    border: "none",
+                    borderRadius: theme.borderRadius.pill,
+                    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                    boxShadow: `0 1px 3px ${theme.colors.border}`,
                   }}
                 >
                   <option disabled value="">
@@ -630,13 +625,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     onChange={(e) =>
                       setIsVertical(e.target.value === "vertical")
                     }
-                    className="text-sm"
+                    className="text-xs font-medium cursor-pointer transition-colors"
                     style={{
-                      background: theme.colors.surface,
+                      background: theme.colors.surfaceGlass,
                       color: theme.colors.text,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: theme.borderRadius.default,
-                      padding: theme.spacing.sm,
+                      border: "none",
+                      borderRadius: theme.borderRadius.pill,
+                      padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                      boxShadow: `0 1px 3px ${theme.colors.border}`,
                     }}
                   >
                     <option value="vertical">Vertical</option>
@@ -644,17 +640,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   </select>
                 )}
               </div>
-              <DynamicGraph
-                data={csvData}
-                isValidGraph={setHasNumericData} //isValidGraph={() => {}}
-                chartType={chartType}
-                groupBy={groupBy}
-                aggregate={aggregate}
-                valueKey={valueKey}
-                isVertical={isVertical}
-              />
+              <div className="w-full relative aspect-video min-h-[300px] max-h-[600px] mt-4">
+                <DynamicGraph
+                  data={csvData}
+                  isValidGraph={setHasNumericData}
+                  chartType={chartType}
+                  groupBy={groupBy}
+                  aggregate={aggregate}
+                  valueKey={valueKey}
+                  isVertical={isVertical}
+                />
+              </div>
               <div
-                className="mt-2 mr-2 text-right text-xs"
+                className="mr-2 mt-1 text-right text-[10px]"
                 style={{ color: theme.colors.textSecondary }}
               >
                 {parseTimestamp(message.timestamp).toLocaleTimeString([], {
@@ -662,10 +660,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   minute: "2-digit",
                 })}
               </div>
-            </div>
+            </motion.div>
           )}
           {currentView === "query" && (
-            <>
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
               {parsedData?.sql_query ? (
                 <QueryDisplay
                   query={parsedData.sql_query.toUpperCase()}
@@ -682,7 +683,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 </p>
               )}
               <div
-                className="mt-2 mr-2 text-right text-xs"
+                className="mr-2 mt-1 text-right text-[10px]"
                 style={{ color: theme.colors.textSecondary }}
               >
                 {parseTimestamp(message.timestamp).toLocaleTimeString([], {
@@ -690,7 +691,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   minute: "2-digit",
                 })}
               </div>
-            </>
+            </motion.div>
           )}
         </div>
       </div>
@@ -698,317 +699,232 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   };
 
   return (
-    <div className="flex w-full" style={{ marginBottom: theme.spacing.md }}>
+    <div className="flex w-full justify-start mb-3">
       {message.isBot ? (
         <div
-          className={`flex w-full items-start ${currentView === "graph" ? "max-w-[90%]" : "w-max"
-            } gap-2`}
-          style={{ position: "relative" }}
+          className="flex w-full items-start gap-4 transition-all animate-fade-up"
+          style={{
+            position: "relative",
+            maxWidth: "100%",
+          }}
         >
+          {/* Bot Avatar */}
           <div
-            className="flex p-2.5 items-center justify-center rounded-full shadow-md"
-            style={{ background: theme.colors.accent }}
+            className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+            style={{
+              background: `${theme.colors.accent}15`,
+              border: `1px solid ${theme.colors.accent}30`,
+            }}
           >
-            <Bot size={20} style={{ color: "white" }} />
+            <Bot size={18} style={{ color: theme.colors.accent }} />
           </div>
+
           <div
-            className="w-full flex flex-col gap-2"
+            className="w-full flex flex-col gap-2 overflow-visible"
             style={{ position: "relative" }}
           >
-            <div className="relative">
-              <div
-                className="absolute -right-12 top-0 flex flex-col items-center"
-                style={{ gap: theme.spacing.sm }}
-              >
-                {currentView === "error" && !disabled && !isSubmitting && message.parentId && (
-                  <CustomTooltip title="Retry" position="top">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => onRetry?.(message.parentId!)}
-                      className="rounded-full absolute right-4 top-1 shadow-sm transition-colors duration-200 hover:opacity-85"
-                    >
-                      <RefreshCw
-                        size={20}
-                        style={{ color: theme.colors.accent }}
-                      />
-                    </motion.button>
-                  </CustomTooltip>
+            <div className="w-full flex flex-col gap-3">
+              {currentView === "error" &&
+                !disabled &&
+                !isSubmitting &&
+                message.parentId && (
+                  <div className="flex justify-end">
+                    <CustomTooltip title="Retry" position="top">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => onRetry?.(message.parentId!)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full shadow-sm border transition-colors text-sm font-medium"
+                        style={{
+                          background: theme.colors.surface,
+                          borderColor: theme.colors.border,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        <RefreshCw
+                          size={14}
+                          style={{ color: theme.colors.accent }}
+                        />
+                        Retry Analysis
+                      </motion.button>
+                    </CustomTooltip>
+                  </div>
                 )}
-                {currentView !== "error" &&
-                  message.status === "normal" && (
-                    <>
-                      {currentView === "query" &&
-                        csvData.length === 0 && (
-                          <CustomTooltip
-                            title="Switch to Text View"
-                            position="top"
-                          >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setCurrentView("text")}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                            >
-                              <Table
-                                size={20}
-                                style={{ color: theme.colors.accent }}
-                              />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                      {csvData.length > 0 &&
-                        currentView !== "table" && (
-                          <CustomTooltip
-                            title="Switch to Table View"
-                            position="top"
-                          >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setCurrentView("table")}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                            >
-                              <Table
-                                size={20}
-                                style={{ color: theme.colors.accent }}
-                              />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                      {currentView !== "graph" && (
-                        <CustomTooltip
-                          title={
-                            !hasNumericData
-                              ? "No valid data for graph"
-                              : "Switch to Graph View"
-                          }
-                          position="top"
+
+              {currentView !== "error" &&
+                message.status === "normal" &&
+                parsedData?.content && (
+                  <div
+                    className="prose prose-lg dark:prose-invert max-w-3xl text-base leading-relaxed tracking-wide"
+                    style={{ color: theme.colors.text }}
+                  >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {parsedData.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
+
+              {/* Segmented Controls for Additional Views */}
+              {currentView !== "error" &&
+                message.status === "normal" &&
+                (csvData.length > 0 || parsedData?.sql_query) && (
+                  <div
+                    className="flex items-center justify-between py-2 border-b mb-3 flex-shrink-0"
+                    style={{ borderColor: `${theme.colors.border}40` }}
+                  >
+                    {/* Segmented Switcher Control */}
+                    <div
+                      className="flex p-0.5 rounded-lg border"
+                      style={{
+                        backgroundColor: theme.mode === 'light' ? '#f1f5f9' : '#0f172a',
+                        borderColor: theme.colors.border,
+                      }}
+                    >
+                      {hasNumericData && (
+                        <button
+                          onClick={() => setCurrentView("graph")}
+                          className="px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-150"
+                          style={{
+                            backgroundColor: currentView === "graph" ? theme.colors.surface : "transparent",
+                            color: currentView === "graph" ? theme.colors.text : theme.colors.textSecondary,
+                            boxShadow: currentView === "graph" ? theme.shadow.sm : "none",
+                          }}
                         >
+                          Chart
+                        </button>
+                      )}
+                      {csvData.length > 0 && (
+                        <button
+                          onClick={() => setCurrentView("table")}
+                          className="px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-150"
+                          style={{
+                            backgroundColor: currentView === "table" ? theme.colors.surface : "transparent",
+                            color: currentView === "table" ? theme.colors.text : theme.colors.textSecondary,
+                            boxShadow: currentView === "table" ? theme.shadow.sm : "none",
+                          }}
+                        >
+                          Table
+                        </button>
+                      )}
+                      {parsedData?.sql_query && (
+                        <button
+                          onClick={() => setCurrentView("query")}
+                          className="px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-150"
+                          style={{
+                            backgroundColor: currentView === "query" ? theme.colors.surface : "transparent",
+                            color: currentView === "query" ? theme.colors.text : theme.colors.textSecondary,
+                            boxShadow: currentView === "query" ? theme.shadow.sm : "none",
+                          }}
+                        >
+                          Query
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Actions for active view */}
+                    <div className="flex items-center gap-2">
+                      {currentView === "graph" && hasNumericData && (
+                        <div className="relative" ref={resolutionRef}>
                           <motion.button
-                            whileHover={{ scale: hasNumericData ? 1.1 : 1 }}
-                            whileTap={{ scale: hasNumericData ? 0.95 : 1 }}
-                            disabled={!hasNumericData}
-                            onClick={() => setCurrentView("graph")}
-                            className="rounded-full disabled:cursor-not-allowed p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                            style={{
-                              background: hasNumericData
-                                ? theme.colors.surface
-                                : theme.colors.disabled,
-                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() =>
+                              setShowResolutionOptions(!showResolutionOptions)
+                            }
+                            className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            title="Download Graph"
                           >
-                            <LineChart
-                              size={20}
+                            <Download
+                              size={16}
+                              style={{ color: theme.colors.textSecondary }}
+                            />
+                          </motion.button>
+                          {showResolutionOptions && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="absolute right-0 mt-2 rounded-xl shadow-lg z-10 w-40 overflow-hidden"
                               style={{
-                                color: hasNumericData
-                                  ? theme.colors.accent
-                                  : theme.colors.disabledText,
+                                background: theme.colors.surfaceGlass,
+                                backdropFilter: "blur(12px)",
+                                border: `1px solid ${theme.colors.border}`,
                               }}
+                            >
+                              <button
+                                onClick={() => handleDownloadGraph("low")}
+                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                style={{ color: theme.colors.text }}
+                              >
+                                Low Resolution
+                              </button>
+                              <button
+                                onClick={() => handleDownloadGraph("high")}
+                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                style={{ color: theme.colors.text }}
+                              >
+                                High Resolution
+                              </button>
+                            </motion.div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {currentView === "table" && csvData.length > 0 && (
+                        <CustomTooltip title="Export to CSV" position="top">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleDownloadCSV}
+                            className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                          >
+                            <Download
+                              size={16}
+                              style={{ color: theme.colors.textSecondary }}
                             />
                           </motion.button>
                         </CustomTooltip>
                       )}
-                      {parsedData?.sql_query &&
-                        currentView !== "query" && (
-                          <CustomTooltip
-                            title="Switch to Query View"
-                            position="top"
+
+                      {currentView === "query" && parsedData?.sql_query && (
+                        <CustomTooltip title={copyTooltipTxt} position="top">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              if (!canCopy) return;
+                              setCanCopy(false);
+                              navigator.clipboard
+                                ?.writeText(parsedData.sql_query)
+                                .then(() => {
+                                  setCopied(true);
+                                  setCopyTooltipTxt("Copied!");
+                                  setTimeout(() => {
+                                    setCopied(false);
+                                    setCopyTooltipTxt("Copy SQL Query");
+                                    setCanCopy(true);
+                                  }, 2000);
+                                });
+                            }}
+                            className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            disabled={!canCopy}
                           >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setCurrentView("query")}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                            >
-                              <Database
-                                size={20}
-                                style={{ color: theme.colors.accent }}
+                            {copied ? (
+                              <Check
+                                size={16}
+                                style={{ color: theme.colors.success }}
                               />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                      {currentView === "graph" &&
-                        hasNumericData && (
-                          <div className="relative" ref={resolutionRef}>
-                            <CustomTooltip
-                              title="Download Graph"
-                              position="bottom"
-                            >
-                              <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() =>
-                                  setShowResolutionOptions(
-                                    !showResolutionOptions
-                                  )
-                                }
-                                className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                                style={{ background: theme.colors.surface }}
-                              >
-                                <Download
-                                  size={20}
-                                  style={{ color: theme.colors.accent }}
-                                />
-                              </motion.button>
-                            </CustomTooltip>
-                            {showResolutionOptions && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
-                                style={{
-                                  background: theme.colors.surface,
-                                  border: `1px solid ${theme.colors.border}`,
-                                  boxShadow: `0 4px 12px ${theme.colors.text}20`,
-                                }}
-                              >
-                                <button
-                                  onClick={() => handleDownloadGraph("low")}
-                                  className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
-                                  style={{
-                                    color: theme.colors.text,
-                                    backgroundColor: "transparent",
-                                  }}
-                                  onMouseEnter={(e) =>
-                                  (e.currentTarget.style.backgroundColor =
-                                    `${theme.colors.accent}20`)
-                                  }
-                                  onMouseLeave={(e) =>
-                                  (e.currentTarget.style.backgroundColor =
-                                    "transparent")
-                                  }
-                                >
-                                  Low Resolution
-                                </button>
-                                <button
-                                  onClick={() => handleDownloadGraph("high")}
-                                  className="w-full text-left px-3 py-2 text-sm transition-all duration-200"
-                                  style={{
-                                    color: theme.colors.text,
-                                    backgroundColor: "transparent",
-                                  }}
-                                  onMouseEnter={(e) =>
-                                  (e.currentTarget.style.backgroundColor =
-                                    `${theme.colors.accent}20`)
-                                  }
-                                  onMouseLeave={(e) =>
-                                  (e.currentTarget.style.backgroundColor =
-                                    "transparent")
-                                  }
-                                >
-                                  High Resolution
-                                </button>
-                              </motion.div>
+                            ) : (
+                              <Copy
+                                size={16}
+                                style={{ color: theme.colors.textSecondary }}
+                              />
                             )}
-                          </div>
-                        )}
-                      {currentView === "graph" &&
-                        hasNumericData &&
-                        onSummarizeGraph && false && (
-                          <CustomTooltip
-                            title="Summarize Graph"
-                            position="top"
-                          >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() =>
-                                onSummarizeGraph(
-                                  graphRef.current!,
-                                  message.id
-                                )
-                              }
-                              disabled={isSubmitting}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85 disabled:opacity-50"
-                              style={{ background: theme.colors.surface }}
-                            >
-                              <ScanEye
-                                size={20}
-                                style={{ color: theme.colors.accent }}
-                              />
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                      {currentView === "query" &&
-                        parsedData?.sql_query && (
-                          <CustomTooltip
-                            title={copyTooltipTxt}
-                            position="top"
-                          >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => {
-                                if (!canCopy) return;
-                                setCanCopy(false);
-                                if (navigator?.clipboard?.writeText) {
-                                  navigator.clipboard
-                                    .writeText(parsedData.sql_query)
-                                    .then(() => {
-                                      setCopied(true);
-                                      setCopyTooltipTxt("Copied!");
-                                    })
-                                    .catch(() => {
-                                      toast.error("Failed to copy.");
-                                    })
-                                    .finally(() => {
-                                      setTimeout(() => {
-                                        setCopied(false);
-                                        setCopyTooltipTxt("Copy SQL Query");
-                                        setCanCopy(true);
-                                      }, 2000);
-                                    });
-                                } else {
-                                  const textarea =
-                                    document.createElement("textarea");
-                                  textarea.value = parsedData.sql_query;
-                                  document.body.appendChild(textarea);
-                                  textarea.select();
-                                  try {
-                                    const success =
-                                      document.execCommand("copy");
-                                    if (success) {
-                                      setCopied(true);
-                                      setCopyTooltipTxt("Copied!");
-                                    } else {
-                                      toast.error("Copying failed.");
-                                    }
-                                  } catch {
-                                    toast.error("Copying not supported.");
-                                  } finally {
-                                    document.body.removeChild(textarea);
-                                    setTimeout(() => {
-                                      setCopied(false);
-                                      setCopyTooltipTxt("Copy SQL Query");
-                                      setCanCopy(true);
-                                    }, 2000);
-                                  }
-                                }
-                              }}
-                              className="rounded-full p-2 shadow-sm transition-colors duration-200 hover:opacity-85"
-                              style={{ background: theme.colors.surface }}
-                              disabled={!canCopy}
-                            >
-                              {copied ? (
-                                <Check
-                                  size={20}
-                                  style={{ color: theme.colors.accent }}
-                                />
-                              ) : (
-                                <Copy
-                                  size={20}
-                                  style={{ color: theme.colors.accent }}
-                                />
-                              )}
-                            </motion.button>
-                          </CustomTooltip>
-                        )}
-                    </>
-                  )}
-              </div>
+                          </motion.button>
+                        </CustomTooltip>
+                      )}
+                    </div>
+                  </div>
+                )}
               {renderContent()}
             </div>
             {message.status === "normal" && !disabled && (
@@ -1141,12 +1057,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                                 backgroundColor: "transparent",
                               }}
                               onMouseEnter={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                `${theme.colors.accent}20`)
+                                (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
                               }
                               onMouseLeave={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "transparent")
+                                (e.currentTarget.style.backgroundColor =
+                                  "transparent")
                               }
                             >
                               {reason}
@@ -1162,64 +1077,53 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           </div>
         </div>
       ) : (
-        <div
-          className="ml-auto flex w-full items-start justify-end"
-          style={{ gap: theme.spacing.md }}
-        >
+        <div className="flex w-full justify-end mb-2">
           {!isEditing ? (
             <div
-              className="max-w-[80%] p-4 shadow-md relative"
+              className="relative group max-w-[85%] md:max-w-[75%] px-6 py-4 rounded-[2rem] transition-all animate-fade-up shadow-sm"
               style={{
-                background: theme.colors.accent,
-                borderRadius: theme.borderRadius.large,
-                borderTopRightRadius: "0",
-                boxShadow: `0 2px 6px ${theme.colors.text}20`,
+                backgroundColor: theme.colors.surfaceGlass,
+                border: `1px solid ${theme.colors.border}`,
               }}
             >
               {!disabled && (
-                <div className="absolute top-2 left-1 flex items-center gap-1">
+                <div className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
                   <CustomTooltip
                     title={
-                      responseStatus === "loading" ||
-                        responseStatus === "error"
+                      responseStatus === "loading" || responseStatus === "error"
                         ? "Cannot favorite while response is loading or failed"
                         : isFavorited
                           ? "Remove from favorites"
                           : "Add to favorites"
                     }
-                    position="top"
+                    position="left"
                   >
                     <motion.button
                       whileHover={{
                         scale:
                           responseStatus === "loading" ||
-                            responseStatus === "error"
+                          responseStatus === "error"
                             ? 1
                             : 1.1,
                       }}
                       whileTap={{
                         scale:
                           responseStatus === "loading" ||
-                            responseStatus === "error"
+                          responseStatus === "error"
                             ? 1
                             : 0.95,
                       }}
                       onClick={handleFavorite}
-                      className="p-1 rounded-full transition-colors"
+                      className="p-1.5 rounded-full transition-colors bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10"
                       style={{
                         color: isFavorited
                           ? "#FF4D4D"
-                          : "rgba(255,255,255,0.8)",
+                          : theme.colors.textSecondary,
                         cursor:
                           responseStatus === "loading" ||
-                            responseStatus === "error"
+                          responseStatus === "error"
                             ? "not-allowed"
                             : "pointer",
-                        opacity:
-                          responseStatus === "loading" ||
-                            responseStatus === "error"
-                            ? 0.5
-                            : 1,
                       }}
                       disabled={
                         responseStatus === "loading" ||
@@ -1233,57 +1137,44 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       />
                     </motion.button>
                   </CustomTooltip>
-                </div>
-              )}
-              <p
-                className="ml-3 whitespace-pre-wrap break-words"
-                style={{ color: "white", fontSize: chatFontSize }}
-              >
-                {message.content}
-              </p>
-              <div
-                className="mt-2 border-t pt-2 flex items-center justify-between"
-                style={{ borderColor: `${theme.colors.surface}20` }}
-              >
-                <span className="text-xs" style={{ color: `${"#ffffff"}99` }}>
-                  {parseTimestamp(message.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <div className="flex items-center gap-2">
-                  {!disabled && !isSubmitting && (
-                    <CustomTooltip title="Edit message" position="bottom">
+
+                  {!isSubmitting && (
+                    <CustomTooltip title="Edit message" position="left">
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleEdit}
-                        className="rounded-full p-2 transition-colors duration-200 hover:opacity-80"
-                        style={{ color: "white" }}
+                        className="p-1.5 rounded-full transition-colors bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10"
+                        style={{ color: theme.colors.textSecondary }}
                       >
                         <Edit3 size={16} />
                       </motion.button>
                     </CustomTooltip>
                   )}
                 </div>
-              </div>
+              )}
+
+              <p
+                className="whitespace-pre-wrap break-words leading-relaxed"
+                style={{
+                  color: theme.colors.text,
+                  fontSize: chatFontSize,
+                }}
+              >
+                {message.content}
+              </p>
             </div>
           ) : (
-            <EditableMessage
-              messageContent={editedContent}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              onContentChange={handleContentChange}
-              fontSize={chatFontSize}
-            />
+            <div className="w-full max-w-3xl">
+              <EditableMessage
+                messageContent={editedContent}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                onContentChange={handleContentChange}
+                fontSize={chatFontSize}
+              />
+            </div>
           )}
-
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-full shadow-md"
-            style={{ background: theme.colors.accent }}
-          >
-            <User size={20} style={{ color: "white" }} />
-          </div>
         </div>
       )}
     </div>
@@ -1300,7 +1191,6 @@ const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
     prevProps.responseStatus === nextProps.responseStatus &&
     prevProps.disabled === nextProps.disabled &&
     prevProps.onRetry === nextProps.onRetry &&
-    prevProps.onSummarizeGraph === nextProps.onSummarizeGraph &&
     prevProps.isSubmitting === nextProps.isSubmitting
   );
 };

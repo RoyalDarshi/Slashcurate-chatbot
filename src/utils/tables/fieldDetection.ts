@@ -38,7 +38,7 @@ const isMostly = (count: number, total: number, ratio = 0.7): boolean =>
 const buildStats = (
   key: string,
   rows: SmartTableRow[],
-  values: unknown[]
+  values: unknown[],
 ): SmartTableColumnStats => {
   const presentValues = values.filter(isPresent);
   const sampleStrings = toSampleStrings(values);
@@ -52,7 +52,7 @@ const buildStats = (
   const booleanCount = presentValues.filter(
     (value) =>
       typeof value === "boolean" ||
-      /^(true|false|yes|no|y|n)$/i.test(String(value).trim())
+      /^(true|false|yes|no|y|n)$/i.test(String(value).trim()),
   ).length;
   const averageLength =
     sampleStrings.reduce((total, value) => total + value.length, 0) /
@@ -61,8 +61,10 @@ const buildStats = (
     numericValues.reduce((total, value) => total + value, 0) /
     Math.max(numericValues.length, 1);
   const variance =
-    numericValues.reduce((total, value) => total + Math.pow(value - mean, 2), 0) /
-    Math.max(numericValues.length, 1);
+    numericValues.reduce(
+      (total, value) => total + Math.pow(value - mean, 2),
+      0,
+    ) / Math.max(numericValues.length, 1);
 
   return {
     nonEmptyCount: presentValues.length,
@@ -76,7 +78,9 @@ const buildStats = (
     max: numericValues.length ? Math.max(...numericValues) : undefined,
     mean: numericValues.length ? mean : undefined,
     standardDeviation: numericValues.length ? Math.sqrt(variance) : undefined,
-    missingPercent: rows.length ? ((rows.length - presentValues.length) / rows.length) * 100 : 0,
+    missingPercent: rows.length
+      ? ((rows.length - presentValues.length) / rows.length) * 100
+      : 0,
     duplicateCount: Math.max(0, presentValues.length - uniqueValues.length),
     sampleValues: presentValues.slice(0, 8),
     uniqueValues: uniqueValues.slice(0, 100),
@@ -85,22 +89,51 @@ const buildStats = (
 
 const detectType = (
   key: string,
-  stats: SmartTableColumnStats
+  stats: SmartTableColumnStats,
 ): SmartTableColumnType => {
   const lowerKey = key.toLowerCase();
   const samples = stats.sampleValues.map((value) => String(value).trim());
 
-  if (samples.length && isMostly(samples.filter((value) => EMAIL_PATTERN.test(value)).length, samples.length, 0.8)) {
+  if (
+    samples.length &&
+    isMostly(
+      samples.filter((value) => EMAIL_PATTERN.test(value)).length,
+      samples.length,
+      0.8,
+    )
+  ) {
     return "email";
   }
-  if (samples.length && isMostly(samples.filter((value) => URL_PATTERN.test(value)).length, samples.length, 0.8)) {
+  if (
+    samples.length &&
+    isMostly(
+      samples.filter((value) => URL_PATTERN.test(value)).length,
+      samples.length,
+      0.8,
+    )
+  ) {
     if (samples.some((value) => IMAGE_PATTERN.test(value))) return "image";
     return "url";
   }
-  if (samples.length && isMostly(samples.filter((value) => IMAGE_PATTERN.test(value)).length, samples.length, 0.8)) {
+  if (
+    samples.length &&
+    isMostly(
+      samples.filter((value) => IMAGE_PATTERN.test(value)).length,
+      samples.length,
+      0.8,
+    )
+  ) {
     return "image";
   }
-  if (samples.length && isMostly(samples.filter((value) => PHONE_PATTERN.test(value)).length, samples.length, 0.8) && /phone|mobile|contact/i.test(lowerKey)) {
+  if (
+    samples.length &&
+    isMostly(
+      samples.filter((value) => PHONE_PATTERN.test(value)).length,
+      samples.length,
+      0.8,
+    ) &&
+    /phone|mobile|contact/i.test(lowerKey)
+  ) {
     return "phone";
   }
   if (stats.booleanRatio >= 0.8) return "boolean";
@@ -111,8 +144,12 @@ const detectType = (
 
   // Only treat as date if either: data ratio is high, OR the key contains a standalone date keyword
   // AND the column is not primarily numeric (prevents "monthly_payment" → date misdetection)
-  const hasDateKeyword = /(^|_)(date|time|created|updated|timestamp|month|year|quarter)(_|$)/i.test(lowerKey);
-  const isLikelyDate = stats.dateRatio >= 0.7 || (hasDateKeyword && parsedDates.length > 0);
+  const hasDateKeyword =
+    /(^|_)(date|time|created|updated|timestamp|month|year|quarter)(_|$)/i.test(
+      lowerKey,
+    );
+  const isLikelyDate =
+    stats.dateRatio >= 0.7 || (hasDateKeyword && parsedDates.length > 0);
   const isLikelyNumeric = stats.numericRatio >= 0.65;
 
   if (isLikelyDate && !isLikelyNumeric) {
@@ -132,11 +169,21 @@ const detectType = (
   }
 
   if (IDENTIFIER_PATTERN.test(lowerKey)) return "identifier";
-  if (STATUS_PATTERN.test(lowerKey) || (stats.uniqueCount > 1 && stats.uniqueCount <= 8 && stats.averageLength < 24)) {
+  if (
+    STATUS_PATTERN.test(lowerKey) ||
+    (stats.uniqueCount > 1 &&
+      stats.uniqueCount <= 8 &&
+      stats.averageLength < 24)
+  ) {
     return "status";
   }
   if (stats.uniqueCount > 1 && stats.uniqueCount <= 40) return "categorical";
-  if (stats.sampleValues.some((value) => typeof value === "object" && value !== null)) return "json";
+  if (
+    stats.sampleValues.some(
+      (value) => typeof value === "object" && value !== null,
+    )
+  )
+    return "json";
   return "text";
 };
 
@@ -148,12 +195,15 @@ const getAlignment = (type: SmartTableColumnType): SmartTableAlignment => {
 
 const getFilterType = (
   type: SmartTableColumnType,
-  stats: SmartTableColumnStats
+  stats: SmartTableColumnStats,
 ): SmartTableFilterType => {
-  if (["numeric", "currency", "percentage"].includes(type)) return "numberRange";
-  if (["date", "datetime", "month", "year", "quarter"].includes(type)) return "dateRange";
+  if (["numeric", "currency", "percentage"].includes(type))
+    return "numberRange";
+  if (["date", "datetime", "month", "year", "quarter"].includes(type))
+    return "dateRange";
   if (type === "boolean") return "boolean";
-  if (["status", "categorical"].includes(type) && stats.uniqueCount <= 50) return "multiSelect";
+  if (["status", "categorical"].includes(type) && stats.uniqueCount <= 50)
+    return "multiSelect";
   if (type === "identifier" && stats.uniqueCount > 100) return "none";
   return "text";
 };
@@ -161,7 +211,7 @@ const getFilterType = (
 const getWidth = (
   key: string,
   type: SmartTableColumnType,
-  stats: SmartTableColumnStats
+  stats: SmartTableColumnStats,
 ) => {
   const labelWidth = formatColumnLabel(key).length * 9 + 48;
   const sampleWidth = Math.min(360, Math.max(80, stats.averageLength * 8 + 36));
@@ -194,28 +244,36 @@ const isTechnicalColumn = (
   key: string,
   type: SmartTableColumnType,
   stats: SmartTableColumnStats,
-  rowCount: number
+  rowCount: number,
 ): boolean => {
   const lowerKey = key.toLowerCase();
-  if (/(password|token|hash|secret|salt|internal|metadata|_raw|etag)/i.test(lowerKey)) {
+  if (
+    /(password|token|hash|secret|salt|internal|metadata|_raw|etag)/i.test(
+      lowerKey,
+    )
+  ) {
     return true;
   }
   if (type !== "identifier") return false;
-  if (/branch|customer|product|user|employee|account|order|invoice/i.test(lowerKey)) {
+  if (
+    /branch|customer|product|user|employee|account|order|invoice/i.test(
+      lowerKey,
+    )
+  ) {
     return false;
   }
   return rowCount > 20 && stats.uniqueCount >= rowCount * 0.9;
 };
 
 export const detectSmartTableColumns = (
-  rows: SmartTableRow[]
+  rows: SmartTableRow[],
 ): SmartTableColumn[] => {
   if (rows.length === 0) return [];
   const keys = Array.from(
     rows.slice(0, 100).reduce((acc, row) => {
       Object.keys(row).forEach((key) => acc.add(key));
       return acc;
-    }, new Set<string>())
+    }, new Set<string>()),
   );
 
   return keys.map((key) => {
@@ -227,12 +285,21 @@ export const detectSmartTableColumns = (
       .filter((value): value is number => value !== null);
     const isTechnical = isTechnicalColumn(key, type, stats, rows.length);
     const width = getWidth(key, type, stats);
-    const granularity =
-      ["date", "datetime", "month", "year", "quarter"].includes(type)
-        ? type === "date" || type === "datetime" || type === "month" || type === "year" || type === "quarter"
-          ? type
-          : "date"
-        : undefined;
+    const granularity = [
+      "date",
+      "datetime",
+      "month",
+      "year",
+      "quarter",
+    ].includes(type)
+      ? type === "date" ||
+        type === "datetime" ||
+        type === "month" ||
+        type === "year" ||
+        type === "quarter"
+        ? type
+        : "date"
+      : undefined;
 
     return {
       key,
@@ -251,11 +318,19 @@ export const detectSmartTableColumns = (
       numberFormat: ["numeric", "currency", "percentage"].includes(type)
         ? {
             locale: "en-IN",
-            style: type === "currency" ? "currency" : type === "percentage" ? "percentage" : "number",
+            style:
+              type === "currency"
+                ? "currency"
+                : type === "percentage"
+                  ? "percentage"
+                  : "number",
             currency: type === "currency" ? "INR" : undefined,
             currencySymbol: type === "currency" ? "₹" : undefined,
-            precision: type === "percentage" ? 1 : detectDecimalPrecision(numericValues),
-            compact: type === "currency" || Math.max(0, ...numericValues.map(Math.abs)) >= 100_000,
+            precision:
+              type === "percentage" ? 1 : detectDecimalPrecision(numericValues),
+            compact:
+              type === "currency" ||
+              Math.max(0, ...numericValues.map(Math.abs)) >= 100_000,
           }
         : undefined,
       dateFormat: granularity

@@ -8,7 +8,6 @@ import React, {
 import { themes } from "./theme"; // Import from your themes file
 import { Theme } from "./types"; // Import the Theme type
 
-
 // Updated context interface
 interface ThemeContextType {
   theme: Theme;
@@ -36,16 +35,16 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
       }
       // If no stored theme, check system preference
       const systemDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
+        "(prefers-color-scheme: dark)",
       ).matches;
       return systemDark ? "dark" : "light";
     } catch (e) {
       console.warn(
         "Failed to access storage or match media, defaulting to system preference",
-        e
+        e,
       );
       const systemDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
+        "(prefers-color-scheme: dark)",
       ).matches;
       return systemDark ? "dark" : "light";
     }

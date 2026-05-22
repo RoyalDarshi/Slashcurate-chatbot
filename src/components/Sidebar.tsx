@@ -44,12 +44,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   // Default menu items for regular users
   const defaultItems = defaultMenuItems;
 
-  const items = menuItems??defaultItems;
+  const items = menuItems ?? defaultItems;
 
   useEffect(() => {
     localStorage.setItem(
       "isDesktopSidebarOpen",
-      isDesktopSidebarOpen.toString()
+      isDesktopSidebarOpen.toString(),
     );
   }, [isDesktopSidebarOpen]);
 
@@ -93,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   return (
-    <div className="flex">
+    <div className="flex h-full">
       {isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
@@ -119,26 +119,27 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`h-screen p-4 flex flex-col ${
-          isDesktopSidebarOpen ? "w-64" : "w-16"
+        className={`h-full p-4 flex flex-col ${
+          isDesktopSidebarOpen ? "md:w-64 w-64" : "md:w-20 w-16"
         } md:static fixed top-0 left-0 transform ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 transition-all duration-300 ease-in-out z-20 shadow-lg`}
+        } md:translate-x-0 transition-all duration-300 ease-in-out z-20 rounded-none md:rounded-2xl border-0 md:border shadow-none md:shadow-md`}
         style={{
           backgroundColor: theme.colors.surface,
-          borderRight: `1px solid ${theme.colors.border}`,
+          borderColor: theme.colors.border,
         }}
       >
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 overflow-hidden">
             {isDesktopSidebarOpen && (
               <>
                 <MessageCircle
-                  size={28}
+                  size={26}
                   style={{ color: theme.colors.accent }}
+                  className="flex-shrink-0"
                 />
                 <h1
-                  className="text-xl font-bold"
+                  className="text-lg font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
                   style={{
                     color: theme.colors.text,
                     fontFamily: theme.typography.fontFamily,
@@ -149,23 +150,30 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </h1>
               </>
             )}
+            {!isDesktopSidebarOpen && (
+              <MessageCircle
+                size={26}
+                style={{ color: theme.colors.accent }}
+                className="mx-auto"
+              />
+            )}
           </div>
           <div className="relative group hidden md:block">
             <button
-              className="p-1 rounded-md transition-all duration-200 hover:bg-opacity-10"
+              className="p-1.5 rounded-lg transition-all duration-200 hover:bg-opacity-10 flex items-center justify-center"
               style={{ backgroundColor: theme.colors.accent, color: "white" }}
               onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
               aria-label="Toggle Sidebar"
               aria-expanded={isDesktopSidebarOpen}
             >
               {isDesktopSidebarOpen ? (
-                <PanelLeftClose size={24} />
+                <PanelLeftClose size={18} />
               ) : (
-                <PanelLeftOpen size={24} />
+                <PanelLeftOpen size={18} />
               )}
             </button>
             <div
-              className="absolute left-12 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+              className="absolute left-12 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap"
               style={{ zIndex: 100 }}
             >
               {isDesktopSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
@@ -173,58 +181,87 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        <nav className="flex flex-col space-y-1 flex-grow">
+        <nav className="flex flex-col space-y-1.5 flex-grow">
           {items?.map(({ id, icon: Icon, label, subMenu }) => (
             <React.Fragment key={id}>
               <button
-                className={`flex items-center justify-between p-3 rounded-md w-full transition-colors duration-200 ${
+                className={`relative flex items-center ${
+                  isDesktopSidebarOpen ? "justify-between" : "justify-center"
+                } rounded-xl w-full transition-all duration-300 group ${
                   activeMenuItem === id
-                    ? "bg-opacity-20"
+                    ? "shadow-sm"
                     : "hover:bg-opacity-10"
                 }`}
                 style={{
                   backgroundColor:
                     activeMenuItem === id
-                      ? `${theme.colors.accent}40`
-                      : undefined,
-                  color: theme.colors.text,
-                  borderRadius: theme.borderRadius.default,
+                      ? `${theme.colors.accent}14` // 8% opacity for cleaner feel
+                      : "transparent",
+                  color: activeMenuItem === id ? theme.colors.accent : theme.colors.text,
                   transition: theme.transition.default,
-                  padding: isDesktopSidebarOpen
-                    ? "0.75rem"
-                    : "0.5rem 1.75rem 0.5rem 0.5rem",
+                  padding: "0.6rem 0.8rem",
                 }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor = theme.colors.hover)
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    activeMenuItem === id
-                      ? `${theme.colors.accent}40`
-                      : "transparent")
-                }
+                onMouseOver={(e) => {
+                  if (activeMenuItem !== id) {
+                    e.currentTarget.style.backgroundColor = theme.colors.hover;
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (activeMenuItem !== id) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }
+                }}
                 onClick={() => handleMenuClick(id)}
                 aria-expanded={id === "connections" && isConnectionsOpen}
                 aria-controls={
                   id === "connections" ? "connections-sub-menu" : undefined
                 }
               >
-                <div className="flex items-center relative group">
-                  <Icon size={20} style={{ color: theme.colors.text }} />
+                <div className="flex items-center relative w-full justify-start">
+                  {/* Left Accent indicator pill */}
+                  {activeMenuItem === id && (
+                    <div
+                      className="absolute left-0 w-1 h-5 rounded-r-full"
+                      style={{
+                        backgroundColor: theme.colors.accent,
+                        marginLeft: "-0.8rem",
+                      }}
+                    />
+                  )}
+
+                  <Icon
+                    size={18}
+                    style={{
+                      color:
+                        activeMenuItem === id
+                          ? theme.colors.accent
+                          : theme.colors.textSecondary,
+                    }}
+                    className={`transition-colors duration-200 group-hover:text-current ${
+                      !isDesktopSidebarOpen ? "mx-auto" : ""
+                    }`}
+                  />
                   {!isDesktopSidebarOpen && (
                     <div
-                      className="absolute left-10 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-                      style={{ zIndex: 100 }}
+                      className="absolute left-12 top-1/2 transform -translate-y-1/2 text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap shadow-lg border border-slate-200/80 dark:border-slate-800/80"
+                      style={{
+                        zIndex: 100,
+                        backgroundColor: theme.colors.surface,
+                        color: theme.colors.text,
+                      }}
                     >
                       {label}
                     </div>
                   )}
                   {isDesktopSidebarOpen && (
                     <span
-                      className="ml-3"
+                      className="ml-3 truncate"
                       style={{
-                        fontSize: theme.typography.size.base,
-                        fontWeight: theme.typography.weight.medium,
+                        fontSize: theme.typography.size.sm,
+                        fontWeight:
+                          activeMenuItem === id
+                            ? theme.typography.weight.semibold
+                            : theme.typography.weight.medium,
                       }}
                     >
                       {label}
@@ -234,11 +271,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {isDesktopSidebarOpen &&
                   id === "connections" &&
                   (isConnectionsOpen ? (
-                    <ChevronUp size={16} style={{ color: theme.colors.text }} />
+                    <ChevronUp size={14} style={{ color: theme.colors.textSecondary }} />
                   ) : (
                     <ChevronDown
-                      size={16}
-                      style={{ color: theme.colors.text }}
+                      size={14}
+                      style={{ color: theme.colors.textSecondary }}
                     />
                   ))}
               </button>
@@ -248,33 +285,53 @@ const Sidebar: React.FC<SidebarProps> = ({
                 isConnectionsOpen &&
                 isDesktopSidebarOpen && (
                   <div
-                    className="pl-6 space-y-1"
+                    className="pl-4 space-y-1 border-l ml-3 mb-1 mt-0.5 border-slate-100 dark:border-slate-800"
                     id="connections-sub-menu"
                     style={{ transition: theme.transition.default }}
                   >
                     {subMenu.map((subItem) => (
                       <button
                         key={subItem.id}
-                        className="flex items-center p-2 rounded-md w-full transition-colors duration-200 hover:bg-opacity-10"
+                        className="relative flex items-center p-2 rounded-lg w-full transition-colors duration-200 hover:bg-opacity-10"
                         style={{
                           backgroundColor:
                             activeMenuItem === subItem.id
                               ? theme.colors.hover
-                              : undefined,
-                          color: theme.colors.text,
+                              : "transparent",
+                          color:
+                            activeMenuItem === subItem.id
+                              ? theme.colors.accent
+                              : theme.colors.textSecondary,
                           borderRadius: theme.borderRadius.default,
                         }}
                         onClick={() => handleMenuClick(subItem.id)}
                       >
+                        {activeMenuItem === subItem.id && (
+                          <div
+                            className="absolute left-0 w-1 h-4 rounded-r-full"
+                            style={{
+                              backgroundColor: theme.colors.accent,
+                              marginLeft: "-1rem",
+                            }}
+                          />
+                        )}
                         <subItem.icon
-                          size={18}
-                          style={{ color: theme.colors.text }}
+                          size={15}
+                          style={{
+                            color:
+                              activeMenuItem === subItem.id
+                                ? theme.colors.accent
+                                : theme.colors.textSecondary,
+                          }}
                         />
                         <span
-                          className="ml-3 text-sm"
+                          className="ml-2.5 text-xs truncate"
                           style={{
-                            fontSize: theme.typography.size.sm,
-                            fontWeight: theme.typography.weight.normal,
+                            fontSize: theme.typography.size.xs,
+                            fontWeight:
+                              activeMenuItem === subItem.id
+                                ? theme.typography.weight.semibold
+                                : theme.typography.weight.normal,
                           }}
                         >
                           {subItem.label}
@@ -288,15 +345,17 @@ const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         <div
-          className="mt-auto pt-4 flex items-center space-x-2"
+          className={`mt-auto pt-4 flex items-center ${
+            isDesktopSidebarOpen ? "space-x-2.5 justify-start" : "justify-center space-x-0"
+          }`}
           style={{ borderTop: `1px solid ${theme.colors.border}` }}
         >
           <svg
-            className="h-8 w-8"
+            className="h-6 w-6 flex-shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             stroke={theme.colors.accent}
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -305,11 +364,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           </svg>
           {isDesktopSidebarOpen && (
             <span
-              className="text-sm font-semibold"
+              className="text-xs font-bold tracking-wider uppercase opacity-80"
               style={{
                 color: theme.colors.text,
                 fontFamily: theme.typography.fontFamily,
-                fontWeight: theme.typography.weight.bold,
               }}
             >
               SlashCurate

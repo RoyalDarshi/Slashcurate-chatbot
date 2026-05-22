@@ -38,7 +38,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   variant = "dark",
 }) => {
   const triggerRef = useRef<string>(
-    `tooltip-${Math.random().toString(36).substr(2, 9)}`
+    `tooltip-${Math.random().toString(36).substr(2, 9)}`,
   );
   const childRef = useRef<HTMLElement>(null);
 

@@ -38,7 +38,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
   }) => {
     const { theme } = useTheme();
     const isDisabled = isSubmitting || disabled;
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
     const dbExplorerRef = useRef<HTMLDivElement>(null);
     const onInputChangeRef = useRef(onInputChange);
     const onSubmitRef = useRef(onSubmit);
@@ -159,6 +159,16 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
       }
     }, []);
 
+    // Auto-grow height based on input content
+    useEffect(() => {
+      const textarea = inputRef.current;
+      if (textarea) {
+        textarea.style.height = "auto";
+        const scrollHeight = textarea.scrollHeight;
+        textarea.style.height = `${Math.min(scrollHeight, 144)}px`;
+      }
+    }, [input]);
+
     const handleMicToggle = useCallback(() => {
       if (!recognition) return;
 
@@ -205,7 +215,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
       <form
         onSubmit={onSubmit}
         style={{ background: theme.colors.background, width: "100%" }}
-        className="flex-grow"
+        className="flex-grow px-4 md:px-0"
       >
         <div className="w-full h-full flex flex-col">
           {isDbExplorerOpen && (
@@ -228,13 +238,13 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
           )}
 
           <div
-            className="flex items-center gap-2 w-full"
+            className="flex items-end gap-2 w-full transition-shadow duration-300 focus-within:shadow-lg shadow-md"
             style={{
               background: theme.colors.surface,
-              borderRadius: theme.borderRadius.pill,
+              borderRadius: "1.5rem",
               border: `1px solid ${theme.colors.border}`,
-              boxShadow: `0 2px 10px ${theme.colors.text}10`,
-              padding: "5px",
+              boxShadow: theme.mode === 'light' ? `0 4px 20px rgba(15, 23, 42, 0.05)` : `0 4px 20px rgba(0, 0, 0, 0.3)`,
+              padding: "8px 12px",
             }}
           >
             {showMicButton &&
@@ -244,7 +254,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                   title={isRecording ? "Stop Voice Input" : "Voice Input"}
                   position="top"
                 >
-                  <div className="relative">
+                  <div className="relative flex-shrink-0">
                     <button
                       type="button"
                       onClick={handleMicToggle}
@@ -253,7 +263,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                         !recognition ||
                         micPermissionStatus === "denied"
                       }
-                      className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0 ${isRecording ? "animate-pulse" : ""
+                      className={`flex items-center justify-center w-9 h-9 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 mb-0.5 ${isRecording ? "animate-pulse" : ""
                         }`}
                       style={{
                         background: isRecording
@@ -268,20 +278,16 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                         isRecording ? "Stop voice input" : "Start voice input"
                       }
                     >
-                      {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+                      {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
                     </button>
-                    {/* <span
-                      className={`absolute top-0 right-0 block w-3 h-3 rounded-full ring-2 ring-white ${getPermissionIndicatorColor()}`}
-                      title={`Microphone status: ${micPermissionStatus}`}
-                    ></span> */}
                   </div>
                 </CustomTooltip>
               )}
 
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
               value={input}
+              rows={1}
               onChange={(e) => {
                 onInputChange(e.target.value);
                 if (isRecording && recognition) {
@@ -289,17 +295,17 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                 }
               }}
               placeholder={voiceInputStatus || "Ask about your data..."}
-              className="flex-grow h-10 px-3 text-base border-none rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed placeholder-opacity-50"
+              className="flex-grow py-1.5 px-3 text-base border-none resize-none overflow-y-auto placeholder-opacity-50 focus:outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: "transparent",
                 color: theme.colors.text,
                 border: "none",
-                borderRadius: theme.borderRadius.default,
                 fontFamily: theme.typography.fontFamily,
                 fontSize: theme.typography.size.base,
-                transition: theme.transition.default,
+                transition: "none",
                 outline: "none",
-                "--tw-ring-color": theme.colors.accent,
+                minHeight: "36px",
+                maxHeight: "144px",
               }}
               disabled={
                 isDisabled || isRecording || micPermissionStatus === "denied"
@@ -310,7 +316,9 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  onSubmit(e);
+                  if (input.trim()) {
+                    onSubmit(e);
+                  }
                 }
               }}
             />
@@ -320,7 +328,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                 <button
                   type="button"
                   onClick={onStopRequest}
-                  className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
+                  className="flex items-center justify-center w-9 h-9 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0 mb-0.5"
                   style={{
                     background: theme.colors.error,
                     color: "white",
@@ -328,7 +336,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                   }}
                   aria-label="Stop generating response"
                 >
-                  <XSquare size={18} />
+                  <XSquare size={16} />
                 </button>
               </CustomTooltip>
             ) : (
@@ -340,7 +348,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                     isRecording ||
                     micPermissionStatus === "denied"
                   }
-                  className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0"
+                  className="flex items-center justify-center w-9 h-9 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex-shrink-0 mb-0.5"
                   style={{
                     background:
                       isDisabled ||
@@ -359,7 +367,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                   aria-label="Send message"
                 >
                   <Send
-                    size={18}
+                    size={16}
                     className="transition-transform duration-300"
                   />
                 </button>

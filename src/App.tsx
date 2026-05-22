@@ -229,7 +229,7 @@ const AppContent: React.FC<{
       />
       {isAuthenticated ? (
         <div
-          className="flex flex-col md:flex-row h-screen"
+          className="flex flex-col md:flex-row h-screen w-screen overflow-hidden p-0 md:p-4 lg:p-5 gap-0 md:gap-4 lg:gap-5"
           style={{ backgroundColor: theme.colors.background }}
         >
           <div className="md:hidden h-16 w-full" />
@@ -239,15 +239,15 @@ const AppContent: React.FC<{
             defaultMenuItems={
               localStorage.getItem("allowedToCreateConnection") !== "false"
                 ? menuItems
-                : menuItems.filter(item => item.id !== "new-connection")
+                : menuItems.filter((item) => item.id !== "new-connection")
             }
             onLogout={onLogout}
           />
           <main
-            className="flex-1 flex flex-col overflow-y-auto md:mt-0 mt-16"
+            className="flex-1 flex flex-col overflow-hidden md:mt-0 mt-16 rounded-none md:rounded-2xl border-0 md:border shadow-none md:shadow-md transition-all duration-300"
             style={{
               backgroundColor: theme.colors.surface,
-              minHeight: "calc(100vh - 64px)",
+              borderColor: theme.colors.border,
             }}
           >
             <UserTips
@@ -256,53 +256,55 @@ const AppContent: React.FC<{
                 setShowTip(false);
               }}
             />
-            {activeMenu === "home" &&
-              (currentView === "chat" ? ( // Conditionally render based on currentView
-                <ChatInterface
-                  ref={chatRef}
-                  onCreateConSelected={onCreateConSelected}
-                  initialQuestion={questionToAsk}
-                  onQuestionAsked={() => setQuestionToAsk(null)}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {activeMenu === "home" &&
+                (currentView === "chat" ? ( // Conditionally render based on currentView
+                  <ChatInterface
+                    ref={chatRef}
+                    onCreateConSelected={onCreateConSelected}
+                    initialQuestion={questionToAsk}
+                    onQuestionAsked={() => setQuestionToAsk(null)}
+                  />
+                ) : (
+                  <DashboardInterface
+                    ref={dashboardRef} // Pass ref to DashboardInterface
+                    onCreateConSelected={onCreateConSelected}
+                    initialQuestion={questionToAsk}
+                    onQuestionAsked={() => setQuestionToAsk(null)}
+                  />
+                ))}
+              {activeMenu === "new-connection" && (
+                <ConnectionForm
+                  token={userToken}
+                  isAdmin={false}
+                  onSuccess={() => setActiveMenu("existing-connection")}
                 />
-              ) : (
-                <DashboardInterface
-                  ref={dashboardRef} // Pass ref to DashboardInterface
-                  onCreateConSelected={onCreateConSelected}
-                  initialQuestion={questionToAsk}
-                  onQuestionAsked={() => setQuestionToAsk(null)}
+              )}
+              {activeMenu === "existing-connection" && (
+                <ExistingConnections
+                  isAdmin={false}
+                  createConnection={onCreateConSelected}
                 />
-              ))}
-            {activeMenu === "new-connection" && (
-              <ConnectionForm
-                token={userToken}
-                isAdmin={false}
-                onSuccess={() => setActiveMenu("existing-connection")}
-              />
-            )}
-            {activeMenu === "existing-connection" && (
-              <ExistingConnections
-                isAdmin={false}
-                createConnection={onCreateConSelected}
-              />
-            )}
-            {activeMenu === "history" && (
-              <History onSessionClicked={handleSessionClicked} />
-            )}
-            {activeMenu === "favourite" && (
-              <Favourites
-                onFavoriteSelected={(question, connection, query) => {
-                  setQuestionToAsk({ text: question, connection, query });
-                  setTimeout(() => setActiveMenu("home"), 0);
-                }}
-              />
-            )}
-            {activeMenu === "settings" && <Settings />}
-            {activeMenu === "help" && (
-              <HelpPage
-                onCreateConSelected={onCreateConSelected}
-                onNewChat={onNewChat}
-              />
-            )}
+              )}
+              {activeMenu === "history" && (
+                <History onSessionClicked={handleSessionClicked} />
+              )}
+              {activeMenu === "favourite" && (
+                <Favourites
+                  onFavoriteSelected={(question, connection, query) => {
+                    setQuestionToAsk({ text: question, connection, query });
+                    setTimeout(() => setActiveMenu("home"), 0);
+                  }}
+                />
+              )}
+              {activeMenu === "settings" && <Settings />}
+              {activeMenu === "help" && (
+                <HelpPage
+                  onCreateConSelected={onCreateConSelected}
+                  onNewChat={onNewChat}
+                />
+              )}
+            </div>
           </main>
         </div>
       ) : (

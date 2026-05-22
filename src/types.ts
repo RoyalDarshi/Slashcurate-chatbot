@@ -169,11 +169,14 @@ export interface Theme {
     surfaceGlass: string; // Glassmorphism effect color
   };
   spacing: {
+    xxs: string; // Extra extra small spacing
     xs: string; // Extra small spacing (padding/margin)
     sm: string; // Small spacing
     md: string; // Medium spacing
     lg: string; // Large spacing
     xl: string; // Extra large spacing
+    "2xl": string; // 2XL spacing
+    "3xl": string; // 3XL spacing
   };
   typography: {
     fontFamily: string; // Primary font stack
@@ -182,10 +185,12 @@ export interface Theme {
       sm: string; // Small text (e.g., timestamps)
       base: string; // Default text size
       lg: string; // Larger text (e.g., headings)
+      xl: string; // Extra large text
     };
     weight: {
       normal: string; // Normal font weight
       medium: string; // Medium font weight
+      semibold: string; // Semibold font weight
       bold: string; // Bold font weight
     };
   };
@@ -205,6 +210,7 @@ export interface Theme {
   };
   transition: {
     default: string; // Default transition timing (e.g., hover effects)
+    layout: string; // Fluid layout transition timing
   };
   // New gradients property
   gradients: {

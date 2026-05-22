@@ -5,14 +5,20 @@ import type {
   SmartTableRow,
 } from "./types";
 
-const getStatusTone = (
-  value: string
-): SmartCellRenderModel["badgeTone"] => {
+const getStatusTone = (value: string): SmartCellRenderModel["badgeTone"] => {
   const normalized = value.toLowerCase();
-  if (/(success|completed|complete|active|approved|paid|won|good|high)/.test(normalized)) {
+  if (
+    /(success|completed|complete|active|approved|paid|won|good|high)/.test(
+      normalized,
+    )
+  ) {
     return "positive";
   }
-  if (/(failed|error|inactive|rejected|cancelled|canceled|lost|bad|low|overdue)/.test(normalized)) {
+  if (
+    /(failed|error|inactive|rejected|cancelled|canceled|lost|bad|low|overdue)/.test(
+      normalized,
+    )
+  ) {
     return "negative";
   }
   if (/(pending|waiting|hold|medium|review|open|warning)/.test(normalized)) {
@@ -21,19 +27,29 @@ const getStatusTone = (
   return "info";
 };
 
-const getHeatPercent = (value: unknown, column: SmartTableColumn): number | undefined => {
+const getHeatPercent = (
+  value: unknown,
+  column: SmartTableColumn,
+): number | undefined => {
   const numericValue = toFiniteNumber(value);
-  if (numericValue === null || column.stats.min === undefined || column.stats.max === undefined) {
+  if (
+    numericValue === null ||
+    column.stats.min === undefined ||
+    column.stats.max === undefined
+  ) {
     return undefined;
   }
   const range = column.stats.max - column.stats.min;
   if (range <= 0) return undefined;
-  return Math.max(0, Math.min(100, ((numericValue - column.stats.min) / range) * 100));
+  return Math.max(
+    0,
+    Math.min(100, ((numericValue - column.stats.min) / range) * 100),
+  );
 };
 
 export const getCellRenderModel = (
   row: SmartTableRow,
-  column: SmartTableColumn
+  column: SmartTableColumn,
 ): SmartCellRenderModel => {
   const rawValue = row[column.key];
   const displayValue = formatTableValue(rawValue, column);
@@ -44,7 +60,8 @@ export const getCellRenderModel = (
     column.stats.mean !== undefined &&
     column.stats.standardDeviation !== undefined &&
     column.stats.standardDeviation > 0 &&
-    Math.abs(numericValue - column.stats.mean) > column.stats.standardDeviation * 2;
+    Math.abs(numericValue - column.stats.mean) >
+      column.stats.standardDeviation * 2;
 
   if (rawValue === null || rawValue === undefined || rawValue === "") {
     return {
@@ -94,7 +111,11 @@ export const getCellRenderModel = (
 
   if (column.type === "boolean") {
     const normalized = String(rawValue).toLowerCase();
-    const truthy = rawValue === true || normalized === "true" || normalized === "yes" || normalized === "y";
+    const truthy =
+      rawValue === true ||
+      normalized === "true" ||
+      normalized === "yes" ||
+      normalized === "y";
     return {
       rawValue,
       displayValue: truthy ? "Yes" : "No",
@@ -123,7 +144,10 @@ export const getCellRenderModel = (
     };
   }
 
-  if (numericValue !== null && ["numeric", "currency", "percentage"].includes(column.type)) {
+  if (
+    numericValue !== null &&
+    ["numeric", "currency", "percentage"].includes(column.type)
+  ) {
     return {
       rawValue,
       displayValue,
@@ -132,7 +156,10 @@ export const getCellRenderModel = (
       heatPercent,
       progressPercent:
         column.stats.max && column.stats.max > 0
-          ? Math.max(0, Math.min(100, (Math.abs(numericValue) / column.stats.max) * 100))
+          ? Math.max(
+              0,
+              Math.min(100, (Math.abs(numericValue) / column.stats.max) * 100),
+            )
           : undefined,
       isAnomaly,
       isPositive: numericValue > 0,

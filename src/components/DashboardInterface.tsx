@@ -2063,26 +2063,6 @@ const DashboardInterface = memo(
             color: theme.colors.text,
           }}
         >
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme={theme.mode}
-            toastStyle={{
-              background: theme.colors.surface,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.borderRadius.default,
-              padding: theme.spacing.sm,
-            }}
-          />
-
           {sessionConnectionError && (
             <div
               className="flex items-center justify-between sticky top-0 z-20 mx-auto max-w-3xl animate-fade-in"
@@ -2132,35 +2112,35 @@ const DashboardInterface = memo(
                 if (connections.length === 0 && !connectionsLoading) {
                   return (
                     <div
-                      className="flex flex-col items-center justify-center h-full text-center"
-                      style={{ color: theme.colors.text }}
+                      className="flex flex-col items-center justify-center h-full text-center animate-fade-up"
+                      style={{ color: theme.colors.text, gap: 12 }}
                     >
-                      <p className="text-2xl font-semibold mb-4">
+                      <div
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 600,
+                          color: theme.colors.text,
+                        }}
+                      >
                         No Connections Found
-                      </p>
-                      <p className="text-lg">
-                        Please create a connection to start interacting with
-                        your data assistant.
+                      </div>
+                      <p
+                        style={{
+                          fontSize: 13,
+                          color: theme.colors.textSecondary,
+                          maxWidth: 360,
+                          margin: 0,
+                        }}
+                      >
+                        Create a connection to start interacting with your data
+                        assistant.
                       </p>
                       {localStorage.getItem("allowedToCreateConnection") !==
                         "false" && (
                         <button
                           onClick={onCreateConSelected}
-                          className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
-                          style={{
-                            color: "white",
-                            backgroundColor: theme.colors.accent,
-                            borderRadius: theme.borderRadius.pill,
-                            padding: "8px 16px",
-                          }}
-                          onMouseOver={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              theme.colors.accentHover)
-                          }
-                          onMouseOut={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              theme.colors.accent)
-                          }
+                          className="ent-btn ent-btn-primary"
+                          style={{ marginTop: 8 }}
                         >
                           Create Connection
                         </button>
@@ -2240,22 +2220,40 @@ const DashboardInterface = memo(
                   );
                 }
                 return (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div
+                    className="flex flex-col items-center justify-center h-full text-center animate-fade-up"
+                    style={{ gap: 10 }}
+                  >
                     <h1
-                      className={`text-3xl font-bold mb-4`}
-                      style={{ marginTop: "10vh", color: theme.colors.text }}
+                      style={{
+                        fontSize: 17,
+                        fontWeight: 700,
+                        color: theme.colors.text,
+                        marginTop: "8vh",
+                        letterSpacing: "-0.02em",
+                      }}
                     >
-                      Hello! I’m your Data Assistant. How can I help you today?
+                      Hello! I'm your Data Assistant.
                     </h1>
+                    <p
+                      style={{
+                        fontSize: 13,
+                        color: theme.colors.textSecondary,
+                        margin: 0,
+                      }}
+                    >
+                      Ask a question to get started.
+                    </p>
                     {!selectedConnection && connections.length > 0 && (
-                      <div className="flex flex-col items-center mb-6">
-                        <p
-                          className={`mb-4`}
-                          style={{ color: theme.colors.textSecondary }}
-                        >
-                          You need to select a data connection first:
-                        </p>
-                      </div>
+                      <p
+                        style={{
+                          fontSize: 12.5,
+                          color: theme.colors.textSecondary,
+                          margin: 0,
+                        }}
+                      >
+                        Select a connection below to begin.
+                      </p>
                     )}
                     {selectedConnection && recommendedQuestions.length > 0 && (
                       <RecommendedQuestions
@@ -2282,13 +2280,11 @@ const DashboardInterface = memo(
           )}
 
           {connections.length > 0 && (
-            <footer
-              className={`shadow-top flex justify-center pb-2`}
-              style={{
-                background: theme.colors.background,
-              }}
-            >
-              <div className="w-full max-w-4xl flex items-center gap-2 px-2">
+            <footer className="flex justify-center pb-4 absolute bottom-0 left-0 right-0 z-40 pointer-events-none px-4">
+              <div
+                className="w-full max-w-4xl flex items-center gap-2 px-3 py-2 rounded-full pointer-events-auto transition-all duration-200 glass-input shadow-floating focus-within:shadow-lg group"
+                style={{ zIndex: 10 }}
+              >
                 <div className="relative" ref={connectionDropdownRef}>
                   <CustomTooltip
                     title="Change or create a connection"
@@ -2301,10 +2297,10 @@ const DashboardInterface = memo(
                         setIsDbExplorerOpen(false);
                       }}
                       disabled={isSubmitting || !!sessionConnectionError}
-                      className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
+                      className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50"
                       style={{
-                        background: theme.colors.surface,
-                        color: theme.colors.accent,
+                        color: theme.colors.textSecondary,
+                        background: "transparent",
                       }}
                     >
                       <Database size={20} />
@@ -2405,12 +2401,14 @@ const DashboardInterface = memo(
                       !selectedConnection ||
                       !!sessionConnectionError
                     }
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
-                      isDbExplorerOpen ? "schema-active" : ""
+                    className={`p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50 ${
+                      isDbExplorerOpen ? "schema-active text-accent" : ""
                     }`}
                     style={{
-                      background: theme.colors.surface,
-                      color: theme.colors.accent,
+                      color: isDbExplorerOpen
+                        ? theme.colors.accent
+                        : theme.colors.textSecondary,
+                      background: "transparent",
                     }}
                   >
                     <Layers
@@ -2429,10 +2427,10 @@ const DashboardInterface = memo(
                     type="button"
                     onClick={handleNewChat}
                     disabled={isSubmitting}
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
+                    className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50"
                     style={{
-                      background: theme.colors.surface,
-                      color: theme.colors.accent,
+                      color: theme.colors.textSecondary,
+                      background: "transparent",
                     }}
                   >
                     <PlusCircle size={20} />
@@ -2463,10 +2461,10 @@ const DashboardInterface = memo(
                     disabled={
                       isSubmitting || userQuestionsFromSession.length === 0
                     }
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
+                    className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50"
                     style={{
-                      background: theme.colors.surface,
-                      color: theme.colors.accent,
+                      color: theme.colors.textSecondary,
+                      background: "transparent",
                     }}
                   >
                     <ListChecks size={20} />
@@ -2486,10 +2484,10 @@ const DashboardInterface = memo(
                           currentDashboardView.mainViewData.chartData.length ===
                             0
                         }
-                        className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
+                        className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50"
                         style={{
-                          background: theme.colors.surface,
-                          color: theme.colors.accent,
+                          color: theme.colors.textSecondary,
+                          background: "transparent",
                         }}
                       >
                         <ScanEye size={20} />

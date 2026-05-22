@@ -101,11 +101,9 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
     return (
       <div
-        className="flex w-full flex-col"
+        className="flex w-full flex-col glass-panel"
         style={{
-          background: theme.colors.surface,
-          backdropFilter: "blur(20px) saturate(180%)",
-          WebkitBackdropFilter: "blur(20px) saturate(180%)",
+          borderRadius: theme.borderRadius.large,
           overflow: "hidden",
           transition: theme.transition.default,
         }}

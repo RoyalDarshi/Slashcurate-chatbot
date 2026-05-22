@@ -27,7 +27,7 @@ import {
 import SchemaExplorer from "./SchemaExplorer";
 import schemaSampleData from "../data/sampleSchemaData";
 import html2canvas from "html2canvas";
-import SummaryModal from "./SummaryModal";
+
 import { FaFilePdf } from "react-icons/fa";
 
 export type ChatInterfaceHandle = {
@@ -134,8 +134,7 @@ const ChatInterface = memo(
       const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
         useState(false);
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
-      const [graphSummary, setGraphSummary] = useState<string | null>(null);
-      const [showSummaryModal, setShowSummaryModal] = useState(false);
+
 
       const options = [
         {
@@ -150,77 +149,7 @@ const ChatInterface = memo(
         })),
       ];
 
-      const summarizeGraph = useCallback(
-        async (graphElement: HTMLElement, botMessageId: string) => {
-          if (!graphElement) {
-            toast.error("No graph element to summarize.");
-            return;
-          }
-          const botMessage = messages.find((m) => m.id === botMessageId);
-          if (!botMessage || !botMessage.parentId) {
-            toast.error("Cannot find associated question for this graph.");
-            return;
-          }
-          const userMessage = messages.find(
-            (m) => m.id === botMessage.parentId,
-          );
-          const question = userMessage
-            ? userMessage.content
-            : "Unknown question";
 
-          setIsSubmitting(true);
-          try {
-            const canvas = await html2canvas(graphElement, { scale: 2 });
-            const imageData = canvas.toDataURL("image/png");
-            const prompt = `Summarize the key insights from this graph image. Consider the current question: "${question}". Main View Data Query: ${botMessage.sql_query}. Focus on trends, anomalies, and overall patterns shown in the visual data.`;
-            const apiKey = import.meta.env.VITE_GEMINI_API_KEY; // Replace with your actual API key
-            const payload = {
-              contents: [
-                {
-                  role: "user",
-                  parts: [
-                    { text: prompt },
-                    {
-                      inlineData: {
-                        mimeType: "image/png",
-                        data: imageData.split(",")[1],
-                      },
-                    },
-                  ],
-                },
-              ],
-            };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-            const result = await response.json();
-            let summaryText = "No summary could be generated.";
-            if (
-              result.candidates &&
-              result.candidates.length > 0 &&
-              result.candidates[0].content &&
-              result.candidates[0].content.parts &&
-              result.candidates[0].content.parts.length > 0
-            ) {
-              summaryText = result.candidates[0].content.parts[0].text;
-              setGraphSummary(summaryText);
-              setShowSummaryModal(true);
-            } else {
-              console.error("Unexpected API response:", result);
-              toast.error("Failed to get summary from AI.");
-            }
-          } catch (error) {
-            console.error("Error summarizing graph:", error);
-            toast.error("Failed to summarize graph.");
-          } finally {
-            setIsSubmitting(false);
-          }
-        },
-        [messages],
-      );
 
       useEffect(() => {
         // Function to check loading status and poll
@@ -1479,10 +1408,7 @@ const ChatInterface = memo(
           )}
           <div
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto"
-            style={{
-              padding: theme.spacing.lg,
-            }}
+            className="flex-1 overflow-y-auto w-full custom-scrollbar pt-6 pb-40 px-4 md:px-8 flex flex-col"
           >
             {connectionsLoading ? (
               <Loader text="Loading connections..." />
@@ -1548,7 +1474,7 @@ const ChatInterface = memo(
                   )}
               </div>
             ) : (
-              <div>
+              <div className="max-w-5xl mx-auto w-full flex flex-col gap-6">
                 {messages.map((message) => {
                   const responseStatus = message.isBot
                     ? null
@@ -1572,7 +1498,6 @@ const ChatInterface = memo(
                         responseStatus={responseStatus}
                         disabled={!!sessionConnectionError}
                         onRetry={handleRetry}
-                        onSummarizeGraph={summarizeGraph}
                         isSubmitting={isSubmitting}
                       />
                     </div>
@@ -1795,13 +1720,7 @@ const ChatInterface = memo(
               {connectionError}
             </div>
           )}
-          {showSummaryModal && graphSummary && (
-            <SummaryModal
-              summaryText={graphSummary}
-              onClose={() => setShowSummaryModal(false)}
-              theme={theme}
-            />
-          )}
+
         </div>
       );
     },

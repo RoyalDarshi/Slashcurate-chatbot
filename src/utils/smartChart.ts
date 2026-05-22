@@ -1239,13 +1239,13 @@ const getResponsiveSettings = (
   const isDense = categoryCount > 10;
   const height =
     orientation === "horizontal"
-      ? Math.min(720, Math.max(340, categoryCount * 34 + 140))
-      : Math.min(640, Math.max(340, categoryCount > 18 ? 520 : 400));
+      ? Math.min(380, Math.max(200, categoryCount * 28 + 100))
+      : Math.min(380, Math.max(200, categoryCount > 12 ? 360 : 280));
 
   return {
-    minHeight: 320,
+    minHeight: 200,
     height,
-    maxHeight: 760,
+    maxHeight: 380,
     categoryCount,
     isDense,
   };
@@ -1388,10 +1388,10 @@ export const getSmartChartConfig = (
     gridLeft:
       orientation === "horizontal"
         ? Math.min(220, Math.max(92, maxLabelLength * 7))
-        : 56,
-    gridRight: 28,
-    gridTop: 36,
-    gridBottom: dense ? 86 : 48,
+        : 40,
+    gridRight: 10,
+    gridTop: 20,
+    gridBottom: dense ? 86 : 30,
     dataZoom: categoryCount > 24 && ["bar", "line", "area"].includes(chartType),
   };
   const label = {
@@ -1722,8 +1722,8 @@ export const getSmartEChartsOption = (
         {
           name: formatKey(config.valueKey ?? "Value"),
           type: "pie",
-          radius: ["45%", "72%"],
-          center: ["50%", "48%"],
+          radius: ["50%", "80%"],
+          center: ["50%", "50%"],
           avoidLabelOverlap: true,
           minAngle: 4,
           itemStyle: {

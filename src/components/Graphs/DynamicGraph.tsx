@@ -9,6 +9,7 @@ import {
   PieChart as PieChartIcon,
   Radar as RadarIcon,
   ScatterChart as ScatterChartIcon,
+  Sparkles,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import { useTheme } from "../../ThemeContext";
@@ -67,8 +68,10 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
   }) => {
     const { theme } = useTheme();
     const [showResolutionOptions, setShowResolutionOptions] = useState(false);
+    const [showInsights, setShowInsights] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const insightsRef = useRef<HTMLDivElement>(null);
     const echartsRef = useRef<any>(null);
 
     const smartOverrides = useMemo(
@@ -131,11 +134,18 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         ) {
           setShowResolutionOptions(false);
         }
+        if (
+          showInsights &&
+          insightsRef.current &&
+          !insightsRef.current.contains(event.target as Node)
+        ) {
+          setShowInsights(false);
+        }
       };
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
-    }, [showResolutionOptions]);
+    }, [showResolutionOptions, showInsights]);
 
     const handleDownloadGraph = async (resolution: "low" | "high") => {
       if (!containerRef.current) return;
@@ -221,38 +231,76 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           transition: theme.transition.default,
         }}
       >
-        <div className="flex items-center justify-between gap-3 px-3 py-2">
-          <div className="flex min-w-0 flex-wrap gap-2">
-            {config.insights.slice(0, 3).map((insight) => (
-              <span
-                key={`${insight.kind}-${insight.label}`}
-                className="max-w-[300px] truncate px-3 py-1 text-xs font-medium"
-                title={`${insight.label}: ${insight.value}`}
+        <div className="flex items-center justify-end gap-3 px-3 py-2 z-10 relative">
+          <div className="relative flex-shrink-0" ref={insightsRef}>
+            <button
+              onClick={() => {
+                setShowInsights((value) => !value);
+                setShowResolutionOptions(false);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: showInsights
+                  ? `${theme.colors.accent}1A`
+                  : "transparent",
+                color: theme.colors.accent,
+                border: `1px solid ${showInsights ? theme.colors.accent + "33" : "transparent"}`,
+                borderRadius: theme.borderRadius.default,
+              }}
+              title="AI Insights"
+            >
+              <Sparkles size={16} />
+              <span>Insights</span>
+            </button>
+
+            {showInsights && config.insights.length > 0 && (
+              <div
+                className="absolute right-0 top-full z-50 mt-1 flex w-80 flex-col gap-2 p-3 shadow-2xl"
                 style={{
-                  color:
-                    insight.tone === "negative"
-                      ? theme.colors.error
-                      : insight.tone === "positive"
-                        ? theme.colors.success
-                        : theme.colors.textSecondary,
-                  background: `${theme.colors.accent}12`,
+                  backgroundColor: theme.colors.surface,
                   border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.borderRadius.pill,
+                  borderRadius: theme.borderRadius.large,
                 }}
               >
-                {insight.label}: {insight.value}
-              </span>
-            ))}
+                <div
+                  className="mb-1 text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  AI Summary
+                </div>
+                {config.insights.map((insight, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded px-3 py-2 text-sm"
+                    style={{
+                      background:
+                        insight.tone === "negative"
+                          ? `${theme.colors.error}10`
+                          : insight.tone === "positive"
+                            ? `${theme.colors.success}10`
+                            : theme.colors.background,
+                      borderLeft: `3px solid ${insight.tone === "negative" ? theme.colors.error : insight.tone === "positive" ? theme.colors.success : theme.colors.accent}`,
+                      color: theme.colors.text,
+                    }}
+                  >
+                    <strong>{insight.label}:</strong> {insight.value}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="relative flex-shrink-0">
+          <div className="relative flex-shrink-0" ref={dropdownRef}>
             <button
-              onClick={() => setShowResolutionOptions((value) => !value)}
+              onClick={() => {
+                setShowResolutionOptions((value) => !value);
+                setShowInsights(false);
+              }}
               className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium transition-opacity hover:opacity-85"
               style={{
-                backgroundColor: `${theme.colors.accent}1A`,
-                color: theme.colors.accent,
-                border: `1px solid ${theme.colors.accent}33`,
+                backgroundColor: "transparent",
+                color: theme.colors.textSecondary,
+                border: `1px solid ${theme.colors.border}`,
                 borderRadius: theme.borderRadius.default,
               }}
               title="Export graph"

@@ -16,7 +16,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
       if (query === null || query === undefined) {
         return "";
       } else if (typeof query === "string") {
-        return query;
+        return query.trim();
       } else if (typeof query === "object") {
         try {
           return JSON.stringify(query, null, 2);
@@ -94,7 +94,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
           // Create a regex pattern for keywords with word boundaries
           const keywordPattern = new RegExp(
             `\\b(${keywords.join("|")})\\b`,
-            "i"
+            "i",
           );
 
           // Process the SQL character by character to handle all edge cases
@@ -402,7 +402,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                 inOn = true;
               } else if (
                 ["WHERE", "GROUP", "ORDER", "HAVING", "LIMIT"].includes(
-                  upperValue
+                  upperValue,
                 )
               ) {
                 inFrom = false;
@@ -456,19 +456,32 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
     }, [formattedQuery, language, theme.colors]);
 
     return (
-      <div className="w-min" style={{ backgroundColor: theme.colors.surface }}>
+      <div 
+        className="w-full rounded-[1.25rem] overflow-hidden mt-2 relative group" 
+        style={{ 
+          backgroundColor: theme.mode === 'light' ? 'rgba(0, 0, 0, 0.03)' : 'rgba(255, 255, 255, 0.03)',
+          border: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <div 
+          className="absolute top-3 right-4 text-[10px] font-mono tracking-widest uppercase opacity-40 transition-opacity group-hover:opacity-100"
+          style={{ color: theme.colors.textSecondary }}
+        >
+          {language}
+        </div>
+        
         {formattedQuery ? (
-          <div className="query-content">
+          <div className="query-content relative pt-2">
             {title && (
-              <h3 className="mb-2" style={{ color: theme.colors.text }}>
+              <h3 className="mb-1 px-3 pt-2 text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
                 {title}
               </h3>
             )}
             <pre
-              className="p-1 rounded overflow-x-auto whitespace-pre-wrap font-mono"
+              className="px-3 py-2 m-0 overflow-x-auto whitespace-pre-wrap font-mono leading-normal"
               style={{
-                backgroundColor: theme.colors.surface,
                 fontSize: fontSize,
+                color: theme.colors.text,
               }}
             >
               <code>{colorizedQuery || formattedQuery}</code>
@@ -476,7 +489,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
           </div>
         ) : (
           <div
-            className="italic"
+            className="italic p-4"
             style={{ color: theme.colors.textSecondary, fontSize: fontSize }}
           >
             No query to display.
@@ -484,12 +497,12 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 const areEqual = (
   prevProps: QueryDisplayProps,
-  nextProps: QueryDisplayProps
+  nextProps: QueryDisplayProps,
 ) => {
   return (
     prevProps.query === nextProps.query &&

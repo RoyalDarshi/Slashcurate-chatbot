@@ -141,7 +141,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 className="flex w-full items-center gap-1.5 text-center"
                 style={{
                   justifyContent: getCellJustify(column),
-                  color: "rgba(255,255,255,0.92)",
+                  color: theme.colors.textSecondary,
                   fontSize: "0.7rem",
                   fontWeight: 600,
                   letterSpacing: "0.07em",
@@ -452,29 +452,48 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
 
       if (column.filterType === "multiSelect") {
         return (
-          <select
-            multiple
-            className="h-16 w-full rounded px-2 py-1 text-xs outline-none"
-            value={filter?.values ?? []}
-            onChange={(event) =>
-              updateColumnFilter(column.key, {
-                type: "multiSelect",
-                values: Array.from(event.target.selectedOptions).map(
-                  (option) => option.value,
-                ),
-              })
-            }
+          <div
+            className="max-h-32 overflow-y-auto rounded border py-1"
             style={{
+              borderColor: theme.colors.border,
               background: theme.colors.surface,
-              color: theme.colors.text,
+              scrollbarWidth: "thin",
             }}
           >
-            {column.stats.uniqueValues.slice(0, 30).map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
+            {column.stats.uniqueValues.slice(0, 30).map((value) => {
+              const isSelected = (filter?.values ?? []).includes(value);
+              return (
+                <label
+                  key={value}
+                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs transition-colors"
+                  style={{ color: theme.colors.text }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = theme.colors.hover)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    className="cursor-pointer"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      const current = filter?.values ?? [];
+                      const next = e.target.checked
+                        ? [...current, value]
+                        : current.filter((v) => v !== value);
+                      updateColumnFilter(column.key, {
+                        type: "multiSelect",
+                        values: next.length > 0 ? next : undefined,
+                      });
+                    }}
+                  />
+                  <span className="truncate">{value}</span>
+                </label>
+              );
+            })}
+          </div>
         );
       }
 
@@ -511,14 +530,16 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
 
     return (
       <div
-        className="flex flex-col overflow-hidden rounded-xl"
+        className="relative flex flex-col overflow-hidden rounded-xl"
         style={{
-          background: theme.colors.surface,
-          border: `1px solid ${theme.colors.border}`,
-          boxShadow: theme.shadow.sm,
+          background: variant === "chat" ? "transparent" : theme.colors.surface,
+          border:
+            variant === "chat" ? "none" : `1px solid ${theme.colors.border}`,
+          boxShadow: variant === "chat" ? "none" : theme.shadow.sm,
           height: variant === "chat" ? "auto" : "100%",
-          maxHeight: variant === "chat" ? 480 : "100%",
-          width: "100%",
+          maxHeight: variant === "chat" ? 600 : "100%",
+          width: "fit-content",
+          maxWidth: "100%",
           minWidth: 0,
           flex: 1,
         }}
@@ -745,57 +766,125 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           </div>
         )}
 
-        {showFilters && (
+        {filterCount > 0 && (
           <div
+            className="flex flex-wrap items-center gap-2 border-b px-3 py-2"
             style={{
-              borderBottom: `1px solid ${theme.colors.border}`,
+              borderColor: theme.colors.border,
               background: theme.colors.background,
-              flexShrink: 0,
             }}
           >
-            <div
-              className="flex items-center justify-between px-3 py-2"
-              style={{ borderBottom: `1px solid ${theme.colors.border}` }}
+            <span
+              className="text-xs font-semibold"
+              style={{ color: theme.colors.textSecondary }}
             >
-              <span
-                className="text-xs font-semibold"
-                style={{ color: theme.colors.textSecondary }}
-              >
-                Filter columns
-              </span>
-              {filterCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="text-xs font-medium"
-                  style={{ color: theme.colors.error }}
+              Active Filters:
+            </span>
+            {Object.entries(columnFilters).map(([key, filter]) => {
+              if (!filter) return null;
+              const col = config.columns.find((c) => c.key === key);
+              if (!col) return null;
+              let display = "";
+              if (filter.type === "text") display = `"${filter.value}"`;
+              if (filter.type === "boolean")
+                display = filter.booleanValue ? "Yes" : "No";
+              if (filter.type === "numberRange")
+                display = `${filter.min ?? "*"} - ${filter.max ?? "*"}`;
+              if (filter.type === "dateRange")
+                display = `${filter.start ?? "*"} to ${filter.end ?? "*"}`;
+              if (filter.type === "multiSelect")
+                display = `${filter.values?.length} selected`;
+
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                  style={{
+                    background: theme.colors.accent + "15",
+                    color: theme.colors.accent,
+                    border: `1px solid ${theme.colors.accent}30`,
+                  }}
                 >
-                  Clear all ({filterCount})
-                </button>
-              )}
-            </div>
+                  <span>
+                    {col.label}: {display}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => updateColumnFilter(key, undefined)}
+                    className="transition-opacity hover:opacity-70"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="ml-auto text-xs font-medium transition-opacity hover:opacity-70"
+              style={{ color: theme.colors.error }}
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {showFilters && (
+          <div
+            className="absolute inset-0 z-50 flex"
+            style={{ background: "rgba(0,0,0,0.3)" }}
+          >
+            <div className="flex-1" onClick={() => setShowFilters(false)} />
             <div
-              className="grid gap-2 px-3 py-2.5"
+              className="flex w-80 flex-col shadow-2xl"
               style={{
-                gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-                maxHeight: 180,
-                overflowY: "auto",
+                background: theme.colors.surface,
+                borderLeft: `1px solid ${theme.colors.border}`,
               }}
             >
-              {visibleColumns
-                .filter((col) => col.filterType !== "none")
-                .map((column) => (
-                  <div key={column.key}>
-                    <div
-                      className="mb-1 truncate text-xs font-medium"
-                      style={{ color: theme.colors.textSecondary }}
-                      title={column.label}
-                    >
-                      {column.label}
-                    </div>
-                    {renderColumnFilter(column)}
-                  </div>
-                ))}
+              <div
+                className="flex items-center justify-between border-b px-4 py-3"
+                style={{ borderColor: theme.colors.border }}
+              >
+                <span
+                  className="font-semibold"
+                  style={{ color: theme.colors.text }}
+                >
+                  Filters
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(false)}
+                  className="rounded p-1 transition-colors"
+                  style={{ color: theme.colors.textSecondary }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = theme.colors.hover)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="grid gap-5">
+                  {visibleColumns
+                    .filter((col) => col.filterType !== "none")
+                    .map((column) => (
+                      <div key={column.key} className="flex flex-col gap-1.5">
+                        <div
+                          className="truncate text-xs font-medium"
+                          style={{ color: theme.colors.textSecondary }}
+                          title={column.label}
+                        >
+                          {column.label}
+                        </div>
+                        {renderColumnFilter(column)}
+                      </div>
+                    ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -824,7 +913,8 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 position: "sticky",
                 top: 0,
                 zIndex: 4,
-                background: theme.colors.accent,
+                background: theme.colors.surface,
+                borderBottom: `1px solid ${theme.colors.border}`,
               }}
             >
               {table.getHeaderGroups().map((headerGroup) => (
@@ -835,14 +925,15 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="px-3 py-2"
+                      className="px-3 py-2.5"
                       style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         width: header.getSize(),
                         flexShrink: 0,
-                        borderRight: `1px solid ${theme.colors.surface}22`,
+                        borderRight: `1px solid ${theme.colors.border}`,
+                        borderBottom: `1px solid ${theme.colors.border}`,
                       }}
                     >
                       {flexRender(
@@ -873,6 +964,16 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                     ref={
                       isVirtualized ? rowVirtualizer.measureElement : undefined
                     }
+                    className="transition-colors duration-150"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.hover;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        virtualRow.index % 2 === 0
+                          ? theme.colors.surface
+                          : `${theme.colors.accent}06`;
+                    }}
                     style={{
                       display: "flex",
                       position: "absolute",
@@ -888,7 +989,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="min-w-0 border-b px-3 py-2 text-sm"
+                        className="min-w-0 border-b px-3 py-1.5 text-[0.82rem]"
                         style={{
                           display: "flex",
                           alignItems: "center",

@@ -400,99 +400,283 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           <DashboardSkeletonLoader question={dashboardItem.question} />
         ) : (
           <div
-            className="flex flex-col flex-grow min-h-0 px-2 pt-2 w-full overflow-hidden"
+            className="flex flex-col flex-grow min-h-0 w-full overflow-y-auto"
             style={{ backgroundColor: theme.colors.background }}
           >
             <div
-              className="w-full p-2 mb-2 rounded-xl flex-shrink-0 shadow-md flex items-center justify-between"
+              className="w-full px-3 py-2 mb-2 flex-shrink-0 flex items-center justify-between gap-3"
               style={{
                 backgroundColor: theme.colors.surface,
                 color: theme.colors.text,
-                boxShadow: theme.shadow.md,
-                borderRadius: theme.borderRadius.large,
+                borderBottom: `1px solid ${theme.colors.border}40`,
               }}
             >
               {isEditing ? (
-                <div className="flex-grow">
+                <div className="flex-grow flex items-center gap-2">
                   <input
                     type="text"
                     value={editedQuestion}
                     onChange={(e) => setEditedQuestion(e.target.value)}
-                    className="w-full p-2 rounded-md"
+                    className="flex-1 px-3 py-1.5 rounded-md text-sm"
                     style={{
                       backgroundColor: theme.colors.background,
                       color: theme.colors.text,
+                      border: `1px solid ${theme.colors.border}`,
+                      outline: "none",
                     }}
                   />
-                  <div className="flex justify-end mt-2 gap-2">
-                    <button
-                      onClick={() => {
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditedQuestion(dashboardItem.question);
+                    }}
+                    className="px-3 py-1 rounded-md text-xs"
+                    style={{
+                      backgroundColor: theme.colors.error,
+                      color: "white",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (editedQuestion.trim()) {
+                        onEditQuestion(
+                          dashboardItem.questionMessageId,
+                          editedQuestion,
+                        );
                         setIsEditing(false);
-                        setEditedQuestion(dashboardItem.question);
-                      }}
-                      className="px-4 py-2 rounded-md"
-                      style={{
-                        backgroundColor: theme.colors.error,
-                        color: "white",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (editedQuestion.trim()) {
-                          onEditQuestion(
-                            dashboardItem.questionMessageId,
-                            editedQuestion,
-                          );
-                          setIsEditing(false);
-                        }
-                      }}
-                      className="px-4 py-2 rounded-md"
-                      style={{
-                        backgroundColor: theme.colors.accent,
-                        color: "white",
-                      }}
-                    >
-                      Save
-                    </button>
-                  </div>
+                      }
+                    }}
+                    className="px-3 py-1 rounded-md text-xs"
+                    style={{
+                      backgroundColor: theme.colors.accent,
+                      color: "white",
+                    }}
+                  >
+                    Save
+                  </button>
                 </div>
               ) : (
                 <>
                   <h3
-                    className="text-xl font-bold w-full text-center"
+                    className="text-sm font-semibold truncate flex-1"
                     style={{ color: theme.colors.text }}
+                    title={dashboardItem.question}
                   >
-                    Question: {dashboardItem.question}
+                    {dashboardItem.question}
                   </h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     {!sessionConErr && (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        disabled={isSubmitting}
-                        className="px-4 py-2 rounded-md"
-                        style={{
-                          backgroundColor: theme.colors.accent,
-                          color: "white",
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <>
+                        <CustomTooltip
+                          title={
+                            dashboardItem.isFavorited
+                              ? "Remove from Favorites"
+                              : "Add to Favorites"
+                          }
+                          position="bottom"
+                        >
+                          <button
+                            onClick={() =>
+                              onToggleFavorite(
+                                dashboardItem.questionMessageId,
+                                dashboardItem.question,
+                                dashboardItem.mainViewData.queryData,
+                                dashboardItem.connectionName,
+                                dashboardItem.isFavorited,
+                              )
+                            }
+                            disabled={isSubmitting}
+                            className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            style={{
+                              color: dashboardItem.isFavorited
+                                ? "#FF4D4D"
+                                : theme.colors.textSecondary,
+                            }}
+                          >
+                            <Heart
+                              size={16}
+                              fill={
+                                dashboardItem.isFavorited ? "currentColor" : "none"
+                              }
+                            />
+                          </button>
+                        </CustomTooltip>
+
+                        <CustomTooltip
+                          title={isLiked ? "Remove like" : "Like this response"}
+                          position="bottom"
+                        >
+                          <button
+                            onClick={handleLike}
+                            disabled={isSubmitting}
+                            className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            {isLiked ? (
+                              <BsHandThumbsUpFill
+                                size={16}
+                                style={{ color: theme.colors.success }}
+                              />
+                            ) : (
+                              <BsHandThumbsUp
+                                size={16}
+                                style={{ color: theme.colors.textSecondary }}
+                              />
+                            )}
+                          </button>
+                        </CustomTooltip>
+
+                        <div className="relative" ref={dislikeRef}>
+                          <CustomTooltip
+                            title={
+                              isDisliked
+                                ? "Remove dislike"
+                                : "Dislike this response"
+                            }
+                            position="bottom"
+                          >
+                            <button
+                              onClick={handleDislike}
+                              disabled={isSubmitting}
+                              className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                              {isDisliked ? (
+                                <BsHandThumbsDownFill
+                                  size={16}
+                                  style={{ color: theme.colors.error }}
+                                />
+                              ) : (
+                                <BsHandThumbsDown
+                                  size={16}
+                                  style={{ color: theme.colors.textSecondary }}
+                                />
+                              )}
+                            </button>
+                          </CustomTooltip>
+
+                          {showDislikeOptions && (
+                            <div
+                              className="absolute top-full right-0 mt-1 rounded-md shadow-lg z-50 min-w-[180px]"
+                              style={{
+                                background: theme.colors.surface,
+                                border: `1px solid ${theme.colors.border}`,
+                                boxShadow: theme.shadow.md,
+                              }}
+                            >
+                              {showCustomInput ? (
+                                <div className="p-3">
+                                  <textarea
+                                    value={customReason}
+                                    onChange={(e) =>
+                                      setCustomReason(e.target.value)
+                                    }
+                                    placeholder="Enter your reason"
+                                    rows={3}
+                                    className="w-full p-2 rounded resize-none text-xs focus:outline-none"
+                                    style={{
+                                      background: theme.colors.background,
+                                      color: theme.colors.text,
+                                      border: `1px solid ${theme.colors.border}`,
+                                    }}
+                                  />
+                                  <div className="flex justify-end mt-2 gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setShowCustomInput(false);
+                                        setCustomReason("");
+                                      }}
+                                      className="px-2 py-1 rounded text-[10px]"
+                                      style={{
+                                        background: theme.colors.surface,
+                                        color: theme.colors.text,
+                                      }}
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (customReason.trim()) {
+                                          handleDislikeOption(customReason);
+                                          setCustomReason("");
+                                        }
+                                      }}
+                                      className="px-2 py-1 rounded text-[10px]"
+                                      style={{
+                                        background: theme.colors.accent,
+                                        color: "white",
+                                      }}
+                                    >
+                                      Submit
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  {[
+                                    "Incorrect data",
+                                    "Takes too long",
+                                    "Irrelevant response",
+                                    "Confusing answer",
+                                    "Other",
+                                  ].map((reason) => (
+                                    <button
+                                      key={reason}
+                                      onClick={() => {
+                                        if (reason === "Other")
+                                          setShowCustomInput(true);
+                                        else handleDislikeOption(reason);
+                                      }}
+                                      className="w-full text-left px-3 py-1.5 text-xs transition-colors"
+                                      style={{ color: theme.colors.text }}
+                                      onMouseEnter={(e) =>
+                                        (e.currentTarget.style.backgroundColor = `${theme.colors.accent}15`)
+                                      }
+                                      onMouseLeave={(e) =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "transparent")
+                                      }
+                                    >
+                                      {reason}
+                                    </button>
+                                  ))}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Separator between reactions and edit */}
+                        <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
+
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          disabled={isSubmitting}
+                          className="px-2.5 py-1 rounded-md text-xs font-medium"
+                          style={{
+                            backgroundColor: `${theme.colors.accent}15`,
+                            color: theme.colors.accent,
+                            border: `1px solid ${theme.colors.accent}30`,
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </>
                     )}
                   </div>
                 </>
               )}
             </div>
 
-            <div className="flex flex-col lg:flex-row w-full gap-3 pb-2 flex-1 min-h-0">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] items-start w-full gap-5 pb-32 flex-1 min-h-0 pr-1">
               <div
                 ref={graphContainerRef}
-                className="flex-1 rounded-xl flex flex-col overflow-hidden min-w-0 min-h-[300px] lg:h-full"
+                className="w-full flex flex-col overflow-hidden min-w-0"
                 style={{
-                  backgroundColor: theme.colors.surface,
-                  boxShadow: theme.shadow.md,
-                  borderRadius: theme.borderRadius.large,
+                  borderRadius: "2rem",
+                  backgroundColor: theme.mode === 'light' ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${theme.colors.border}40`,
+                  maxHeight: "100%",
                 }}
               >
                 {dashboardItem.mainViewData.chartData?.length > 0 && (
@@ -784,229 +968,66 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               </div>
 
-              <div className="flex-1 lg:flex-none lg:w-[40%] w-full overflow-hidden flex flex-col min-w-0 min-h-[300px] lg:h-full">
-                {activeViewType === "table" && (
-                  <DataTable
-                    data={dashboardItem.mainViewData.tableData}
-                    onRowsChange={setSyncedTableRows}
-                  />
-                )}
-                {activeViewType === "query" && (
-                  <QueryDisplay
-                    query={dashboardItem.mainViewData.queryData}
-                    fontSize="text-base"
-                  />
-                )}
-              </div>
-
-              <div className="flex flex-row lg:flex-col justify-between items-center flex-shrink-0 mt-4 lg:mt-0 px-1">
-                <div className="flex flex-row lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2">
-                  {(["table", "query"] as const).map((viewType) => (
-                    <button
-                      key={viewType}
-                      onClick={() => onViewTypeChange(viewType)}
-                      disabled={isSubmitting}
-                      title={
-                        viewType.charAt(0).toUpperCase() + viewType.slice(1)
-                      }
-                      className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50`}
-                      style={{
-                        backgroundColor:
-                          activeViewType === viewType
-                            ? theme.colors.accent
-                            : theme.colors.surface,
-                        color:
-                          activeViewType === viewType
-                            ? "white"
-                            : theme.colors.accent,
-                        border: `1px solid ${theme.colors.text}10`,
-                        boxShadow: theme.shadow.lg,
-                      }}
-                    >
-                      {viewType === "table" && <Table size={24} />}
-                      {viewType === "query" && <Database size={24} />}
-                    </button>
-                  ))}
-                </div>
-
-                {!sessionConErr && (
-                  <div className="flex flex-row lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 mt-4">
-                    <CustomTooltip
-                      title={
-                        dashboardItem.isFavorited
-                          ? "Remove from Favorites"
-                          : "Add to Favorites"
-                      }
-                      position="bottom"
-                    >
+              <div
+                className="w-full flex flex-col min-w-0 overflow-hidden"
+                style={{
+                  maxHeight: "100%",
+                  backgroundColor: theme.colors.surface,
+                  border: `1px solid ${theme.colors.border}40`,
+                  borderRadius: "1.5rem",
+                  boxShadow: theme.shadow.md,
+                }}
+              >
+                <div
+                  className="flex items-center justify-between px-4 py-2.5 border-b flex-shrink-0"
+                  style={{
+                    borderColor: `${theme.colors.border}30`,
+                    backgroundColor: theme.mode === 'light' ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)',
+                  }}
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
+                    {activeViewType === "query" ? "SQL Query" : "Data Table"}
+                  </span>
+                  
+                  {/* Segmented Switcher Control */}
+                  <div
+                    className="flex p-0.5 rounded-lg border"
+                    style={{
+                      backgroundColor: theme.mode === 'light' ? '#f1f5f9' : '#0f172a',
+                      borderColor: theme.colors.border,
+                    }}
+                  >
+                    {(["table", "query"] as const).map((viewType) => (
                       <button
-                        onClick={() =>
-                          onToggleFavorite(
-                            dashboardItem.questionMessageId,
-                            dashboardItem.question,
-                            dashboardItem.mainViewData.queryData,
-                            dashboardItem.connectionName,
-                            dashboardItem.isFavorited,
-                          )
-                        }
+                        key={viewType}
+                        onClick={() => onViewTypeChange(viewType)}
                         disabled={isSubmitting}
-                        className="pl-2 pb-2 rounded-full"
+                        className="px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-150"
                         style={{
-                          color: dashboardItem.isFavorited
-                            ? "#FF4D4D"
-                            : theme.colors.textSecondary,
-                          backgroundColor: "transparent",
+                          backgroundColor: activeViewType === viewType ? theme.colors.surface : "transparent",
+                          color: activeViewType === viewType ? theme.colors.text : theme.colors.textSecondary,
+                          boxShadow: activeViewType === viewType ? theme.shadow.sm : "none",
                         }}
                       >
-                        <Heart
-                          size={32}
-                          fill={
-                            dashboardItem.isFavorited ? "currentColor" : "none"
-                          }
-                        />
+                        {viewType === "table" ? "Table" : "SQL"}
                       </button>
-                    </CustomTooltip>
-                    <CustomTooltip
-                      title={isLiked ? "Remove like" : "Like this response"}
-                      position="bottom"
-                    >
-                      <button
-                        onClick={handleLike}
-                        disabled={isSubmitting}
-                        className="pl-2 pb-2 rounded-md"
-                      >
-                        {isLiked ? (
-                          <BsHandThumbsUpFill
-                            size={32}
-                            style={{ color: theme.colors.success }}
-                          />
-                        ) : (
-                          <BsHandThumbsUp
-                            size={32}
-                            style={{ color: theme.colors.textSecondary }}
-                          />
-                        )}
-                      </button>
-                    </CustomTooltip>
-                    <div className="relative" ref={dislikeRef}>
-                      <CustomTooltip
-                        title={
-                          isDisliked
-                            ? "Remove dislike"
-                            : "Dislike this response"
-                        }
-                        position="bottom"
-                      >
-                        <button
-                          onClick={handleDislike}
-                          disabled={isSubmitting}
-                          className="pl-2 rounded-md"
-                        >
-                          {isDisliked ? (
-                            <BsHandThumbsDownFill
-                              size={32}
-                              style={{ color: theme.colors.error }}
-                            />
-                          ) : (
-                            <BsHandThumbsDown
-                              size={32}
-                              style={{ color: theme.colors.textSecondary }}
-                            />
-                          )}
-                        </button>
-                      </CustomTooltip>
-                      {showDislikeOptions && (
-                        <div
-                          className="absolute bottom-full right-0 mb-2 rounded-md shadow-lg z-10 min-w-[180px]"
-                          style={{
-                            background: theme.colors.surface,
-                            border: `1px solid ${theme.colors.border}`,
-                            boxShadow: theme.shadow.md,
-                          }}
-                        >
-                          {showCustomInput ? (
-                            <div className="p-3">
-                              <textarea
-                                value={customReason}
-                                onChange={(e) =>
-                                  setCustomReason(e.target.value)
-                                }
-                                placeholder="Enter your reason"
-                                rows={3}
-                                className="w-full p-2 rounded resize-none focus:outline-none"
-                                style={{
-                                  background: theme.colors.background,
-                                  color: theme.colors.text,
-                                  border: `1px solid ${theme.colors.border}`,
-                                }}
-                              />
-                              <div className="flex justify-end mt-2 gap-2">
-                                <button
-                                  onClick={() => {
-                                    setShowCustomInput(false);
-                                    setCustomReason("");
-                                  }}
-                                  className="px-2 py-1 rounded"
-                                  style={{
-                                    background: theme.colors.surface,
-                                    color: theme.colors.text,
-                                  }}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (customReason.trim()) {
-                                      handleDislikeOption(customReason);
-                                      setCustomReason("");
-                                    }
-                                  }}
-                                  className="px-2 py-1 rounded"
-                                  style={{
-                                    background: theme.colors.accent,
-                                    color: "white",
-                                  }}
-                                >
-                                  Submit
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              {[
-                                "Incorrect data",
-                                "Takes too long",
-                                "Irrelevant response",
-                                "Confusing answer",
-                                "Other",
-                              ].map((reason) => (
-                                <button
-                                  key={reason}
-                                  onClick={() => {
-                                    if (reason === "Other")
-                                      setShowCustomInput(true);
-                                    else handleDislikeOption(reason);
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm"
-                                  style={{ color: theme.colors.text }}
-                                  onMouseEnter={(e) =>
-                                    (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-                                  }
-                                  onMouseLeave={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      "transparent")
-                                  }
-                                >
-                                  {reason}
-                                </button>
-                              ))}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                )}
+                </div>
+
+                <div className="flex-1 overflow-auto p-3 min-h-0">
+                  {activeViewType === "query" ? (
+                    <QueryDisplay
+                      query={dashboardItem.mainViewData.queryData}
+                      fontSize="text-sm"
+                    />
+                  ) : (
+                    <DataTable
+                      data={dashboardItem.mainViewData.tableData}
+                      onRowsChange={setSyncedTableRows}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
