@@ -6,7 +6,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { HelpCircle, Heart, Database, Table } from "lucide-react";
+import { HelpCircle, Heart, Database, Table, DollarSign, Users, TrendingUp as TrendingUpIcon, Activity } from "lucide-react";
+import KPICard from "./KPICard";
 import {
   BsHandThumbsDown,
   BsHandThumbsDownFill,
@@ -394,13 +395,44 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       );
     }
 
+    const getKpiIcon = (label: string) => {
+      const lower = label.toLowerCase();
+      if (lower.includes("user") || lower.includes("customer") || lower.includes("visitor") || lower.includes("client") || lower.includes("count")) {
+        return <Users size={16} />;
+      }
+      if (
+        lower.includes("price") ||
+        lower.includes("amount") ||
+        lower.includes("revenue") ||
+        lower.includes("sales") ||
+        lower.includes("cost") ||
+        lower.includes("income") ||
+        lower.includes("profit") ||
+        lower.includes("tax") ||
+        lower.includes("fee") ||
+        lower.includes("dollar") ||
+        lower.includes("rupee") ||
+        lower.includes("currency") ||
+        lower.includes("total")
+      ) {
+        return <DollarSign size={16} />;
+      }
+      if (lower.includes("rate") || lower.includes("percent") || lower.includes("growth") || lower.includes("trend")) {
+        return <TrendingUpIcon size={16} />;
+      }
+      return <Activity size={16} />;
+    };
+
+    const kpis = dashboardItem?.kpiData;
+    const hasKpis = kpis && kpis.kpi1 && kpis.kpi1.value !== null && kpis.kpi1.value !== undefined;
+
     return (
       <div className="flex-1 w-full flex flex-col min-h-0 overflow-hidden">
         {isSubmitting ? (
           <DashboardSkeletonLoader question={dashboardItem.question} />
         ) : (
           <div
-            className="flex flex-col flex-grow min-h-0 w-full overflow-y-auto"
+            className="flex flex-col flex-grow min-h-0 w-full lg:overflow-hidden overflow-y-auto"
             style={{ backgroundColor: theme.colors.background }}
           >
             <div
@@ -503,7 +535,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             />
                           </button>
                         </CustomTooltip>
-
+ 
                         <CustomTooltip
                           title={isLiked ? "Remove like" : "Like this response"}
                           position="bottom"
@@ -526,12 +558,12 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             )}
                           </button>
                         </CustomTooltip>
-
+ 
                         <div className="relative" ref={dislikeRef}>
                           <CustomTooltip
                             title={
                               isDisliked
-                                ? "Remove dislike"
+                               ? "Remove dislike"
                                 : "Dislike this response"
                             }
                             position="bottom"
@@ -554,7 +586,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               )}
                             </button>
                           </CustomTooltip>
-
+ 
                           {showDislikeOptions && (
                             <div
                               className="absolute top-full right-0 mt-1 rounded-md shadow-lg z-50 min-w-[180px]"
@@ -645,10 +677,10 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             </div>
                           )}
                         </div>
-
+ 
                         {/* Separator between reactions and edit */}
                         <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
-
+ 
                         <button
                           onClick={() => setIsEditing(true)}
                           disabled={isSubmitting}
@@ -668,95 +700,269 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] items-start w-full gap-5 pb-32 flex-1 min-h-0 pr-1">
+            {hasKpis && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 mb-4 flex-shrink-0">
+                <KPICard
+                  title={kpis.kpi1.label}
+                  value={kpis.kpi1.value}
+                  change={kpis.kpi1.change}
+                  icon={getKpiIcon(kpis.kpi1.label)}
+                />
+                <KPICard
+                  title={kpis.kpi2.label}
+                  value={kpis.kpi2.value}
+                  change={kpis.kpi2.change}
+                  icon={getKpiIcon(kpis.kpi2.label)}
+                />
+                <KPICard
+                  title={kpis.kpi3.label}
+                  value={kpis.kpi3.value}
+                  change={kpis.kpi3.change}
+                  icon={getKpiIcon(kpis.kpi3.label)}
+                />
+              </div>
+            )}
+ 
+            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] items-start lg:items-stretch w-full gap-5 pb-20 lg:pb-16 flex-1 min-h-0 px-3 lg:h-full">
               <div
                 ref={graphContainerRef}
                 className="w-full flex flex-col overflow-hidden min-w-0"
                 style={{
-                  borderRadius: "2rem",
-                  backgroundColor: theme.mode === 'light' ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${theme.colors.border}40`,
                   maxHeight: "100%",
+                  backgroundColor: theme.colors.surface,
+                  border: `1px solid ${theme.colors.border}40`,
+                  borderRadius: "1.5rem",
+                  boxShadow: theme.shadow.md,
                 }}
               >
-                {dashboardItem.mainViewData.chartData?.length > 0 && (
-                  <div className="p-1.5 flex flex-wrap gap-2 flex-shrink-0">
-                    <div className="flex items-center gap-1.5">
-                      <label
-                        htmlFor="graph-type-select"
-                        className="text-sm"
-                        style={{ color: theme.colors.textSecondary }}
-                      >
-                        Type:
-                      </label>
-                      <select
-                        id="graph-type-select"
-                        value={graphType}
-                        onChange={(e) =>
-                          setGraphType(e.target.value as SmartChartType)
-                        }
-                        className="px-2 py-1 text-sm rounded-md border"
-                        style={{
-                          backgroundColor: theme.colors.surface,
-                          color: theme.colors.text,
-                          borderColor: theme.colors.border,
-                        }}
-                      >
-                        <option value="bar">Bar</option>
-                        <option value="line">Line</option>
-                        <option value="area">Area</option>
-                        <option value="pie">Pie</option>
-                        <option value="scatter">Scatter</option>
-                        <option value="radar">Radar</option>
-                        <option value="funnel">Funnel</option>
-                        <option value="treemap">Treemap</option>
-                      </select>
-                    </div>
-                    {["bar", "line", "area"].includes(graphType) && (
-                      <div className="flex items-center gap-1.5">
+                <div
+                  className="flex items-center justify-between px-4 py-2 border-b flex-shrink-0 min-h-[45px]"
+                  style={{
+                    borderColor: `${theme.colors.border}30`,
+                    backgroundColor: theme.mode === 'light' ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)',
+                  }}
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wider flex-shrink-0" style={{ color: theme.colors.textSecondary }}>
+                    Visualization
+                  </span>
+                  {dashboardItem.mainViewData.chartData?.length > 0 && (
+                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-0.5 max-w-[75%]">
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         <label
-                          className="text-sm"
+                          htmlFor="graph-type-select"
+                          className="text-[11px] font-medium"
                           style={{ color: theme.colors.textSecondary }}
                         >
-                          Orient:
+                          Type:
                         </label>
                         <select
-                          value={isVertical ? "vertical" : "horizontal"}
+                          id="graph-type-select"
+                          value={graphType}
                           onChange={(e) =>
-                            setIsVertical(e.target.value === "vertical")
+                            setGraphType(e.target.value as SmartChartType)
                           }
-                          className="px-2 py-1 text-sm rounded-md border"
+                          className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
                           style={{
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: theme.colors.background,
                             color: theme.colors.text,
-                            borderColor: theme.colors.border,
+                            borderColor: `${theme.colors.border}50`,
                           }}
                         >
-                          <option value="vertical">Vertical</option>
-                          <option value="horizontal">Horizontal</option>
+                          <option value="bar">Bar</option>
+                          <option value="line">Line</option>
+                          <option value="area">Area</option>
+                          <option value="pie">Pie</option>
+                          <option value="scatter">Scatter</option>
+                          <option value="radar">Radar</option>
+                          <option value="funnel">Funnel</option>
+                          <option value="treemap">Treemap</option>
                         </select>
                       </div>
-                    )}
-                    {["bar", "line", "area", "pie", "treemap"].includes(
-                      graphType,
-                    ) &&
-                      groupBy && (
+
+                      {["bar", "line", "area"].includes(graphType) && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <label
+                            className="text-[11px] font-medium"
+                            style={{ color: theme.colors.textSecondary }}
+                          >
+                            Orient:
+                          </label>
+                          <select
+                            value={isVertical ? "vertical" : "horizontal"}
+                            onChange={(e) =>
+                              setIsVertical(e.target.value === "vertical")
+                            }
+                            className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                            style={{
+                              backgroundColor: theme.colors.background,
+                              color: theme.colors.text,
+                              borderColor: `${theme.colors.border}50`,
+                            }}
+                          >
+                            <option value="vertical">Vertical</option>
+                            <option value="horizontal">Horizontal</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {["bar", "line", "area", "pie", "treemap"].includes(
+                        graphType,
+                      ) &&
+                        groupBy && (
+                          <>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <label
+                                className="text-[11px] font-medium"
+                                style={{ color: theme.colors.textSecondary }}
+                              >
+                                Group:
+                              </label>
+                              <select
+                                value={groupBy || ""}
+                                onChange={(e) => setGroupBy(e.target.value)}
+                                className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                                style={{
+                                  backgroundColor: theme.colors.background,
+                                  color: theme.colors.text,
+                                  borderColor: `${theme.colors.border}50`,
+                                }}
+                              >
+                                {getValidCategoricalKeys(
+                                  dashboardItem.mainViewData.chartData,
+                                ).map((key) => (
+                                  <option key={key} value={key}>
+                                    {key.replace(/_/g, " ")}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <label
+                                className="text-[11px] font-medium"
+                                style={{ color: theme.colors.textSecondary }}
+                              >
+                                Agg:
+                              </label>
+                              <select
+                                value={aggregate}
+                                onChange={(e) =>
+                                  setAggregate(e.target.value as SmartAggregation)
+                                }
+                                className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                                style={{
+                                  backgroundColor: theme.colors.background,
+                                  color: theme.colors.text,
+                                  borderColor: `${theme.colors.border}50`,
+                                }}
+                              >
+                                <option value="count">Count</option>
+                                <option value="sum">Sum</option>
+                                <option value="avg">Average</option>
+                                <option value="min">Minimum</option>
+                                <option value="max">Maximum</option>
+                              </select>
+                            </div>
+                            {(aggregate === "sum" ||
+                              aggregate === "avg" ||
+                              aggregate === "min" ||
+                              aggregate === "max") && (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <label
+                                  className="text-[11px] font-medium"
+                                  style={{ color: theme.colors.textSecondary }}
+                                >
+                                  Value:
+                                </label>
+                                <select
+                                  value={valueKey || ""}
+                                  onChange={(e) => setValueKey(e.target.value)}
+                                  className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                                  style={{
+                                    backgroundColor: theme.colors.background,
+                                    color: theme.colors.text,
+                                    borderColor: `${theme.colors.border}50`,
+                                  }}
+                                >
+                                  {getValidValueKeys(
+                                    dashboardItem.mainViewData.chartData,
+                                  ).map((key) => (
+                                    <option key={key} value={key}>
+                                      {key.replace(/_/g, " ")}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                      {graphType === "scatter" && (
                         <>
-                          <div className="flex items-center gap-1.5">
-                            <label
-                              className="text-sm"
-                              style={{ color: theme.colors.textSecondary }}
-                            >
-                              Group:
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
+                              X-Axis:
                             </label>
                             <select
                               value={groupBy || ""}
                               onChange={(e) => setGroupBy(e.target.value)}
-                              className="px-2 py-1 text-sm rounded-md border"
+                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
                               style={{
-                                backgroundColor: theme.colors.surface,
+                                backgroundColor: theme.colors.background,
                                 color: theme.colors.text,
-                                borderColor: theme.colors.border,
+                                borderColor: `${theme.colors.border}50`,
+                              }}
+                            >
+                              {getValidValueKeys(
+                                dashboardItem.mainViewData.chartData,
+                              ).map((key) => (
+                                <option key={key} value={key}>
+                                  {key.replace(/_/g, " ")}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
+                              Y-Axis:
+                            </label>
+                            <select
+                              value={valueKey || ""}
+                              onChange={(e) => setValueKey(e.target.value)}
+                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                              style={{
+                                backgroundColor: theme.colors.background,
+                                color: theme.colors.text,
+                                borderColor: `${theme.colors.border}50`,
+                              }}
+                            >
+                              {getValidValueKeys(
+                                dashboardItem.mainViewData.chartData,
+                              ).map((key) => (
+                                <option key={key} value={key}>
+                                  {key.replace(/_/g, " ")}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      )}
+
+                      {["radar", "funnel"].includes(graphType) && (
+                        <>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
+                              {graphType === "radar"
+                                ? "Category:"
+                                : "Stage:"}
+                            </label>
+                            <select
+                              value={groupBy || ""}
+                              onChange={(e) => setGroupBy(e.target.value)}
+                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                              style={{
+                                backgroundColor: theme.colors.background,
+                                color: theme.colors.text,
+                                borderColor: `${theme.colors.border}50`,
                               }}
                             >
                               {getValidCategoricalKeys(
@@ -768,11 +974,31 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               ))}
                             </select>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <label
-                              className="text-sm"
-                              style={{ color: theme.colors.textSecondary }}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
+                              Value:
+                            </label>
+                            <select
+                              value={valueKey || ""}
+                              onChange={(e) => setValueKey(e.target.value)}
+                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                              style={{
+                                backgroundColor: theme.colors.background,
+                                color: theme.colors.text,
+                                borderColor: `${theme.colors.border}50`,
+                              }}
                             >
+                              {getValidValueKeys(
+                                dashboardItem.mainViewData.chartData,
+                              ).map((key) => (
+                                <option key={key} value={key}>
+                                  {key.replace(/_/g, " ")}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
                               Agg:
                             </label>
                             <select
@@ -780,177 +1006,22 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               onChange={(e) =>
                                 setAggregate(e.target.value as SmartAggregation)
                               }
-                              className="px-2 py-1 text-sm rounded-md border"
+                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
                               style={{
-                                backgroundColor: theme.colors.surface,
+                                backgroundColor: theme.colors.background,
                                 color: theme.colors.text,
-                                borderColor: theme.colors.border,
+                                borderColor: `${theme.colors.border}50`,
                               }}
                             >
                               <option value="count">Count</option>
                               <option value="sum">Sum</option>
-                              <option value="avg">Average</option>
-                              <option value="min">Minimum</option>
-                              <option value="max">Maximum</option>
                             </select>
                           </div>
-                          {(aggregate === "sum" ||
-                            aggregate === "avg" ||
-                            aggregate === "min" ||
-                            aggregate === "max") && (
-                            <div className="flex items-center gap-1.5">
-                              <label
-                                className="text-sm"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Value:
-                              </label>
-                              <select
-                                value={valueKey || ""}
-                                onChange={(e) => setValueKey(e.target.value)}
-                                className="px-2 py-1 text-sm rounded-md border"
-                                style={{
-                                  backgroundColor: theme.colors.surface,
-                                  color: theme.colors.text,
-                                  borderColor: theme.colors.border,
-                                }}
-                              >
-                                {getValidValueKeys(
-                                  dashboardItem.mainViewData.chartData,
-                                ).map((key) => (
-                                  <option key={key} value={key}>
-                                    {key.replace(/_/g, " ")}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
                         </>
                       )}
-                    {graphType === "scatter" && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <label style={{ color: theme.colors.textSecondary }}>
-                            X-Axis:
-                          </label>
-                          <select
-                            value={groupBy || ""}
-                            onChange={(e) => setGroupBy(e.target.value)}
-                            className="px-2 py-1 rounded-md border"
-                            style={{
-                              backgroundColor: theme.colors.surface,
-                              color: theme.colors.text,
-                              borderColor: theme.colors.border,
-                            }}
-                          >
-                            {getValidValueKeys(
-                              dashboardItem.mainViewData.chartData,
-                            ).map((key) => (
-                              <option key={key} value={key}>
-                                {key.replace(/_/g, " ")}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label style={{ color: theme.colors.textSecondary }}>
-                            Y-Axis:
-                          </label>
-                          <select
-                            value={valueKey || ""}
-                            onChange={(e) => setValueKey(e.target.value)}
-                            className="px-2 py-1 rounded-md border"
-                            style={{
-                              backgroundColor: theme.colors.surface,
-                              color: theme.colors.text,
-                              borderColor: theme.colors.border,
-                            }}
-                          >
-                            {getValidValueKeys(
-                              dashboardItem.mainViewData.chartData,
-                            ).map((key) => (
-                              <option key={key} value={key}>
-                                {key.replace(/_/g, " ")}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </>
-                    )}
-                    {["radar", "funnel"].includes(graphType) && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <label style={{ color: theme.colors.textSecondary }}>
-                            {graphType === "radar"
-                              ? "Category By:"
-                              : "Stage By:"}
-                          </label>
-                          <select
-                            value={groupBy || ""}
-                            onChange={(e) => setGroupBy(e.target.value)}
-                            className="px-2 py-1 rounded-md border"
-                            style={{
-                              backgroundColor: theme.colors.surface,
-                              color: theme.colors.text,
-                              borderColor: theme.colors.border,
-                            }}
-                          >
-                            {getValidCategoricalKeys(
-                              dashboardItem.mainViewData.chartData,
-                            ).map((key) => (
-                              <option key={key} value={key}>
-                                {key.replace(/_/g, " ")}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label style={{ color: theme.colors.textSecondary }}>
-                            Value:
-                          </label>
-                          <select
-                            value={valueKey || ""}
-                            onChange={(e) => setValueKey(e.target.value)}
-                            className="px-2 py-1 rounded-md border"
-                            style={{
-                              backgroundColor: theme.colors.surface,
-                              color: theme.colors.text,
-                              borderColor: theme.colors.border,
-                            }}
-                          >
-                            {getValidValueKeys(
-                              dashboardItem.mainViewData.chartData,
-                            ).map((key) => (
-                              <option key={key} value={key}>
-                                {key.replace(/_/g, " ")}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label style={{ color: theme.colors.textSecondary }}>
-                            Aggregate:
-                          </label>
-                          <select
-                            value={aggregate}
-                            onChange={(e) =>
-                              setAggregate(e.target.value as SmartAggregation)
-                            }
-                            className="px-2 py-1 rounded-md border"
-                            style={{
-                              backgroundColor: theme.colors.surface,
-                              color: theme.colors.text,
-                              borderColor: theme.colors.border,
-                            }}
-                          >
-                            <option value="count">Count</option>
-                            <option value="sum">Sum</option>
-                          </select>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
                 <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col items-stretch justify-end">
                   <DynamicGraph
                     data={
@@ -979,7 +1050,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 }}
               >
                 <div
-                  className="flex items-center justify-between px-4 py-2.5 border-b flex-shrink-0"
+                  className="flex items-center justify-between px-4 py-2 border-b flex-shrink-0 min-h-[45px]"
                   style={{
                     borderColor: `${theme.colors.border}30`,
                     backgroundColor: theme.mode === 'light' ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)',
@@ -1020,11 +1091,13 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     <QueryDisplay
                       query={dashboardItem.mainViewData.queryData}
                       fontSize="text-sm"
+                      flat
                     />
                   ) : (
                     <DataTable
                       data={dashboardItem.mainViewData.tableData}
                       onRowsChange={setSyncedTableRows}
+                      variant="dashboard-flat"
                     />
                   )}
                 </div>

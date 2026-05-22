@@ -10,7 +10,7 @@ export const getSmartVirtualizationConfig = (
       pageSize: 100,
       virtualizationThreshold: 1000,
       paginationThreshold: 120,
-      estimatedRowHeight: 46,
+      estimatedRowHeight: 36,
       overscan: 18,
     };
   }
@@ -22,7 +22,7 @@ export const getSmartVirtualizationConfig = (
       pageSize: 50,
       virtualizationThreshold: 1000,
       paginationThreshold: 120,
-      estimatedRowHeight: 46,
+      estimatedRowHeight: 36,
       overscan: 12,
     };
   }
@@ -33,7 +33,7 @@ export const getSmartVirtualizationConfig = (
     pageSize: Math.max(10, rowCount || 10),
     virtualizationThreshold: 1000,
     paginationThreshold: 120,
-    estimatedRowHeight: 46,
+    estimatedRowHeight: 36,
     overscan: 8,
   };
 };

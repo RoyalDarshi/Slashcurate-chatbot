@@ -36,7 +36,7 @@ import type {
 
 interface SmartDataTableProps {
   data: unknown;
-  variant?: "dashboard" | "chat";
+  variant?: "dashboard" | "chat" | "dashboard-flat";
   fileBaseName?: string;
   onRowsChange?: (rows: SmartTableRow[]) => void;
 }
@@ -455,7 +455,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           <div
             className="max-h-32 overflow-y-auto rounded border py-1"
             style={{
-              borderColor: theme.colors.border,
+              borderColor: `${theme.colors.border}25`,
               background: theme.colors.surface,
               scrollbarWidth: "thin",
             }}
@@ -530,15 +530,25 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
 
     return (
       <div
-        className="relative flex flex-col overflow-hidden rounded-xl"
+        className={`relative flex flex-col overflow-hidden ${
+          variant === "dashboard-flat" ? "rounded-none" : "rounded-xl"
+        }`}
         style={{
-          background: variant === "chat" ? "transparent" : theme.colors.surface,
+          background:
+            variant === "chat" || variant === "dashboard-flat"
+              ? "transparent"
+              : theme.colors.surface,
           border:
-            variant === "chat" ? "none" : `1px solid ${theme.colors.border}`,
-          boxShadow: variant === "chat" ? "none" : theme.shadow.sm,
+            variant === "chat" || variant === "dashboard-flat"
+              ? "none"
+              : `1px solid ${theme.colors.border}25`,
+          boxShadow:
+            variant === "chat" || variant === "dashboard-flat"
+              ? "none"
+              : theme.shadow.sm,
           height: variant === "chat" ? "auto" : "100%",
           maxHeight: variant === "chat" ? 600 : "100%",
-          width: "fit-content",
+          width: variant === "dashboard-flat" ? "100%" : "fit-content",
           maxWidth: "100%",
           minWidth: 0,
           flex: 1,
@@ -547,7 +557,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
         <div
           className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
           style={{
-            borderBottom: `1px solid ${theme.colors.border}`,
+            borderBottom: `1px solid ${theme.colors.border}25`,
             flexShrink: 0,
           }}
         >
@@ -556,7 +566,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
               style={{
                 background: theme.colors.background,
-                border: `1px solid ${theme.colors.border}`,
+                border: `1px solid ${theme.colors.border}25`,
               }}
             >
               <Search
@@ -600,7 +610,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 background: showFilters
                   ? `${theme.colors.accent}14`
                   : "transparent",
-                border: `1px solid ${showFilters || filterCount > 0 ? theme.colors.accent + "44" : theme.colors.border}`,
+                border: `1px solid ${showFilters || filterCount > 0 ? theme.colors.accent + "44" : theme.colors.border}25`,
               }}
             >
               <Filter size={13} />
@@ -621,7 +631,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 background: showColumns
                   ? `${theme.colors.accent}14`
                   : "transparent",
-                border: `1px solid ${showColumns ? theme.colors.accent + "44" : theme.colors.border}`,
+                border: `1px solid ${showColumns ? theme.colors.accent + "44" : theme.colors.border}25`,
               }}
             >
               <Columns3 size={13} />
@@ -630,7 +640,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
 
             <div
               className="mx-1 h-5 w-px"
-              style={{ background: theme.colors.border }}
+              style={{ background: `${theme.colors.border}25` }}
             />
 
             <div ref={exportRef} style={{ position: "relative" }}>
@@ -640,7 +650,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
                 style={{
                   color: theme.colors.textSecondary,
-                  border: `1px solid ${theme.colors.border}`,
+                  border: `1px solid ${theme.colors.border}25`,
                 }}
               >
                 <Download size={13} />
@@ -655,7 +665,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                     top: "calc(100% + 4px)",
                     zIndex: 50,
                     background: theme.colors.surface,
-                    border: `1px solid ${theme.colors.border}`,
+                    border: `1px solid ${theme.colors.border}25`,
                     borderRadius: theme.borderRadius.default,
                     boxShadow: theme.shadow.md,
                     minWidth: 140,
@@ -726,7 +736,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           <div
             className="border-b px-3 py-2.5"
             style={{
-              borderColor: theme.colors.border,
+              borderColor: `${theme.colors.border}25`,
               background: theme.colors.background,
             }}
           >
@@ -751,7 +761,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                       color: visible
                         ? theme.colors.accent
                         : theme.colors.textSecondary,
-                      border: `1px solid ${visible ? theme.colors.accent + "44" : theme.colors.border}`,
+                      border: `1px solid ${visible ? theme.colors.accent + "44" : theme.colors.border}25`,
                       background: visible
                         ? `${theme.colors.accent}10`
                         : "transparent",
@@ -770,7 +780,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
           <div
             className="flex flex-wrap items-center gap-2 border-b px-3 py-2"
             style={{
-              borderColor: theme.colors.border,
+              borderColor: `${theme.colors.border}25`,
               background: theme.colors.background,
             }}
           >
@@ -839,12 +849,12 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
               className="flex w-80 flex-col shadow-2xl"
               style={{
                 background: theme.colors.surface,
-                borderLeft: `1px solid ${theme.colors.border}`,
+                borderLeft: `1px solid ${theme.colors.border}25`,
               }}
             >
               <div
                 className="flex items-center justify-between border-b px-4 py-3"
-                style={{ borderColor: theme.colors.border }}
+                style={{ borderColor: `${theme.colors.border}25` }}
               >
                 <span
                   className="font-semibold"
@@ -914,7 +924,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 top: 0,
                 zIndex: 4,
                 background: theme.colors.surface,
-                borderBottom: `1px solid ${theme.colors.border}`,
+                borderBottom: `1px solid ${theme.colors.border}25`,
               }}
             >
               {table.getHeaderGroups().map((headerGroup) => (
@@ -925,15 +935,16 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="px-3 py-2.5"
+                      className="px-3 py-1.5"
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
+                        justifyContent: getCellJustify(
+                          visibleColumns.find((c) => c.key === header.column.id)
+                        ),
                         width: header.getSize(),
                         flexShrink: 0,
-                        borderRight: `1px solid ${theme.colors.border}`,
-                        borderBottom: `1px solid ${theme.colors.border}`,
+                        borderBottom: `1px solid ${theme.colors.border}20`,
                       }}
                     >
                       {flexRender(
@@ -970,9 +981,11 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor =
-                        virtualRow.index % 2 === 0
-                          ? theme.colors.surface
-                          : `${theme.colors.accent}06`;
+                        variant === "dashboard-flat"
+                          ? "transparent"
+                          : virtualRow.index % 2 === 0
+                            ? theme.colors.surface
+                            : `${theme.colors.accent}06`;
                     }}
                     style={{
                       display: "flex",
@@ -981,21 +994,27 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                       width: totalTableWidth,
                       minHeight: config.performance.estimatedRowHeight,
                       background:
-                        virtualRow.index % 2 === 0
-                          ? theme.colors.surface
-                          : `${theme.colors.accent}06`,
+                        variant === "dashboard-flat"
+                          ? "transparent"
+                          : virtualRow.index % 2 === 0
+                            ? theme.colors.surface
+                            : `${theme.colors.accent}06`,
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="min-w-0 border-b px-3 py-1.5 text-[0.82rem]"
+                        className="min-w-0 border-b px-3 py-1 text-[0.82rem]"
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "center",
+                          justifyContent: getCellJustify(
+                            visibleColumns.find((c) => c.key === cell.column.id)
+                          ),
                           width: cell.column.getSize(),
-                          borderColor: theme.colors.border,
+                          borderColor: variant === "dashboard-flat"
+                            ? `${theme.colors.border}15`
+                            : `${theme.colors.border}25`,
                         }}
                       >
                         {flexRender(
@@ -1029,8 +1048,8 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                         width: column.width,
                         flexShrink: 0,
                         color: theme.colors.accent,
-                        justifyContent: "center",
-                        borderTop: `1px solid ${theme.colors.border}`,
+                        justifyContent: getCellJustify(column),
+                        borderTop: `1px solid ${theme.colors.border}25`,
                         background: `${theme.colors.accent}06`,
                       }}
                     >
@@ -1072,7 +1091,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
         {config.performance.mode === "paginated" && (
           <div
             className="flex items-center justify-between border-t px-3 py-2"
-            style={{ borderColor: theme.colors.border }}
+            style={{ borderColor: `${theme.colors.border}25` }}
           >
             <span
               className="text-xs"

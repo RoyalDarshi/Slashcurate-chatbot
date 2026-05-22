@@ -222,7 +222,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
     return (
       <div
-        className="flex h-full flex-col"
+        className="flex h-full flex-col relative"
         style={{
           background: theme.colors.surface,
           backdropFilter: "blur(20px) saturate(180%)",
@@ -231,7 +231,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           transition: theme.transition.default,
         }}
       >
-        <div className="flex items-center justify-end gap-3 px-3 py-2 z-10 relative">
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
           <div className="relative flex-shrink-0" ref={insightsRef}>
             <button
               onClick={() => {

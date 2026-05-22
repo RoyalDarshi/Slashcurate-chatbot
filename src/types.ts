@@ -123,6 +123,7 @@ export interface DataTableProps {
   data: any;
   darkMode?: boolean;
   onRowsChange?: (rows: Record<string, unknown>[]) => void;
+  variant?: "chat" | "dashboard" | "dashboard-flat";
 }
 
 export interface TableColumn {

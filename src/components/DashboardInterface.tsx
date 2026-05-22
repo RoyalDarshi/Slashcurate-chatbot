@@ -2057,7 +2057,7 @@ const DashboardInterface = memo(
 
       return (
         <div
-          className={`flex flex-col h-screen transition-colors duration-300 overflow-hidden`}
+          className={`flex flex-col h-full w-full min-h-0 flex-grow relative transition-colors duration-300 overflow-hidden`}
           style={{
             backgroundColor: theme.colors.background,
             color: theme.colors.text,
@@ -2282,7 +2282,7 @@ const DashboardInterface = memo(
           {connections.length > 0 && (
             <footer className="flex justify-center pb-4 absolute bottom-0 left-0 right-0 z-40 pointer-events-none px-4">
               <div
-                className="w-full max-w-4xl flex items-center gap-2 px-3 py-2 rounded-full pointer-events-auto transition-all duration-200 glass-input shadow-floating focus-within:shadow-lg group"
+                className="w-full max-w-4xl flex items-end gap-2 px-4 py-2.5 rounded-[1.75rem] pointer-events-auto transition-all duration-200 glass-input shadow-floating dark:shadow-floating-dark focus-within:shadow-lg group"
                 style={{ zIndex: 10 }}
               >
                 <div className="relative" ref={connectionDropdownRef}>
@@ -2297,7 +2297,7 @@ const DashboardInterface = memo(
                         setIsDbExplorerOpen(false);
                       }}
                       disabled={isSubmitting || !!sessionConnectionError}
-                      className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50"
+                      className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
                       style={{
                         color: theme.colors.textSecondary,
                         background: "transparent",
@@ -2401,7 +2401,7 @@ const DashboardInterface = memo(
                       !selectedConnection ||
                       !!sessionConnectionError
                     }
-                    className={`p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50 ${
+                    className={`p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 ${
                       isDbExplorerOpen ? "schema-active text-accent" : ""
                     }`}
                     style={{
@@ -2427,7 +2427,7 @@ const DashboardInterface = memo(
                     type="button"
                     onClick={handleNewChat}
                     disabled={isSubmitting}
-                    className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50"
+                    className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
                     style={{
                       color: theme.colors.textSecondary,
                       background: "transparent",
@@ -2461,7 +2461,7 @@ const DashboardInterface = memo(
                     disabled={
                       isSubmitting || userQuestionsFromSession.length === 0
                     }
-                    className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 disabled:opacity-50"
+                    className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
                     style={{
                       color: theme.colors.textSecondary,
                       background: "transparent",

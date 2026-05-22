@@ -1,84 +1,96 @@
 import React from "react";
-import { TrendingUp, TrendingDown } from "lucide-react";
-import { useTheme } from "../ThemeContext"; // Import useTheme hook
+import { TrendingUp, TrendingDown, Activity } from "lucide-react";
+import { useTheme } from "../ThemeContext";
 
 interface KPICardProps {
   title: string;
-  value: string | number;
-  change: string;
-  icon: React.ReactNode;
+  value: string | number | null;
+  change?: string | number;
+  icon?: React.ReactNode;
 }
 
 const KPICard: React.FC<KPICardProps> = ({ title, value, change, icon }) => {
-  const { theme } = useTheme(); // Use the useTheme hook to access the theme
+  const { theme } = useTheme();
 
   const formattedValue =
-    typeof value === "number" ? value.toLocaleString() : value;
+    value === null || value === undefined
+      ? "—"
+      : typeof value === "number"
+      ? value.toLocaleString()
+      : value;
 
-  const isPositiveChange = parseFloat(change) >= 0;
+  const changeNum = typeof change === "number" ? change : parseFloat(change || "0");
+  const isPositiveChange = changeNum >= 0;
+  const hasChange = change !== undefined && change !== null && change !== "" && !isNaN(changeNum);
+
+  const displayChange = hasChange
+    ? `${isPositiveChange ? "+" : ""}${changeNum.toFixed(1)}%`
+    : "";
 
   return (
     <div
-      // Increased padding (p-4), added a slightly more pronounced shadow, and subtle transition
-      className={`p-4 rounded-xl shadow-lg transition-all duration-300 h-full`}
-      style={{ backgroundColor: theme.colors.surface }}
+      className="p-5 rounded-2xl shadow-md transition-all duration-300 h-full flex flex-col justify-between border"
+      style={{
+        backgroundColor: theme.colors.surface,
+        borderColor: `${theme.colors.border}35`,
+      }}
     >
-      {/* Container for icon and title */}
-      <div className="flex items-center justify-center mb-2">
-        {" "}
-        {/* Centered content */}
-        {/* Icon with appropriate sizing and margin */}
-        {/* {icon && (
-          <div
-            className={`mr-${theme.spacing.sm}`}
-            style={{ color: theme.colors.accent }}
-          >
-            {icon}
-          </div>
-        )}{" "} */}
-        {/* Render icon if provided */}
+      <div className="flex items-center justify-between mb-3">
         <h3
-          className={`text-${theme.typography.size.sm} text-center font-${theme.typography.weight.medium} uppercase tracking-wider`}
+          className="text-xs font-semibold uppercase tracking-wider truncate"
           style={{ color: theme.colors.textSecondary }}
         >
           {title}
         </h3>
+        {icon ? (
+          <div
+            className="flex items-center justify-center p-1.5 rounded-lg"
+            style={{
+              color: theme.colors.accent,
+              backgroundColor: `${theme.colors.accent}15`,
+            }}
+          >
+            {icon}
+          </div>
+        ) : (
+          <div
+            className="flex items-center justify-center p-1.5 rounded-lg"
+            style={{
+              color: theme.colors.accent,
+              backgroundColor: `${theme.colors.accent}15`,
+            }}
+          >
+            <Activity size={16} />
+          </div>
+        )}
       </div>
 
-      {/* Value display - made larger and bolder */}
-      <p
-        className={`text-3xl font-${theme.typography.weight.bold} text-center`}
-        style={{ color: theme.colors.text }}
-      >
-        {formattedValue}
-      </p>
-
-      {/* Change display - re-introduced and styled */}
-      {/* <div
-        className={`flex items-center justify-center mt-${theme.spacing.xs}`}
-      >
-        {isPositiveChange ? (
-          <TrendingUp
-            size={20}
-            style={{ color: theme.colors.success }}
-            className={`mr-${theme.spacing.xs}`}
-          />
-        ) : (
-          <TrendingDown
-            size={20}
-            style={{ color: theme.colors.error }}
-            className={`mr-${theme.spacing.xs}`}
-          />
-        )}
-        <span
-          className={`text-${theme.typography.size.sm} font-${theme.typography.weight.semibold}`}
-          style={{
-            color: isPositiveChange ? theme.colors.success : theme.colors.error,
-          }}
+      <div className="flex items-baseline justify-between mt-1 gap-2 flex-wrap">
+        <p
+          className="text-2xl font-bold tracking-tight"
+          style={{ color: theme.colors.text }}
         >
-          {change}
-        </span>
-      </div> */}
+          {formattedValue}
+        </p>
+
+        {hasChange && (
+          <div className="flex items-center gap-1">
+            {isPositiveChange ? (
+              <TrendingUp size={14} style={{ color: theme.colors.success }} />
+            ) : (
+              <TrendingDown size={14} style={{ color: theme.colors.error }} />
+            )}
+            <span
+              className="text-xs font-semibold"
+              style={{
+                color: isPositiveChange ? theme.colors.success : theme.colors.error,
+              }}
+            >
+              {displayChange}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

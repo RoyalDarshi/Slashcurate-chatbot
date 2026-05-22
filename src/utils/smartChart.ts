@@ -1699,7 +1699,7 @@ export const getSmartEChartsOption = (
     },
     legend: showLegend
       ? {
-          bottom: 4,
+          bottom: 0,
           left: "center",
           icon: "circle",
           itemWidth: 10,
@@ -1722,8 +1722,8 @@ export const getSmartEChartsOption = (
         {
           name: formatKey(config.valueKey ?? "Value"),
           type: "pie",
-          radius: ["50%", "80%"],
-          center: ["50%", "50%"],
+          radius: ["62%", "80%"],
+          center: ["50%", "46%"],
           avoidLabelOverlap: true,
           minAngle: 4,
           itemStyle: {
@@ -1735,9 +1735,9 @@ export const getSmartEChartsOption = (
             show: config.label.show,
             color: theme.colors.textSecondary,
             formatter: (params: { name: string; percent: number }) =>
-              `${truncateLabel(params.name, 16)}\n${trimTrailingZeroes(params.percent.toFixed(1))}%`,
+              `${truncateLabel(params.name, 10)}\n${trimTrailingZeroes(params.percent.toFixed(1))}%`,
           },
-          labelLine: { show: config.label.show, smooth: true },
+          labelLine: { show: config.label.show, smooth: true, length: 5, length2: 3 },
           data: config.processedData.map((datum, index) => ({
             name: datum.name,
             value: Math.max(0, datum.total),
@@ -1933,7 +1933,7 @@ export const getSmartEChartsOption = (
       right: config.axis.gridRight,
       top: config.axis.gridTop,
       bottom: showLegend
-        ? Math.max(config.axis.gridBottom, 72)
+        ? Math.max(config.axis.gridBottom, 44)
         : config.axis.gridBottom,
       containLabel: true,
     },

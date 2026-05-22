@@ -179,17 +179,16 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     return (
       <form
         onSubmit={onSubmit}
-        style={{ width: "100%", position: "relative", zIndex: 10 }}
-        className="flex-grow max-w-4xl mx-auto px-4 md:px-0"
+        style={{ width: "100%", position: "relative" }}
+        className="flex-grow flex items-end"
       >
         <div
-          className="flex items-end gap-2 w-full transition-shadow duration-300 focus-within:shadow-lg shadow-md"
+          className="flex items-end gap-2 w-full"
           style={{
-            borderRadius: "1.5rem",
-            padding: "8px 12px",
-            backgroundColor: theme.colors.surface,
-            border: `1px solid ${theme.colors.border}`,
-            boxShadow: theme.mode === 'light' ? `0 4px 20px rgba(15, 23, 42, 0.05)` : `0 4px 20px rgba(0, 0, 0, 0.3)`,
+            backgroundColor: "transparent",
+            border: "none",
+            boxShadow: "none",
+            padding: "0px",
           }}
         >
           {showMicButton &&

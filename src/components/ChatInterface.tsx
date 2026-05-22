@@ -1507,47 +1507,43 @@ const ChatInterface = memo(
             )}
             <div ref={messagesEndRef} />
           </div>
-          {connections.length > 0 && (
+          {userHasScrolledUp && (
             <div
+              className="flex justify-end"
               style={{
-                position: "sticky",
-                bottom: 0,
-                background: theme.colors.background,
-                paddingBottom: theme.spacing.sm,
+                position: "absolute",
+                bottom: "90px",
+                right: "30px",
+                zIndex: 1000,
               }}
             >
-              {userHasScrolledUp && (
-                <div
-                  className="flex justify-end"
+              <CustomTooltip title="Scroll to Bottom" position="top">
+                <button
+                  onClick={scrollToBottom}
                   style={{
-                    position: "absolute",
-                    bottom: "80px",
-                    right: "30px",
-                    zIndex: 1000,
+                    background: theme.colors.accent,
+                    color: "white",
+                    padding: "8px",
+                    borderRadius: theme.borderRadius.large,
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: theme.shadow.md,
                   }}
                 >
-                  <CustomTooltip title="Scroll to Bottom" position="top">
-                    <button
-                      onClick={scrollToBottom}
-                      style={{
-                        background: theme.colors.accent,
-                        color: "white",
-                        padding: "8px",
-                        borderRadius: theme.borderRadius.large,
-                        border: "none",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: theme.shadow.md,
-                      }}
-                    >
-                      <ArrowDown size={20} />
-                    </button>
-                  </CustomTooltip>
-                </div>
-              )}
-              <div className="max-w-4xl mx-auto flex items-center gap-2">
+                  <ArrowDown size={20} />
+                </button>
+              </CustomTooltip>
+            </div>
+          )}
+          {connections.length > 0 && (
+            <footer className="flex justify-center pb-4 absolute bottom-0 left-0 right-0 z-40 pointer-events-none px-4">
+              <div
+                className="w-full max-w-4xl flex items-end gap-2 px-4 py-2.5 rounded-[1.75rem] pointer-events-auto transition-all duration-200 glass-input shadow-floating dark:shadow-floating-dark focus-within:shadow-lg group"
+                style={{ zIndex: 10 }}
+              >
                 <div className="relative" ref={connectionDropdownRef}>
                   <CustomTooltip
                     title="Change or create a connection"
@@ -1557,10 +1553,10 @@ const ChatInterface = memo(
                       type="button"
                       onClick={toggleConnectionDropdown}
                       disabled={isSubmitting || !!sessionConnectionError}
-                      className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
+                      className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
                       style={{
-                        background: theme.colors.surface,
-                        color: theme.colors.accent,
+                        color: theme.colors.textSecondary,
+                        background: "transparent",
                       }}
                     >
                       <Database size={20} />
@@ -1657,12 +1653,14 @@ const ChatInterface = memo(
                       !selectedConnection ||
                       !!sessionConnectionError
                     }
-                    className={`p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 ${
-                      isDbExplorerOpen ? "schema-active" : ""
+                    className={`p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 ${
+                      isDbExplorerOpen ? "schema-active text-accent" : ""
                     }`}
                     style={{
-                      background: theme.colors.surface,
-                      color: theme.colors.accent,
+                      color: isDbExplorerOpen
+                        ? theme.colors.accent
+                        : theme.colors.textSecondary,
+                      background: "transparent",
                     }}
                   >
                     <Layers
@@ -1681,10 +1679,10 @@ const ChatInterface = memo(
                     type="button"
                     onClick={handleNewChat}
                     disabled={isSubmitting}
-                    className="p-2.5 shadow-lg rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50"
+                    className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
                     style={{
-                      background: theme.colors.surface,
-                      color: theme.colors.accent,
+                      color: theme.colors.textSecondary,
+                      background: "transparent",
                     }}
                   >
                     <PlusCircle size={20} />
@@ -1699,10 +1697,10 @@ const ChatInterface = memo(
                   onStopRequest={handleStopRequest}
                 />
               </div>
-            </div>
+            </footer>
           )}
           {isDbExplorerOpen && selectedConnection && (
-            <div className="w-3/4 backdrop-blur-lg self-center absolute bottom-16 z-50 flex items-center justify-center">
+            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-3xl pointer-events-auto flex items-center justify-center">
               <SchemaExplorer
                 schemas={schemaSampleData}
                 onClose={() => setIsDbExplorerOpen(false)}

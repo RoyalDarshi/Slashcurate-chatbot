@@ -214,18 +214,14 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
     return (
       <form
         onSubmit={onSubmit}
-        style={{ background: theme.colors.background, width: "100%" }}
-        className="flex-grow px-4 md:px-0"
+        style={{ width: "100%" }}
+        className="flex-grow flex items-end"
       >
-        <div className="w-full h-full flex flex-col">
+        <div className="w-full flex flex-col relative">
           {isDbExplorerOpen && (
             <div
               ref={dbExplorerRef}
-              className="schema-explorer-container mb-2"
-              style={{
-                position: "relative",
-                zIndex: 5,
-              }}
+              className="schema-explorer-container absolute bottom-full left-1/2 transform -translate-x-1/2 z-50 w-full max-w-3xl mb-4 pointer-events-auto"
             >
               <SchemaExplorer
                 schemas={schemaSampleData}
@@ -238,13 +234,12 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
           )}
 
           <div
-            className="flex items-end gap-2 w-full transition-shadow duration-300 focus-within:shadow-lg shadow-md"
+            className="flex items-end gap-2 w-full"
             style={{
-              background: theme.colors.surface,
-              borderRadius: "1.5rem",
-              border: `1px solid ${theme.colors.border}`,
-              boxShadow: theme.mode === 'light' ? `0 4px 20px rgba(15, 23, 42, 0.05)` : `0 4px 20px rgba(0, 0, 0, 0.3)`,
-              padding: "8px 12px",
+              backgroundColor: "transparent",
+              border: "none",
+              boxShadow: "none",
+              padding: "0px",
             }}
           >
             {showMicButton &&

@@ -195,15 +195,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                 style={{
                   backgroundColor:
                     activeMenuItem === id
-                      ? `${theme.colors.accent}14` // 8% opacity for cleaner feel
+                      ? (theme.mode === "light" ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.07)")
                       : "transparent",
-                  color: activeMenuItem === id ? theme.colors.accent : theme.colors.text,
+                  color: activeMenuItem === id ? theme.colors.text : theme.colors.text,
                   transition: theme.transition.default,
-                  padding: "0.6rem 0.8rem",
+                  padding: "0.375rem 0.5rem",
                 }}
                 onMouseOver={(e) => {
                   if (activeMenuItem !== id) {
-                    e.currentTarget.style.backgroundColor = theme.colors.hover;
+                    e.currentTarget.style.backgroundColor =
+                      theme.mode === "light" ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)";
                   }
                 }}
                 onMouseOut={(e) => {
@@ -219,22 +220,24 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 <div className="flex items-center relative w-full justify-start">
                   {/* Left Accent indicator pill */}
-                  {activeMenuItem === id && (
-                    <div
-                      className="absolute left-0 w-1 h-5 rounded-r-full"
-                      style={{
-                        backgroundColor: theme.colors.accent,
-                        marginLeft: "-0.8rem",
-                      }}
-                    />
-                  )}
+                  <div
+                    className={`absolute left-0 w-1 rounded-r-full transition-all duration-300 ${
+                      activeMenuItem === id
+                        ? "h-5 opacity-100 scale-y-100"
+                        : "h-0 opacity-0 scale-y-50"
+                    }`}
+                    style={{
+                      backgroundColor: theme.colors.accent,
+                      marginLeft: "-0.5rem",
+                    }}
+                  />
 
                   <Icon
                     size={18}
                     style={{
                       color:
                         activeMenuItem === id
-                          ? theme.colors.accent
+                          ? theme.colors.text
                           : theme.colors.textSecondary,
                     }}
                     className={`transition-colors duration-200 group-hover:text-current ${
@@ -292,35 +295,49 @@ const Sidebar: React.FC<SidebarProps> = ({
                     {subMenu.map((subItem) => (
                       <button
                         key={subItem.id}
-                        className="relative flex items-center p-2 rounded-lg w-full transition-colors duration-200 hover:bg-opacity-10"
+                        className="relative flex items-center rounded-lg w-full transition-colors duration-200"
                         style={{
                           backgroundColor:
                             activeMenuItem === subItem.id
-                              ? theme.colors.hover
+                              ? (theme.mode === "light" ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.07)")
                               : "transparent",
                           color:
                             activeMenuItem === subItem.id
-                              ? theme.colors.accent
+                              ? theme.colors.text
                               : theme.colors.textSecondary,
                           borderRadius: theme.borderRadius.default,
+                          padding: "0.375rem 0.5rem",
+                        }}
+                        onMouseOver={(e) => {
+                          if (activeMenuItem !== subItem.id) {
+                            e.currentTarget.style.backgroundColor =
+                              theme.mode === "light" ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)";
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (activeMenuItem !== subItem.id) {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                          }
                         }}
                         onClick={() => handleMenuClick(subItem.id)}
                       >
-                        {activeMenuItem === subItem.id && (
-                          <div
-                            className="absolute left-0 w-1 h-4 rounded-r-full"
-                            style={{
-                              backgroundColor: theme.colors.accent,
-                              marginLeft: "-1rem",
-                            }}
-                          />
-                        )}
+                        <div
+                          className={`absolute left-0 w-1 rounded-r-full transition-all duration-300 ${
+                            activeMenuItem === subItem.id
+                              ? "h-4 opacity-100 scale-y-100"
+                              : "h-0 opacity-0 scale-y-50"
+                          }`}
+                          style={{
+                            backgroundColor: theme.colors.accent,
+                            marginLeft: "-0.5rem",
+                          }}
+                        />
                         <subItem.icon
                           size={15}
                           style={{
                             color:
                               activeMenuItem === subItem.id
-                                ? theme.colors.accent
+                                ? theme.colors.text
                                 : theme.colors.textSecondary,
                           }}
                         />

@@ -9,10 +9,11 @@ interface QueryDisplayProps {
   title?: string;
   language?: string;
   fontSize: string;
+  flat?: boolean;
 }
 
 const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
-  ({ query, title, language = "sql", fontSize }) => {
+  ({ query, title, language = "sql", fontSize, flat = false }) => {
     const { theme } = useTheme();
 
     const formattedQuery = useMemo(() => {
@@ -489,7 +490,7 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
             <div className="relative group">
               {/* Enhanced Copy Button */}
               {formattedQuery && (
-                <div className="absolute top-13 right-3 z-10 transition-opacity duration-200">
+                <div className={`absolute ${flat ? "top-3" : "top-13"} right-3 z-10 transition-opacity duration-200`}>
                   <CopyButton query={formattedQuery} />
                 </div>
               )}
@@ -499,35 +500,37 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.3 }}
-                className="relative overflow-hidden rounded-xl shadow-lg"
+                className={`relative overflow-hidden ${flat ? "" : "rounded-xl shadow-lg"}`}
                 style={{
-                  backgroundColor: theme.colors.surface,
-                  border: `1px solid ${theme.colors.accent}20`,
+                  backgroundColor: flat ? "transparent" : theme.colors.surface,
+                  border: flat ? "none" : `1px solid ${theme.colors.accent}20`,
                 }}
               >
                 {/* Top bar with subtle gradient */}
-                <div
-                  className="h-8 flex items-center px-4 border-b"
-                  style={{
-                    background: `linear-gradient(90deg, ${theme.colors.accent}08, ${theme.colors.accent}03)`,
-                    borderColor: `${theme.colors.accent}15`,
-                  }}
-                >
-                  <div className="flex space-x-1.5">
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: `${theme.colors.error}` }}
-                    />
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: `${theme.colors.warning}` }}
-                    />
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: `${theme.colors.success}` }}
-                    />
+                {!flat && (
+                  <div
+                    className="h-8 flex items-center px-4 border-b"
+                    style={{
+                      background: `linear-gradient(90deg, ${theme.colors.accent}08, ${theme.colors.accent}03)`,
+                      borderColor: `${theme.colors.accent}15`,
+                    }}
+                  >
+                    <div className="flex space-x-1.5">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: `${theme.colors.error}` }}
+                      />
+                      <div
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: `${theme.colors.warning}` }}
+                      />
+                      <div
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: `${theme.colors.success}` }}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Code content */}
                 <pre
@@ -535,7 +538,9 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                   style={{
                     fontSize: fontSize,
                     lineHeight: "1.6",
-                    background: `linear-gradient(135deg, ${theme.colors.surface} 0%, ${theme.colors.surface}f8 100%)`,
+                    background: flat
+                      ? "transparent"
+                      : `linear-gradient(135deg, ${theme.colors.surface} 0%, ${theme.colors.surface}f8 100%)`,
                   }}
                 >
                   <code className="block">
@@ -576,7 +581,8 @@ const areEqual = (
     prevProps.query === nextProps.query &&
     prevProps.title === nextProps.title &&
     prevProps.language === nextProps.language &&
-    prevProps.fontSize === nextProps.fontSize
+    prevProps.fontSize === nextProps.fontSize &&
+    prevProps.flat === nextProps.flat
   );
 };
 
