@@ -3,7 +3,7 @@ import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Trash2, AlertTriangle, Edit2, X } from "react-feather";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Database, Server, Globe, User, Activity, Clock, Layers } from "lucide-react";
 import { useTheme } from "../ThemeContext";
 import {
   deleteConnection,
@@ -307,320 +307,177 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
       </h2>
 
       {connections.length > 0 ? (
-        <div
-          className="rounded-lg shadow-lg mb-40 relative overflow-hidden"
-          style={{
-            backgroundColor: theme.colors.surface,
-            border: `1px solid ${theme.colors.text}30`,
-            boxShadow:
-              theme.colors.background === "#0F172A"
-                ? "0 4px 12px rgba(0, 0, 0, 0.3)"
-                : "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-          }}
-        >
-          {/* Table with sticky header and scrollable content */}
-          <div className="max-h-[70vh] overflow-y-auto rounded-lg">
-            <div className="overflow-x-auto" style={{ minWidth: "100%" }}>
-              <table
-                className="min-w-full"
-                style={{
-                  tableLayout: "fixed",
-                  width: "100%",
-                  borderCollapse: "separate",
-                  borderSpacing: 0,
-                  borderColor: theme.colors.text + "20",
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+          {connections.map((connection) => (
+            <div
+              key={connection.id}
+              className="flex flex-col rounded-xl shadow-lg overflow-hidden transition-all duration-200 group"
+              style={{
+                backgroundColor: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+                boxShadow: theme.colors.background === "#0F172A"
+                  ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
+                  : "0 4px 20px -2px rgba(0, 0, 0, 0.05)",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = theme.colors.background === "#0F172A"
+                  ? "0 12px 30px -4px rgba(0, 0, 0, 0.5)"
+                  : "0 12px 30px -4px rgba(0, 0, 0, 0.1)";
+                e.currentTarget.style.borderColor = `${theme.colors.accent}40`;
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = theme.colors.background === "#0F172A"
+                  ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
+                  : "0 4px 20px -2px rgba(0, 0, 0, 0.05)";
+                e.currentTarget.style.borderColor = theme.colors.border;
+              }}
+            >
+              {/* Card Header */}
+              <div 
+                className="p-5 border-b flex items-start justify-between gap-4"
+                style={{ 
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.mode === 'light' ? '#F8FAFC' : `${theme.colors.surfaceGlass}`
                 }}
               >
-                <thead
-                  className="sticky top-0 z-10"
-                  style={{ backgroundColor: theme.colors.accent }}
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div 
+                    className="p-2.5 rounded-lg flex-shrink-0"
+                    style={{ backgroundColor: `${theme.colors.accent}15`, color: theme.colors.accent }}
+                  >
+                    <Database size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-lg truncate" style={{ color: theme.colors.text }}>
+                      {connection.connectionName}
+                    </h3>
+                    <p className="text-xs truncate font-medium mt-0.5" style={{ color: `${theme.colors.text}80` }}>
+                      {connection.description || "No description provided"}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Actions Menu */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <CustomTooltip
+                    title={connection.isAdmin ? "Cannot re-extract metadata for default connections" : "Re-extract Metadata"}
+                    position="top"
+                  >
+                    <button
+                      onClick={() => handleReExtractMetadata(connection)}
+                      disabled={connection.isAdmin}
+                      className="p-1.5 rounded-md transition-colors disabled:opacity-50"
+                      style={{ color: connection.isAdmin ? theme.colors.disabledText : '#10B981' }}
+                      onMouseOver={(e) => !connection.isAdmin && (e.currentTarget.style.backgroundColor = `${theme.colors.success}15`)}
+                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <ClipboardList size={16} />
+                    </button>
+                  </CustomTooltip>
+                  
+                  {(!connection.uid || connection.uid === localStorage.getItem("uid")) && !connection.isAdmin && (
+                    <CustomTooltip title="Edit Connection" position="top">
+                      <button
+                        onClick={() => setEditConnection(connection)}
+                        className="p-1.5 rounded-md transition-colors"
+                        style={{ color: theme.colors.accent }}
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = `${theme.colors.accent}15`)}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                    </CustomTooltip>
+                  )}
+                  
+                  {(!connection.uid || connection.uid === localStorage.getItem("uid")) && (
+                    <CustomTooltip
+                      title={connection.isAdmin ? "Cannot delete default connections" : "Delete Connection"}
+                      position="top"
+                    >
+                      <button
+                        onClick={() => confirmDeleteConnection(connection)}
+                        disabled={connection.isAdmin}
+                        className="p-1.5 rounded-md transition-colors disabled:opacity-50"
+                        style={{ color: connection.isAdmin ? theme.colors.disabledText : theme.colors.error }}
+                        onMouseOver={(e) => !connection.isAdmin && (e.currentTarget.style.backgroundColor = `${theme.colors.error}15`)}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </CustomTooltip>
+                  )}
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="p-5 flex-1 flex flex-col gap-4 text-sm" style={{ color: theme.colors.textSecondary }}>
+                
+                <div className="flex items-center gap-3">
+                  <Globe size={16} className="opacity-70 flex-shrink-0" />
+                  <div className="truncate">
+                    <span className="font-semibold" style={{ color: theme.colors.text }}>{connection.hostname}</span>
+                    <span className="opacity-70 mx-1">:</span>
+                    <span className="font-mono text-xs">{connection.port}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Server size={16} className="opacity-70 flex-shrink-0" />
+                  <div className="truncate">
+                    <span className="opacity-70 mr-2">Engine:</span>
+                    <span className="font-medium" style={{ color: theme.colors.text }}>{connection.selectedDB}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Activity size={16} className="opacity-70 flex-shrink-0" />
+                  <div className="truncate">
+                    <span className="opacity-70 mr-2">Database:</span>
+                    <span className="font-medium" style={{ color: theme.colors.text }}>{connection.database}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <User size={16} className="opacity-70 flex-shrink-0" />
+                  <div className="truncate">
+                    <span className="opacity-70 mr-2">User:</span>
+                    <span className="font-medium" style={{ color: theme.colors.text }}>{connection.username}</span>
+                  </div>
+                </div>
+                
+              </div>
+
+              {/* Card Footer (Badges) */}
+              <div 
+                className="p-4 pt-0 flex flex-wrap gap-2 mt-auto"
+              >
+                <div 
+                  className="px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5"
+                  style={{ backgroundColor: `${theme.colors.text}08`, color: theme.colors.textSecondary }}
                 >
-                  <tr>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "150px" }}
-                    >
-                      Connection Name
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "200px" }}
-                    >
-                      Description
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "150px" }}
-                    >
-                      Hostname
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "80px" }}
-                    >
-                      Port
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "150px" }}
-                    >
-                      Database
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "120px" }}
-                    >
-                      Username
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "140px" }}
-                    >
-                      Command Timeout
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "170px" }}
-                    >
-                      Max Transport Objects
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "120px" }}
-                    >
-                      Selected DB
-                    </th>
-                    <th
-                      className="py-3 px-4 text-left text-xs font-medium text-white uppercase tracking-wider"
-                      style={{ width: "140px" }}
-                    >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody
-                  className="divide-y divide-gray-200"
-                  style={{
-                    backgroundColor: theme.colors.surface,
-                  }}
-                  ref={tableContainerRef}
+                  <Clock size={12} />
+                  <span>{connection.commandTimeout}s Timeout</span>
+                </div>
+                <div 
+                  className="px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5"
+                  style={{ backgroundColor: `${theme.colors.text}08`, color: theme.colors.textSecondary }}
                 >
-                  {connections.map((connection, index) => (
-                    <tr
-                      key={connection.id}
-                      className="transition-colors duration-150"
-                      style={{
-                        backgroundColor:
-                          index % 2 === 0
-                            ? `${theme.colors.background}90`
-                            : theme.colors.surface,
-                        "&:hover": {
-                          backgroundColor: `${theme.colors.accent}15`,
-                        },
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = `${theme.colors.accent}15`;
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor =
-                          index % 2 === 0
-                            ? `${theme.colors.background}90`
-                            : theme.colors.surface;
-                      }}
-                    >
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        <div className="font-medium">
-                          {connection.connectionName}
-                        </div>
-                      </td>
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.description}
-                      </td>
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.hostname}
-                      </td>
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.port}
-                      </td>
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.database}
-                      </td>
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.username}
-                      </td>
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.commandTimeout}
-                      </td>
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.maxTransportObjects}
-                      </td>
-                      <td
-                        className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {connection.selectedDB}
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="flex justify-center space-x-3">
-                          <CustomTooltip
-                            title={
-                              connection.isAdmin
-                                ? "Cannot re-extract metadata for default connections"
-                                : "Re-extract Metadata"
-                            }
-                            position="top"
-                            variant="dark"
-                          >
-                            <button
-                              onClick={() =>
-                                handleReExtractMetadata(connection)
-                              }
-                              className="p-1.5 rounded-full focus:outline-none disabled:cursor-not-allowed transition-colors duration-200"
-                              aria-label="Re-extract metadata"
-                              disabled={connection.isAdmin}
-                              style={{
-                                color: connection.isAdmin
-                                  ? theme.colors.disabled
-                                  : "#10B981",
-                                backgroundColor: "transparent",
-                              }}
-                              onMouseOver={(e) => {
-                                if (!connection.isAdmin) {
-                                  e.currentTarget.style.backgroundColor =
-                                    theme.colors.background === "#0F172A"
-                                      ? "rgba(16, 185, 129, 0.2)"
-                                      : "rgba(220, 252, 231, 1)";
-                                }
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor =
-                                  "transparent";
-                              }}
-                            >
-                              <ClipboardList
-                                size={18}
-                                style={{
-                                  color: connection.isAdmin
-                                    ? theme.colors.disabled
-                                    : "#10B981",
-                                }}
-                              />
-                            </button>
-                          </CustomTooltip>
-                          {(!connection.uid ||
-                            connection.uid === localStorage.getItem("uid")) &&
-                            !connection.isAdmin && (
-                              <CustomTooltip
-                                title="Edit Connection"
-                                position="top"
-                                variant="dark"
-                              >
-                                <button
-                                  onClick={() => setEditConnection(connection)}
-                                  className="p-1.5 rounded-full focus:outline-none transition-colors duration-200"
-                                  aria-label="Edit connection"
-                                  style={{
-                                    color: "#3B82F6",
-                                    backgroundColor: "transparent",
-                                  }}
-                                  onMouseOver={(e) => {
-                                    e.currentTarget.style.backgroundColor =
-                                      theme.colors.background === "#0F172A"
-                                        ? "rgba(59, 130, 246, 0.2)"
-                                        : "rgba(219, 234, 254, 1)";
-                                  }}
-                                  onMouseOut={(e) => {
-                                    e.currentTarget.style.backgroundColor =
-                                      "transparent";
-                                  }}
-                                >
-                                  <Edit2
-                                    size={18}
-                                    style={{ color: "#3B82F6" }}
-                                  />
-                                </button>
-                              </CustomTooltip>
-                            )}
-                          {(!connection.uid ||
-                            connection.uid === localStorage.getItem("uid")) && (
-                            <CustomTooltip
-                              title={
-                                connection.isAdmin
-                                  ? "Cannot delete default connections"
-                                  : "Delete Connection"
-                              }
-                              position="top"
-                              variant="dark"
-                            >
-                              <button
-                                onClick={() =>
-                                  confirmDeleteConnection(connection)
-                                }
-                                className="p-1.5 rounded-full focus:outline-none disabled:cursor-not-allowed transition-colors duration-200"
-                                aria-label="Delete connection"
-                                disabled={connection.isAdmin}
-                                style={{
-                                  color: connection.isAdmin
-                                    ? theme.colors.disabled
-                                    : "#EF4444",
-                                  backgroundColor: "transparent",
-                                }}
-                                onMouseOver={(e) => {
-                                  if (!connection.isAdmin) {
-                                    e.currentTarget.style.backgroundColor =
-                                      theme.colors.background === "#0F172A"
-                                        ? "rgba(239, 68, 68, 0.2)"
-                                        : "rgba(254, 226, 226, 1)";
-                                  }
-                                }}
-                                onMouseOut={(e) => {
-                                  e.currentTarget.style.backgroundColor =
-                                    "transparent";
-                                }}
-                              >
-                                <Trash2
-                                  size={18}
-                                  style={{
-                                    color: connection.isAdmin
-                                      ? theme.colors.disabled
-                                      : "#EF4444",
-                                  }}
-                                />
-                              </button>
-                            </CustomTooltip>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  <Layers size={12} />
+                  <span>{connection.maxTransportObjects} Max Objects</span>
+                </div>
+                {connection.isAdmin && (
+                  <div 
+                    className="px-2.5 py-1 rounded-md text-xs font-bold ml-auto uppercase tracking-wider"
+                    style={{ backgroundColor: `${theme.colors.accent}15`, color: theme.colors.accent }}
+                  >
+                    Default
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       ) : (
         <div
@@ -687,77 +544,76 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
       {/* Render confirmation modal */}
       <DeleteConfirmationModal />
 
-      {/* Edit Connection Modal */}
+      {/* Edit Connection Modal - Right Slide-Over Drawer */}
       {editConnection && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-60 overflow-y-auto py-8">
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Dark Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" 
+            onClick={() => setEditConnection(null)} 
+          />
+          
+          {/* Drawer Panel */}
           <div
-            className="w-full max-w-3xl rounded-xl shadow-2xl relative"
+            className="relative w-full max-w-[600px] h-full shadow-2xl flex flex-col animate-slide-in-right"
             style={{
-              backgroundColor: theme.colors.surface,
-              border: `1px solid ${theme.colors.accent}40`,
+              backgroundColor: theme.colors.background,
+              borderLeft: `1px solid ${theme.colors.border}`,
             }}
           >
-            {/* Modal Header */}
+            {/* Drawer Header */}
             <div
-              className="flex items-center justify-between px-6 py-4 rounded-t-xl"
+              className="flex items-center justify-between px-6 py-5 flex-shrink-0"
               style={{
+                backgroundColor: theme.colors.surface,
                 borderBottom: `1px solid ${theme.colors.border}`,
-                backgroundColor: `${theme.colors.accent}15`,
               }}
             >
               <div>
-                <h2
-                  className="text-xl font-bold"
-                  style={{ color: theme.colors.text }}
-                >
+                <h2 className="text-xl font-bold" style={{ color: theme.colors.text }}>
                   Edit Connection
                 </h2>
-                <p
-                  className="text-sm mt-0.5"
-                  style={{ color: `${theme.colors.text}80` }}
-                >
-                  Editing: <strong>{editConnection.connectionName}</strong>
+                <p className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+                  Editing settings for <strong>{editConnection.connectionName}</strong>
                 </p>
               </div>
               <button
                 onClick={() => setEditConnection(null)}
                 className="p-2 rounded-full transition-colors duration-200"
-                style={{ color: theme.colors.text }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = `${theme.colors.text}15`;
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
+                style={{ color: theme.colors.textSecondary }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.hover)}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                 aria-label="Close edit modal"
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Render ConnectionForm in edit mode */}
-            <ConnectionForm
-              isAdmin={isAdmin}
-              token={token || ""}
-              editConnectionId={editConnection.id}
-              initialData={{
-                connectionName: editConnection.connectionName,
-                description: editConnection.description,
-                hostname: editConnection.hostname,
-                port: editConnection.port,
-                selectedDB: editConnection.selectedDB,
-                database: editConnection.database,
-                commandTimeout: editConnection.commandTimeout,
-                maxTransportObjects: editConnection.maxTransportObjects,
-                username: editConnection.username,
-                password: "",
-                isPublic: editConnection.isPublic || false,
-              }}
-              onSuccess={() => {
-                setEditConnection(null);
-                fetchConnections();
-              }}
-            />
+            {/* Render ConnectionForm in Drawer Body */}
+            <div className="flex-1 overflow-y-auto">
+              <ConnectionForm
+                isAdmin={isAdmin}
+                token={token || ""}
+                editConnectionId={editConnection.id}
+                initialData={{
+                  connectionName: editConnection.connectionName,
+                  description: editConnection.description,
+                  hostname: editConnection.hostname,
+                  port: editConnection.port,
+                  selectedDB: editConnection.selectedDB,
+                  database: editConnection.database,
+                  commandTimeout: editConnection.commandTimeout,
+                  maxTransportObjects: editConnection.maxTransportObjects,
+                  username: editConnection.username,
+                  password: "",
+                  isPublic: editConnection.isPublic || false,
+                }}
+                onSuccess={() => {
+                  setEditConnection(null);
+                  fetchConnections();
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
