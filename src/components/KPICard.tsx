@@ -29,10 +29,9 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, change, icon }) => {
 
   return (
     <div
-      className="p-5 rounded-2xl shadow-md transition-all duration-300 h-full flex flex-col justify-between border"
+      className="p-6 rounded-3xl transition-all duration-300 h-full flex flex-col justify-between"
       style={{
-        backgroundColor: theme.colors.surface,
-        borderColor: `${theme.colors.border}35`,
+        backgroundColor: theme.mode === 'light' ? '#F8FAFC' : 'rgba(255, 255, 255, 0.02)',
       }}
     >
       <div className="flex items-center justify-between mb-3">

@@ -108,7 +108,7 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
         if (!currentList) {
           currentList = [];
           elements.push(
-            <ul key={`ul-${index}`} className="list-disc pl-5">
+            <ul key={`ul-${index}`} className="list-disc pl-5 mb-4 space-y-2">
               {currentList}
             </ul>
           );
@@ -122,7 +122,7 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
           currentList = null;
         }
         if (line.trim()) {
-          elements.push(<p key={`p-${index}`}>{parseText(line)}</p>);
+          elements.push(<p key={`p-${index}`} className="mb-3 leading-relaxed">{parseText(line)}</p>);
         }
       }
     });
@@ -134,16 +134,14 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
       {/* Widget Container */}
       <div className="absolute bottom-6 right-6 pointer-events-auto">
         <div
-          className={`relative bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 transition-all duration-500 ease-out transform ${
+          className={`relative glass-modal rounded-[24px] shadow-2xl transition-all duration-500 ease-out transform ${
             isVisible
               ? "translate-y-0 opacity-100 scale-100"
               : "translate-y-8 opacity-0 scale-95"
-          } ${isExpanded ? "w-96 h-[500px]" : "w-80 h-64"}`}
+          } ${isExpanded ? "w-[600px] h-[600px]" : "w-[480px] h-80"}`}
           style={{
-            // background: theme.colors.surface,
-            background: `linear-gradient(135deg, ${theme.colors.surface}f0 0%, ${theme.colors.surface}e0 100%)`,
-            backdropFilter: "blur(20px)",
-            border: `1px solid ${theme.colors.surface}40`,
+            background: theme.colors.surfaceGlass,
+            border: `1px solid ${theme.colors.border}`,
           }}
         >
           {/* Header */}
@@ -198,10 +196,9 @@ const SummaryModal: React.FC<SummaryModalProps> = ({
             </div>
           </div>
 
-          {/* Content */}
           <div
-            className={`p-4 transition-all duration-500 ${
-              isExpanded ? "h-[400px]" : "h-[180px]"
+            className={`p-5 transition-all duration-500 ${
+              isExpanded ? "h-[500px]" : "h-[240px]"
             } overflow-hidden`}
           >
             <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">

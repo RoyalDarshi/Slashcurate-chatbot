@@ -2,166 +2,92 @@ import React from "react";
 import { useTheme } from "../ThemeContext";
 
 interface DashboardSkeletonProps {
- question?: string;
+  question?: string;
 }
 
-const DashboardSkeleton: React.FC<DashboardSkeletonProps> = ({question}) => {
-    const {theme}= useTheme();
+const DashboardSkeleton: React.FC<DashboardSkeletonProps> = ({ question }) => {
+  const { theme } = useTheme();
+
   return (
     <div
-      className="flex flex-col h-full p-2"
-      style={{ backgroundColor: theme.colors.background }}
+      className="flex flex-col h-full w-full p-1 animate-pulse"
+      style={{ backgroundColor: "transparent" }}
     >
-      {/* Question Section Skeleton */}
-      <div className="l lg:flex-row items-start">
-        {/* Current Question - made full width and uses theme colors */}
-        <div
-          className="w-full p-2 mb-2 rounded-xl shadow-md" // Added w-full here
-          style={{
-            backgroundColor: theme.colors.surface, // Using surface for question background
-            color: theme.colors.text, // Using text for question color
-            boxShadow: theme.shadow.md, // Using theme shadow
-            borderRadius: theme.borderRadius.large, // Using theme border radius
-          }}
+      {/* Elevated Question Header Skeleton */}
+      <div
+        className="w-full p-4 mb-4 rounded-xl border flex items-center justify-center min-h-[50px]"
+        style={{
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+          boxShadow:
+            theme.mode === "light"
+              ? "0 4px 18px -4px rgba(15,23,42,0.03)"
+              : theme.shadow.sm,
+        }}
+      >
+        <h3
+          className="text-sm font-bold text-center truncate max-w-2xl"
+          style={{ color: theme.colors.text }}
         >
-          <h3
-            className="text-xl font-bold text-center"
-            style={{ color: theme.colors.text }}
-          >
-            Question: {question}
-          </h3>
-        </div>
+          Question: {question || "Evaluating context criteria..."}
+        </h3>
       </div>
 
-      {/* Main Content Area Skeleton */}
-      <div className="flex flex-col lg:flex-row gap-2 flex-grow overflow-hidden">
-        {/* Graph Section Skeleton */}
+      {/* Main Grid Splitting Workspace Layout Skeleton */}
+      <div className="flex flex-col lg:flex-row gap-4 flex-grow overflow-hidden min-h-0 w-full items-stretch">
+        {/* Left Visualization Panel Skeleton */}
         <div
-          className="flex-1 rounded-xl shadow-lg flex justify-center items-center overflow-hidden"
+          className="flex-1 min-h-[300px] lg:min-h-0 rounded-2xl border p-5 flex flex-col justify-between"
           style={{
             backgroundColor: theme.colors.surface,
-            boxShadow: theme.shadow.lg,
-            borderRadius: theme.borderRadius.large,
-            minHeight: "400px",
+            borderColor: theme.colors.border,
           }}
         >
-          {/* Graph skeleton */}
-          <div className="w-full h-full p-6 flex flex-col justify-end">
-            <div className="flex items-end justify-between h-64 space-x-3">
-              {/* Bar chart skeleton */}
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex-1 rounded-t"
-                  style={{
-                    backgroundColor: theme.colors.textSecondary + "30",
-                    height: `${Math.random() * 60 + 40}%`,
-                  }}
-                ></div>
-              ))}
-            </div>
-            {/* X-axis labels skeleton */}
-            <div className="flex justify-between mt-3 space-x-3">
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-3 rounded flex-1"
-                  style={{ backgroundColor: theme.colors.textSecondary + "40" }}
-                ></div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Section: KPI Cards + Table/Query Skeleton */}
-        <div className="flex flex-col lg:w-[40%] w-full overflow-hidden">
-          {/* KPI Cards Skeleton */}
-          <div className="grid m-2 grid-cols-3 gap-2">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="p-3 rounded-xl shadow-md"
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  boxShadow: theme.shadow.md,
-                  borderRadius: theme.borderRadius.large,
-                }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div
-                    className="w-6 h-6 rounded"
-                    style={{
-                      backgroundColor: theme.colors.textSecondary + "40",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  className="h-4 bg-gray-300 rounded mb-2 w-3/4"
-                  style={{ backgroundColor: theme.colors.textSecondary + "40" }}
-                ></div>
-                <div
-                  className="h-6 bg-gray-300 rounded mb-1 w-1/2"
-                  style={{ backgroundColor: theme.colors.textSecondary + "30" }}
-                ></div>
-                <div
-                  className="h-3 bg-gray-300 rounded w-1/3"
-                  style={{ backgroundColor: theme.colors.textSecondary + "40" }}
-                ></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Table/Query Section Skeleton */}
           <div
-            className="flex-1 overflow-y-auto m-2 rounded-xl p-4"
-            style={{
-              backgroundColor: theme.colors.surface,
-              boxShadow: theme.shadow.lg,
-              borderRadius: theme.borderRadius.large,
-              minHeight: "300px",
-              maxHeight: "100%",
-            }}
+            className="flex items-center justify-between mb-4 pb-2 border-b"
+            style={{ borderColor: `${theme.colors.border}40` }}
           >
-            {/* Table header skeleton */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-4 rounded"
-                  style={{ backgroundColor: theme.colors.textSecondary + "40" }}
-                ></div>
-              ))}
-            </div>
+            <div className="h-3 w-28 rounded-md bg-slate-200/80 dark:bg-slate-800/60" />
+            <div className="h-6 w-32 rounded-lg bg-slate-200/60 dark:bg-slate-800/40" />
+          </div>
 
-            {/* Table rows skeleton */}
-            {[...Array(8)].map((_, rowIndex) => (
-              <div key={rowIndex} className="grid grid-cols-4 gap-4 mb-3">
-                {[...Array(4)].map((_, colIndex) => (
-                  <div
-                    key={colIndex}
-                    className="h-3 rounded"
-                    style={{
-                      backgroundColor: theme.colors.textSecondary + "30",
-                    }}
-                  ></div>
-                ))}
+          {/* Mock Graph Bars Skeleton */}
+          <div className="flex-1 flex items-end justify-center gap-4 px-4 py-6">
+            <div className="w-10 h-32 rounded-t-lg bg-slate-200/60 dark:bg-slate-800/40" />
+            <div className="w-10 h-48 rounded-t-lg bg-slate-200/70 dark:bg-slate-800/50" />
+            <div className="w-10 h-24 rounded-t-lg bg-slate-200/50 dark:bg-slate-800/30" />
+            <div className="w-10 h-40 rounded-t-lg bg-slate-200/60 dark:bg-slate-800/40" />
+          </div>
+
+          <div className="h-3 w-full rounded-md mt-4 bg-slate-200/50 dark:bg-slate-800/30" />
+        </div>
+
+        {/* Right Tabular/Query Control Panel Skeleton */}
+        <div
+          className="w-full lg:w-[400px] rounded-2xl border p-4 flex flex-col gap-3.5"
+          style={{
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+          }}
+        >
+          <div
+            className="flex items-center justify-between pb-2 border-b"
+            style={{ borderColor: `${theme.colors.border}40` }}
+          >
+            <div className="h-3 w-24 rounded-md bg-slate-200/80 dark:bg-slate-800/60" />
+            <div className="h-6 w-20 rounded-md bg-slate-200/60 dark:bg-slate-800/40" />
+          </div>
+
+          {/* Dummy Rows Skeleton */}
+          <div className="space-y-2.5 mt-2 flex-1 overflow-hidden">
+            {[...Array(6)].map((_, idx) => (
+              <div key={idx} className="flex gap-3 items-center">
+                <div className="h-3 w-1/4 rounded bg-slate-200/70 dark:bg-slate-800/50" />
+                <div className="h-3 w-2/4 rounded bg-slate-200/50 dark:bg-slate-800/30" />
+                <div className="h-3 w-1/4 rounded bg-slate-200/60 dark:bg-slate-800/40" />
               </div>
             ))}
           </div>
-        </div>
-
-        {/* View Toggle Buttons Skeleton */}
-        <div className="flex flex-row self-start lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 flex-shrink-0 mt-4 lg:mt-0 justify-center">
-          {[...Array(2)].map((_, i) => (
-            <div
-              key={i}
-              className="w-12 h-12 rounded-full"
-              style={{
-                backgroundColor: theme.colors.bubbleBot,
-                boxShadow: theme.shadow.md,
-              }}
-            ></div>
-          ))}
         </div>
       </div>
     </div>

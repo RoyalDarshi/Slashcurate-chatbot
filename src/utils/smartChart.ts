@@ -1389,9 +1389,9 @@ export const getSmartChartConfig = (
       orientation === "horizontal"
         ? Math.min(220, Math.max(92, maxLabelLength * 7))
         : 40,
-    gridRight: 10,
-    gridTop: 20,
-    gridBottom: dense ? 86 : 30,
+    gridRight: 15,
+    gridTop: 15,
+    gridBottom: dense ? 70 : 25,
     dataZoom: categoryCount > 24 && ["bar", "line", "area"].includes(chartType),
   };
   const label = {
@@ -1722,8 +1722,8 @@ export const getSmartEChartsOption = (
         {
           name: formatKey(config.valueKey ?? "Value"),
           type: "pie",
-          radius: ["62%", "80%"],
-          center: ["50%", "46%"],
+          radius: ["40%", "60%"],
+          center: ["50%", "50%"],
           avoidLabelOverlap: true,
           minAngle: 4,
           itemStyle: {
@@ -1847,7 +1847,7 @@ export const getSmartEChartsOption = (
       tooltip: { ...baseOption.tooltip, trigger: "item" },
       radar: {
         center: ["50%", "51%"],
-        radius: "64%",
+        radius: "60%",
         indicator: config.radarIndicators,
         axisName: {
           color: theme.colors.textSecondary,

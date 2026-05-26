@@ -117,12 +117,10 @@ const PreviousQuestionsModal: React.FC<PreviousQuestionsModalProps> = ({
       </style>
 
       <div
-        className="modal-container rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+        className="modal-container glass-modal rounded-[24px] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl"
         style={{
-          background: `linear-gradient(135deg, ${theme.colors.surface}f0, ${theme.colors.surface}e0)`,
-          backdropFilter: "blur(20px)",
-          border: `1px solid ${theme.colors.border}40`,
-          boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px ${theme.colors.border}20`,
+          background: theme.colors.surfaceGlass,
+          border: `1px solid ${theme.colors.border}`,
         }}
       >
         {/* Header */}
@@ -145,7 +143,7 @@ const PreviousQuestionsModal: React.FC<PreviousQuestionsModalProps> = ({
             </div>
             <div>
               <h3
-                className="font-bold tracking-tight"
+                className="font-semibold tracking-tight"
                 style={{
                   color: theme.colors.text,
                   fontSize: "1.125rem",

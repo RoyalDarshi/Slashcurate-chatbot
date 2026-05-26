@@ -38,14 +38,13 @@ function App() {
   } | null>(null);
   const [showTip, setShowTip] = useState<boolean>(false);
   const chatRef = useRef<ChatInterfaceHandle>(null);
-  const dashboardRef = useRef<DashboardInterfaceHandle>(null); // New ref for DashboardInterface
+  const dashboardRef = useRef<DashboardInterfaceHandle>(null);
 
   const triggerChatFunction = () => {
     if (chatRef.current) {
       chatRef.current.handleNewChat();
     }
     if (dashboardRef.current) {
-      // Also trigger for dashboard
       dashboardRef.current.handleNewChat();
     }
   };
@@ -65,12 +64,14 @@ function App() {
           sessionStorage.removeItem(key);
           setIsAuthenticated(false);
           setIsAdminAuthenticated(false);
+          localStorage.removeItem("currentSessionId");
         }
       } catch (error) {
         console.error(`Error validating token:`, error);
         sessionStorage.removeItem(key);
         setIsAuthenticated(false);
         setIsAdminAuthenticated(false);
+        localStorage.removeItem("currentSessionId");
       }
     }
   };
@@ -82,12 +83,15 @@ function App() {
   const handleNewChat = () => {
     triggerChatFunction();
     localStorage.removeItem("currentSessionId");
-    localStorage.removeItem("currentDashboardQuestionId"); // Clear dashboard question ID
+    localStorage.removeItem("currentDashboardQuestionId");
     handleHomePage();
   };
+
   const handleUserLogout = () => {
     handleLogout();
     setIsAuthenticated(false);
+    localStorage.removeItem("currentSessionId");
+    localStorage.removeItem("currentDashboardQuestionId");
   };
 
   const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
@@ -125,7 +129,7 @@ function App() {
                   onLoginSuccess={handleLoginSuccess}
                   onLogout={handleUserLogout}
                   chatRef={chatRef}
-                  dashboardRef={dashboardRef} // Pass dashboard ref
+                  dashboardRef={dashboardRef}
                   onCreateConSelected={handleCreateConSelected}
                   onHomePage={handleHomePage}
                   onNewChat={handleNewChat}
@@ -136,7 +140,6 @@ function App() {
                 />
               }
             />
-
             <Route
               path="/admin"
               element={
@@ -168,7 +171,7 @@ const AppContent: React.FC<{
   onCreateConSelected: () => void;
   onHomePage: () => void;
   chatRef: React.RefObject<ChatInterfaceHandle>;
-  dashboardRef: React.RefObject<DashboardInterfaceHandle>; // New prop for dashboard ref
+  dashboardRef: React.RefObject<DashboardInterfaceHandle>;
   questionToAsk: { text: string; connection: string; query?: string } | null;
   setQuestionToAsk: (
     question: { text: string; connection: string; query?: string } | null,
@@ -185,7 +188,7 @@ const AppContent: React.FC<{
   onCreateConSelected,
   onHomePage,
   chatRef,
-  dashboardRef, // Destructure dashboardRef
+  dashboardRef,
   questionToAsk,
   setQuestionToAsk,
   showTip,
@@ -193,7 +196,7 @@ const AppContent: React.FC<{
   onNewChat,
 }) => {
   const { theme } = useTheme();
-  const { notificationsEnabled, currentView } = useSettings(); // Get currentView from settings
+  const { notificationsEnabled, currentView } = useSettings();
   const userToken = sessionStorage.getItem("token") || "";
 
   const handleSessionClicked = () => {
@@ -208,7 +211,7 @@ const AppContent: React.FC<{
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col antialiased transition-colors duration-300"
       style={{
         backgroundColor: theme.colors.background,
         color: theme.colors.text,
@@ -216,7 +219,7 @@ const AppContent: React.FC<{
     >
       <ToastContainer
         position="top-right"
-        autoClose={7000}
+        autoClose={5000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
@@ -224,15 +227,16 @@ const AppContent: React.FC<{
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme={theme.colors.accent === "#7C3AED" ? "dark" : "light"}
+        theme={theme.mode === "dark" ? "dark" : "light"}
         style={{ zIndex: 10000 }}
       />
       {isAuthenticated ? (
         <div
-          className="flex flex-col md:flex-row h-screen w-screen overflow-hidden p-0 md:p-4 lg:p-5 gap-0 md:gap-4 lg:gap-5"
-          style={{ backgroundColor: theme.colors.background }}
+          className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-transparent"
         >
-          <div className="md:hidden h-16 w-full" />
+          {/* Mobile safe header gap */}
+          <div className="md:hidden h-16 w-full flex-shrink-0" />
+
           <Sidebar
             onMenuClick={setActiveMenu}
             activeMenu={activeMenu}
@@ -243,22 +247,19 @@ const AppContent: React.FC<{
             }
             onLogout={onLogout}
           />
+
           <main
-            className="flex-1 flex flex-col overflow-hidden md:mt-0 mt-16 rounded-none md:rounded-2xl border-0 md:border shadow-none md:shadow-md transition-all duration-300"
+            className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
             style={{
               backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
+              boxShadow: "none",
+              borderLeft: "none",
             }}
           >
-            <UserTips
-              show={showTip}
-              onClose={() => {
-                setShowTip(false);
-              }}
-            />
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <UserTips show={showTip} onClose={() => setShowTip(false)} />
+            <div className="flex-1 flex flex-col overflow-hidden relative">
               {activeMenu === "home" &&
-                (currentView === "chat" ? ( // Conditionally render based on currentView
+                (currentView === "chat" ? (
                   <ChatInterface
                     ref={chatRef}
                     onCreateConSelected={onCreateConSelected}
@@ -267,35 +268,43 @@ const AppContent: React.FC<{
                   />
                 ) : (
                   <DashboardInterface
-                    ref={dashboardRef} // Pass ref to DashboardInterface
+                    ref={dashboardRef}
                     onCreateConSelected={onCreateConSelected}
                     initialQuestion={questionToAsk}
                     onQuestionAsked={() => setQuestionToAsk(null)}
                   />
                 ))}
               {activeMenu === "new-connection" && (
-                <ConnectionForm
-                  token={userToken}
-                  isAdmin={false}
-                  onSuccess={() => setActiveMenu("existing-connection")}
-                />
+                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                  <ConnectionForm
+                    token={userToken}
+                    isAdmin={false}
+                    onSuccess={() => setActiveMenu("existing-connection")}
+                  />
+                </div>
               )}
               {activeMenu === "existing-connection" && (
-                <ExistingConnections
-                  isAdmin={false}
-                  createConnection={onCreateConSelected}
-                />
+                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                  <ExistingConnections
+                    isAdmin={false}
+                    createConnection={onCreateConSelected}
+                  />
+                </div>
               )}
               {activeMenu === "history" && (
-                <History onSessionClicked={handleSessionClicked} />
+                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
+                  <History onSessionClicked={handleSessionClicked} />
+                </div>
               )}
               {activeMenu === "favourite" && (
-                <Favourites
-                  onFavoriteSelected={(question, connection, query) => {
-                    setQuestionToAsk({ text: question, connection, query });
-                    setTimeout(() => setActiveMenu("home"), 0);
-                  }}
-                />
+                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
+                  <Favourites
+                    onFavoriteSelected={(question, connection, query) => {
+                      setQuestionToAsk({ text: question, connection, query });
+                      setTimeout(() => setActiveMenu("home"), 0);
+                    }}
+                  />
+                </div>
               )}
               {activeMenu === "settings" && <Settings />}
               {activeMenu === "help" && (

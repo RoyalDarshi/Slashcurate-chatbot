@@ -1,6 +1,7 @@
 import { memo, useCallback, useState, useEffect } from "react";
 import { useTheme } from "../ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 interface RecommendedQuestion {
   question_id: string;
@@ -14,7 +15,7 @@ interface RecommendedQuestionsProps {
   onQuestionClick: (
     question: string,
     connection: string,
-    query?: string
+    query?: string,
   ) => void;
 }
 
@@ -27,7 +28,7 @@ const ModernizedRecommendedQuestions = ({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 300);
+    const timer = setTimeout(() => setIsVisible(true), 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -35,132 +36,81 @@ const ModernizedRecommendedQuestions = ({
     (question: string, connection: string, query?: string) => {
       onQuestionClick(question, connection, query);
     },
-    [onQuestionClick]
+    [onQuestionClick],
   );
 
   return (
     <motion.section
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      aria-label="Recommended Questions"
-      className="w-full mt-12 px-4 flex justify-center"
-      style={{ fontFamily: theme.typography.fontFamily }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 12 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="w-full mt-6 text-left"
     >
-      <div className="w-full max-w-4xl mx-auto">
-        {questions.length > 0 && (
-          <motion.h2
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="text-2xl mb-8 tracking-tight text-center"
-            style={{
-              color: theme.colors.text,
-              fontWeight: theme.typography.weight.bold,
-            }}
-          >
-            Would you like to ask your frequently asked questions?
-          </motion.h2>
-        )}
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <Sparkles size={14} style={{ color: theme.colors.accent }} />
+        <h2
+          className="text-xs font-semibold uppercase tracking-wider opacity-60"
+          style={{
+            color: theme.colors.textSecondary,
+            fontFamily: theme.typography.fontFamily,
+          }}
         >
-          <ul
-            className="grid gap-4"
-            style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-            }}
-          >
-            <AnimatePresence>
-              {questions.map((q, index) => (
-                <motion.li
-                  key={q.question_id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + index * 0.1, duration: 0.4 }}
-                  whileHover={{ scale: 1.02 }}
+          Suggested Analytical Parameters
+        </h2>
+      </div>
+
+      <div className="max-w-2xl">
+        <ul className="flex flex-col gap-2 m-0 p-0 list-none">
+          <AnimatePresence>
+            {questions.map((q, idx) => (
+              <motion.li
+                key={q.question_id || idx}
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleClick(q.question, q.connection, q.query)}
+                  onMouseEnter={() => setHoveredId(q.question_id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  className="w-full flex items-center justify-between text-left px-4 py-3 rounded-xl border text-sm font-semibold transition-all duration-200 shadow-xs group"
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderColor:
+                      hoveredId === q.question_id
+                        ? `${theme.colors.accent}40`
+                        : theme.colors.border,
+                  }}
                 >
-                  <motion.button
-                    className="w-full flex items-center p-5 rounded-lg focus:outline-none"
+                  <span
+                    className="truncate pr-4 transition-colors"
                     style={{
-                      background:
-                        hoveredId === q.question_id
-                          ? theme.colors.hover
-                          : theme.colors.surface,
-                      color: theme.colors.text,
-                      border: `1px solid ${
+                      color:
                         hoveredId === q.question_id
                           ? theme.colors.accent
-                          : theme.colors.border
-                      }`,
-                      borderRadius: theme.borderRadius.default,
-                      boxShadow:
-                        hoveredId === q.question_id
-                          ? theme.shadow.md
-                          : theme.shadow.sm,
-                      transition: theme.transition.default,
+                          : theme.colors.text,
                     }}
-                    onClick={() =>
-                      handleClick(q.question, q.connection, q.query)
-                    }
-                    onMouseEnter={() => setHoveredId(q.question_id)}
-                    onMouseLeave={() => setHoveredId(null)}
-                    onFocus={() => setHoveredId(q.question_id)}
-                    onBlur={() => setHoveredId(null)}
-                    aria-label={`Ask: ${q.question}`}
                   >
-                    <div className="flex items-center w-full">
-                      <motion.span
-                        className={`text-base truncate flex-grow ${
-                          hoveredId === q.question_id ? "font-medium" : ""
-                        }`}
-                        style={{
-                          color:
-                            hoveredId === q.question_id
-                              ? theme.colors.accent
-                              : theme.colors.text,
-                          fontWeight:
-                            hoveredId === q.question_id
-                              ? theme.typography.weight.medium
-                              : theme.typography.weight.normal,
-                        }}
-                        title={q.question}
-                      >
-                        {q.question}
-                      </motion.span>
+                    {q.question}
+                  </span>
 
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{
-                          opacity: hoveredId === q.question_id ? 1 : 0,
-                          scale: hoveredId === q.question_id ? 1 : 0.8,
-                        }}
-                        transition={{ duration: 0.2 }}
-                        className="ml-2 flex-shrink-0"
-                      >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke={theme.colors.accent}
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                      </motion.div>
-                    </div>
-                  </motion.button>
-                </motion.li>
-              ))}
-            </AnimatePresence>
-          </ul>
-        </motion.div>
+                  <ArrowRight
+                    size={14}
+                    className="flex-shrink-0 transition-transform duration-200"
+                    style={{
+                      color: theme.colors.accent,
+                      transform:
+                        hoveredId === q.question_id
+                          ? "translateX(4px)"
+                          : "translateX(0)",
+                    }}
+                  />
+                </button>
+              </motion.li>
+            ))}
+          </AnimatePresence>
+        </ul>
       </div>
     </motion.section>
   );

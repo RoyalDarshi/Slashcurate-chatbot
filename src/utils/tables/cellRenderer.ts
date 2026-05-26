@@ -154,13 +154,6 @@ export const getCellRenderModel = (
       kind: "number",
       title: displayValue,
       heatPercent,
-      progressPercent:
-        column.stats.max && column.stats.max > 0
-          ? Math.max(
-              0,
-              Math.min(100, (Math.abs(numericValue) / column.stats.max) * 100),
-            )
-          : undefined,
       isAnomaly,
       isPositive: numericValue > 0,
       isNegative: numericValue < 0,

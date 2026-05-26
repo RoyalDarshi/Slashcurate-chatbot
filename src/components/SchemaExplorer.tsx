@@ -338,7 +338,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
 
   return (
     <div
-      className="schema-explorer w-full max-w-full rounded-lg flex flex-col"
+      className="schema-explorer w-full max-w-full flex flex-col glass-modal rounded-3xl border border-transparent"
       style={{
         background: theme.colors.surface,
         boxShadow: `0 8px 32px ${theme.colors.text}15`,

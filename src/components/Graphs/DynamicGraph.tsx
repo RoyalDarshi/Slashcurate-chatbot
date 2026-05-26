@@ -35,22 +35,22 @@ interface DynamicGraphProps {
 const getIcon = (chartType: SmartChartType) => {
   switch (chartType) {
     case "line":
-      return <LineChartIcon size={46} color="white" />;
+      return <LineChartIcon size={32} className="text-indigo-500" />;
     case "pie":
-      return <PieChartIcon size={46} color="white" />;
+      return <PieChartIcon size={32} className="text-indigo-500" />;
     case "scatter":
-      return <ScatterChartIcon size={46} color="white" />;
+      return <ScatterChartIcon size={32} className="text-indigo-500" />;
     case "radar":
-      return <RadarIcon size={46} color="white" />;
+      return <RadarIcon size={32} className="text-indigo-500" />;
     case "funnel":
-      return <FunnelIcon size={46} color="white" />;
+      return <FunnelIcon size={32} className="text-indigo-500" />;
     case "area":
-      return <AreaChartIcon size={46} color="white" />;
+      return <AreaChartIcon size={32} className="text-indigo-500" />;
     case "treemap":
-      return <PieChartIcon size={46} color="white" />;
+      return <PieChartIcon size={32} className="text-indigo-500" />;
     case "bar":
     default:
-      return <BarChart3 size={46} color="white" />;
+      return <BarChart3 size={32} className="text-indigo-500" />;
   }
 };
 
@@ -97,12 +97,8 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
           chartInstance?.resize();
         }
       });
-
       resizeObserver.observe(container);
-
-      return () => {
-        resizeObserver.disconnect();
-      };
+      return () => resizeObserver.disconnect();
     }, []);
 
     useEffect(() => {
@@ -149,7 +145,6 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
     const handleDownloadGraph = async (resolution: "low" | "high") => {
       if (!containerRef.current) return;
-
       try {
         const scale = resolution === "high" ? 2 : 1;
         const canvas = await html2canvas(containerRef.current, {
@@ -173,42 +168,42 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
     if (config.emptyState.isEmpty) {
       return (
         <div
-          className="flex flex-col items-center justify-center h-full p-8 text-center"
-          style={{
-            background: theme.colors.surface,
-            borderRadius: theme.borderRadius.large,
-            minHeight: 320,
-          }}
+          className="flex flex-col items-center justify-center h-full p-8 text-center bg-transparent animate-fade-up"
+          style={{ minHeight: 320 }}
         >
           <div
-            className="mb-6 flex items-center justify-center"
+            className="mb-4 flex items-center justify-center border"
             style={{
-              width: 92,
-              height: 92,
-              background: theme.gradients.primary,
+              width: 64,
+              height: 64,
+              background: `${theme.colors.accent}08`,
+              borderColor: `${theme.colors.accent}20`,
               borderRadius: "50%",
-              boxShadow: theme.shadow.md,
             }}
           >
             {getIcon(config.chartType)}
           </div>
           <h3
-            className="mb-2 text-2xl font-bold"
+            className="mb-1 text-base font-semibold tracking-tight"
             style={{ color: theme.colors.text }}
           >
             {config.emptyState.title}
           </h3>
-          <p className="max-w-lg" style={{ color: theme.colors.textSecondary }}>
+          <p
+            className="max-w-md text-xs font-semibold leading-relaxed"
+            style={{ color: theme.colors.textSecondary }}
+          >
             {config.emptyState.message}
           </p>
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <div className="mt-3 flex flex-wrap justify-center gap-1.5">
             {config.emptyState.suggestions.map((suggestion) => (
               <span
                 key={suggestion}
-                className="px-3 py-1 text-sm"
+                className="px-2.5 py-1 text-xs font-semibold border"
                 style={{
                   color: theme.colors.textSecondary,
-                  border: `1px solid ${theme.colors.border}`,
+                  borderColor: theme.colors.border,
+                  background: theme.colors.background,
                   borderRadius: theme.borderRadius.pill,
                 }}
               >
@@ -222,68 +217,59 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
     return (
       <div
-        className="flex h-full flex-col relative"
-        style={{
-          background: theme.colors.surface,
-          backdropFilter: "blur(20px) saturate(180%)",
-          WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          overflow: "hidden",
-          transition: theme.transition.default,
-        }}
+        className="flex h-full flex-grow flex-col relative bg-transparent"
+        style={{ overflow: "visible" }}
       >
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
           <div className="relative flex-shrink-0" ref={insightsRef}>
             <button
               onClick={() => {
                 setShowInsights((value) => !value);
                 setShowResolutionOptions(false);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold border rounded-lg transition-colors shadow-xs"
               style={{
                 backgroundColor: showInsights
-                  ? `${theme.colors.accent}1A`
-                  : "transparent",
+                  ? `${theme.colors.accent}12`
+                  : theme.colors.surface,
                 color: theme.colors.accent,
-                border: `1px solid ${showInsights ? theme.colors.accent + "33" : "transparent"}`,
-                borderRadius: theme.borderRadius.default,
+                borderColor: showInsights
+                  ? `${theme.colors.accent}30`
+                  : theme.colors.border,
               }}
-              title="AI Insights"
             >
-              <Sparkles size={16} />
+              <Sparkles size={14} />
               <span>Insights</span>
             </button>
 
             {showInsights && config.insights.length > 0 && (
               <div
-                className="absolute right-0 top-full z-50 mt-1 flex w-80 flex-col gap-2 p-3 shadow-2xl"
+                className="absolute left-0 top-full z-50 mt-1 flex w-[360px] flex-col gap-3 p-4 shadow-xl border"
                 style={{
                   backgroundColor: theme.colors.surface,
-                  border: `1px solid ${theme.colors.border}`,
+                  borderColor: theme.colors.border,
                   borderRadius: theme.borderRadius.large,
                 }}
               >
-                <div
-                  className="mb-1 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: theme.colors.textSecondary }}
-                >
-                  AI Summary
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  AI Summary Overview
                 </div>
                 {config.insights.map((insight, idx) => (
                   <div
                     key={idx}
-                    className="rounded px-3 py-2 text-sm"
+                    className="rounded-lg px-3 py-2.5 text-sm font-medium leading-relaxed"
                     style={{
                       background:
                         insight.tone === "negative"
-                          ? `${theme.colors.error}10`
+                          ? "rgba(239, 68, 68, 0.05)"
                           : insight.tone === "positive"
-                            ? `${theme.colors.success}10`
+                            ? "rgba(16, 185, 129, 0.05)"
                             : theme.colors.background,
                       borderLeft: `3px solid ${insight.tone === "negative" ? theme.colors.error : insight.tone === "positive" ? theme.colors.success : theme.colors.accent}`,
                       color: theme.colors.text,
                     }}
                   >
-                    <strong>{insight.label}:</strong> {insight.value}
+                    <strong className="font-semibold">{insight.label}:</strong> {insight.value}
                   </div>
                 ))}
               </div>
@@ -296,57 +282,47 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 setShowResolutionOptions((value) => !value);
                 setShowInsights(false);
               }}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium transition-opacity hover:opacity-85"
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold border rounded-lg transition-colors shadow-xs"
               style={{
-                backgroundColor: "transparent",
+                backgroundColor: theme.colors.surface,
                 color: theme.colors.textSecondary,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.borderRadius.default,
+                borderColor: theme.colors.border,
               }}
-              title="Export graph"
             >
-              <Download size={16} />
+              <Download size={14} />
               <span>Export</span>
             </button>
 
             {showResolutionOptions && (
               <div
                 ref={dropdownRef}
-                className="absolute right-0 z-10 mt-1 py-1 shadow-lg"
+                className="absolute right-0 z-10 mt-1 py-1 shadow-lg border rounded-lg overflow-hidden animate-fade-up"
                 style={{
                   backgroundColor: theme.colors.surface,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.borderRadius.default,
-                  minWidth: 140,
+                  borderColor: theme.colors.border,
+                  minWidth: 130,
                 }}
               >
-                <button
-                  onClick={() => handleDownloadGraph("low")}
-                  className="w-full px-3 py-1.5 text-left text-sm hover:opacity-80"
-                  style={{ color: theme.colors.text }}
-                >
-                  Standard Quality
-                </button>
-                <button
-                  onClick={() => handleDownloadGraph("high")}
-                  className="w-full px-3 py-1.5 text-left text-sm hover:opacity-80"
-                  style={{ color: theme.colors.text }}
-                >
-                  High Quality
-                </button>
+                {["low", "high"].map((res) => (
+                  <button
+                    key={res}
+                    onClick={() => handleDownloadGraph(res as any)}
+                    className="w-full px-3 py-1.5 text-left text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: theme.colors.text }}
+                  >
+                    {res === "low" ? "Standard Image" : "High Quality Render"}
+                  </button>
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex-1 min-h-0" ref={containerRef}>
+        <div className="flex-1 min-h-0 w-full" ref={containerRef}>
           <ReactECharts
             ref={echartsRef}
             option={option}
-            style={{
-              height: "100%",
-              width: "100%",
-            }}
+            style={{ height: "100%", width: "100%" }}
             notMerge
             lazyUpdate
           />

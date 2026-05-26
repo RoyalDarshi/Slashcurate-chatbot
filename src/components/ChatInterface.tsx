@@ -15,7 +15,14 @@ import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
-import { ArrowDown, Database, Layers, PlusCircle } from "lucide-react";
+import {
+  ArrowDown,
+  Database,
+  Layers,
+  PlusCircle,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
 import {
@@ -26,8 +33,6 @@ import {
 } from "../hooks";
 import SchemaExplorer from "./SchemaExplorer";
 import schemaSampleData from "../data/sampleSchemaData";
-import html2canvas from "html2canvas";
-
 import { FaFilePdf } from "react-icons/fa";
 
 export type ChatInterfaceHandle = {
@@ -39,9 +44,7 @@ export type ChatInterfaceHandle = {
   ) => void;
 };
 
-// --- UPDATED FUNCTION ---
 const getErrorMessage = (error: any): string => {
-  // Check for axios cancel
   if (axios.isCancel(error) || (error as Error).name === "CanceledError") {
     return "Request cancelled by user.";
   }
@@ -71,23 +74,17 @@ const getErrorMessage = (error: any): string => {
   );
 };
 
-// Utility function to limit data to 500 rows for backend storage
 const limitDataForBackend = (responseData: any): any => {
   const MAX_ROWS = 500;
-  // Create a deep copy to avoid mutating the original
   const limitedData = { ...responseData };
-
-  // Limit the answer array to 500 rows if it exists
   if (
     Array.isArray(limitedData.answer) &&
     limitedData.answer.length > MAX_ROWS
   ) {
     limitedData.answer = limitedData.answer.slice(0, MAX_ROWS);
   }
-
   return limitedData;
 };
-// --- END UPDATED FUNCTION ---
 
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
@@ -135,13 +132,8 @@ const ChatInterface = memo(
         useState(false);
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
 
-
       const options = [
-        {
-          value: "create-con",
-          label: "Create New Connection",
-          isAdmin: false,
-        },
+        { value: "create-con", label: "Create New Connection", isAdmin: false },
         ...connections.map((connection: Connection) => ({
           value: connection.connectionName,
           label: connection.connectionName,
@@ -149,28 +141,20 @@ const ChatInterface = memo(
         })),
       ];
 
-
-
       useEffect(() => {
-        // Function to check loading status and poll
         const checkAndPoll = async () => {
           const allLoadingMessages = messages.filter(
             (msg) => msg.isBot && msg.status === "loading",
           );
-
           if (allLoadingMessages.length === 0) {
             setIsSubmitting(false);
             return;
           }
           setIsSubmitting(true);
-
           const messagesToPoll = allLoadingMessages.filter(
             (msg) => msg.id.includes("-") && !msg.id.startsWith("temp-"),
           );
-
-          if (messagesToPoll.length === 0) {
-            return;
-          }
+          if (messagesToPoll.length === 0) return;
 
           try {
             for (const msg of messagesToPoll) {
@@ -179,7 +163,6 @@ const ChatInterface = memo(
                 { token },
                 { headers: { Authorization: `Bearer ${token}` } },
               );
-
               if (response.data.status !== "loading") {
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
@@ -193,18 +176,12 @@ const ChatInterface = memo(
               }
             }
           } catch (error) {
-            // Don't set isSubmitting to false here, let the next poll cycle handle it
             console.error("Error polling message updates:", error);
           }
         };
 
-        // Initial check
         checkAndPoll();
-
-        // Set up interval
         const intervalId = setInterval(checkAndPoll, 3000);
-
-        // Cleanup
         return () => clearInterval(intervalId);
       }, [messages, token, dispatchMessages]);
 
@@ -217,16 +194,10 @@ const ChatInterface = memo(
             setIsConnectionDropdownOpen(false);
           }
         };
-
-        if (isConnectionDropdownOpen) {
+        if (isConnectionDropdownOpen)
           document.addEventListener("mousedown", handleClickOutside);
-        } else {
+        return () =>
           document.removeEventListener("mousedown", handleClickOutside);
-        }
-
-        return () => {
-          document.removeEventListener("mousedown", handleClickOutside);
-        };
       }, [isConnectionDropdownOpen]);
 
       useEffect(() => {
@@ -260,11 +231,8 @@ const ChatInterface = memo(
         setInput("");
         setEditingMessageId(null);
         setSessionConnectionError(null);
-        setGraphSummary(null);
-        setShowSummaryModal(false);
       }, [clearSession]);
 
-      // Replace your existing askQuestion with this:
       const askQuestion = useCallback(
         async (
           question: string,
@@ -272,11 +240,9 @@ const ChatInterface = memo(
           isFavorited: boolean,
           query?: string,
         ) => {
-          // ... (Keep your existing session/connection validation logic here) ...
-          // START VALIDATION BLOCK
           if (!connection) {
             toast.error("No connection provided.");
-            setIsSubmitting(false); // Release lock
+            setIsSubmitting(false);
             return;
           }
           let currentSessionId = sessionId;
@@ -300,7 +266,7 @@ const ChatInterface = memo(
                 currentSessionId = storedSessionId;
               } catch (error) {
                 console.error(
-                  "Failed to load stored session from localStorage (askQuestion):",
+                  "Failed to load stored session from localStorage:",
                   error,
                 );
                 localStorage.removeItem("currentSessionId");
@@ -308,11 +274,9 @@ const ChatInterface = memo(
             }
           }
 
-          // 1. OPTIMISTIC UPDATE: Create temporary IDs
           const tempUserMsgId = `temp-user-${Date.now()}`;
           const tempBotMsgId = `temp-bot-${Date.now() + 1}`;
 
-          // Prepare Optimistic Messages
           const optimisticUserMessage: Message = {
             id: tempUserMsgId,
             content: question,
@@ -357,32 +321,26 @@ const ChatInterface = memo(
               });
             } catch (error) {
               console.error("Error creating session:", error);
-              setIsSubmitting(false); // Release lock on error
+              setIsSubmitting(false);
               return;
             }
           } else {
-            // 2. Add User message to UI IMMEDIATELY (Before API call)
             dispatchMessages({
               type: "ADD_MESSAGE",
               message: optimisticUserMessage,
             });
-
-            // 3. Add Bot "Loading" message to UI IMMEDIATELY
             dispatchMessages({
               type: "ADD_MESSAGE",
               message: optimisticBotMessage,
             });
           }
-          // END VALIDATION BLOCK
 
-          // Scroll to bottom
           setTimeout(() => scrollToMessage(tempBotMsgId), 100);
 
           let finalUserMessageId = tempUserMsgId;
           let finalBotMessageId = tempBotMsgId;
 
           try {
-            // 4. Save User Message to Backend
             const userResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -397,7 +355,6 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } },
             );
 
-            // 5. Update UI with REAL User Message ID from DB
             finalUserMessageId = userResponse.data.id;
             dispatchMessages({
               type: "REPLACE_MESSAGE_ID",
@@ -405,7 +362,6 @@ const ChatInterface = memo(
               newId: finalUserMessageId,
             });
 
-            // 6. Create Bot Entry in Backend
             const botLoadingResponse = await axios.post(
               `${API_URL}/api/messages`,
               {
@@ -414,29 +370,25 @@ const ChatInterface = memo(
                 content: "loading...",
                 isBot: true,
                 isFavorited: false,
-                parentId: finalUserMessageId, // Link to REAL User ID
+                parentId: finalUserMessageId,
                 status: "loading",
               },
               { headers: { "Content-Type": "application/json" } },
             );
 
             finalBotMessageId = botLoadingResponse.data.id;
-
-            // Update the optimistic bot message with the REAL ID
             dispatchMessages({
               type: "REPLACE_MESSAGE_ID",
               oldId: tempBotMsgId,
               newId: finalBotMessageId,
             });
 
-            // 7. Call the Chatbot API (Heavy lifting)
             const controller = new AbortController();
             setActiveRequestController(controller);
 
             const connectionObj = connections.find(
               (c) => c.connectionName === connection,
             );
-
             const payload = query
               ? {
                   question,
@@ -453,15 +405,11 @@ const ChatInterface = memo(
             const response = await axios.post(
               `${CHATBOT_API_URL}/ask`,
               payload,
-              {
-                signal: controller.signal,
-              },
+              { signal: controller.signal },
             );
-
             setActiveRequestController(null);
             const responseData = response.data;
 
-            // 8. Handle Success/Error from Python
             let finalContent = "";
             let finalStatus: Message["status"] = "normal";
 
@@ -477,7 +425,6 @@ const ChatInterface = memo(
               finalContent = JSON.stringify(responseData, null, 2);
             }
 
-            // 9. Update Backend with Final Answer
             const limitedData = limitDataForBackend(responseData);
             await axios.put(
               `${API_URL}/api/messages/${finalBotMessageId}`,
@@ -493,42 +440,32 @@ const ChatInterface = memo(
               { headers: { "Content-Type": "application/json" } },
             );
 
-            // 10. Update UI with Final Answer
             dispatchMessages({
               type: "UPDATE_MESSAGE",
-              id: finalBotMessageId, // Use the real ID
+              id: finalBotMessageId,
               message: {
                 content: finalContent,
                 timestamp: new Date().toISOString(),
                 status: finalStatus,
               },
             });
-            setIsSubmitting(false); // Done!
+            setIsSubmitting(false);
             setTimeout(() => scrollToMessage(finalBotMessageId), 150);
           } catch (error) {
             setActiveRequestController(null);
             const errorContent = getErrorMessage(error);
-
-            // If connection was cancelled, stop.
             if (
               axios.isCancel(error) ||
               (error as Error).name === "CanceledError"
-            ) {
+            )
               return;
-            }
 
-            // CRITICAL: Update the OPTIMISTIC Bot Message to be an Error message
-            // Instead of creating a NEW orphaned error message.
             dispatchMessages({
               type: "UPDATE_MESSAGE",
-              id: finalBotMessageId, // Update the correct ID (Real or Temp)
-              message: {
-                content: errorContent,
-                status: "error",
-              },
+              id: finalBotMessageId,
+              message: { content: errorContent, status: "error" },
             });
 
-            // Try to sync error state to backend if we have a real ID
             if (finalBotMessageId !== tempBotMsgId) {
               await axios
                 .put(`${API_URL}/api/messages/${finalBotMessageId}`, {
@@ -538,7 +475,6 @@ const ChatInterface = memo(
                 })
                 .catch((e) => console.error("Failed to save error state", e));
             }
-
             setIsSubmitting(false);
           }
         },
@@ -566,24 +502,12 @@ const ChatInterface = memo(
             );
             return;
           }
-
-          // if (sessionId && sessionConnection === connection) {
-          //   await askQuestion(question, connection, true, query);
-          // } else {
           handleNewChat();
           await new Promise<void>((resolve) => setTimeout(resolve, 0));
           setSelectedConnection(connection);
           await askQuestion(question, connection, false, query);
-          // }
         },
-        [
-          // sessionId,
-          // sessionConnection,
-          connections,
-          askQuestion,
-          handleNewChat,
-          setSelectedConnection,
-        ],
+        [connections, askQuestion, handleNewChat, setSelectedConnection],
       );
 
       useEffect(() => {
@@ -593,7 +517,7 @@ const ChatInterface = memo(
           setSessionConnectionError(null);
         } else if (sessionId && !sessionConnection) {
           setSessionConnectionError(
-            "This session was loaded but has no associated connection. You can view history or start a new chat.",
+            "This session was loaded but has no associated connection. View history or start a new chat.",
           );
         }
       }, [
@@ -726,22 +650,17 @@ const ChatInterface = memo(
       const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
           e.preventDefault();
-          // 1. Check lock immediately
           if (!input.trim() || isSubmitting) return;
           if (!selectedConnection) {
             toast.error("No connection selected.");
             return;
           }
-
-          // 2. Lock UI immediately
           setIsSubmitting(true);
           const question = input;
           setInput("");
-
           try {
             await askQuestion(question, selectedConnection, false);
           } catch (error) {
-            // If critical failure, unlock
             setIsSubmitting(false);
             console.error(error);
           }
@@ -750,68 +669,54 @@ const ChatInterface = memo(
       );
 
       const handleStopRequest = useCallback(async () => {
-        if (!isSubmitting) return; // Guard clause
-
-        // 1. Abort the in-flight Axios request
+        if (!isSubmitting) return;
         if (activeRequestController) {
           activeRequestController.abort();
           setActiveRequestController(null);
         }
-
-        // Find the message that is currently loading
         const loadingMessage = messages.find(
           (msg) => msg.isBot && msg.status === "loading",
         );
-
         if (loadingMessage && loadingMessage.id) {
           const errorMessage = "Request cancelled by user.";
-          const errorStatus = "error"; // <-- ADDED
+          const errorStatus = "error";
           const loadingMessageId = loadingMessage.id;
-
           try {
-            // 2. Update the Flask (API_URL) backend message to an error state
             await axios.put(
               `${API_URL}/api/messages/${loadingMessageId}`,
               {
                 token,
                 content: errorMessage,
                 timestamp: new Date().toISOString(),
-                status: errorStatus, // <-- MODIFIED
+                status: errorStatus,
               },
               { headers: { "Content-Type": "application/json" } },
             );
-
-            // 3. Update local state
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: loadingMessageId,
               message: {
                 content: errorMessage,
                 timestamp: new Date().toISOString(),
-                status: errorStatus, // <-- MODIFIED
+                status: errorStatus,
               },
             });
-
-            // 4. Update component's submitting state
             setIsSubmitting(false);
           } catch (error) {
             console.error("Error cancelling request:", error);
-            toast.error("Failed to cancel request. Please try again.");
-            // Still update UI and state even if API fails
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: loadingMessageId,
               message: {
                 content: `Error cancelling: ${getErrorMessage(error)}`,
                 timestamp: new Date().toISOString(),
-                status: "error", // <-- MODIFIED
+                status: "error",
               },
             });
             setIsSubmitting(false);
           }
         } else {
-          console.warn("Stop requested, but no 'loading...' message found.");
-          setIsSubmitting(false); // Reset state just in case
+          setIsSubmitting(false);
         }
       }, [
         isSubmitting,
@@ -827,7 +732,7 @@ const ChatInterface = memo(
             sessionConnection || selectedConnection;
           if (!token || !currentConnectionForAction) {
             toast.error(
-              "Cannot favorite message: Missing token or active connection.",
+              "Cannot favorite message: Missing active connection parameters.",
             );
             return;
           }
@@ -837,7 +742,6 @@ const ChatInterface = memo(
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId,
             );
-            console.log(responseMessage);
             await axios.post(
               `${API_URL}/favorite`,
               {
@@ -860,15 +764,13 @@ const ChatInterface = memo(
               id: messageId,
               message: { isFavorited: true },
             });
-            if (responseMessage) {
+            if (responseMessage)
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
                 id: responseMessage.id,
                 message: { isFavorited: true },
               });
-            }
           } catch (error) {
-            console.error("Error favoriting message:", error);
             toast.error(
               `Failed to favorite message: ${getErrorMessage(error)}`,
             );
@@ -879,6 +781,7 @@ const ChatInterface = memo(
           messages,
           selectedConnection,
           sessionConnection,
+          connections,
           dispatchMessages,
         ],
       );
@@ -889,7 +792,7 @@ const ChatInterface = memo(
             sessionConnection || selectedConnection;
           if (!token || !currentConnectionForAction) {
             toast.error(
-              "Cannot unfavorite message: Token or active connection missing.",
+              "Cannot unfavorite message: Active configuration reference dropped.",
             );
             return;
           }
@@ -916,15 +819,13 @@ const ChatInterface = memo(
               id: messageId,
               message: { isFavorited: false },
             });
-            if (responseMessage) {
+            if (responseMessage)
               dispatchMessages({
                 type: "UPDATE_MESSAGE",
                 id: responseMessage.id,
                 message: { isFavorited: false },
               });
-            }
           } catch (error) {
-            console.error("Error unfavoriting message:", error);
             toast.error(
               `Failed to unfavorite message: ${getErrorMessage(error)}`,
             );
@@ -935,6 +836,7 @@ const ChatInterface = memo(
           messages,
           selectedConnection,
           sessionConnection,
+          connections,
           dispatchMessages,
         ],
       );
@@ -944,39 +846,16 @@ const ChatInterface = memo(
           const userMessage = messages.find(
             (msg) => msg.id === userMessageId && !msg.isBot,
           );
-          if (!userMessage) {
-            toast.error("User message not found for retry.");
-            return;
-          }
-
           const botMessage = messages.find(
             (msg) => msg.parentId === userMessageId && msg.isBot,
           );
-          if (!botMessage) {
-            toast.error("Bot response not found for retry.");
-            return;
-          }
+          if (!userMessage || !botMessage) return;
 
           const connectionForRetry = sessionConnection || selectedConnection;
-          if (!connectionForRetry) {
-            toast.error(
-              "No active connection available for this session to retry.",
-            );
-            return;
-          }
-
           const connectionObj = connections.find(
             (conn) => conn.connectionName === connectionForRetry,
           );
-          if (!connectionObj) {
-            toast.error("Connection details not found for retry.");
-            return;
-          }
-
-          if (!sessionId) {
-            toast.error("Session ID is missing, cannot retry.");
-            return;
-          }
+          if (!connectionObj || !sessionId) return;
 
           const originalBotMessageId = botMessage.id;
 
@@ -987,7 +866,7 @@ const ChatInterface = memo(
                 token,
                 content: "loading...",
                 timestamp: new Date().toISOString(),
-                status: "loading", // <-- MODIFIED
+                status: "loading",
               },
               { headers: { "Content-Type": "application/json" } },
             );
@@ -997,48 +876,33 @@ const ChatInterface = memo(
               message: {
                 content: "loading...",
                 timestamp: new Date().toISOString(),
-                status: "loading", // <-- MODIFIED
+                status: "loading",
               },
             });
 
-            const payload = {
-              question: userMessage.content,
-              connection: connectionObj,
-              sessionId,
-            };
-
-            // Create a new AbortController for this request
             const controller = new AbortController();
-            setActiveRequestController(controller); // Store it in state
+            setActiveRequestController(controller);
 
             const response = await axios.post(
               `${CHATBOT_API_URL}/ask`,
-              payload,
               {
-                signal: controller.signal, // <-- Pass the signal here
+                question: userMessage.content,
+                connection: connectionObj,
+                sessionId,
               },
+              { signal: controller.signal },
             );
-
-            // If we get here, the request was NOT cancelled
             setActiveRequestController(null);
             const botResponseContent = JSON.stringify(response.data, null, 2);
-            console.log("Bot Response Content:", botResponseContent);
 
-            // Create limited data for backend storage (500 rows max)
             const limitedResponseData = limitDataForBackend(response.data);
-            const botResponseContentForBackend = JSON.stringify(
-              limitedResponseData,
-              null,
-              2,
-            );
-
             await axios.put(
               `${API_URL}/api/messages/${originalBotMessageId}`,
               {
                 token,
-                content: botResponseContentForBackend,
+                content: JSON.stringify(limitedResponseData, null, 2),
                 timestamp: new Date().toISOString(),
-                status: "normal", // <-- MODIFIED
+                status: "normal",
               },
               { headers: { "Content-Type": "application/json" } },
             );
@@ -1048,54 +912,37 @@ const ChatInterface = memo(
               message: {
                 content: botResponseContent,
                 timestamp: new Date().toISOString(),
-                status: "normal", // <-- MODIFIED
+                status: "normal",
               },
             });
             setTimeout(() => scrollToMessage(originalBotMessageId), 100);
           } catch (error) {
-            // Clear the controller
             setActiveRequestController(null);
-            const errorContent = getErrorMessage(error); // <-- Use new function
-            const errorStatus = "error";
-
-            // Check if the error was from cancellation
+            const errorContent = getErrorMessage(error);
             if (
               axios.isCancel(error) ||
               (error as Error).name === "CanceledError"
-            ) {
-              console.log("Retry request cancelled by AbortController.");
-              // Message was updated by handleStopRequest
-            } else {
-              console.error("Error retrying message:", error);
+            )
+              return;
 
-              await axios
-                .put(
-                  `${API_URL}/api/messages/${originalBotMessageId}`,
-                  {
-                    token,
-                    content: errorContent,
-                    timestamp: new Date().toISOString(),
-                    status: errorStatus, // <-- MODIFIED
-                  },
-                  { headers: { "Content-Type": "application/json" } },
-                )
-                .catch((updateError) =>
-                  console.error(
-                    "Failed to update message to error state on server (retry):",
-                    updateError,
-                  ),
-                );
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: originalBotMessageId,
-                message: {
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                  status: errorStatus, // <-- MODIFIED
-                },
-              });
-              setTimeout(() => scrollToMessage(originalBotMessageId), 100);
-            }
+            await axios
+              .put(`${API_URL}/api/messages/${originalBotMessageId}`, {
+                token,
+                content: errorContent,
+                timestamp: new Date().toISOString(),
+                status: "error",
+              })
+              .catch(() => {});
+            dispatchMessages({
+              type: "UPDATE_MESSAGE",
+              id: originalBotMessageId,
+              message: {
+                content: errorContent,
+                timestamp: new Date().toISOString(),
+                status: "error",
+              },
+            });
+            setTimeout(() => scrollToMessage(originalBotMessageId), 100);
           }
         },
         [
@@ -1112,39 +959,18 @@ const ChatInterface = memo(
 
       async function handleEditMessage(id: string, content: string) {
         const userMessage = messages.find((msg) => msg.id === id && !msg.isBot);
-        if (!userMessage) {
-          toast.error("User message not found for edit.");
-          return;
-        }
-
+        if (!userMessage || !sessionId) return;
         const connectionForEdit = sessionConnection || selectedConnection;
-        if (!connectionForEdit) {
-          toast.error(
-            "No active connection available for this session to edit.",
-          );
-          return;
-        }
-
         const connectionObj = connections.find(
           (conn) => conn.connectionName === connectionForEdit,
         );
-        if (!connectionObj) {
-          toast.error("Connection details not found for edit.");
-          return;
-        }
-
-        if (!sessionId) {
-          toast.error("Session ID is missing, cannot edit message.");
-          return;
-        }
+        if (!connectionObj) return;
 
         let botMessageToUpdateId: string | null = null;
         const responseMessage = messages.find(
           (msg) => msg.parentId === id && msg.isBot,
         );
-        if (responseMessage) {
-          botMessageToUpdateId = responseMessage.id;
-        }
+        if (responseMessage) botMessageToUpdateId = responseMessage.id;
 
         try {
           await axios.put(
@@ -1174,7 +1000,7 @@ const ChatInterface = memo(
                 token,
                 content: "loading...",
                 timestamp: new Date().toISOString(),
-                status: "loading", // <-- MODIFIED
+                status: "loading",
               },
               { headers: { "Content-Type": "application/json" } },
             );
@@ -1184,7 +1010,7 @@ const ChatInterface = memo(
               message: {
                 content: "loading...",
                 timestamp: new Date().toISOString(),
-                status: "loading", // <-- MODIFIED
+                status: "loading",
               },
             });
           } else {
@@ -1197,126 +1023,78 @@ const ChatInterface = memo(
                 isBot: true,
                 isFavorited: false,
                 parentId: id,
-                status: "loading", // <-- MODIFIED
+                status: "loading",
               },
               { headers: { "Content-Type": "application/json" } },
             );
             botMessageToUpdateId = botLoadingResponse.data.id;
-            const newBotLoadingMessage: Message = {
-              id: botMessageToUpdateId!,
-              content: "loading...",
-              isBot: true,
-              timestamp: new Date().toISOString(),
-              isFavorited: false,
-              parentId: id,
-              status: "loading", // <-- MODIFIED
-            };
             dispatchMessages({
               type: "ADD_MESSAGE",
-              message: newBotLoadingMessage,
+              message: {
+                id: botMessageToUpdateId!,
+                content: "loading...",
+                isBot: true,
+                timestamp: new Date().toISOString(),
+                isFavorited: false,
+                parentId: id,
+                status: "loading",
+              },
             });
           }
 
-          if (!botMessageToUpdateId) {
-            throw new Error(
-              "Failed to obtain a bot message ID for update/creation.",
-            );
-          }
+          const controller = new AbortController();
+          setActiveRequestController(controller);
+          const response = await axios.post(
+            `${CHATBOT_API_URL}/ask`,
+            { question: content, connection: connectionObj, sessionId },
+            { signal: controller.signal },
+          );
+          setActiveRequestController(null);
+          const botResponseContent = JSON.stringify(response.data, null, 2);
 
-          try {
-            const payload = {
-              question: content,
-              connection: connectionObj,
-              sessionId,
-            };
-
-            // Create a new AbortController for this request
-            const controller = new AbortController();
-            setActiveRequestController(controller); // Store it in state
-
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              payload,
-              {
-                signal: controller.signal, // <-- Pass the signal here
-              },
-            );
-
-            // If we get here, the request was NOT cancelled
-            setActiveRequestController(null);
-            const botResponseContent = JSON.stringify(response.data, null, 2);
-
-            await axios.put(
-              `${API_URL}/api/messages/${botMessageToUpdateId}`,
-              {
+          await axios.put(
+            `${API_URL}/api/messages/${botMessageToUpdateId}`,
+            {
+              token,
+              content: botResponseContent,
+              timestamp: new Date().toISOString(),
+              status: "normal",
+            },
+            { headers: { "Content-Type": "application/json" } },
+          );
+          dispatchMessages({
+            type: "UPDATE_MESSAGE",
+            id: botMessageToUpdateId,
+            message: {
+              content: botResponseContent,
+              timestamp: new Date().toISOString(),
+              status: "normal",
+            },
+          });
+          setTimeout(() => scrollToMessage(botMessageToUpdateId!, 100));
+        } catch (error) {
+          setActiveRequestController(null);
+          const errorContent = getErrorMessage(error);
+          if (
+            axios.isCancel(error) ||
+            (error as Error).name === "CanceledError"
+          )
+            return;
+          if (botMessageToUpdateId) {
+            await axios
+              .put(`${API_URL}/api/messages/${botMessageToUpdateId}`, {
                 token,
-                content: botResponseContent,
+                content: errorContent,
                 timestamp: new Date().toISOString(),
-                status: "normal", // <-- MODIFIED
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+                status: "error",
+              })
+              .catch(() => {});
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: botMessageToUpdateId,
-              message: {
-                content: botResponseContent,
-                timestamp: new Date().toISOString(),
-                status: "normal", // <-- MODIFIED
-              },
+              message: { content: errorContent, status: "error" },
             });
-            setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
-          } catch (error) {
-            // Clear the controller
-            setActiveRequestController(null);
-            const errorContent = getErrorMessage(error); // <-- Use new function
-            const errorStatus = "error";
-
-            // Check if the error was from cancellation
-            if (
-              axios.isCancel(error) ||
-              (error as Error).name === "CanceledError"
-            ) {
-              console.log("Edit request cancelled by AbortController.");
-              // Message was updated by handleStopRequest
-            } else {
-              console.error(
-                "Error getting bot response for edited message:",
-                error,
-              );
-
-              await axios
-                .put(
-                  `${API_URL}/api/messages/${botMessageToUpdateId}`,
-                  {
-                    token,
-                    content: errorContent,
-                    timestamp: new Date().toISOString(),
-                    status: errorStatus, // <-- MODIFIED
-                  },
-                  { headers: { "Content-Type": "application/json" } },
-                )
-                .catch((updateError) =>
-                  console.error(
-                    "Failed to update message to error state on server (edit):",
-                    updateError,
-                  ),
-                );
-              dispatchMessages({
-                type: "UPDATE_MESSAGE",
-                id: botMessageToUpdateId,
-                message: {
-                  content: errorContent,
-                  timestamp: new Date().toISOString(),
-                  status: errorStatus, // <-- MODIFIED
-                },
-              });
-              setTimeout(() => scrollToMessage(botMessageToUpdateId!), 100);
-            }
           }
-        } catch (error) {
-          console.error("Error handling edit message (outer scope):", error);
-          toast.error(`Failed to process edit: ${getErrorMessage(error)}`);
         }
       }
 
@@ -1334,16 +1112,13 @@ const ChatInterface = memo(
         if (botResponse) {
           if (botResponse.status === "loading") return "loading";
           if (botResponse.status === "error") return "error";
-          // We assume 'normal' status means success
           if (botResponse.status === "normal") return "success";
         }
         return null;
       };
 
       const toggleConnectionDropdown = useCallback(() => {
-        if (isDbExplorerOpen) {
-          setIsDbExplorerOpen(false);
-        }
+        if (isDbExplorerOpen) setIsDbExplorerOpen(false);
         setIsConnectionDropdownOpen((prev) => !prev);
       }, [isDbExplorerOpen]);
 
@@ -1353,111 +1128,106 @@ const ChatInterface = memo(
 
       return (
         <div
-          className="flex flex-col h-full"
-          style={{ background: theme.colors.background }}
+          className="flex flex-col h-full relative"
+          style={{ background: "transparent" }}
         >
           <ToastContainer
             toastStyle={{
               background: theme.colors.surface,
               color: theme.colors.text,
-              border: `1px solid ${theme.colors.text}20`,
+              border: `1px solid ${theme.colors.border}`,
               borderRadius: theme.borderRadius.default,
-              padding: theme.spacing.sm,
             }}
           />
           {sessionConnectionError && (
             <div
-              className="flex items-center justify-between sticky top-0 z-20 mx-auto max-w-3xl animate-fade-in"
+              className="flex items-center justify-between sticky top-4 z-50 mx-auto w-[calc(100%-2rem)] max-w-3xl border-l-4 p-3 rounded-lg shadow-md animate-fade-in"
               style={{
                 background: theme.colors.surface,
                 color: theme.colors.error,
-                borderLeft: `4px solid ${theme.colors.error}`,
-                borderRadius: theme.borderRadius.default,
-                boxShadow: theme.shadow.md,
-                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                // marginBottom: theme.spacing.md,
+                borderColor: theme.colors.error,
               }}
             >
-              <div className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ marginRight: theme.spacing.sm }}
-                >
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                <div>
-                  <div className="font-medium">{sessionConnectionError}</div>
-                  {/* <div className="text-sm opacity-75">
-                    You can view the chat history but cannot ask new questions
-                    with this session. Start a new chat or select a valid
-                    connection.
-                  </div> */}
-                </div>
+              <div className="flex items-center gap-2">
+                <AlertCircle size={16} />
+                <span className="font-semibold text-sm">
+                  {sessionConnectionError}
+                </span>
               </div>
             </div>
           )}
+
+          {/* Core scrollable messages region with enhanced contrast padding */}
           <div
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto w-full custom-scrollbar pt-6 pb-40 px-4 md:px-8 flex flex-col"
+            className="flex-1 overflow-y-auto w-full custom-scrollbar pt-6 pb-36 px-4 md:px-8 flex flex-col"
           >
             {connectionsLoading ? (
-              <Loader text="Loading connections..." />
+              <Loader text="Mapping integrated clusters..." />
             ) : connections.length === 0 && !selectedConnection ? (
-              <div
-                className="flex flex-col items-center justify-center h-full text-center"
-                style={{ color: theme.colors.text }}
-              >
-                <p className="text-2xl font-semibold mb-4">
-                  No Connections Found
+              <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 border"
+                  style={{
+                    background: `${theme.colors.accent}08`,
+                    borderColor: theme.colors.border,
+                  }}
+                >
+                  <Database size={22} style={{ color: theme.colors.accent }} />
+                </div>
+                <p
+                  className="text-lg font-bold tracking-tight mb-1"
+                  style={{ color: theme.colors.text }}
+                >
+                  No Repositories Hooked
                 </p>
-                <p className="text-lg">
-                  Please create a connection to start interacting with your data
-                  assistant.
+                <p
+                  className="text-xs font-medium opacity-70 mb-5"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  Connect a database schema layer to unlock analytical
+                  transformations.
                 </p>
                 {localStorage.getItem("allowedToCreateConnection") !==
                   "false" && (
                   <button
                     onClick={onCreateConSelected}
-                    className="mt-6 flex items-center justify-center w-full max-w-[180px] py-2 text-sm font-medium tracking-wide"
+                    className="px-4 py-2 text-xs font-bold text-white transition-all hover:scale-102 active:scale-98 shadow-sm"
                     style={{
-                      color: "white",
                       backgroundColor: theme.colors.accent,
-                      borderRadius: theme.borderRadius.pill,
-                      padding: "8px 16px",
+                      borderRadius: theme.borderRadius.default,
                     }}
-                    onMouseOver={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        theme.colors.accentHover)
-                    }
-                    onMouseOut={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        theme.colors.accent)
-                    }
                   >
-                    Create Connection
+                    Setup New Matrix
                   </button>
                 )}
               </div>
             ) : messages.length === 0 &&
               !connectionError &&
               !sessionConnectionError ? (
-              <div
-                className="flex flex-col items-center justify-center h-full text-center"
-                style={{ color: theme.colors.text }}
-              >
-                <h1 className="text-3xl font-bold mb-4">
-                  Hello! I’m your Data Assistant. How can I help you today?
+              <div className="flex flex-col items-center justify-center h-full text-center px-4 max-w-2xl mx-auto">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-5 border animate-pulse"
+                  style={{
+                    background: `${theme.colors.accent}08`,
+                    borderColor: theme.colors.border,
+                  }}
+                >
+                  <Sparkles size={18} style={{ color: theme.colors.accent }} />
+                </div>
+                <h1
+                  className="text-2xl md:text-3xl font-bold tracking-tight mb-3"
+                  style={{ color: theme.colors.text }}
+                >
+                  Automate Your Relational Insights
                 </h1>
+                <p
+                  className="text-sm font-medium mb-8 max-w-lg"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  Input analytical queries in natural language to query, plot,
+                  and verify structure layouts instantly.
+                </p>
                 {recommendedQuestions &&
                   recommendedQuestions.length > 0 &&
                   selectedConnection && (
@@ -1474,7 +1244,7 @@ const ChatInterface = memo(
                   )}
               </div>
             ) : (
-              <div className="max-w-5xl mx-auto w-full flex flex-col gap-6">
+              <div className="max-w-4xl mx-auto w-full flex flex-col gap-6">
                 {messages.map((message) => {
                   const responseStatus = message.isBot
                     ? null
@@ -1482,7 +1252,6 @@ const ChatInterface = memo(
                   return (
                     <div
                       className="flex flex-col w-full max-w-full"
-                      style={{ gap: theme.spacing.md }}
                       key={message.id}
                       ref={(el) => (messageRefs.current[message.id] = el)}
                     >
@@ -1507,144 +1276,94 @@ const ChatInterface = memo(
             )}
             <div ref={messagesEndRef} />
           </div>
+
           {userHasScrolledUp && (
-            <div
-              className="flex justify-end"
-              style={{
-                position: "absolute",
-                bottom: "90px",
-                right: "30px",
-                zIndex: 1000,
-              }}
-            >
+            <div className="absolute bottom-24 right-6 z-50">
               <CustomTooltip title="Scroll to Bottom" position="top">
                 <button
                   onClick={scrollToBottom}
+                  className="p-2.5 rounded-xl text-white transition-all hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
                   style={{
                     background: theme.colors.accent,
-                    color: "white",
-                    padding: "8px",
-                    borderRadius: theme.borderRadius.large,
-                    border: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: theme.shadow.md,
                   }}
                 >
-                  <ArrowDown size={20} />
+                  <ArrowDown size={16} />
                 </button>
               </CustomTooltip>
             </div>
           )}
+
+          {/* Premium Floating Command Pod */}
           {connections.length > 0 && (
-            <footer className="flex justify-center pb-4 absolute bottom-0 left-0 right-0 z-40 pointer-events-none px-4">
+            <footer className="absolute bottom-4 left-0 right-0 z-40 pointer-events-none px-4 flex justify-center">
               <div
-                className="w-full max-w-4xl flex items-end gap-2 px-4 py-2.5 rounded-[1.75rem] pointer-events-auto transition-all duration-200 glass-input shadow-floating dark:shadow-floating-dark focus-within:shadow-lg group"
-                style={{ zIndex: 10 }}
+                className="w-full max-w-4xl flex items-end gap-2 px-3 py-2 rounded-[24px] pointer-events-auto border transition-all duration-300 focus-within:ring-2 focus-within:ring-indigo-500/20 shadow-2xl"
+                style={{
+                  backgroundColor: theme.mode === 'light' ? theme.colors.surface : theme.colors.surfaceGlass,
+                  borderColor: theme.colors.border,
+                  boxShadow: theme.mode === "light" ? "0 24px 48px -12px rgba(15, 23, 42, 0.15)" : "0 24px 48px -12px rgba(0, 0, 0, 0.5)"
+                }}
               >
-                <div className="relative" ref={connectionDropdownRef}>
-                  <CustomTooltip
-                    title="Change or create a connection"
-                    position="top"
-                  >
+                <div
+                  className="relative flex-shrink-0"
+                  ref={connectionDropdownRef}
+                >
+                  <CustomTooltip title="Database Nodes" position="top">
                     <button
                       type="button"
                       onClick={toggleConnectionDropdown}
                       disabled={isSubmitting || !!sessionConnectionError}
-                      className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
-                      style={{
-                        color: theme.colors.textSecondary,
-                        background: "transparent",
-                      }}
+                      className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                      style={{ color: theme.colors.textSecondary }}
                     >
-                      <Database size={20} />
+                      <Database size={19} />
                     </button>
                   </CustomTooltip>
+
                   {isConnectionDropdownOpen && (
                     <div
-                      className="absolute bottom-full left-0 rounded-md shadow-lg z-30 transition-all duration-300 mb-2"
+                      className="absolute bottom-[calc(100%+0.5rem)] left-0 rounded-xl border z-50 min-w-[220px] overflow-hidden py-1.5 shadow-xl animate-fade-up"
                       style={{
                         background: theme.colors.surface,
-                        border: `1px solid ${theme.colors.border}`,
-                        boxShadow: `0 4px 12px ${theme.colors.text}20`,
-                        width: "min-content",
-                        maxWidth: "min-content",
+                        borderColor: theme.colors.border,
                       }}
                     >
                       {options.map((option) => (
                         <div
                           key={option.value}
-                          className="flex items-center justify-between px-3 py-2 hover:bg-opacity-10 hover:bg-accent cursor-pointer transition-all duration-300"
+                          className="flex items-center justify-between px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors text-xs font-semibold"
                           style={{
                             color: theme.colors.text,
                             background:
                               selectedConnection === option.value
-                                ? `${theme.colors.accent}10`
+                                ? `${theme.colors.accent}08`
                                 : "transparent",
                           }}
                           onClick={() => handleConnectionSelect(option.value)}
                         >
-                          <span
-                            className="truncate"
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {option.label}
-                          </span>
+                          <span className="truncate">{option.label}</span>
                           {option.isAdmin && (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                backgroundColor: theme.colors.background,
-                                color: theme.colors.accent,
-                                fontSize: theme.typography.size.sm,
-                                fontWeight: theme.typography.weight.normal,
-                                padding: `0 ${theme.spacing.sm}`,
-                                borderRadius: theme.borderRadius.default,
-                                marginLeft: theme.spacing.sm,
-                                textTransform: "lowercase",
-                              }}
-                            >
-                              Default
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ml-2 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400">
+                              System
                             </span>
                           )}
                           {option.value !== "create-con" && (
-                            <div className="relative group">
-                              <button
-                                type="button"
-                                onClick={(e) => handlePdfClick(option.value, e)}
-                                className="p-1"
-                              >
-                                <FaFilePdf
-                                  size={16}
-                                  style={{ color: theme.colors.error }}
-                                  className="hover:scale-105 transition-transform duration-300"
-                                />
-                              </button>
-                              <span
-                                className="absolute bottom-full left-1/2 transform -translate-x-1/2 mt-1 text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap"
-                                style={{
-                                  background: theme.colors.accent,
-                                  color: theme.colors.surface,
-                                  boxShadow: `0 0 6px ${theme.colors.accent}40`,
-                                }}
-                              >
-                                View Data Atlas
-                              </span>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => handlePdfClick(option.value, e)}
+                              className="p-1 rounded text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
+                              title="Data Atlas PDF"
+                            >
+                              <FaFilePdf size={13} />
+                            </button>
                           )}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                <CustomTooltip title="Explore Database Schema" position="top">
+
+                <CustomTooltip title="Schema Matrix" position="top">
                   <button
                     type="button"
                     onClick={toggleDbExplorer}
@@ -1653,54 +1372,51 @@ const ChatInterface = memo(
                       !selectedConnection ||
                       !!sessionConnectionError
                     }
-                    className={`p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 ${
-                      isDbExplorerOpen ? "schema-active text-accent" : ""
-                    }`}
+                    className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
                     style={{
                       color: isDbExplorerOpen
                         ? theme.colors.accent
                         : theme.colors.textSecondary,
-                      background: "transparent",
                     }}
                   >
                     <Layers
-                      size={20}
+                      size={19}
                       style={{
-                        transform: isDbExplorerOpen
-                          ? "rotate(180deg)"
-                          : "rotate(0deg)",
-                        transition: "transform 0.3s ease",
+                        transform: isDbExplorerOpen ? "rotate(180deg)" : "none",
+                        transition: "transform 0.2s",
                       }}
                     />
                   </button>
                 </CustomTooltip>
-                <CustomTooltip title="Create a new session" position="top">
+
+                <CustomTooltip title="Reset Analytics Thread" position="top">
                   <button
                     type="button"
                     onClick={handleNewChat}
                     disabled={isSubmitting}
-                    className="p-2.5 rounded-full transition-colors duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
-                    style={{
-                      color: theme.colors.textSecondary,
-                      background: "transparent",
-                    }}
+                    className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                    style={{ color: theme.colors.textSecondary }}
                   >
-                    <PlusCircle size={20} />
+                    <PlusCircle size={19} />
                   </button>
                 </CustomTooltip>
-                <ChatInput
-                  input={input}
-                  isSubmitting={isSubmitting}
-                  onInputChange={setInput}
-                  onSubmit={handleSubmit}
-                  disabled={!!sessionConnectionError}
-                  onStopRequest={handleStopRequest}
-                />
+
+                <div className="flex-1 min-w-0">
+                  <ChatInput
+                    input={input}
+                    isSubmitting={isSubmitting}
+                    onInputChange={setInput}
+                    onSubmit={handleSubmit}
+                    disabled={!!sessionConnectionError}
+                    onStopRequest={handleStopRequest}
+                  />
+                </div>
               </div>
             </footer>
           )}
+
           {isDbExplorerOpen && selectedConnection && (
-            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-3xl pointer-events-auto flex items-center justify-center">
+            <div className="absolute bottom-22 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl pointer-events-auto">
               <SchemaExplorer
                 schemas={schemaSampleData}
                 onClose={() => setIsDbExplorerOpen(false)}
@@ -1710,15 +1426,12 @@ const ChatInterface = memo(
               />
             </div>
           )}
+
           {connectionError && (
-            <div
-              className="text-center"
-              style={{ padding: theme.spacing.md, color: theme.colors.error }}
-            >
+            <div className="text-center text-xs font-bold py-2.5 text-red-500 bg-red-500/10 border-b border-red-500/20 absolute top-0 left-0 right-0 z-50 animate-fade-in">
               {connectionError}
             </div>
           )}
-
         </div>
       );
     },

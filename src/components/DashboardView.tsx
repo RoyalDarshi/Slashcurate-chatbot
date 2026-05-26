@@ -6,7 +6,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { HelpCircle, Heart, Database, Table, DollarSign, Users, TrendingUp as TrendingUpIcon, Activity } from "lucide-react";
+import {
+  HelpCircle,
+  Heart,
+  Database,
+  Table,
+  DollarSign,
+  Users,
+  TrendingUp as TrendingUpIcon,
+  Activity,
+} from "lucide-react";
 import KPICard from "./KPICard";
 import {
   BsHandThumbsDown,
@@ -14,17 +23,10 @@ import {
   BsHandThumbsUp,
   BsHandThumbsUpFill,
 } from "react-icons/bs";
-import {
-  FaChartBar,
-  FaChartLine,
-  FaChartPie,
-  FaTable,
-  FaTerminal,
-} from "react-icons/fa";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { useTheme } from "../ThemeContext";
-import { DashboardItem, MainViewData } from "./DashboardInterface";
+import { DashboardItem } from "./DashboardInterface";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
 import DynamicGraph from "./Graphs/DynamicGraph";
 import DataTable from "./DataTable";
@@ -274,25 +276,26 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     if (!dashboardItem) {
       return (
         <div
-          className="flex flex-col items-center justify-center h-full p-4 w-full"
-          style={{ backgroundColor: theme.colors.background }}
+          className="flex flex-col items-center justify-center h-full p-6 w-full text-center"
+          style={{ backgroundColor: "transparent" }}
         >
           <HelpCircle
-            size={48}
+            size={44}
             style={{ color: theme.colors.textSecondary }}
-            className="mb-3"
+            className="mb-3 opacity-50"
           />
           <h2
-            className="text-xl font-semibold"
+            className="text-base font-semibold tracking-tight"
             style={{ color: theme.colors.text }}
           >
-            Dashboard is ready
+            Dashboard workspace staged
           </h2>
           <p
-            className="mt-1 text-center"
+            className="text-xs font-semibold max-w-xs mx-auto mt-1"
             style={{ color: theme.colors.textSecondary }}
           >
-            Ask a question below to populate the dashboard with insights.
+            Staging environment calibrated. Fire an query parameter below to
+            load analytics modules.
           </p>
         </div>
       );
@@ -301,31 +304,38 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     if (dashboardItem.isError) {
       return (
         <div
-          className="flex flex-col items-center justify-center h-full p-4 w-full"
-          style={{ backgroundColor: theme.colors.background }}
+          className="flex flex-col items-center justify-center h-full p-6 w-full text-center"
+          style={{ backgroundColor: "transparent" }}
         >
           <HelpCircle
-            size={48}
+            size={44}
             style={{ color: theme.colors.error }}
-            className="mb-3"
+            className="mb-3 opacity-85"
           />
           <h2
-            className="text-xl font-semibold"
+            className="text-base font-semibold tracking-tight"
             style={{ color: theme.colors.text }}
           >
-            Error: {dashboardItem.question}
+            Error Captured: {dashboardItem.question}
           </h2>
-          <p className="mt-1 text-center" style={{ color: theme.colors.error }}>
+          <p
+            className="text-xs font-semibold mt-1.5 max-w-md mx-auto"
+            style={{ color: theme.colors.error }}
+          >
             {dashboardItem.textualSummary.replace("Error: ", "")}
           </p>
           {!sessionConErr && (
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 mt-5">
               <button
                 onClick={() => setIsEditing(true)}
-                className="px-4 py-2 rounded-md"
-                style={{ backgroundColor: theme.colors.accent, color: "white" }}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border"
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                }}
               >
-                Edit Question
+                Modify Question
               </button>
               <button
                 onClick={() =>
@@ -334,10 +344,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     dashboardItem.question,
                   )
                 }
-                className="px-4 py-2 rounded-md"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shadow-xs"
                 style={{
                   backgroundColor: theme.colors.accent,
-                  color: "white",
                 }}
               >
                 Retry
@@ -345,27 +354,30 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             </div>
           )}
           {isEditing && (
-            <div className="mt-4 w-full max-w-md">
+            <div
+              className="mt-4 w-full max-w-md p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-xl"
+              style={{ borderColor: theme.colors.border }}
+            >
               <input
                 type="text"
                 value={editedQuestion}
                 onChange={(e) => setEditedQuestion(e.target.value)}
-                className="w-full p-2 rounded-md"
+                className="w-full px-3 py-2 rounded-lg text-xs border focus:outline-none font-semibold"
                 style={{
                   backgroundColor: theme.colors.background,
                   color: theme.colors.text,
+                  borderColor: theme.colors.border,
                 }}
               />
-              <div className="flex justify-end mt-2 gap-2">
+              <div className="flex justify-end mt-3 gap-2">
                 <button
                   onClick={() => {
                     setIsEditing(false);
                     setEditedQuestion(dashboardItem.question);
                   }}
-                  className="px-4 py-2 rounded-md"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                   style={{
                     backgroundColor: theme.colors.error,
-                    color: "white",
                   }}
                 >
                   Cancel
@@ -380,10 +392,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                       setIsEditing(false);
                     }
                   }}
-                  className="px-4 py-2 rounded-md"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                   style={{
                     backgroundColor: theme.colors.accent,
-                    color: "white",
                   }}
                 >
                   Update
@@ -397,7 +408,13 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
 
     const getKpiIcon = (label: string) => {
       const lower = label.toLowerCase();
-      if (lower.includes("user") || lower.includes("customer") || lower.includes("visitor") || lower.includes("client") || lower.includes("count")) {
+      if (
+        lower.includes("user") ||
+        lower.includes("customer") ||
+        lower.includes("visitor") ||
+        lower.includes("client") ||
+        lower.includes("count")
+      ) {
         return <Users size={16} />;
       }
       if (
@@ -417,14 +434,23 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       ) {
         return <DollarSign size={16} />;
       }
-      if (lower.includes("rate") || lower.includes("percent") || lower.includes("growth") || lower.includes("trend")) {
+      if (
+        lower.includes("rate") ||
+        lower.includes("percent") ||
+        lower.includes("growth") ||
+        lower.includes("trend")
+      ) {
         return <TrendingUpIcon size={16} />;
       }
       return <Activity size={16} />;
     };
 
     const kpis = dashboardItem?.kpiData;
-    const hasKpis = kpis && kpis.kpi1 && kpis.kpi1.value !== null && kpis.kpi1.value !== undefined;
+    const hasKpis =
+      kpis &&
+      kpis.kpi1 &&
+      kpis.kpi1.value !== null &&
+      kpis.kpi1.value !== undefined;
 
     return (
       <div className="flex-1 w-full flex flex-col min-h-0 overflow-hidden">
@@ -433,14 +459,15 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         ) : (
           <div
             className="flex flex-col flex-grow min-h-0 w-full lg:overflow-hidden overflow-y-auto"
-            style={{ backgroundColor: theme.colors.background }}
+            style={{ backgroundColor: "transparent" }}
           >
+            {/* Core Workspace Header Deck Panel */}
             <div
-              className="w-full px-3 py-2 mb-2 flex-shrink-0 flex items-center justify-between gap-3"
+              className="w-full px-4 py-2 mb-3 flex-shrink-0 flex items-center justify-between gap-3 border-b"
               style={{
                 backgroundColor: theme.colors.surface,
                 color: theme.colors.text,
-                borderBottom: `1px solid ${theme.colors.border}40`,
+                borderColor: theme.colors.border,
               }}
             >
               {isEditing ? (
@@ -449,12 +476,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     type="text"
                     value={editedQuestion}
                     onChange={(e) => setEditedQuestion(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-md text-sm"
+                    className="flex-1 px-3 py-1.5 rounded-lg border text-xs focus:outline-none font-semibold"
                     style={{
                       backgroundColor: theme.colors.background,
                       color: theme.colors.text,
-                      border: `1px solid ${theme.colors.border}`,
-                      outline: "none",
+                      borderColor: theme.colors.border,
                     }}
                   />
                   <button
@@ -462,11 +488,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                       setIsEditing(false);
                       setEditedQuestion(dashboardItem.question);
                     }}
-                    className="px-3 py-1 rounded-md text-xs"
-                    style={{
-                      backgroundColor: theme.colors.error,
-                      color: "white",
-                    }}
+                    className="px-3 py-1 rounded-md text-xs font-semibold text-white"
+                    style={{ backgroundColor: theme.colors.error }}
                   >
                     Cancel
                   </button>
@@ -480,11 +503,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         setIsEditing(false);
                       }
                     }}
-                    className="px-3 py-1 rounded-md text-xs"
-                    style={{
-                      backgroundColor: theme.colors.accent,
-                      color: "white",
-                    }}
+                    className="px-3 py-1 rounded-md text-xs font-semibold text-white"
+                    style={{ backgroundColor: theme.colors.accent }}
                   >
                     Save
                   </button>
@@ -492,8 +512,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               ) : (
                 <>
                   <h3
-                    className="text-sm font-semibold truncate flex-1"
-                    style={{ color: theme.colors.text }}
+                    className="text-sm font-semibold truncate flex-1 tracking-tight"
+                    style={{
+                      color:
+                        theme.mode === "light" ? "#0F172A" : theme.colors.text,
+                    }}
                     title={dashboardItem.question}
                   >
                     {dashboardItem.question}
@@ -504,8 +527,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         <CustomTooltip
                           title={
                             dashboardItem.isFavorited
-                              ? "Remove from Favorites"
-                              : "Add to Favorites"
+                              ? "Remove Favorite"
+                              : "Bookmark Metric Layout"
                           }
                           position="bottom"
                         >
@@ -520,108 +543,97 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               )
                             }
                             disabled={isSubmitting}
-                            className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            style={{
-                              color: dashboardItem.isFavorited
-                                ? "#FF4D4D"
-                                : theme.colors.textSecondary,
-                            }}
+                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-400"
                           >
                             <Heart
-                              size={16}
+                              size={15}
                               fill={
-                                dashboardItem.isFavorited ? "currentColor" : "none"
+                                dashboardItem.isFavorited ? "#EF4444" : "none"
+                              }
+                              className={
+                                dashboardItem.isFavorited
+                                  ? "text-red-500"
+                                  : "text-slate-400"
                               }
                             />
                           </button>
                         </CustomTooltip>
- 
+
                         <CustomTooltip
-                          title={isLiked ? "Remove like" : "Like this response"}
+                          title={isLiked ? "Remove Like" : "Like Response"}
                           position="bottom"
                         >
                           <button
                             onClick={handleLike}
                             disabled={isSubmitting}
-                            className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-400"
                           >
                             {isLiked ? (
                               <BsHandThumbsUpFill
-                                size={16}
+                                size={15}
                                 style={{ color: theme.colors.success }}
                               />
                             ) : (
-                              <BsHandThumbsUp
-                                size={16}
-                                style={{ color: theme.colors.textSecondary }}
-                              />
+                              <BsHandThumbsUp size={15} />
                             )}
                           </button>
                         </CustomTooltip>
- 
+
                         <div className="relative" ref={dislikeRef}>
                           <CustomTooltip
                             title={
-                              isDisliked
-                               ? "Remove dislike"
-                                : "Dislike this response"
+                              isDisliked ? "Remove Dislike" : "Dislike Response"
                             }
                             position="bottom"
                           >
                             <button
                               onClick={handleDislike}
                               disabled={isSubmitting}
-                              className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-400"
                             >
                               {isDisliked ? (
                                 <BsHandThumbsDownFill
-                                  size={16}
+                                  size={15}
                                   style={{ color: theme.colors.error }}
                                 />
                               ) : (
-                                <BsHandThumbsDown
-                                  size={16}
-                                  style={{ color: theme.colors.textSecondary }}
-                                />
+                                <BsHandThumbsDown size={15} />
                               )}
                             </button>
                           </CustomTooltip>
- 
+
                           {showDislikeOptions && (
                             <div
-                              className="absolute top-full right-0 mt-1 rounded-md shadow-lg z-50 min-w-[180px]"
+                              className="absolute top-full right-0 mt-1 rounded-xl border z-50 min-w-[180px] overflow-hidden py-1 shadow-lg animate-fade-up"
                               style={{
                                 background: theme.colors.surface,
-                                border: `1px solid ${theme.colors.border}`,
-                                boxShadow: theme.shadow.md,
+                                borderColor: theme.colors.border,
                               }}
                             >
                               {showCustomInput ? (
-                                <div className="p-3">
+                                <div className="p-2.5 flex flex-col gap-2">
                                   <textarea
                                     value={customReason}
                                     onChange={(e) =>
                                       setCustomReason(e.target.value)
                                     }
-                                    placeholder="Enter your reason"
-                                    rows={3}
-                                    className="w-full p-2 rounded resize-none text-xs focus:outline-none"
+                                    placeholder="Enter structural error description..."
+                                    rows={2}
+                                    className="w-full p-2 rounded-lg border text-xs focus:outline-none resize-none font-semibold"
                                     style={{
                                       background: theme.colors.background,
                                       color: theme.colors.text,
-                                      border: `1px solid ${theme.colors.border}`,
+                                      borderColor: theme.colors.border,
                                     }}
                                   />
-                                  <div className="flex justify-end mt-2 gap-2">
+                                  <div className="flex justify-end gap-1.5 text-[10px] font-semibold uppercase tracking-wider">
                                     <button
                                       onClick={() => {
                                         setShowCustomInput(false);
                                         setCustomReason("");
                                       }}
-                                      className="px-2 py-1 rounded text-[10px]"
                                       style={{
-                                        background: theme.colors.surface,
-                                        color: theme.colors.text,
+                                        color: theme.colors.textSecondary,
                                       }}
                                     >
                                       Cancel
@@ -633,11 +645,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                           setCustomReason("");
                                         }
                                       }}
-                                      className="px-2 py-1 rounded text-[10px]"
-                                      style={{
-                                        background: theme.colors.accent,
-                                        color: "white",
-                                      }}
+                                      className="px-2 py-0.5 rounded text-white bg-indigo-600"
                                     >
                                       Submit
                                     </button>
@@ -646,28 +654,21 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               ) : (
                                 <>
                                   {[
-                                    "Incorrect data",
-                                    "Takes too long",
-                                    "Irrelevant response",
-                                    "Confusing answer",
-                                    "Other",
+                                    "Incorrect data layout",
+                                    "Execution threshold delay",
+                                    "Irrelevant response frame",
+                                    "Confusing answer grid",
+                                    "Other Deviation",
                                   ].map((reason) => (
                                     <button
                                       key={reason}
-                                      onClick={() => {
-                                        if (reason === "Other")
-                                          setShowCustomInput(true);
-                                        else handleDislikeOption(reason);
-                                      }}
-                                      className="w-full text-left px-3 py-1.5 text-xs transition-colors"
+                                      onClick={() =>
+                                        reason === "Other"
+                                          ? setShowCustomInput(true)
+                                          : handleDislikeOption(reason)
+                                      }
+                                      className="w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                                       style={{ color: theme.colors.text }}
-                                      onMouseEnter={(e) =>
-                                        (e.currentTarget.style.backgroundColor = `${theme.colors.accent}15`)
-                                      }
-                                      onMouseLeave={(e) =>
-                                        (e.currentTarget.style.backgroundColor =
-                                          "transparent")
-                                      }
                                     >
                                       {reason}
                                     </button>
@@ -677,21 +678,20 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             </div>
                           )}
                         </div>
- 
-                        {/* Separator between reactions and edit */}
+
                         <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />
- 
+
                         <button
                           onClick={() => setIsEditing(true)}
                           disabled={isSubmitting}
-                          className="px-2.5 py-1 rounded-md text-xs font-medium"
+                          className="px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors"
                           style={{
-                            backgroundColor: `${theme.colors.accent}15`,
+                            backgroundColor: `${theme.colors.accent}12`,
+                            borderColor: `${theme.colors.accent}30`,
                             color: theme.colors.accent,
-                            border: `1px solid ${theme.colors.accent}30`,
                           }}
                         >
-                          Edit
+                          Modify
                         </button>
                       </>
                     )}
@@ -701,7 +701,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             </div>
 
             {hasKpis && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 mb-4 flex-shrink-0">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-3 mb-3 flex-shrink-0">
                 <KPICard
                   title={kpis.kpi1.label}
                   value={kpis.kpi1.value}
@@ -722,50 +722,37 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 />
               </div>
             )}
- 
-            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] items-start lg:items-stretch w-full gap-5 pb-20 lg:pb-16 flex-1 min-h-0 px-3 lg:h-full">
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch w-full gap-4 pb-28 lg:pb-24 flex-1 min-h-0 px-3">
+              {/* Left Visualization Panel Island */}
               <div
                 ref={graphContainerRef}
-                className="w-full flex flex-col overflow-hidden min-w-0"
+                className="lg:col-span-5 w-full flex flex-col overflow-visible min-w-0 animate-fade-up"
                 style={{
                   maxHeight: "100%",
-                  backgroundColor: theme.colors.surface,
-                  border: `1px solid ${theme.colors.border}40`,
-                  borderRadius: "1.5rem",
-                  boxShadow: theme.shadow.md,
+                  backgroundColor: "transparent",
+                  borderRadius: theme.borderRadius.large,
                 }}
               >
                 <div
-                  className="flex items-center justify-between px-4 py-2 border-b flex-shrink-0 min-h-[45px]"
-                  style={{
-                    borderColor: `${theme.colors.border}30`,
-                    backgroundColor: theme.mode === 'light' ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)',
-                  }}
+                  className="flex items-center justify-end py-1 flex-shrink-0"
+                  style={{ borderColor: "transparent" }}
                 >
-                  <span className="text-xs font-semibold uppercase tracking-wider flex-shrink-0" style={{ color: theme.colors.textSecondary }}>
-                    Visualization
-                  </span>
                   {dashboardItem.mainViewData.chartData?.length > 0 && (
-                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-0.5 max-w-[75%]">
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <label
-                          htmlFor="graph-type-select"
-                          className="text-[11px] font-medium"
-                          style={{ color: theme.colors.textSecondary }}
-                        >
-                          Type:
-                        </label>
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-end">
+                      <div className="flex items-center flex-shrink-0">
+
                         <select
                           id="graph-type-select"
                           value={graphType}
                           onChange={(e) =>
                             setGraphType(e.target.value as SmartChartType)
                           }
-                          className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                          className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                           style={{
-                            backgroundColor: theme.colors.background,
+                            backgroundColor: theme.colors.surface,
                             color: theme.colors.text,
-                            borderColor: `${theme.colors.border}50`,
+                            borderColor: theme.colors.border,
                           }}
                         >
                           <option value="bar">Bar</option>
@@ -780,23 +767,18 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                       </div>
 
                       {["bar", "line", "area"].includes(graphType) && (
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <label
-                            className="text-[11px] font-medium"
-                            style={{ color: theme.colors.textSecondary }}
-                          >
-                            Orient:
-                          </label>
+                        <div className="flex items-center flex-shrink-0">
+
                           <select
                             value={isVertical ? "vertical" : "horizontal"}
                             onChange={(e) =>
                               setIsVertical(e.target.value === "vertical")
                             }
-                            className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                            className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                             style={{
-                              backgroundColor: theme.colors.background,
+                              backgroundColor: theme.colors.surface,
                               color: theme.colors.text,
-                              borderColor: `${theme.colors.border}50`,
+                              borderColor: theme.colors.border,
                             }}
                           >
                             <option value="vertical">Vertical</option>
@@ -810,21 +792,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                       ) &&
                         groupBy && (
                           <>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <label
-                                className="text-[11px] font-medium"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Group:
-                              </label>
+                            <div className="flex items-center flex-shrink-0">
+
                               <select
                                 value={groupBy || ""}
                                 onChange={(e) => setGroupBy(e.target.value)}
-                                className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                                className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer max-w-[120px]"
                                 style={{
-                                  backgroundColor: theme.colors.background,
+                                  backgroundColor: theme.colors.surface,
                                   color: theme.colors.text,
-                                  borderColor: `${theme.colors.border}50`,
+                                  borderColor: theme.colors.border,
                                 }}
                               >
                                 {getValidCategoricalKeys(
@@ -836,51 +813,43 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                 ))}
                               </select>
                             </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <label
-                                className="text-[11px] font-medium"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Agg:
-                              </label>
+                            <div className="flex items-center flex-shrink-0">
+
                               <select
                                 value={aggregate}
                                 onChange={(e) =>
-                                  setAggregate(e.target.value as SmartAggregation)
+                                  setAggregate(
+                                    e.target.value as SmartAggregation,
+                                  )
                                 }
-                                className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                                className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                                 style={{
-                                  backgroundColor: theme.colors.background,
+                                  backgroundColor: theme.colors.surface,
                                   color: theme.colors.text,
-                                  borderColor: `${theme.colors.border}50`,
+                                  borderColor: theme.colors.border,
                                 }}
                               >
                                 <option value="count">Count</option>
                                 <option value="sum">Sum</option>
-                                <option value="avg">Average</option>
-                                <option value="min">Minimum</option>
-                                <option value="max">Maximum</option>
+                                <option value="avg">Avg</option>
+                                <option value="min">Min</option>
+                                <option value="max">Max</option>
                               </select>
                             </div>
                             {(aggregate === "sum" ||
                               aggregate === "avg" ||
                               aggregate === "min" ||
                               aggregate === "max") && (
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                <label
-                                  className="text-[11px] font-medium"
-                                  style={{ color: theme.colors.textSecondary }}
-                                >
-                                  Value:
-                                </label>
+                              <div className="flex items-center flex-shrink-0">
+
                                 <select
                                   value={valueKey || ""}
                                   onChange={(e) => setValueKey(e.target.value)}
-                                  className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                                  className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer max-w-[120px]"
                                   style={{
-                                    backgroundColor: theme.colors.background,
+                                    backgroundColor: theme.colors.surface,
                                     color: theme.colors.text,
-                                    borderColor: `${theme.colors.border}50`,
+                                    borderColor: theme.colors.border,
                                   }}
                                 >
                                   {getValidValueKeys(
@@ -898,18 +867,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
 
                       {graphType === "scatter" && (
                         <>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
-                              X-Axis:
-                            </label>
+                          <div className="flex items-center flex-shrink-0">
+
                             <select
                               value={groupBy || ""}
                               onChange={(e) => setGroupBy(e.target.value)}
-                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                               style={{
-                                backgroundColor: theme.colors.background,
+                                backgroundColor: theme.colors.surface,
                                 color: theme.colors.text,
-                                borderColor: `${theme.colors.border}50`,
+                                borderColor: theme.colors.border,
                               }}
                             >
                               {getValidValueKeys(
@@ -921,18 +888,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               ))}
                             </select>
                           </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
-                              Y-Axis:
-                            </label>
+                          <div className="flex items-center flex-shrink-0">
+
                             <select
                               value={valueKey || ""}
                               onChange={(e) => setValueKey(e.target.value)}
-                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                               style={{
-                                backgroundColor: theme.colors.background,
+                                backgroundColor: theme.colors.surface,
                                 color: theme.colors.text,
-                                borderColor: `${theme.colors.border}50`,
+                                borderColor: theme.colors.border,
                               }}
                             >
                               {getValidValueKeys(
@@ -949,20 +914,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
 
                       {["radar", "funnel"].includes(graphType) && (
                         <>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
-                              {graphType === "radar"
-                                ? "Category:"
-                                : "Stage:"}
-                            </label>
+                          <div className="flex items-center flex-shrink-0">
+
                             <select
                               value={groupBy || ""}
                               onChange={(e) => setGroupBy(e.target.value)}
-                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                               style={{
-                                backgroundColor: theme.colors.background,
+                                backgroundColor: theme.colors.surface,
                                 color: theme.colors.text,
-                                borderColor: `${theme.colors.border}50`,
+                                borderColor: theme.colors.border,
                               }}
                             >
                               {getValidCategoricalKeys(
@@ -974,18 +935,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               ))}
                             </select>
                           </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
-                              Value:
-                            </label>
+                          <div className="flex items-center flex-shrink-0">
+
                             <select
                               value={valueKey || ""}
                               onChange={(e) => setValueKey(e.target.value)}
-                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
+                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                               style={{
-                                backgroundColor: theme.colors.background,
+                                backgroundColor: theme.colors.surface,
                                 color: theme.colors.text,
-                                borderColor: `${theme.colors.border}50`,
+                                borderColor: theme.colors.border,
                               }}
                             >
                               {getValidValueKeys(
@@ -997,32 +956,12 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               ))}
                             </select>
                           </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <label style={{ color: theme.colors.textSecondary }} className="text-[11px] font-medium">
-                              Agg:
-                            </label>
-                            <select
-                              value={aggregate}
-                              onChange={(e) =>
-                                setAggregate(e.target.value as SmartAggregation)
-                              }
-                              className="px-2 py-0.5 text-xs rounded border outline-none cursor-pointer transition-all duration-150"
-                              style={{
-                                backgroundColor: theme.colors.background,
-                                color: theme.colors.text,
-                                borderColor: `${theme.colors.border}50`,
-                              }}
-                            >
-                              <option value="count">Count</option>
-                              <option value="sum">Sum</option>
-                            </select>
-                          </div>
                         </>
                       )}
                     </div>
                   )}
                 </div>
-                <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col items-stretch justify-end">
+                <div className="flex-1 min-h-0 w-full overflow-visible flex flex-col items-stretch justify-end">
                   <DynamicGraph
                     data={
                       syncedTableRows ?? dashboardItem.mainViewData.chartData
@@ -1039,32 +978,31 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               </div>
 
+              {/* Right Tabular Query Log Island */}
               <div
-                className="w-full flex flex-col min-w-0 overflow-hidden"
+                className="lg:col-span-7 w-full flex flex-col overflow-hidden min-w-0 animate-fade-up"
                 style={{
                   maxHeight: "100%",
-                  backgroundColor: theme.colors.surface,
-                  border: `1px solid ${theme.colors.border}40`,
-                  borderRadius: "1.5rem",
-                  boxShadow: theme.shadow.md,
+                  backgroundColor: "transparent",
+                  borderRadius: theme.borderRadius.large,
                 }}
               >
                 <div
-                  className="flex items-center justify-between px-4 py-2 border-b flex-shrink-0 min-h-[45px]"
-                  style={{
-                    borderColor: `${theme.colors.border}30`,
-                    backgroundColor: theme.mode === 'light' ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)',
-                  }}
+                  className="flex items-center justify-between py-2 flex-shrink-0 min-h-[45px]"
+                  style={{ borderColor: "transparent" }}
                 >
-                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
-                    {activeViewType === "query" ? "SQL Query" : "Data Table"}
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    {activeViewType === "query"
+                      ? "SQL Query Log"
+                      : "Data Matrix Grid"}
                   </span>
-                  
-                  {/* Segmented Switcher Control */}
+
+                  {/* Segmented Light High Contrast Switcher Controls */}
                   <div
-                    className="flex p-0.5 rounded-lg border"
+                    className="flex p-0.5 rounded-lg border font-semibold"
                     style={{
-                      backgroundColor: theme.mode === 'light' ? '#f1f5f9' : '#0f172a',
+                      backgroundColor:
+                        theme.mode === "light" ? "#E2E8F0" : "#0F172A",
                       borderColor: theme.colors.border,
                     }}
                   >
@@ -1073,11 +1011,20 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         key={viewType}
                         onClick={() => onViewTypeChange(viewType)}
                         disabled={isSubmitting}
-                        className="px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-150"
+                        className="px-2.5 py-1 text-xs font-semibold rounded-md transition-all"
                         style={{
-                          backgroundColor: activeViewType === viewType ? theme.colors.surface : "transparent",
-                          color: activeViewType === viewType ? theme.colors.text : theme.colors.textSecondary,
-                          boxShadow: activeViewType === viewType ? theme.shadow.sm : "none",
+                          backgroundColor:
+                            activeViewType === viewType
+                              ? theme.colors.surface
+                              : "transparent",
+                          color:
+                            activeViewType === viewType
+                              ? theme.colors.text
+                              : theme.colors.textSecondary,
+                          boxShadow:
+                            activeViewType === viewType
+                              ? "0 1px 3px rgba(0,0,0,0.06)"
+                              : "none",
                         }}
                       >
                         {viewType === "table" ? "Table" : "SQL"}
