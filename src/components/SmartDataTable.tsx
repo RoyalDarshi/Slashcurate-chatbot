@@ -898,7 +898,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 position: "sticky",
                 top: 0,
                 zIndex: 4,
-                background: variant === "dashboard-flat" || variant === "chat" ? "transparent" : theme.colors.surface,
+                background: theme.colors.surface,
               }}
             >
               {table.getHeaderGroups().map((headerGroup) => (
@@ -1002,7 +1002,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                   position: "sticky",
                   bottom: 0,
                   zIndex: 3,
-                  background: variant === "dashboard-flat" || variant === "chat" ? "transparent" : theme.colors.surface,
+                  background: theme.colors.surface,
                 }}
               >
                 <tr style={{ display: "flex", width: totalTableWidth }}>

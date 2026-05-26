@@ -1926,15 +1926,21 @@ export const getSmartEChartsOption = (
   );
   const valueAxis = makeValueAxis(config, theme, config.yAxisKey);
 
+  let gridBottom = config.axis.gridBottom;
+  if (showLegend) {
+    gridBottom = Math.max(gridBottom, 48);
+  }
+  if (config.axis.dataZoom) {
+    gridBottom += 24;
+  }
+
   return {
     ...baseOption,
     grid: {
-      left: config.axis.gridLeft,
+      left: 16,
       right: config.axis.gridRight,
       top: config.axis.gridTop,
-      bottom: showLegend
-        ? Math.max(config.axis.gridBottom, 44)
-        : config.axis.gridBottom,
+      bottom: gridBottom,
       containLabel: true,
     },
     dataZoom: config.axis.dataZoom
