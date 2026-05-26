@@ -275,7 +275,7 @@ const AppContent: React.FC<{
                   />
                 ))}
               {activeMenu === "new-connection" && (
-                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
                   <ConnectionForm
                     token={userToken}
                     isAdmin={false}
@@ -284,7 +284,7 @@ const AppContent: React.FC<{
                 </div>
               )}
               {activeMenu === "existing-connection" && (
-                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
                   <ExistingConnections
                     isAdmin={false}
                     createConnection={onCreateConSelected}
@@ -308,10 +308,12 @@ const AppContent: React.FC<{
               )}
               {activeMenu === "settings" && <Settings />}
               {activeMenu === "help" && (
-                <HelpPage
+                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
+                 <HelpPage
                   onCreateConSelected={onCreateConSelected}
                   onNewChat={onNewChat}
                 />
+                </div>
               )}
             </div>
           </main>
