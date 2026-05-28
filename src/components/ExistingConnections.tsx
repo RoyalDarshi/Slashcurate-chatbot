@@ -503,11 +503,12 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
           </button>
         </div>
       )}
-      {loading && (
-        <div className="md:col-span-2 mt-4">
-          <Loader text={"Extracting metadata, please wait..."} />
-        </div>
-      )}
+        {loading && (
+          <div className="md:col-span-2 mt-4 flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-sm font-medium opacity-70" style={{ color: theme.colors.text }}>Extracting metadata, please wait...</p>
+          </div>
+        )}
 
       {/* Render confirmation modal */}
       <DeleteConfirmationModal />

@@ -23,7 +23,9 @@ import {
   AlertCircle,
   Sparkles,
   LayoutDashboard,
+  X,
 } from "lucide-react";
+import ConnectionForm from "./ConnectionForm";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
 import {
@@ -134,6 +136,7 @@ const ChatInterface = memo(
       const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
         useState(false);
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
+      const [showCreateConnectionModal, setShowCreateConnectionModal] = useState(false);
 
       const options = [
         { value: "create-con", label: "Create New Connection", isAdmin: false },
@@ -588,15 +591,12 @@ const ChatInterface = memo(
       }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
 
       const handleConnectionSelect = useCallback(
-        (connection: string | null) => {
-          if (connection === "create-con") {
-            onCreateConSelected();
-            if (sessionId) handleNewChat();
-            setSelectedConnection(null);
-            localStorage.removeItem("selectedConnection");
+        (value: string) => {
+          if (value === "create-con") {
+            setShowCreateConnectionModal(true);
           } else {
             const selectedConnectionObj = connections.find(
-              (conn) => conn.connectionName === connection,
+              (conn) => conn.connectionName === value,
             );
             if (selectedConnectionObj) {
               if (
@@ -619,7 +619,6 @@ const ChatInterface = memo(
           setIsConnectionDropdownOpen(false);
         },
         [
-          onCreateConSelected,
           connections,
           handleNewChat,
           setSelectedConnection,
@@ -1175,7 +1174,10 @@ const ChatInterface = memo(
             className="flex-1 overflow-y-auto w-full custom-scrollbar pt-6 pb-36 px-4 md:px-8 flex flex-col"
           >
             {connectionsLoading ? (
-              <Loader text="Mapping integrated clusters..." />
+              <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto animate-pulse">
+                <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-sm font-medium opacity-70" style={{ color: theme.colors.text }}>Mapping integrated clusters...</p>
+              </div>
             ) : connections.length === 0 && !selectedConnection ? (
               <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
                 <div
@@ -1294,12 +1296,12 @@ const ChatInterface = memo(
               <CustomTooltip title="Scroll to Bottom" position="top">
                 <button
                   onClick={scrollToBottom}
-                  className="p-2.5 rounded-xl text-white transition-all hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
+                  className="p-3 rounded-full text-white transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md"
                   style={{
                     background: theme.colors.accent,
                   }}
                 >
-                  <ArrowDown size={16} />
+                  <ArrowDown size={18} />
                 </button>
               </CustomTooltip>
             </div>
@@ -1442,7 +1444,7 @@ const ChatInterface = memo(
           )}
 
           {isDbExplorerOpen && selectedConnection && (
-            <div className="absolute bottom-22 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl pointer-events-auto">
+            <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl pointer-events-auto">
               <SchemaExplorer
                 schemas={schemaSampleData}
                 onClose={() => setIsDbExplorerOpen(false)}
@@ -1465,6 +1467,33 @@ const ChatInterface = memo(
               >
                 <AlertCircle size={14} />
                 <span className="truncate">Connection Error: {connectionError}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Create Connection Modal */}
+          {showCreateConnectionModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-up">
+              <div
+                className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl custom-scrollbar"
+                style={{ backgroundColor: theme.colors.background }}
+              >
+                <button
+                  onClick={() => setShowCreateConnectionModal(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 z-10 transition-colors"
+                  style={{ color: theme.colors.text }}
+                >
+                  <X size={20} />
+                </button>
+                <div className="p-6 md:p-8">
+                  <ConnectionForm
+                    isAdmin={false}
+                    token={token}
+                    onSuccess={() => {
+                      setShowCreateConnectionModal(false);
+                    }}
+                  />
+                </div>
               </div>
             </div>
           )}

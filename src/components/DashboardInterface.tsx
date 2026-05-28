@@ -31,6 +31,7 @@ import DashboardError from "./DashboardError";
 import PreviousQuestionsDrawer from "./PreviousQuestionsDrawer";
 import html2canvas from "html2canvas";
 import { FaFilePdf } from "react-icons/fa";
+import ConnectionForm from "./ConnectionForm";
 import {
   ListChecks,
   Database,
@@ -39,6 +40,7 @@ import {
   AlertCircle,
   Sparkles,
   MessageSquare,
+  X,
 } from "lucide-react";
 
 export type DashboardInterfaceHandle = {
@@ -279,6 +281,7 @@ const DashboardInterface = memo(
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
       const [isConnectionDropdownOpen, setIsConnectionDropdownOpen] =
         useState(false);
+      const [showCreateConnectionModal, setShowCreateConnectionModal] = useState(false);
       const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
         null,
       );
@@ -1148,13 +1151,13 @@ const DashboardInterface = memo(
       const handleConnectionSelect = useCallback(
         (value: string) => {
           if (value === "create-con") {
-            onCreateConSelected();
+            setShowCreateConnectionModal(true);
           } else {
             setSelectedConnection(value);
           }
           setIsConnectionDropdownOpen(false);
         },
-        [onCreateConSelected, setSelectedConnection],
+        [setSelectedConnection],
       );
 
       const handlePdfClick = useCallback(
@@ -1972,8 +1975,9 @@ const DashboardInterface = memo(
               {(() => {
                 if (connectionsLoading) {
                   return (
-                    <div className="flex justify-center items-center flex-grow">
-                      <Loader text="Loading connections..." />
+                    <div className="flex justify-center items-center flex-grow flex-col animate-pulse">
+                      <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+                      <p className="text-sm font-medium opacity-70" style={{ color: theme.colors.text }}>Loading connections...</p>
                     </div>
                   );
                 }
@@ -2009,8 +2013,9 @@ const DashboardInterface = memo(
 
                 if (!currentDashboardView) {
                   return (
-                    <div className="flex justify-center items-center flex-grow">
-                      <Loader text="Loading dashboard view..." />
+                    <div className="flex justify-center items-center flex-grow flex-col animate-pulse">
+                      <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+                      <p className="text-sm font-medium opacity-70" style={{ color: theme.colors.text }}>Loading dashboard view...</p>
                     </div>
                   );
                 }
@@ -2297,6 +2302,34 @@ const DashboardInterface = memo(
               </div>
             </div>
           )}
+
+          {/* Create Connection Modal */}
+          {showCreateConnectionModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-up">
+              <div
+                className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl custom-scrollbar"
+                style={{ backgroundColor: theme.colors.background }}
+              >
+                <button
+                  onClick={() => setShowCreateConnectionModal(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 z-10 transition-colors"
+                  style={{ color: theme.colors.text }}
+                >
+                  <X size={20} />
+                </button>
+                <div className="p-6 md:p-8">
+                  <ConnectionForm
+                    isAdmin={false}
+                    token={token}
+                    onSuccess={() => {
+                      setShowCreateConnectionModal(false);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       );
     },

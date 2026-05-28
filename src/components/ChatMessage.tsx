@@ -782,17 +782,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       </div>
                     )}
 
-                    {currentView === "table" && csvData.length > 0 && (
-                      <CustomTooltip title="Export data to CSV" position="top">
-                        <button
-                          onClick={handleDownloadCSV}
-                          className="p-1.5 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                        >
-                          <Download size={15} />
-                        </button>
-                      </CustomTooltip>
-                    )}
-
                     {currentView === "query" && parsedData?.sql_query && (
                       <CustomTooltip title={copyTooltipTxt} position="top">
                         <button
