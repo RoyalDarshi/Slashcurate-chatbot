@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import ConnectionForm from "./ConnectionForm";
-import LDAPForm from "./LDAPForm";
+import LDAPManager from "./LDAPManager";
 import Setting from "./Settings";
 import ExistingConnections from "./ExistingConnections";
 import UserManagement from "./UserManagement";
@@ -11,7 +11,6 @@ import { useTheme } from "../ThemeContext";
 import { Database, Key, Settings, LogOut, Link, Server, User, Shield } from "lucide-react"; 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import LDAPConfigDisplay from "./LDAPConfigDisplay";
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -32,12 +31,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   );
 
   const adminMenuItems: MenuItem[] = [
-    { id: "create-connection", label: "Create Connection", icon: Database },
-    { id: "create-ldap", label: "Create LDAP Details", icon: Key },
-    { id: "existing-connection", label: "Existing Connection", icon: Link },
+    { id: "existing-connection", label: "Connections", icon: Link },
     { id: "users", label: "Manage Users", icon: User },
     { id: "permission-control", label: "Permission Control", icon: Shield },
-    { id: "ldap-config", label: "LDAP Config", icon: Server },
+    { id: "ldap-settings", label: "LDAP Settings", icon: Server },
     { id: "settings", label: "Settings", icon: Settings },
     { id: "logout", label: "Logout", icon: LogOut },
   ];
@@ -104,14 +101,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             }}
           />
         )}
-        {activeMenu === "create-ldap" && <LDAPForm adminId={token} />}
         {activeMenu === "existing-connection" && (
           <ExistingConnections
             isAdmin={true}
             createConnection={handleCreateConnection}
           />
         )}
-        {activeMenu === "ldap-config" && <LDAPConfigDisplay />}
+        {activeMenu === "ldap-settings" && <LDAPManager />}
         {activeMenu === "users" && (
           <UserManagement token={token} />
         )}

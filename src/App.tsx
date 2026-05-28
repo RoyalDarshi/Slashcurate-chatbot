@@ -108,7 +108,7 @@ function App() {
   };
 
   const handleCreateConSelected = () => {
-    setActiveMenu("new-connection");
+    setActiveMenu("existing-connection");
   };
 
   const handleHomePage = () => {
@@ -244,7 +244,7 @@ const AppContent: React.FC<{
             defaultMenuItems={
               localStorage.getItem("allowedToCreateConnection") !== "false"
                 ? menuItems
-                : menuItems.filter((item) => item.id !== "new-connection")
+                : menuItems // We don't filter out new-connection here since we removed it from menuItems.
             }
             onLogout={onLogout}
           />
@@ -278,15 +278,6 @@ const AppContent: React.FC<{
                     />
                   </div>
                 </>
-              )}
-              {activeMenu === "new-connection" && (
-                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
-                  <ConnectionForm
-                    token={userToken}
-                    isAdmin={false}
-                    onSuccess={() => setActiveMenu("existing-connection")}
-                  />
-                </div>
               )}
               {activeMenu === "existing-connection" && (
                 <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">

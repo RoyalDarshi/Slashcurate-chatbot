@@ -58,6 +58,9 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
 
   // State for edit modal
   const [editConnection, setEditConnection] = useState<Connection | null>(null);
+  
+  // State for create modal
+  const [isCreatingConnection, setIsCreatingConnection] = useState(false);
 
   const fetchConnections = useCallback(async () => {
     if (!token) {
@@ -299,12 +302,28 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
           border: `1px solid ${theme.colors.text}20`,
         }}
       />
-      <h2
-        className="text-3xl font-bold mb-6"
-        style={{ color: theme.colors.text }}
-      >
-        Existing Connections
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2
+          className="text-3xl font-bold"
+          style={{ color: theme.colors.text }}
+        >
+          Connections
+        </h2>
+        
+        {/* Render Add Connection button only if we have connections (empty state handles its own) */}
+        {connections.length > 0 && (
+          <button
+            onClick={() => setIsCreatingConnection(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-xs"
+            style={{ backgroundColor: theme.colors.accent }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accentHover)}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accent)}
+          >
+            <Database size={16} />
+            Add Connection
+          </button>
+        )}
+      </div>
 
       {connections.length > 0 ? (
         <div className="overflow-x-auto rounded-xl shadow-lg border pb-2" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface, boxShadow: theme.colors.background === "#0F172A" ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)" : "0 4px 20px -2px rgba(0, 0, 0, 0.05)" }}>
@@ -481,7 +500,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
             started!
           </p>
           <button
-            onClick={createConnection}
+            onClick={() => setIsCreatingConnection(true)}
             disabled={loading}
             className="w-full px-4 py-2 font-medium rounded-md transition duration-200 shadow-sm text-white"
             style={{
@@ -513,13 +532,16 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
       {/* Render confirmation modal */}
       <DeleteConfirmationModal />
 
-      {/* Edit Connection Modal - Right Slide-Over Drawer */}
-      {editConnection && (
+      {/* Edit/Create Connection Modal - Right Slide-Over Drawer */}
+      {(editConnection || isCreatingConnection) && (
         <div className="fixed inset-0 z-50 flex justify-end">
           {/* Dark Overlay */}
           <div 
             className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" 
-            onClick={() => setEditConnection(null)} 
+            onClick={() => {
+              setEditConnection(null);
+              setIsCreatingConnection(false);
+            }} 
           />
           
           {/* Drawer Panel */}
@@ -540,19 +562,24 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
             >
               <div>
                 <h2 className="text-xl font-bold" style={{ color: theme.colors.text }}>
-                  Edit Connection
+                  {isCreatingConnection ? "Create Connection" : "Edit Connection"}
                 </h2>
                 <p className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
-                  Editing settings for <strong>{editConnection.connectionName}</strong>
+                  {isCreatingConnection 
+                    ? "Add a new database connection to your workspace" 
+                    : <>Editing settings for <strong>{editConnection?.connectionName}</strong></>}
                 </p>
               </div>
               <button
-                onClick={() => setEditConnection(null)}
+                onClick={() => {
+                  setEditConnection(null);
+                  setIsCreatingConnection(false);
+                }}
                 className="p-2 rounded-full transition-colors duration-200"
                 style={{ color: theme.colors.textSecondary }}
                 onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.hover)}
                 onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                aria-label="Close edit modal"
+                aria-label="Close modal"
               >
                 <X size={20} />
               </button>
@@ -563,8 +590,8 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
               <ConnectionForm
                 isAdmin={isAdmin}
                 token={token || ""}
-                editConnectionId={editConnection.id}
-                initialData={{
+                editConnectionId={editConnection?.id}
+                initialData={editConnection ? {
                   connectionName: editConnection.connectionName,
                   description: editConnection.description,
                   hostname: editConnection.hostname,
@@ -576,9 +603,10 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                   username: editConnection.username,
                   password: "",
                   isPublic: editConnection.isPublic || false,
-                }}
+                } : null}
                 onSuccess={() => {
                   setEditConnection(null);
+                  setIsCreatingConnection(false);
                   fetchConnections();
                 }}
               />
