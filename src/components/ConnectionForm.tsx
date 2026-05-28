@@ -5,7 +5,6 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import debounce from "lodash.debounce";
@@ -25,13 +24,8 @@ import {
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import "./ConnectionForm.css";
-import {
-  createAdminConnection,
-  createUserConnection,
-  testConnection,
-  updateConnection,
-} from "../api";
-import { CHATBOT_API_URL } from "../config";
+import { connectionService } from "../services/connectionService";
+import { handleApiError } from "../utils/errorHandler";
 
 // Define interfaces for type safety
 interface FormData {
@@ -363,12 +357,9 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isMetadataExtracted) {
-      // Now depends on metadata extraction
       toast.error(
         "Please test connection and extract metadata before creating.",
-        {
-          theme: mode,
-        },
+        { theme: mode },
       );
       return;
     }
@@ -378,27 +369,22 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       });
       return;
     }
-    if (!token) {
-      toast.error("Authentication token not found. Please log in again.", {
-        theme: mode,
-      });
-      return;
-    }
 
     try {
       setLoading(true);
       setLoadingText(editConnectionId ? "Updating connection, please wait..." : "Submitting connection, please wait...");
+      
       let response: any;
       if (editConnectionId) {
-        response = await updateConnection(token, editConnectionId, formData);
+        response = await connectionService.updateConnection(editConnectionId, formData, isAdmin);
       } else if (isAdmin) {
-        response = await createAdminConnection(token, formData);
+        response = await connectionService.createAdminConnection(formData);
       } else {
-        response = await createUserConnection(token, formData);
+        response = await connectionService.createUserConnection(formData);
       }
       setLoading(false);
 
-      if (response.status === 200) {
+      if (response.message === "Connection updated successfully" || response.message === "Connection Details Stored Successfully!") {
         toast.success(
           editConnectionId
             ? "Connection updated successfully."
@@ -408,20 +394,13 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
         if (!editConnectionId) handleClearForm();
         if (onSuccess) onSuccess();
       } else {
-        toast.error(`Error: ${response.data.message || "Unknown error"}`, {
+        toast.error(`Error: ${response.message || "Unknown error"}`, {
           theme: mode,
         });
       }
     } catch (error) {
       setLoading(false);
-      toast.error(
-        `Error: ${
-          axios.isAxiosError(error)
-            ? error.response?.data?.message || "Request failed"
-            : (error as Error).message
-        }`,
-        { theme: mode },
-      );
+      handleApiError(error, "Failed to save connection", mode);
     }
   };
 
@@ -439,34 +418,18 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     setIsMetadataExtracted(false); // Also reset metadata extraction status
 
     try {
-      const response = await testConnection(formData); // Assuming testConnection doesn't need a token or uses a generic one
+      const response = await connectionService.testConnection(formData, isAdmin);
       setLoading(false);
 
-      if (response.status === 200) {
+      if (response.message === "Connection successful!" || response.status === "success") {
         toast.success("Connection test successful.", { theme: mode });
         setIsTestSuccessful(true);
       } else {
-        toast.error(
-          `Error: ${
-            response.data.message || response.data?.error || "Test failed"
-          }`,
-          {
-            theme: mode,
-          },
-        );
-        setIsTestSuccessful(false);
+        toast.error(`Error: ${response.message || "Test failed"}`, { theme: mode });
       }
     } catch (error) {
       setLoading(false);
-      toast.error(
-        `Connection test failed: ${
-          axios.isAxiosError(error)
-            ? error.response?.data?.message || "Unknown error"
-            : "Network error"
-        }`,
-        { theme: mode },
-      );
-      setIsTestSuccessful(false);
+      handleApiError(error, "Connection test error", mode);
     }
   };
 
@@ -477,45 +440,23 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       });
       return;
     }
-    // Optionally re-validate here if needed, though isTestSuccessful implies form was valid
-    // if (!isFormValid) { ... }
 
     setLoading(true);
     setLoadingText("Extracting metadata, please wait...");
-    setIsMetadataExtracted(false); // Reset before attempting
+    setIsMetadataExtracted(false);
 
     try {
-      // Pass the token if your extractMetadataFromDB API requires it
-      const response = await axios.post(`${CHATBOT_API_URL}/meta_data`, {
-        connection: formData,
-        isEncrypted: false,
-      }); // Pass formData and token
-      setLoading(false);
-
-      if (response.status === 200) {
-        toast.success("Metadata extracted successfully.", { theme: mode });
-        setIsMetadataExtracted(true);
-        // You might want to store/display some of the extracted metadata if the API returns it
-      } else {
-        toast.error(
-          `Metadata extraction failed: ${
-            response.data.message || "Unknown error"
-          }`,
-          { theme: mode },
-        );
-        setIsMetadataExtracted(true);
-      }
-    } catch (error) {
-      setLoading(false);
-      toast.error(
-        `Metadata extraction error: ${
-          axios.isAxiosError(error)
-            ? error.response?.data?.message || "Request failed"
-            : (error as Error).message
-        }`,
-        { theme: mode },
-      );
+      // Using reExtractMetadata which maps to /meta_data
+      const response = await connectionService.reExtractMetadata({
+        ...formData,
+      } as any);
+      
+      toast.success("Metadata extracted successfully.", { theme: mode });
       setIsMetadataExtracted(true);
+    } catch (error) {
+      handleApiError(error, "Metadata extraction error", mode);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -534,7 +475,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       isPublic: false,
     });
     setErrors({});
-    setIsTestButtonEnabled(false); // Will be re-enabled by useEffect if form becomes valid
+    setIsTestButtonEnabled(false);
     setIsExtractMetadataButtonEnabled(false);
     setIsSubmitButtonEnabled(false);
     setIsFormModified(false);

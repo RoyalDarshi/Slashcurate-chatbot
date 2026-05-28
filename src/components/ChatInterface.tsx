@@ -2,6 +2,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   memo,
   forwardRef,
   useImperativeHandle,
@@ -10,7 +11,11 @@ import {
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import { Message, Connection, ChatInterfaceProps } from "../types";
-import { API_URL, CHATBOT_API_URL } from "../config";
+import { chatService } from "../services/chatService";
+import { historyService } from "../services/historyService";
+import { connectionService } from "../services/connectionService";
+import { handleApiError } from "../utils/errorHandler";
+import { API_URL } from "../config";
 import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import Loader from "./Loader";
@@ -94,7 +99,7 @@ const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
-      const { setCurrentView } = useSettings();
+      const { currentView, setCurrentView } = useSettings();
       const token = sessionStorage.getItem("token") ?? "";
 
       const {
@@ -147,6 +152,24 @@ const ChatInterface = memo(
         })),
       ];
 
+      const orderedMessages = useMemo(() => {
+        const parentMessages = messages.filter(m => !m.isBot || !m.parentId);
+        const childMessages = messages.filter(m => m.isBot && m.parentId);
+        const sorted: Message[] = [];
+        
+        parentMessages.forEach(parent => {
+          sorted.push(parent);
+          const children = childMessages.filter(child => child.parentId === parent.id);
+          sorted.push(...children);
+        });
+        
+        // Add any orphaned child messages at the end
+        const orphanedChildren = childMessages.filter(child => !parentMessages.some(p => p.id === child.parentId));
+        sorted.push(...orphanedChildren);
+        
+        return sorted;
+      }, [messages]);
+
       useEffect(() => {
         const checkAndPoll = async () => {
           const allLoadingMessages = messages.filter(
@@ -164,19 +187,15 @@ const ChatInterface = memo(
 
           try {
             for (const msg of messagesToPoll) {
-              const response = await axios.post(
-                `${API_URL}/api/getmessages/${msg.id}`,
-                { token },
-                { headers: { Authorization: `Bearer ${token}` } },
-              );
-              if (response.data.status !== "loading") {
+              const response = await chatService.getMessage(msg.id);
+              if (response.status !== "loading") {
                 dispatchMessages({
                   type: "UPDATE_MESSAGE",
                   id: msg.id,
                   message: {
-                    content: response.data.content,
-                    timestamp: response.data.timestamp,
-                    status: response.data.status,
+                    content: response.content,
+                    timestamp: response.timestamp,
+                    status: response.status,
                   },
                 });
               }
@@ -212,9 +231,7 @@ const ChatInterface = memo(
             const storedSessionId = localStorage.getItem("currentSessionId");
             if (storedSessionId) {
               try {
-                await axios.get(`${API_URL}/api/sessions/${storedSessionId}`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                });
+                await historyService.getSession(storedSessionId);
                 loadSession(storedSessionId);
               } catch (error) {
                 console.error("Session validation failed:", error);
@@ -305,19 +322,17 @@ const ChatInterface = memo(
 
           if (!currentSessionId) {
             try {
-              const response = await axios.post(
-                `${API_URL}/api/sessions`,
-                {
-                  token,
-                  currentConnection: connection,
-                  con_id: connections.find(
-                    (c) => c.connectionName === connection,
-                  )?.id,
-                  title: question.substring(0, 50) + "...",
-                },
-                { headers: { "Content-Type": "application/json" } },
+              const connectionObj = connections.find(
+                (c) => c.connectionName === connection,
               );
-              currentSessionId = response.data.id;
+              
+              const response = await historyService.createSession({
+                token,
+                currentConnection: connection,
+                con_id: connectionObj?.id ?? "",
+                title: question.substring(0, 50) + "...",
+              });
+              currentSessionId = response.id;
               localStorage.setItem("currentSessionId", currentSessionId || "");
               dispatchMessages({
                 type: "SET_SESSION",
@@ -347,42 +362,33 @@ const ChatInterface = memo(
           let finalBotMessageId = tempBotMsgId;
 
           try {
-            const userResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: currentSessionId,
-                content: question,
-                isBot: false,
-                isFavorited,
-                parentId: null,
-                status: "normal",
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            const userResponse = await chatService.createMessage({
+              token,
+              session_id: currentSessionId,
+              content: question,
+              isBot: false,
+              isFavorited: false,
+              status: "normal",
+            });
 
-            finalUserMessageId = userResponse.data.id;
+            finalUserMessageId = userResponse.id;
             dispatchMessages({
               type: "REPLACE_MESSAGE_ID",
               oldId: tempUserMsgId,
               newId: finalUserMessageId,
             });
 
-            const botLoadingResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: currentSessionId,
-                content: "loading...",
-                isBot: true,
-                isFavorited: false,
-                parentId: finalUserMessageId,
-                status: "loading",
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            const botLoadingResponse = await chatService.createMessage({
+              token,
+              session_id: currentSessionId,
+              content: "loading...",
+              isBot: true,
+              isFavorited: false,
+              parentId: userResponse.data?.id || userResponse.id,
+              status: "loading",
+            });
 
-            finalBotMessageId = botLoadingResponse.data.id;
+            finalBotMessageId = botLoadingResponse.id;
             dispatchMessages({
               type: "REPLACE_MESSAGE_ID",
               oldId: tempBotMsgId,
@@ -408,11 +414,7 @@ const ChatInterface = memo(
                   sessionId: currentSessionId,
                 };
 
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              payload,
-              { signal: controller.signal },
-            );
+            const response = await chatService.askChatbot(payload, controller);
             setActiveRequestController(null);
             const responseData = response.data;
 
@@ -432,19 +434,15 @@ const ChatInterface = memo(
             }
 
             const limitedData = limitDataForBackend(responseData);
-            await axios.put(
-              `${API_URL}/api/messages/${finalBotMessageId}`,
-              {
-                token,
-                content:
-                  finalStatus === "error"
-                    ? finalContent
-                    : JSON.stringify(limitedData, null, 2),
-                timestamp: new Date().toISOString(),
-                status: finalStatus,
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            await chatService.updateMessage(finalBotMessageId, {
+              token,
+              content:
+                finalStatus === "error"
+                  ? finalContent
+                  : JSON.stringify(limitedData, null, 2),
+              timestamp: new Date().toISOString(),
+              status: finalStatus,
+            });
 
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -538,6 +536,7 @@ const ChatInterface = memo(
       ]);
 
       useEffect(() => {
+        if (currentView !== "chat") return;
         const storedSessionId = localStorage.getItem("currentSessionId");
         if (storedSessionId) {
           axios
@@ -553,7 +552,7 @@ const ChatInterface = memo(
         } else if (sessionId) {
           clearSession();
         }
-      }, [loadSession, token, clearSession]);
+      }, [loadSession, token, clearSession, currentView]);
 
       useEffect(() => {
         if (initialQuestion && !connectionsLoading && connections.length > 0) {
@@ -631,13 +630,7 @@ const ChatInterface = memo(
         async (connection: string, e: React.MouseEvent) => {
           e.stopPropagation();
           try {
-            const response = await axios.get(
-              `${API_URL}/api/data-atlas/${connection}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-                responseType: "blob",
-              },
-            );
+            const response = await connectionService.downloadDataAtlas(connection);
             const pdfBlob = new Blob([response.data], {
               type: "application/pdf",
             });
@@ -688,16 +681,7 @@ const ChatInterface = memo(
           const errorStatus = "error";
           const loadingMessageId = loadingMessage.id;
           try {
-            await axios.put(
-              `${API_URL}/api/messages/${loadingMessageId}`,
-              {
-                token,
-                content: errorMessage,
-                timestamp: new Date().toISOString(),
-                status: errorStatus,
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            await chatService.updateMessage(loadingMessageId, { token, content: errorMessage, timestamp: new Date().toISOString(), status: errorStatus });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: loadingMessageId,
@@ -748,23 +732,7 @@ const ChatInterface = memo(
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId,
             );
-            await axios.post(
-              `${API_URL}/favorite`,
-              {
-                token,
-                questionId: messageId,
-                questionContent: questionMessage.content,
-                currentConnection: currentConnectionForAction,
-                con_id: connections.find(
-                  (c) => c.connectionName === currentConnectionForAction,
-                )?.id,
-                responseQuery:
-                  responseMessage && responseMessage.status === "normal"
-                    ? JSON.parse(responseMessage.content).sql_query
-                    : null,
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            await chatService.favoriteMessage({ token, questionId: messageId, questionContent: questionMessage.content, currentConnection: currentConnectionForAction, con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id, responseQuery: responseMessage && responseMessage.status === "normal" ? (JSON.parse(responseMessage.content).metadata?.query || JSON.parse(responseMessage.content).query || null) : null });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: messageId,
@@ -804,19 +772,7 @@ const ChatInterface = memo(
           }
           try {
             const message = messages.find((msg) => msg.id === messageId);
-            await axios.post(
-              `${API_URL}/unfavorite`,
-              {
-                token,
-                currentConnection: currentConnectionForAction,
-                con_id: connections.find(
-                  (c) => c.connectionName === currentConnectionForAction,
-                )?.id,
-                questionContent: message?.content,
-                questionId: messageId,
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            await chatService.unfavoriteMessage({ token, currentConnection: currentConnectionForAction, con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id, questionContent: message?.content, questionId: messageId });
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId,
             );
@@ -864,18 +820,15 @@ const ChatInterface = memo(
           if (!connectionObj || !sessionId) return;
 
           const originalBotMessageId = botMessage.id;
+          
+          const payload = {
+            question: userMessage.content,
+            con_id: connectionObj.id,
+            session_id: sessionId,
+          };
 
           try {
-            await axios.put(
-              `${API_URL}/api/messages/${originalBotMessageId}`,
-              {
-                token,
-                content: "loading...",
-                timestamp: new Date().toISOString(),
-                status: "loading",
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            await chatService.updateMessage(originalBotMessageId, { token, content: "loading...", timestamp: new Date().toISOString(), status: "loading" });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: originalBotMessageId,
@@ -889,29 +842,12 @@ const ChatInterface = memo(
             const controller = new AbortController();
             setActiveRequestController(controller);
 
-            const response = await axios.post(
-              `${CHATBOT_API_URL}/ask`,
-              {
-                question: userMessage.content,
-                connection: connectionObj,
-                sessionId,
-              },
-              { signal: controller.signal },
-            );
+            const response = await chatService.askChatbot(payload, controller);
             setActiveRequestController(null);
             const botResponseContent = JSON.stringify(response.data, null, 2);
 
             const limitedResponseData = limitDataForBackend(response.data);
-            await axios.put(
-              `${API_URL}/api/messages/${originalBotMessageId}`,
-              {
-                token,
-                content: JSON.stringify(limitedResponseData, null, 2),
-                timestamp: new Date().toISOString(),
-                status: "normal",
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            await chatService.updateMessage(originalBotMessageId, { token, content: JSON.stringify(limitedResponseData, null, 2), timestamp: new Date().toISOString(), status: "normal" });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: originalBotMessageId,
@@ -931,14 +867,7 @@ const ChatInterface = memo(
             )
               return;
 
-            await axios
-              .put(`${API_URL}/api/messages/${originalBotMessageId}`, {
-                token,
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-                status: "error",
-              })
-              .catch(() => {});
+            await chatService.updateMessage(originalBotMessageId, { token, content: errorContent, timestamp: new Date().toISOString(), status: "error" }).catch(() => {});
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: originalBotMessageId,
@@ -972,6 +901,12 @@ const ChatInterface = memo(
         );
         if (!connectionObj) return;
 
+        const payload = {
+          question: content,
+          con_id: connectionObj.id,
+          session_id: sessionId,
+        };
+
         let botMessageToUpdateId: string | null = null;
         const responseMessage = messages.find(
           (msg) => msg.parentId === id && msg.isBot,
@@ -979,16 +914,7 @@ const ChatInterface = memo(
         if (responseMessage) botMessageToUpdateId = responseMessage.id;
 
         try {
-          await axios.put(
-            `${API_URL}/api/messages/${id}`,
-            {
-              token,
-              content,
-              timestamp: new Date().toISOString(),
-              status: "normal",
-            },
-            { headers: { "Content-Type": "application/json" } },
-          );
+          await chatService.updateMessage(id, { token, content, timestamp: new Date().toISOString(), status: "normal" });
           dispatchMessages({
             type: "UPDATE_MESSAGE",
             id,
@@ -1000,16 +926,7 @@ const ChatInterface = memo(
           });
 
           if (botMessageToUpdateId) {
-            await axios.put(
-              `${API_URL}/api/messages/${botMessageToUpdateId}`,
-              {
-                token,
-                content: "loading...",
-                timestamp: new Date().toISOString(),
-                status: "loading",
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
+            await chatService.updateMessage(botMessageToUpdateId, { token, content: "loading...", timestamp: new Date().toISOString(), status: "loading" });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: botMessageToUpdateId,
@@ -1020,20 +937,8 @@ const ChatInterface = memo(
               },
             });
           } else {
-            const botLoadingResponse = await axios.post(
-              `${API_URL}/api/messages`,
-              {
-                token,
-                session_id: sessionId,
-                content: "loading...",
-                isBot: true,
-                isFavorited: false,
-                parentId: id,
-                status: "loading",
-              },
-              { headers: { "Content-Type": "application/json" } },
-            );
-            botMessageToUpdateId = botLoadingResponse.data.id;
+            const botLoadingResponse = await chatService.createMessage({ token, session_id: sessionId, content: "loading...", isBot: true, isFavorited: false, parentId: id, status: "loading" });
+            botMessageToUpdateId = botLoadingResponse.id;
             dispatchMessages({
               type: "ADD_MESSAGE",
               message: {
@@ -1050,24 +955,11 @@ const ChatInterface = memo(
 
           const controller = new AbortController();
           setActiveRequestController(controller);
-          const response = await axios.post(
-            `${CHATBOT_API_URL}/ask`,
-            { question: content, connection: connectionObj, sessionId },
-            { signal: controller.signal },
-          );
+          const response = await chatService.askChatbot(payload, controller);
           setActiveRequestController(null);
           const botResponseContent = JSON.stringify(response.data, null, 2);
 
-          await axios.put(
-            `${API_URL}/api/messages/${botMessageToUpdateId}`,
-            {
-              token,
-              content: botResponseContent,
-              timestamp: new Date().toISOString(),
-              status: "normal",
-            },
-            { headers: { "Content-Type": "application/json" } },
-          );
+          await chatService.updateMessage(botMessageToUpdateId, { token, content: botResponseContent, timestamp: new Date().toISOString(), status: "normal" });
           dispatchMessages({
             type: "UPDATE_MESSAGE",
             id: botMessageToUpdateId,
@@ -1087,14 +979,7 @@ const ChatInterface = memo(
           )
             return;
           if (botMessageToUpdateId) {
-            await axios
-              .put(`${API_URL}/api/messages/${botMessageToUpdateId}`, {
-                token,
-                content: errorContent,
-                timestamp: new Date().toISOString(),
-                status: "error",
-              })
-              .catch(() => {});
+            await chatService.updateMessage(botMessageToUpdateId, { token, content: errorContent, timestamp: new Date().toISOString(), status: "error" }).catch(() => {});
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: botMessageToUpdateId,
@@ -1259,7 +1144,7 @@ const ChatInterface = memo(
               </div>
             ) : (
               <div className="max-w-4xl mx-auto w-full flex flex-col gap-2">
-                {messages.map((message) => {
+                {orderedMessages.map((message) => {
                   const responseStatus = message.isBot
                     ? null
                     : getMessageResponseStatus(message.id);

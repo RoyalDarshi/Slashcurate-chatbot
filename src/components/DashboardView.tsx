@@ -24,8 +24,9 @@ import {
   BsHandThumbsUpFill,
 } from "react-icons/bs";
 import { toast } from "react-toastify";
-import axios from "axios";
 import { useTheme } from "../ThemeContext";
+import { chatService } from "../services/chatService";
+import { handleApiError } from "../utils/errorHandler";
 import { DashboardItem } from "./DashboardInterface";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
 import DynamicGraph from "./Graphs/DynamicGraph";
@@ -216,18 +217,14 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       if (!dashboardItem) return;
       const newReaction = isLiked ? null : "like";
       try {
-        await axios.post(
-          `${API_URL}/api/messages/${dashboardItem.botResponseId}/reaction`,
-          {
-            token: sessionStorage.getItem("token"),
-            reaction: newReaction,
-            dislike_reason: null,
-          },
-        );
+        await chatService.updateReaction(dashboardItem.botResponseId, {
+          token: sessionStorage.getItem("token") || "",
+          reaction: newReaction,
+          isFeedbackPositive: newReaction === "like" ? true : null,
+        });
         onUpdateReaction(dashboardItem.questionMessageId, newReaction, null);
       } catch (error) {
-        console.error("Error setting like reaction:", error);
-        toast.error("Failed to set like reaction.");
+        handleApiError(error, "Failed to set like reaction");
       }
     };
 
@@ -235,14 +232,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       if (!dashboardItem) return;
       if (isDisliked) {
         try {
-          await axios.post(
-            `${API_URL}/api/messages/${dashboardItem.botResponseId}/reaction`,
-            {
-              token: sessionStorage.getItem("token"),
-              reaction: null,
-              dislike_reason: null,
-            },
-          );
+          await chatService.updateReaction(dashboardItem.botResponseId, {
+            token: sessionStorage.getItem("token") || "",
+            reaction: null,
+            isFeedbackPositive: false,
+          });
           onUpdateReaction(dashboardItem.questionMessageId, null, null);
         } catch (error) {
           console.error("Error removing dislike reaction:", error);
@@ -256,20 +250,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
     const handleDislikeOption = async (reason: string) => {
       if (!dashboardItem) return;
       try {
-        await axios.post(
-          `${API_URL}/api/messages/${dashboardItem.botResponseId}/reaction`,
-          {
-            token: sessionStorage.getItem("token"),
-            reaction: "dislike",
-            dislike_reason: reason,
-          },
-        );
+        await chatService.updateReaction(dashboardItem.botResponseId, {
+          token: sessionStorage.getItem("token") || "",
+          reaction: "dislike",
+          isFeedbackPositive: false,
+        });
         onUpdateReaction(dashboardItem.questionMessageId, "dislike", reason);
         setShowDislikeOptions(false);
         setShowCustomInput(false);
       } catch (error) {
-        console.error("Error setting dislike reaction:", error);
-        toast.error("Failed to set dislike reaction.");
+        handleApiError(error, "Failed to set dislike reaction");
       }
     };
 

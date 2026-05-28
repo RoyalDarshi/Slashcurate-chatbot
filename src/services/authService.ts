@@ -1,5 +1,4 @@
-import axios from "axios";
-import { API_URL } from "../config";
+import { apiClient } from "./apiClient";
 
 interface UserLoginResponse {
   message: string;
@@ -21,10 +20,9 @@ class AuthService {
   // -- Login Methods --
 
   async loginUser(username: string, password: string): Promise<UserLoginResponse> {
-    const response = await axios.post<UserLoginResponse>(
-      `${API_URL}/login/user`,
-      { email: username, password }, // Backend expects 'email' key even for username
-      { headers: { "Content-Type": "application/json" } }
+    const response = await apiClient.post<UserLoginResponse>(
+      `/login/user`,
+      { email: username, password } // Backend expects 'email' key even for username
     );
     this.setToken(response.data.token, false);
     localStorage.setItem("uid", String(response.data.uid));
@@ -34,10 +32,9 @@ class AuthService {
   }
 
   async loginAdmin(email: string, password: string): Promise<AdminLoginResponse> {
-    const response = await axios.post<AdminLoginResponse>(
-      `${API_URL}/login/admin`,
-      { email, password },
-      { headers: { "Content-Type": "application/json" } }
+    const response = await apiClient.post<AdminLoginResponse>(
+      `/login/admin`,
+      { email, password }
     );
     this.setToken(response.data.token, true);
     return response.data;
@@ -70,10 +67,9 @@ class AuthService {
 
   async validateToken(token: string): Promise<{ valid: boolean; isAdmin: boolean }> {
     try {
-      const response = await axios.post(
-        `${API_URL}/validate-token`,
-        { token },
-        { headers: { "Content-Type": "application/json" } }
+      const response = await apiClient.post(
+        `/validate-token`,
+        { token }
       );
       return {
         valid: response.data.valid === true,

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useTheme } from "../ThemeContext";
 import { Plus, Edit2, Trash2, X } from "lucide-react";
 import { toast } from "react-toastify";
-import { API_URL } from "../config";
+import { adminService } from "../services/adminService";
+import { handleApiError } from "../utils/errorHandler";
 
 interface UserManagementProps {
   token: string;
@@ -21,6 +22,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
   const { theme } = useTheme();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
   
   // Form State
   const [showModal, setShowModal] = useState(false);
@@ -29,17 +31,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      if (response.ok) {
+      const data = await adminService.getUsers();
+      if (data && data.users) {
         setUsers(data.users);
-      } else {
-        toast.error(data.message || "Failed to fetch users");
       }
     } catch (error) {
-      toast.error("Network error while fetching users");
+      handleApiError(error, "Failed to fetch users", mode);
     } finally {
       setLoading(false);
     }
@@ -47,33 +44,22 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
 
   useEffect(() => {
     fetchUsers();
-  }, [token]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = editingId ? `/api/admin/users/${editingId}` : "/api/admin/users";
-    const method = editingId ? "PUT" : "POST";
-
     try {
-      const response = await fetch(`${API_URL}${url}`, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        toast.success(`User ${editingId ? "updated" : "created"} successfully`);
-        setShowModal(false);
-        fetchUsers(); // Refresh list
+      if (editingId) {
+        await adminService.updateUser(editingId, formData);
       } else {
-        toast.error(data.message || "Operation failed");
+        await adminService.createUser(formData);
       }
+      
+      toast.success(`User ${editingId ? "updated" : "created"} successfully`);
+      setShowModal(false);
+      fetchUsers(); // Refresh list
     } catch (error) {
-      toast.error("Network error");
+      handleApiError(error, "Failed to save user", mode);
     }
   };
 
@@ -81,19 +67,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/admin/users/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        toast.success("User deleted successfully");
-        fetchUsers();
-      } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to delete user");
-      }
+      await adminService.deleteUser(id);
+      toast.success("User deleted successfully");
+      fetchUsers();
     } catch (error) {
-      toast.error("Network error");
+      handleApiError(error, "Failed to delete user", mode);
     }
   };
 

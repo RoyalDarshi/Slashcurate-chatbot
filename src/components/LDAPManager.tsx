@@ -8,6 +8,8 @@ import Loader from "./Loader";
 import styled from "styled-components";
 import { Theme } from "../types";
 import { authService } from "../services/authService";
+import { adminService } from "../services/adminService";
+import { handleApiError } from "../utils/errorHandler";
 
 export const StyledInput = styled.input<{ theme: Theme }>`
   &:-webkit-autofill,
@@ -49,24 +51,19 @@ const LDAPManager = () => {
   const fetchLDAPConfig = async () => {
     try {
       setIsLoading(true);
-      const token = authService.getToken(true);
-      if (!token) throw new Error("Token not found");
-
-      const response = await getLdapConfig(token);
-      if (response.status === 200 && response.data.LDAP_SERVER) {
+      const response = await adminService.getLdapConfig();
+      if (response) {
         setConfig({
-          ldapHost: response.data.LDAP_SERVER,
-          ldapPort: response.data.LDAP_PORT,
-          baseDn: response.data.LDAP_BASE_DN,
-          userRdn: response.data.LDAP_USER_RDN,
+          ldapHost: response.LDAP_SERVER || "",
+          ldapPort: response.LDAP_PORT || 0,
+          baseDn: response.LDAP_BASE_DN || "",
+          userRdn: response.LDAP_USER_RDN || "",
         });
-        setIsEditing(false);
       } else {
-        setIsEditing(true); // No config found, show form
+        setIsEditing(true);
       }
     } catch (error) {
-      console.error("Error fetching LDAP configuration:", error);
-      setIsEditing(true); // On error or not found, default to form
+      handleApiError(error, "Failed to fetch LDAP configuration", mode);
     } finally {
       setIsLoading(false);
     }
@@ -74,28 +71,26 @@ const LDAPManager = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setConfig((prev) => ({
+    setLdapConfig((prev) => ({
       ...prev,
-      [name]: name === "ldapPort" ? parseInt(value) || 0 : value,
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = authService.getToken(true);
-    if (!token) {
-      toast.error("Admin session expired. Please log in again.", { theme: mode });
-      return;
-    }
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      const response = await storeLdapConfig(token, config);
-      if (response.status === 200) {
-        toast.success("LDAP settings saved successfully!", { theme: mode });
-        setIsEditing(false);
-      }
+      await adminService.storeLdapConfig({
+        ...ldapConfig,
+        LDAP_PORT: parseInt(ldapConfig.LDAP_PORT) || 389,
+      });
+      toast.success("LDAP configuration updated successfully!", {
+        theme: mode,
+      });
+      setIsEditing(false);
     } catch (error) {
-      toast.error("Failed to save LDAP settings.", { theme: mode });
+      handleApiError(error, "Failed to save LDAP configuration", mode);
     } finally {
       setIsSaving(false);
     }

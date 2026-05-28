@@ -10,8 +10,8 @@ import {
   BookmarkCheck,
   AlertCircle,
 } from "lucide-react";
-import { API_URL } from "../config";
-import axios from "axios";
+import { historyService } from "../services/historyService";
+import { handleApiError } from "../utils/errorHandler";
 import CustomTooltip from "./CustomTooltip";
 
 interface FavoriteMessage {
@@ -51,9 +51,9 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
           return;
         }
 
-        const response = await axios.post(`${API_URL}/favorites`, { token });
-        if (response.status === 200) {
-          const formattedData = response.data.map((item: any) => ({
+        const data = await historyService.fetchFavourites();
+        if (data) {
+          const formattedData = data.map((item: any) => ({
             id: item.question_id,
             text: item.question,
             query: item.query || undefined,
@@ -62,11 +62,10 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
             timestamp: item.timestamp,
           }));
           setFavorites(formattedData);
-          setError(null);
         }
       } catch (err) {
+        handleApiError(err, "Failed to load favorites", "light");
         setError("Failed to load favorites");
-        console.error("API Error:", err);
       } finally {
         setLoading(false);
       }
@@ -85,18 +84,14 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
       setAnimateId(id);
       const connection = localStorage.getItem("selectedConnection");
       setTimeout(async () => {
-        await axios.post(`${API_URL}/favorite/delete`, {
-          token,
-          questionId: id,
-          selectedConnection: connection,
-        });
+        await historyService.deleteFavourite(id, connection);
         setFavorites((prev) => prev.filter((msg) => msg.id !== id));
         setAnimateId(null);
         setDeleteConfirmId(null);
       }, 300);
     } catch (err) {
+      handleApiError(err, "Failed to remove favorite", "light");
       setError("Failed to remove favorite");
-      console.error("API Error:", err);
       setAnimateId(null);
       setDeleteConfirmId(null);
     }

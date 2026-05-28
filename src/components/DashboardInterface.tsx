@@ -252,7 +252,7 @@ const DashboardInterface = memo(
   forwardRef<DashboardInterfaceHandle, DashboardInterfaceProps>(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
-      const { setCurrentView } = useSettings();
+      const { currentView, setCurrentView } = useSettings();
       const token = sessionStorage.getItem("token") ?? "";
 
       const connectionDropdownRef = useRef<HTMLDivElement>(null);
@@ -475,6 +475,7 @@ const DashboardInterface = memo(
 
       useEffect(() => {
         const handleSessionLoad = async () => {
+          if (currentView !== "dashboard") return;
           const storedSessionId = localStorage.getItem("currentSessionId");
           const storedCurrentQuestionId = localStorage.getItem(
             "currentDashboardQuestionId",
@@ -580,6 +581,7 @@ const DashboardInterface = memo(
         clearSession,
         initialDashboardState,
         connections,
+        currentView,
       ]);
 
       useEffect(() => {
@@ -731,11 +733,13 @@ const DashboardInterface = memo(
           try {
             if (!currentSessionId) {
               try {
+                const connectionObj = connections.find((c) => c.connectionName === connection);
                 const response = await axiosInstance.post(
                   `${API_URL}/api/sessions`,
                   {
                     token,
                     currentConnection: connection,
+                    con_id: connectionObj?.id ?? "",
                     title: question.substring(0, 50) + "...",
                   },
                   { headers: { "Content-Type": "application/json" } },

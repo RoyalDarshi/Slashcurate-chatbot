@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Trash2, AlertTriangle, Edit2, X } from "react-feather";
-import { ClipboardList, Database, Server, Globe, User, Activity, Clock, Layers } from "lucide-react";
+import { Trash2, Edit2, X } from "react-feather";
+import { ClipboardList,Activity, Database, Server, Globe, User, Clock, Layers } from "lucide-react";
 import { useTheme } from "../ThemeContext";
-import {
-  deleteConnection,
-  getAdminConnections,
-  getUserConnections,
-} from "../api";
 import CustomTooltip from "./CustomTooltip";
-import { CHATBOT_API_URL } from "../config";
+import { connectionService } from "../services/connectionService";
+import { handleApiError } from "../utils/errorHandler";
 import Loader from "./Loader";
 import ConnectionForm from "./ConnectionForm";
 
@@ -77,32 +72,23 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
       setError(null);
 
       let response = isAdmin
-        ? await getAdminConnections(token)
-        : await getUserConnections(token);
+        ? await connectionService.getAdminConnections()
+        : await connectionService.getUserConnections();
 
       if (
-        !response.data.connections ||
-        response.data.connections.length === 0
+        !response.connections ||
+        response.connections.length === 0
       ) {
         setError("No connections found.");
         setConnections([]);
       } else {
-        setConnections(response.data.connections);
+        setConnections(response.connections);
       }
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<{ message?: string }>;
-        const errorMsg =
-          axiosError.response?.data?.message ?? axiosError.message;
-        toast.error(`Error: ${errorMsg}`, { theme: mode });
-        setError(errorMsg);
-      } else {
-        const errorMsg = (error as Error).message;
-        toast.error(`Error: ${errorMsg}`, { theme: mode });
-        setError(errorMsg);
-      }
+      handleApiError(error, "Failed to load connections", mode);
+      setError("Failed to load connections");
     }
   }, [isAdmin, mode]);
 
@@ -123,29 +109,17 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const response = await deleteConnection(token, connectionToDelete.id);
+      await connectionService.deleteConnection(connectionToDelete.id, isAdmin);
 
-      if (response.status === 200) {
-        toast.success("Connection deleted successfully!", { theme: mode });
-        setShowDeleteModal(false);
-        setConnectionToDelete(null);
-        fetchConnections();
-      }
+      toast.success("Connection deleted successfully!", { theme: mode });
+      setShowDeleteModal(false);
+      setConnectionToDelete(null);
+      fetchConnections();
     } catch (error) {
       setLoading(false);
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<{ message?: string }>;
-        const errorMsg =
-          axiosError.response?.data?.message ?? axiosError.message;
-        toast.error(`Error: ${errorMsg}`, { theme: mode });
-        setError(errorMsg);
-      } else {
-        const errorMsg = (error as Error).message;
-        toast.error(`Error: ${errorMsg}`, { theme: mode });
-        setError(errorMsg);
-      }
+      handleApiError(error, "Failed to delete connection", mode);
     }
-  }, [connectionToDelete, mode, fetchConnections]);
+  }, [connectionToDelete, mode, fetchConnections, isAdmin]);
 
   const handleReExtractMetadata = useCallback(
     async (connection: Connection) => {
@@ -166,33 +140,15 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
           database: connection.database,
           description: connection.description,
           hostname: connection.hostname,
-          maxTransportObjects: connection.maxTransportObjects,
-          password: connection.password,
           port: connection.port,
           selectedDB: connection.selectedDB,
           username: connection.username,
         };
 
-        const response = await axios.post(`${CHATBOT_API_URL}/meta_data`, {
-          connection: connData,
-          isEncrypted: true,
-        });
-
-        if (response.status === 200) {
-          toast.success("Metadata re-extracted successfully!", { theme: mode });
-        }
+        await connectionService.reExtractMetadata(connData);
+        toast.success("Metadata re-extracted successfully!", { theme: mode });
       } catch (error) {
-        if (axios.isAxiosError(error)) {
-          const axiosError = error as AxiosError<{ message?: string }>;
-          const errorMsg =
-            axiosError.response?.data?.message ?? axiosError.message;
-          toast.error(`Error: ${errorMsg}`, { theme: mode });
-          setError(errorMsg);
-        } else {
-          const errorMsg = (error as Error).message;
-          toast.error(`Error: ${errorMsg}`, { theme: mode });
-          setError(errorMsg);
-        }
+        handleApiError(error, "Failed to re-extract metadata", mode);
       } finally {
         setLoading(false);
       }

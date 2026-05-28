@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useTheme } from "../ThemeContext";
 import { Plus, Trash2, Save, Users, Database, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "react-toastify";
-import { API_URL } from "../config";
+import { adminService } from "../services/adminService";
+import { connectionService } from "../services/connectionService";
+import { handleApiError } from "../utils/errorHandler";
 
 interface PermissionControlProps {
   token: string;
@@ -41,41 +43,23 @@ const PermissionControl: React.FC<PermissionControlProps> = ({ token }) => {
 
   const fetchGroups = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/groups`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setGroups(data.groups || []);
-      }
+      const data = await adminService.getGroups();
+      setGroups(data.groups || []);
     } catch (e) {
-      toast.error("Failed to fetch groups");
+      handleApiError(e, "Failed to fetch groups");
     }
   };
 
   const fetchUsersAndConnections = async () => {
     try {
-      const [usersRes, connsRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/api/admin/connections`, { headers: { Authorization: `Bearer ${token}` } }) // Wait, AdminDashboard uses a different endpoint for connections list maybe? Or just use `/connections/admin/list` POST
+      const [usersData, connsData] = await Promise.all([
+        adminService.listUsers(),
+        connectionService.getAdminConnections()
       ]);
-
-      if (usersRes.ok) {
-        const udata = await usersRes.json();
-        setUsers(udata.users || []);
-      }
-      // Let's use the POST endpoint for admin connections
-      const pConnsRes = await fetch(`${API_URL}/connections/admin/list`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
-      });
-      if (pConnsRes.ok) {
-          const cdata = await pConnsRes.json();
-          setConnections(cdata.connections || []);
-      }
-
+      setUsers(usersData.users || []);
+      setConnections(connsData.connections || []);
     } catch (e) {
-      toast.error("Failed to fetch users or connections");
+      handleApiError(e, "Failed to fetch users or connections");
     }
   };
 
@@ -96,17 +80,11 @@ const PermissionControl: React.FC<PermissionControlProps> = ({ token }) => {
   const loadGroupMapping = async (groupId: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/groups/${groupId}/mapping`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setGroupUsers(data.users || []);
-        // Make sure connection IDs are stored as strings for easy matching in checkboxes
-        setGroupConnections((data.connections || []).map(String));
-      }
+      const data = await adminService.getGroupMapping(groupId);
+      setGroupUsers(data.users || []);
+      setGroupConnections((data.connections || []).map(String));
     } catch (e) {
-      toast.error("Failed to load group mappings");
+      handleApiError(e, "Failed to load group mappings");
     }
     setLoading(false);
   };
@@ -114,21 +92,12 @@ const PermissionControl: React.FC<PermissionControlProps> = ({ token }) => {
   const createGroup = async () => {
     if (!newGroupName.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/groups`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: newGroupName.trim() })
-      });
-      if (res.ok) {
-        toast.success("Group created");
-        setNewGroupName("");
-        fetchGroups();
-      } else {
-         const d = await res.json();
-         toast.error(d.error || "Failed to create group");
-      }
-    } catch (e) {
-      toast.error("Network error");
+      await adminService.createGroup(newGroupName.trim());
+      toast.success("Group created");
+      setNewGroupName("");
+      fetchGroups();
+    } catch (e: any) {
+      handleApiError(e, "Failed to create group");
     }
   };
 
@@ -136,17 +105,12 @@ const PermissionControl: React.FC<PermissionControlProps> = ({ token }) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this group?")) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/groups/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        toast.success("Group deleted");
-        if (selectedGroupId === id) setSelectedGroupId(null);
-        fetchGroups();
-      }
+      await adminService.deleteGroup(id);
+      toast.success("Group deleted");
+      if (selectedGroupId === id) setSelectedGroupId(null);
+      fetchGroups();
     } catch (e) {
-      toast.error("Failed to delete group");
+      handleApiError(e, "Failed to delete group");
     }
   };
 

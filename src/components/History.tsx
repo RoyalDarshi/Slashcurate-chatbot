@@ -14,8 +14,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
-import { API_URL } from "../config";
-import axios from "axios";
+import { historyService } from "../services/historyService";
+import { handleApiError } from "../utils/errorHandler";
 import { toast } from "react-toastify";
 
 /* ----------------------------------------------------------
@@ -82,33 +82,14 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
   const loadSessions = async (filter: string) => {
     setIsLoading(true);
     if (!token) {
-      // Toast logic...
       setIsLoading(false);
       return;
     }
-
     try {
-      const response = await axios.post(
-        `${API_URL}/api/fetchsessions`,
-        { token, filter }, // Pass the filter to the backend
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-      const fetchedSessions = response.data;
-      // We no longer need to map empty messages array manually or client-side filter
+      const fetchedSessions = await historyService.fetchSessions(filter);
       setSessions(fetchedSessions);
     } catch (error) {
-      console.error("Failed to load sessions from server", error);
-      toast.error("Failed to load chat history.", {
-        style: {
-          background: theme.colors.surface,
-          color: theme.colors.error,
-          border: `1px solid ${theme.colors.error}20`,
-          borderRadius: theme.borderRadius.default,
-        },
-        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
-      });
-      setSessions([]);
+      handleApiError(error, "Failed to load chat history", mode);
     } finally {
       setIsLoading(false);
     }
@@ -116,12 +97,8 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
 
   const deleteSession = async (sessionId: string) => {
     try {
-      await axios.delete(`${API_URL}/api/sessions/${sessionId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      await historyService.deleteSession(sessionId);
+      
       // Remove locally
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
 
@@ -135,18 +112,14 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
           border: `1px solid ${theme.colors.success}20`,
           borderRadius: theme.borderRadius.default,
         },
-        theme: theme.colors.background === "#0F172A" ? "dark" : "light",
+        theme: mode,
       });
     } catch (error) {
-      // Error handling...
-      console.error(error);
+      handleApiError(error, "Failed to delete session", mode);
     } finally {
       setShowConfirmDelete(null);
     }
   };
-
-  // ... startEditing, saveTitle, cancelEditing remain mostly the same,
-  // just update 'sessions' state directly instead of filteredSessions
 
   const startEditing = (session: Session, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -154,16 +127,12 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
     setEditingTitle(session.title);
   };
 
-  const saveTitle = async (sessionId: string, e?: React.MouseEvent) => {
+  const saveTitle = async (sessionId: string, e?: React.MouseEvent | React.KeyboardEvent) => {
     e?.stopPropagation();
     if (!editingTitle.trim()) return;
 
     try {
-      await axios.put(
-        `${API_URL}/api/sessions/${sessionId}`,
-        { title: editingTitle },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await historyService.updateSessionTitle(sessionId, editingTitle);
 
       setSessions((prev) =>
         prev.map((s) =>
