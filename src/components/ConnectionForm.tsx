@@ -262,11 +262,6 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
         ([key, value]) => key !== "selectedDB" && !!value,
       );
       setIsFormModified(isModified);
-      if (isModified) {
-        // If any relevant field is changed, reset progress
-        setIsTestSuccessful(false);
-        setIsMetadataExtracted(false);
-      }
     }, 500);
     return () => {
       if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
@@ -348,9 +343,13 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     debouncedValidateField(name as keyof FormData, value);
-    // When data changes, reset test and metadata success
-    setIsTestSuccessful(false);
-    setIsMetadataExtracted(false);
+    
+    // Only reset test/metadata progress if critical connection parameters change
+    const criticalFields = ["hostname", "port", "database", "username", "password"];
+    if (criticalFields.includes(name)) {
+      setIsTestSuccessful(false);
+      setIsMetadataExtracted(false);
+    }
   };
 
   const handleSelectDB = (value: string) => {

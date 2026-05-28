@@ -259,22 +259,26 @@ const AppContent: React.FC<{
           >
             <UserTips show={showTip} onClose={() => setShowTip(false)} />
             <div className="flex-1 flex flex-col overflow-hidden relative">
-              {activeMenu === "home" &&
-                (currentView === "chat" ? (
-                  <ChatInterface
-                    ref={chatRef}
-                    onCreateConSelected={onCreateConSelected}
-                    initialQuestion={questionToAsk}
-                    onQuestionAsked={() => setQuestionToAsk(null)}
-                  />
-                ) : (
-                  <DashboardInterface
-                    ref={dashboardRef}
-                    onCreateConSelected={onCreateConSelected}
-                    initialQuestion={questionToAsk}
-                    onQuestionAsked={() => setQuestionToAsk(null)}
-                  />
-                ))}
+              {activeMenu === "home" && (
+                <>
+                  <div className={`absolute inset-0 flex flex-col ${currentView === "chat" ? "z-10" : "hidden"}`}>
+                    <ChatInterface
+                      ref={chatRef}
+                      onCreateConSelected={onCreateConSelected}
+                      initialQuestion={questionToAsk}
+                      onQuestionAsked={() => setQuestionToAsk(null)}
+                    />
+                  </div>
+                  <div className={`absolute inset-0 flex flex-col ${currentView === "dashboard" ? "z-10" : "hidden"}`}>
+                    <DashboardInterface
+                      ref={dashboardRef}
+                      onCreateConSelected={onCreateConSelected}
+                      initialQuestion={questionToAsk}
+                      onQuestionAsked={() => setQuestionToAsk(null)}
+                    />
+                  </div>
+                </>
+              )}
               {activeMenu === "new-connection" && (
                 <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
                   <ConnectionForm

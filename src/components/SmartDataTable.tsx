@@ -996,7 +996,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
                 );
               })}
             </tbody>
-            {rows.length > 0 && (
+            {rows.length > 1 && summaries.length > 0 && (
               <tfoot
                 style={{
                   position: "sticky",

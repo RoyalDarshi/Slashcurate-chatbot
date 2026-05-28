@@ -585,11 +585,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col mb-4">
+    <div className="w-full flex flex-col mb-1">
       {message.isBot ? (
         /* Minimalist Bot Stream Message */
         <div
-          className="flex w-full items-start gap-4 py-5 transition-all duration-300 group"
+          className="flex w-full items-start gap-4 py-2 transition-all duration-300 group"
           style={{
             backgroundColor: "transparent",
           }}
@@ -966,7 +966,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
         </div>
       ) : (
-        <div className="w-full flex justify-end group py-6">
+        <div className="w-full flex justify-end group py-2">
           {!isEditing ? (
             <div
               className="relative max-w-[85%] md:max-w-[75%] px-6 py-4 rounded-3xl font-medium"

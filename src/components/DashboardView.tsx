@@ -463,32 +463,42 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           >
             {/* Core Workspace Header Deck Panel */}
             <div
-              className="w-full px-4 py-2 mb-3 flex-shrink-0 flex items-center justify-between gap-3 border-b"
+              className="mx-4 mt-2 mb-2 px-4 py-2 flex-shrink-0 flex items-center justify-between gap-3 rounded-xl border shadow-sm transition-all duration-300 relative overflow-hidden"
               style={{
-                backgroundColor: theme.colors.surface,
-                color: theme.colors.text,
-                borderColor: theme.colors.border,
+                backgroundColor: theme.mode === "light" ? "#FFFFFF" : "rgba(30, 41, 59, 0.5)",
+                borderColor: theme.mode === "light" ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+                backdropFilter: "blur(12px)",
               }}
             >
+              {/* Subtle decorative glow */}
+              <div
+                className="absolute top-0 left-0 w-1/3 h-full opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
+                style={{
+                  background: `linear-gradient(90deg, ${theme.colors.accent}, transparent)`,
+                }}
+              />
+
               {isEditing ? (
-                <div className="flex-grow flex items-center gap-2">
+                <div className="flex-grow flex items-center gap-2 relative z-10">
                   <input
                     type="text"
                     value={editedQuestion}
                     onChange={(e) => setEditedQuestion(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-lg border text-xs focus:outline-none font-semibold"
+                    className="flex-1 px-3 py-1.5 rounded-lg border text-sm focus:outline-none font-medium transition-shadow focus:ring-2"
                     style={{
-                      backgroundColor: theme.colors.background,
+                      backgroundColor: theme.mode === "light" ? "#F8FAFC" : "rgba(0,0,0,0.2)",
                       color: theme.colors.text,
                       borderColor: theme.colors.border,
+                      ringColor: theme.colors.accent + "40",
                     }}
+                    autoFocus
                   />
                   <button
                     onClick={() => {
                       setIsEditing(false);
                       setEditedQuestion(dashboardItem.question);
                     }}
-                    className="px-3 py-1 rounded-md text-xs font-semibold text-white"
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-90 transition-opacity"
                     style={{ backgroundColor: theme.colors.error }}
                   >
                     Cancel
@@ -503,7 +513,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                         setIsEditing(false);
                       }
                     }}
-                    className="px-3 py-1 rounded-md text-xs font-semibold text-white"
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-90 transition-opacity"
                     style={{ backgroundColor: theme.colors.accent }}
                   >
                     Save
@@ -511,16 +521,23 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 </div>
               ) : (
                 <>
-                  <h3
-                    className="text-sm font-semibold truncate flex-1 tracking-tight"
-                    style={{
-                      color:
-                        theme.mode === "light" ? "#0F172A" : theme.colors.text,
-                    }}
-                    title={dashboardItem.question}
-                  >
-                    {dashboardItem.question}
-                  </h3>
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0 relative z-10">
+                    <div 
+                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: `${theme.colors.accent}15` }}
+                    >
+                      <HelpCircle size={14} style={{ color: theme.colors.accent }} />
+                    </div>
+                    <h3
+                      className="text-sm font-semibold truncate tracking-tight"
+                      style={{
+                        color: theme.mode === "light" ? "#0F172A" : theme.colors.text,
+                      }}
+                      title={dashboardItem.question}
+                    >
+                      {dashboardItem.question}
+                    </h3>
+                  </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {!sessionConErr && (
                       <>

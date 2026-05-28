@@ -1254,7 +1254,7 @@ const ChatInterface = memo(
                   )}
               </div>
             ) : (
-              <div className="max-w-4xl mx-auto w-full flex flex-col gap-6">
+              <div className="max-w-4xl mx-auto w-full flex flex-col gap-2">
                 {messages.map((message) => {
                   const responseStatus = message.isBot
                     ? null
