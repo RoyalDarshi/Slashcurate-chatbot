@@ -7,6 +7,7 @@ import { ToastContainer, toast } from "react-toastify";
 import Loader from "./Loader";
 import styled from "styled-components";
 import { Theme } from "../types";
+import { authService } from "../services/authService";
 
 export const StyledInput = styled.input<{ theme: Theme }>`
   &:-webkit-autofill,
@@ -48,7 +49,7 @@ const LDAPManager = () => {
   const fetchLDAPConfig = async () => {
     try {
       setIsLoading(true);
-      const token = sessionStorage.getItem("token");
+      const token = authService.getToken(true);
       if (!token) throw new Error("Token not found");
 
       const response = await getLdapConfig(token);
@@ -81,7 +82,7 @@ const LDAPManager = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = sessionStorage.getItem("token");
+    const token = authService.getToken(true);
     if (!token) {
       toast.error("Admin session expired. Please log in again.", { theme: mode });
       return;

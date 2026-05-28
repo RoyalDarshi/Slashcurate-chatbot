@@ -111,47 +111,57 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
   return (
     <div className="p-8 h-full" style={{ color: theme.colors.text }}>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Manage Users</h2>
+        <h2
+          className="text-3xl font-bold"
+          style={{ color: theme.colors.text }}
+        >
+          Manage Users
+        </h2>
         <button
           onClick={() => openModal()}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-xs"
+          style={{ backgroundColor: theme.colors.accent }}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accentHover)}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accent)}
         >
-          <Plus size={18} /> Add User
+          <Plus size={16} /> Add User
         </button>
       </div>
 
       {loading ? (
-        <p>Loading users...</p>
+        <div className="flex justify-center items-center py-12">
+          <p className="opacity-70">Loading users...</p>
+        </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg shadow" style={{ backgroundColor: theme.colors.background }}>
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto rounded-xl shadow-lg border pb-2" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface, boxShadow: theme.colors.background === "#0F172A" ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)" : "0 4px 20px -2px rgba(0, 0, 0, 0.05)" }}>
+          <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
-                <th className="p-4 font-semibold">Username</th>
-                <th className="p-4 font-semibold">Email</th>
-                <th className="p-4 font-semibold">Joined</th>
-                <th className="p-4 font-semibold text-right">Actions</th>
+              <tr style={{ borderBottom: `2px solid ${theme.colors.border}`, backgroundColor: theme.colors.background }}>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider opacity-70">Username</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider opacity-70">Email</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider opacity-70">Joined</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider opacity-70 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
-                  <td className="p-4">{user.username}</td>
-                  <td className="p-4">{user.email}</td>
-                  <td className="p-4">{new Date(user.created_at).toLocaleDateString()}</td>
-                  <td className="p-4 flex justify-end gap-3">
-                    <button onClick={() => openModal(user)} className="text-blue-500 hover:text-blue-400">
-                      <Edit2 size={18} />
+                <tr key={user.id} className="transition-colors hover:bg-black/5" style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
+                  <td className="px-6 py-4 font-medium">{user.username}</td>
+                  <td className="px-6 py-4 opacity-80">{user.email}</td>
+                  <td className="px-6 py-4 opacity-80">{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 flex justify-end gap-3">
+                    <button onClick={() => openModal(user)} className="p-2 rounded-lg transition-colors" style={{ color: theme.colors.textSecondary }} onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.hover)} onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}>
+                      <Edit2 size={16} />
                     </button>
-                    <button onClick={() => handleDelete(user.id)} className="text-red-500 hover:text-red-400">
-                      <Trash2 size={18} />
+                    <button onClick={() => handleDelete(user.id)} className="p-2 rounded-lg transition-colors" style={{ color: theme.colors.error || "#ef4444" }} onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.hover)} onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}>
+                      <Trash2 size={16} />
                     </button>
                   </td>
                 </tr>
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="p-4 text-center">No users found.</td>
+                  <td colSpan={4} className="px-6 py-12 text-center opacity-70">No users found.</td>
                 </tr>
               )}
             </tbody>
@@ -161,98 +171,119 @@ const UserManagement: React.FC<UserManagementProps> = ({ token }) => {
 
       {/* Modal for Create / Edit */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="w-full max-w-md p-6 rounded-lg shadow-xl relative" style={{ backgroundColor: theme.colors.surface }}>
-            <button 
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" 
+            onClick={() => setShowModal(false)} 
+          />
+          <div
+            className="relative w-full max-w-[500px] h-full shadow-2xl flex flex-col animate-slide-in-right"
+            style={{ backgroundColor: theme.colors.background, borderLeft: `1px solid ${theme.colors.border}` }}
+          >
+            <div
+              className="flex items-center justify-between px-6 py-5 flex-shrink-0"
+              style={{ backgroundColor: theme.colors.surface, borderBottom: `1px solid ${theme.colors.border}` }}
             >
-              <X size={20} />
-            </button>
-            <h3 className="text-xl font-bold mb-4">
-              {editingId ? "Edit User" : "Create New User"}
-            </h3>
+              <div>
+                <h2 className="text-xl font-bold" style={{ color: theme.colors.text }}>
+                  {editingId ? "Edit User" : "Create User"}
+                </h2>
+                <p className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+                  {editingId ? "Modify user details and permissions" : "Add a new user to the system"}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-2 rounded-full transition-colors duration-200"
+                style={{ color: theme.colors.textSecondary }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.hover)}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                <X size={20} />
+              </button>
+            </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Username</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full p-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full p-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  {editingId ? "New Password (leave blank to keep current)" : "Password"}
-                </label>
-                <input
-                  type="password"
-                  required={!editingId}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full p-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }}
-                />
-              </div>
+            <div className="flex-1 overflow-y-auto p-6" style={{ color: theme.colors.text }}>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Username</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 border transition-all"
+                    style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border, color: theme.colors.text, focusRingColor: theme.colors.accent }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 border transition-all"
+                    style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border, color: theme.colors.text, focusRingColor: theme.colors.accent }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    {editingId ? "New Password (leave blank to keep current)" : "Password"}
+                  </label>
+                  <input
+                    type="password"
+                    required={!editingId}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 border transition-all"
+                    style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border, color: theme.colors.text, focusRingColor: theme.colors.accent }}
+                  />
+                </div>
 
-              <div className="flex items-center gap-2 mt-4">
-                <input
-                  type="checkbox"
-                  id="allowedToCreateConnection"
-                  checked={formData.allowedToCreateConnection}
-                  onChange={(e) => setFormData({ ...formData, allowedToCreateConnection: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="allowedToCreateConnection" className="text-sm font-medium">
-                  Allowed to Create Connections
-                </label>
-              </div>
-
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="checkbox"
-                  id="allowedToCreatePublicConnection"
-                  checked={formData.allowedToCreatePublicConnection}
-                  onChange={(e) => setFormData({ ...formData, allowedToCreatePublicConnection: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="allowedToCreatePublicConnection" className="text-sm font-medium">
-                  Allowed to Create Public Connections
-                </label>
-              </div>
-              
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded border hover:bg-opacity-80"
-                  style={{ borderColor: theme.colors.border }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  {editingId ? "Save Changes" : "Create User"}
-                </button>
-              </div>
-            </form>
+                <div className="pt-4 space-y-3">
+                  <h4 className="text-sm font-semibold opacity-70 uppercase tracking-wider mb-2">Permissions</h4>
+                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-black/5 transition-colors" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.allowedToCreateConnection}
+                      onChange={(e) => setFormData({ ...formData, allowedToCreateConnection: e.target.checked })}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium">Create Connections</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-black/5 transition-colors" style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.allowedToCreatePublicConnection}
+                      onChange={(e) => setFormData({ ...formData, allowedToCreatePublicConnection: e.target.checked })}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium">Create Public Connections</span>
+                  </label>
+                </div>
+                
+                <div className="flex justify-end gap-3 mt-8 pt-4 border-t" style={{ borderColor: theme.colors.border }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-5 py-2.5 rounded-lg border font-medium transition-colors"
+                    style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.surface }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-lg font-medium text-white transition-all shadow-sm"
+                    style={{ backgroundColor: theme.colors.accent }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accentHover)}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accent)}
+                  >
+                    {editingId ? "Save Changes" : "Create User"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

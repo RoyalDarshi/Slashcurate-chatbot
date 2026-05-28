@@ -38,6 +38,8 @@ interface ExistingConnectionsProps {
   createConnection: () => void;
 }
 
+import { authService } from "../services/authService";
+
 const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
   isAdmin,
   createConnection,
@@ -49,7 +51,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
   const [error, setError] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
-  const token = sessionStorage.getItem("token");
+  const token = authService.getToken(isAdmin);
 
   // State for deletion confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);

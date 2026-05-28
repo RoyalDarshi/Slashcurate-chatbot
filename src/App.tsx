@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import ChatInterface, { ChatInterfaceHandle } from "./components/ChatInterface";
 import DashboardInterface, {
@@ -11,14 +11,13 @@ import ConnectionForm from "./components/ConnectionForm";
 import ExistingConnections from "./components/ExistingConnections";
 import History from "./components/History";
 import Settings from "./components/Settings";
-import AdminLogin from "./components/AdminLogin";
 import AdminDashboard from "./components/AdminDashboard";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import { SettingsProvider, useSettings } from "./SettingsContext";
 import { handleLogout } from "./utils";
 import "@fontsource/inter";
 import "./index.css";
-import { validateToken } from "./api";
+import { authService } from "./services/authService";
 import { menuItems } from "./menuItems";
 import Favourites from "./components/Favourites";
 import UserTips from "./components/UserTips";
@@ -30,8 +29,8 @@ import { MessageSquare } from "lucide-react";
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] =
-    useState<boolean>(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [questionToAsk, setQuestionToAsk] = useState<{
     text: string;
     connection: string;
@@ -51,29 +50,34 @@ function App() {
   };
 
   const validateUser = async () => {
-    const key = "token";
-    const token = sessionStorage.getItem(key);
-    if (token) {
-      try {
-        const response = await validateToken(token);
-        if (response.status === 200) {
-          !response.data.isAdmin
-            ? setIsAuthenticated(true)
-            : setIsAdminAuthenticated(true);
+    const adminToken = authService.getToken(true);
+    const userToken = authService.getToken(false);
+    
+    try {
+      if (adminToken) {
+        const { valid, isAdmin } = await authService.validateToken(adminToken);
+        if (valid && isAdmin) {
+          setIsAdminAuthenticated(true);
+        } else {
+          authService.clearTokens();
+          setIsAdminAuthenticated(false);
+        }
+      } else if (userToken) {
+        const { valid, isAdmin } = await authService.validateToken(userToken);
+        if (valid && !isAdmin) {
+          setIsAuthenticated(true);
           setActiveMenu("home");
         } else {
-          sessionStorage.removeItem(key);
+          authService.clearTokens();
           setIsAuthenticated(false);
-          setIsAdminAuthenticated(false);
-          localStorage.removeItem("currentSessionId");
         }
-      } catch (error) {
-        console.error(`Error validating token:`, error);
-        sessionStorage.removeItem(key);
-        setIsAuthenticated(false);
-        setIsAdminAuthenticated(false);
-        localStorage.removeItem("currentSessionId");
       }
+    } catch (e) {
+      authService.clearTokens();
+      setIsAdminAuthenticated(false);
+      setIsAuthenticated(false);
+    } finally {
+      setIsInitializing(false);
     }
   };
 
@@ -90,15 +94,18 @@ function App() {
 
   const handleUserLogout = () => {
     handleLogout();
+    authService.logout();
     setIsAuthenticated(false);
+    setIsAdminAuthenticated(false);
     localStorage.removeItem("currentSessionId");
     localStorage.removeItem("currentDashboardQuestionId");
   };
 
-  const handleLoginSuccess = (token: string, isAdmin: boolean = false) => {
-    sessionStorage.setItem("token", token);
+  const handleLoginSuccess = (token: string, isAdmin = false) => {
+    // token is already saved by authService before this is called
     if (isAdmin) {
       setIsAdminAuthenticated(true);
+      window.location.href = "/admin"; 
     } else {
       setIsAuthenticated(true);
       handleNewChat();
@@ -114,6 +121,19 @@ function App() {
   const handleHomePage = () => {
     setActiveMenu("home");
   };
+
+  if (isInitializing) {
+    return (
+      <ThemeProvider>
+        <div className="flex h-screen w-screen items-center justify-center transition-colors duration-300" style={{ backgroundColor: "#0F172A" }}>
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-8 h-8 border-4 border-t-transparent border-blue-500 rounded-full animate-spin"></div>
+            <p className="text-white opacity-70 text-sm font-semibold tracking-wider animate-pulse">VERIFYING SESSION</p>
+          </div>
+        </div>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider>
@@ -149,9 +169,7 @@ function App() {
                     onLogout={() => setIsAdminAuthenticated(false)}
                   />
                 ) : (
-                  <AdminLogin
-                    onLoginSuccess={(token) => handleLoginSuccess(token, true)}
-                  />
+                  <Navigate to="/?login=admin" replace />
                 )
               }
             />
@@ -198,7 +216,6 @@ const AppContent: React.FC<{
 }) => {
   const { theme } = useTheme();
   const { notificationsEnabled, currentView } = useSettings();
-  const userToken = sessionStorage.getItem("token") || "";
 
   const handleSessionClicked = () => {
     onHomePage();

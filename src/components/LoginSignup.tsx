@@ -7,7 +7,7 @@ import ForgotPassword from "./ForgotPassword";
 import { useTheme } from "../ThemeContext";
 
 interface LoginSignupProps {
-  onLoginSuccess: (token: string) => void;
+  onLoginSuccess: (token: string, isAdmin?: boolean) => void;
 }
 
 const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {

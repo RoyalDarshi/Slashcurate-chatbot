@@ -61,18 +61,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (id === "connections") {
       setIsConnectionsOpen(!isConnectionsOpen);
     } else if (id === "logout") {
-      handleLogout();
+      if (onLogout) {
+        onLogout();
+      } else {
+        onMenuClick(id);
+      }
     } else {
       onMenuClick(id);
       setActiveMenuItem(id);
       setIsOpen(false);
     }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("token");
-    if (onLogout) onLogout();
-    else window.location.reload();
   };
 
   return (

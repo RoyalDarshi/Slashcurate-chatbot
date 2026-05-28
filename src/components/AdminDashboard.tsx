@@ -11,6 +11,7 @@ import { useTheme } from "../ThemeContext";
 import { Database, Key, Settings, LogOut, Link, Server, User, Shield } from "lucide-react"; 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { authService } from "../services/authService";
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -24,10 +25,10 @@ interface MenuItem {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeMenu, setActiveMenu] = useState<string>("create-connection");
+  const [activeMenu, setActiveMenu] = useState<string>("existing-connection");
   const { theme } = useTheme();
   const [token, setToken] = useState<string | null>(
-    sessionStorage.getItem("token")
+    authService.getToken(true)
   );
 
   const adminMenuItems: MenuItem[] = [
@@ -52,7 +53,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleMenuClick = (id: string) => {
     if (id === "logout") {
-      sessionStorage.removeItem("token"); // Match key from AdminLogin
+      authService.clearTokens();
       setToken(null);
       onLogout();
     } else {

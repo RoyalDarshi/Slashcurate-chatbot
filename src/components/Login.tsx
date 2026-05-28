@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useNavigate } from "react-router-dom"; // <-- ADDED IMPORT
+import { useNavigate, useLocation } from "react-router-dom"; // <-- ADDED IMPORT
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
-import { API_URL } from "../config";
+import { authService } from "../services/authService";
 import { useTheme } from "../ThemeContext";
 
 interface LoginProps {
-  onLoginSuccess: (token: string) => void;
+  onLoginSuccess: (token: string, isAdmin: boolean) => void;
   onForgotPassword: () => void;
   onSwitchToSignup: () => void;
 }
@@ -26,7 +26,12 @@ const Login: React.FC<LoginProps> = ({
   const { theme } = useTheme();
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
-  const navigate = useNavigate(); // <-- INITIALIZED HOOK
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const [loginType, setLoginType] = useState<"user" | "admin">(
+    queryParams.get("login") === "admin" ? "admin" : "user"
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -48,46 +53,34 @@ const Login: React.FC<LoginProps> = ({
 
     try {
       setLoading(true);
-      const response = await axios.post(
-        `${API_URL}/login/user`,
-        { email: username, password },
-        { headers: { "Content-Type": "application/json" } },
-      );
-      setLoading(false);
-
-      if (response.status === 200) {
-        const token = response.data.token;
-        const uid = response.data.uid;
-        const allowedToCreateConnection = response.data.allowed_to_create_connection;
-        const allowedToCreatePublicConnection = response.data.allowed_to_create_public_connection;
-        localStorage.setItem("uid", String(uid));
-        localStorage.setItem("allowedToCreateConnection", String(allowedToCreateConnection));
-        localStorage.setItem("allowedToCreatePublicConnection", String(allowedToCreatePublicConnection));
-        toast.success("Login successful!", { theme: mode });
-        onLoginSuccess(token);
+      
+      if (loginType === "admin") {
+        const response = await authService.loginAdmin(username, password);
+        toast.success("Admin login successful!", { theme: mode });
+        onLoginSuccess(response.token, true);
       } else {
-        toast.error(`Error: ${response.data.message || "Login failed"}`, {
-          theme: mode,
-        });
-      }
-      if (response.status === 401) {
-        toast.error("Invalid username or password.", { theme: mode });
+        const response = await authService.loginUser(username, password);
+        toast.success("Login successful!", { theme: mode });
+        onLoginSuccess(response.token, false);
       }
     } catch (error) {
-      setLoading(false);
       if (axios.isAxiosError(error)) {
-        toast.error(
-          `Error: ${error.response?.data?.message || error.message}`,
-          { theme: mode },
-        );
+        if (error.response?.status === 401) {
+          toast.error("Invalid credentials.", { theme: mode });
+        } else {
+          toast.error(
+            `Error: ${error.response?.data?.message || error.message}`,
+            { theme: mode },
+          );
+        }
       } else {
         toast.error(
-          `Error: ${
-            (error as Error).message || "An unexpected error occurred"
-          }`,
+          `Error: ${(error as Error).message || "An unexpected error occurred"}`,
           { theme: mode },
         );
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,19 +109,45 @@ const Login: React.FC<LoginProps> = ({
           }}
         />
 
-        {/* Username Field */}
+        {/* Login Type Toggle */}
+        <div className="flex p-1 rounded-xl mb-6 shadow-sm" style={{ backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)' }}>
+          <button
+            type="button"
+            onClick={() => setLoginType("user")}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${loginType === "user" ? "shadow-md" : "opacity-60"}`}
+            style={{ 
+              backgroundColor: loginType === "user" ? theme.colors.surface : "transparent",
+              color: loginType === "user" ? theme.colors.text : theme.colors.textSecondary 
+            }}
+          >
+            User Login
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoginType("admin")}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${loginType === "admin" ? "shadow-md" : "opacity-60"}`}
+            style={{ 
+              backgroundColor: loginType === "admin" ? theme.colors.surface : "transparent",
+              color: loginType === "admin" ? theme.colors.text : theme.colors.textSecondary 
+            }}
+          >
+            Admin Login
+          </button>
+        </div>
+
+        {/* Username / Email Field */}
         <div className="space-y-1">
           <label
             htmlFor="username"
             className="text-sm font-semibold tracking-wide"
             style={{ color: theme.colors.text }}
           >
-            Username
+            {loginType === "admin" ? "Admin Email" : "Username"}
           </label>
           <InputField
             type="text"
             name="username"
-            placeholder="name@company.com"
+            placeholder={loginType === "admin" ? "admin@company.com" : "john_doe"}
             value={formData.username}
             onChange={handleChange}
             required
@@ -188,20 +207,7 @@ const Login: React.FC<LoginProps> = ({
         </button>
       </form>
 
-      {/* --- ADDED: Admin Login Link --- */}
-      <div className="flex flex-col items-center mt-8">
-        <button
-          type="button"
-          className="text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 opacity-60 hover:opacity-100 hover:translate-x-1"
-          style={{ color: theme.colors.textSecondary }}
-          onClick={() => navigate("/admin")} // <-- NAVIGATE TO ADMIN LOGIN
-          disabled={loading}
-          title="Access the Admin Dashboard"
-        >
-          Are you an Admin? <span style={{ color: theme.colors.accent }}>Login here &rarr;</span>
-        </button>
-      </div>
-      {/* ------------------------------- */}
+
 
       {/* Links (Currently Commented Out) */}
       {/* <div className="flex flex-col items-center space-y-2 text-sm mt-4">
