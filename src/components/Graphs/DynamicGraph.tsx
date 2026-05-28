@@ -244,7 +244,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
 
             {showInsights && config.insights.length > 0 && (
               <div
-                className="absolute left-0 top-full z-50 mt-1 flex w-[360px] flex-col gap-3 p-4 shadow-xl border"
+                className="absolute right-0 top-full z-50 mt-1 flex w-[360px] flex-col gap-3 p-4 shadow-xl border"
                 style={{
                   backgroundColor: theme.colors.surface,
                   borderColor: theme.colors.border,

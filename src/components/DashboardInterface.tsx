@@ -455,6 +455,10 @@ const DashboardInterface = memo(
           setSessionConnectionError(
             "This session was loaded but has no associated connection. You can view history or start a new chat.",
           );
+          const timer = setTimeout(() => {
+            setSessionConnectionError(null);
+          }, 8000);
+          return () => clearTimeout(timer);
         }
       }, [
         sessionConnection,

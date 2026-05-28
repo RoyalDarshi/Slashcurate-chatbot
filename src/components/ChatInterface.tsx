@@ -519,6 +519,10 @@ const ChatInterface = memo(
           setSessionConnectionError(
             "This session was loaded but has no associated connection. View history or start a new chat.",
           );
+          const timer = setTimeout(() => {
+            setSessionConnectionError(null);
+          }, 8000);
+          return () => clearTimeout(timer);
         }
       }, [
         sessionConnection,

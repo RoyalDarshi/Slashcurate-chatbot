@@ -727,7 +727,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               {/* Left Visualization Panel Island */}
               <div
                 ref={graphContainerRef}
-                className="lg:col-span-5 w-full flex flex-col overflow-visible min-w-0 animate-fade-up"
+                className="lg:col-span-5 w-full flex flex-col overflow-visible min-w-0 animate-fade-up z-20"
                 style={{
                   maxHeight: "100%",
                   backgroundColor: "transparent",
@@ -735,11 +735,11 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                 }}
               >
                 <div
-                  className="flex items-center justify-end py-1 flex-shrink-0"
+                  className="flex items-center justify-center py-1 flex-shrink-0"
                   style={{ borderColor: "transparent" }}
                 >
                   {dashboardItem.mainViewData.chartData?.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-end">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-center">
                       <div className="flex items-center flex-shrink-0">
 
                         <select

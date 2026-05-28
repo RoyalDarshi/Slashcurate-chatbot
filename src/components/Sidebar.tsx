@@ -103,16 +103,16 @@ const Sidebar: React.FC<SidebarProps> = ({
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 transition-all duration-300 ease-in-out z-40 bg-transparent overflow-x-hidden`}
       >
-        <div className="flex items-center justify-between mb-6 px-1">
-          <div className="flex items-center space-x-2.5 overflow-hidden">
-            <MessageCircle
-              size={22}
-              style={{ color: theme.colors.accent }}
-              className="flex-shrink-0"
-            />
-            {isDesktopSidebarOpen && (
+        <div className={`flex items-center mb-8 mt-2 px-1 ${isDesktopSidebarOpen ? "justify-between" : "justify-center"}`}>
+          {isDesktopSidebarOpen && (
+            <div className="flex items-center space-x-2.5 overflow-hidden">
+              <MessageCircle
+                size={24}
+                style={{ color: theme.colors.accent }}
+                className="flex-shrink-0"
+              />
               <h1
-                className="text-base font-semibold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
+                className="text-lg font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
                 style={{
                   color: theme.colors.text,
                   fontFamily: theme.typography.fontFamily,
@@ -120,48 +120,47 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 {menuItems ? "Admin Panel" : "Ask Your Data"}
               </h1>
-            )}
-          </div>
-          <div className="relative group hidden md:block">
+            </div>
+          )}
+          <div className={`relative group hidden md:flex ${!isDesktopSidebarOpen ? "w-full justify-center" : ""}`}>
             <button
-              className="p-1.5 rounded-lg transition-colors flex items-center justify-center text-white hover:opacity-90"
+              className="p-2 rounded-xl transition-colors flex items-center justify-center text-white hover:opacity-90 shadow-sm"
               style={{ backgroundColor: theme.colors.accent }}
               onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
               title={isDesktopSidebarOpen ? "Collapse Frame" : "Expand Frame"}
             >
               {isDesktopSidebarOpen ? (
-                <PanelLeftClose size={16} />
+                <PanelLeftClose size={18} />
               ) : (
-                <PanelLeftOpen size={16} />
+                <PanelLeftOpen size={18} />
               )}
             </button>
           </div>
         </div>
 
-        <nav className="flex flex-col space-y-1 flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <nav className="flex flex-col space-y-2 flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar px-1">
           {items?.map(({ id, icon: Icon, label, subMenu }) => {
             const isMenuSelected = activeMenuItem === id;
             const itemBg = isMenuSelected
-              ? theme.mode === "light"
-                ? "rgba(79, 70, 229, 0.06)"
-                : "rgba(255, 255, 255, 0.07)"
+              ? `${theme.colors.accent}1A`
               : "transparent";
             const itemColor = isMenuSelected
               ? theme.colors.accent
-              : theme.colors.text;
+              : theme.colors.textSecondary;
 
             return (
               <React.Fragment key={id}>
                 <button
-                  className={`relative flex items-center ${isDesktopSidebarOpen ? "justify-between" : "justify-center"} rounded-xl w-full transition-all group`}
+                  className={`relative flex items-center ${
+                    isDesktopSidebarOpen ? "justify-start px-3 py-2.5 w-full" : "justify-center w-11 h-11 mx-auto"
+                  } rounded-xl transition-all group`}
                   style={{
                     backgroundColor: itemBg,
                     color: itemColor,
-                    padding: "0.5rem 0.625rem",
                   }}
                   onMouseOver={(e) => {
                     if (!isMenuSelected) {
-                      e.currentTarget.style.backgroundColor = theme.colors.hover;
+                      e.currentTarget.style.backgroundColor = theme.mode === "light" ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)";
                     }
                   }}
                   onMouseOut={(e) => {
@@ -171,56 +170,42 @@ const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   onClick={() => handleMenuClick(id)}
                 >
-                  <div className="flex items-center relative w-full justify-start">
-                    <div
-                      className={`absolute left-0 w-1 rounded-r-full transition-all duration-200 ${
-                        isMenuSelected
-                          ? "h-5 opacity-100 scale-y-100"
-                          : "h-0 opacity-0 scale-y-50"
-                      }`}
-                      style={{
-                        backgroundColor: theme.colors.accent,
-                        marginLeft: "-0.625rem",
-                      }}
-                    />
+                  <Icon
+                    size={20}
+                    style={{
+                      color: isMenuSelected
+                        ? theme.colors.accent
+                        : theme.colors.textSecondary,
+                    }}
+                    className="flex-shrink-0 group-hover:scale-110 transition-transform duration-200"
+                  />
 
-                    <Icon
-                      size={18}
+                  {!isDesktopSidebarOpen && (
+                    <div
+                      className="absolute left-14 top-1/2 transform -translate-y-1/2 text-[11px] font-bold tracking-wide uppercase px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-xl border"
+                      style={{
+                        zIndex: 100,
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.border,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {label}
+                    </div>
+                  )}
+
+                  {isDesktopSidebarOpen && (
+                    <span
+                      className="ml-3 truncate text-[13.5px] font-bold tracking-wide"
                       style={{
                         color: isMenuSelected
-                          ? theme.colors.accent
+                          ? theme.colors.text
                           : theme.colors.textSecondary,
                       }}
-                      className="flex-shrink-0 group-hover:text-current animate-none"
-                    />
-
-                    {!isDesktopSidebarOpen && (
-                      <div
-                        className="absolute left-12 top-1/2 transform -translate-y-1/2 text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-lg border"
-                        style={{
-                          zIndex: 100,
-                          backgroundColor: theme.colors.surface,
-                          borderColor: theme.colors.border,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        {label}
-                      </div>
-                    )}
-
-                    {isDesktopSidebarOpen && (
-                      <span
-                        className="ml-3 truncate text-sm font-semibold tracking-tight"
-                        style={{
-                          color: isMenuSelected
-                            ? theme.colors.text
-                            : theme.colors.textSecondary,
-                        }}
-                      >
-                        {label}
-                      </span>
-                    )}
-                  </div>
+                    >
+                      {label}
+                    </span>
+                  )}
 
                   {isDesktopSidebarOpen && id === "connections" && (
                     <div
