@@ -94,11 +94,10 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
             onChange={handleChange}
             required
             disabled={loading}
-            className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
+            className="w-full px-4 py-2.5 text-sm rounded-xl border border-transparent shadow-sm focus:border-transparent transition-all"
             style={{
-              backgroundColor: theme.colors.bubbleBot,
+              backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
               color: theme.colors.text,
-              borderRadius: theme.borderRadius.default,
               focusRingColor: theme.colors.accent,
             }}
           />
@@ -107,21 +106,13 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-36 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full shadow-lg block py-3 mt-6 text-sm font-semibold tracking-wide transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
           style={{
-            color: theme.colors.text,
-            backgroundColor: "transparent",
-            border: `1px solid ${theme.colors.accent}`,
-            borderRadius: theme.borderRadius.pill,
+            color: '#fff',
+            background: `linear-gradient(135deg, ${theme.colors.accent}, ${theme.colors.accentHover})`,
+            borderRadius: '12px',
+            boxShadow: `0 8px 20px -6px ${theme.colors.accent}80`
           }}
-          onMouseOver={(e) =>
-            !loading &&
-            (e.currentTarget.style.backgroundColor =
-              theme.colors.accentHover + "20")
-          }
-          onMouseOut={(e) =>
-            !loading && (e.currentTarget.style.backgroundColor = "transparent")
-          }
           disabled={loading}
           title="Send a reset link to your email" // Tooltip added
         >
@@ -129,17 +120,16 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
         </button>
       </form>
 
-      {/* Back to Login */}
-      <div className="text-center text-sm mt-4">
+      <div className="flex flex-col items-center mt-8">
         <button
           type="button"
-          className="transition-all duration-200 hover:underline"
+          className="text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 opacity-60 hover:opacity-100 hover:-translate-x-1"
           style={{ color: theme.colors.textSecondary }}
           onClick={onBackToLogin}
           disabled={loading}
           title="Return to login screen" // Tooltip added
         >
-          Return to Galaxy
+          &larr; Return to Sign In
         </button>
         {loading && <Loader text="Sending..." />}
       </div>

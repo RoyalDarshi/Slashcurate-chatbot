@@ -170,14 +170,14 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
             onChange={handleChange}
             placeholder={placeholder}
             disabled={isLoading}
-            className={`w-full p-2 pr-10 rounded border focus:outline-none transition-all ${
-              hasError ? "focus:ring-2 focus:ring-red-200" : "focus:ring-2"
+            className={`w-full px-4 py-2.5 pr-10 rounded-xl border border-transparent shadow-sm focus:border-transparent transition-all duration-200 ${
+              hasError ? "focus:ring-2 focus:ring-red-500" : "focus:ring-2"
             }`}
             style={{
-              backgroundColor: theme.colors.background,
+              backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)',
               color: theme.colors.text,
-              // Dynamic Border Color: Red if error, standard if not
-              borderColor: hasError ? "#ef4444" : `${theme.colors.text}40`,
+              // Dynamic Border Color
+              borderColor: hasError ? "#ef4444" : "transparent",
               // @ts-ignore 
               '--tw-ring-color': hasError ? '#ef4444' : theme.colors.accent 
             }}
@@ -204,17 +204,24 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 backdrop-blur-md animate-fade-in">
       <div 
         ref={modalRef}
-        className="p-6 rounded-lg shadow-2xl w-full max-w-md relative"
+        className="p-8 rounded-3xl shadow-2xl w-full max-w-md relative border transition-all"
         style={{ 
-          backgroundColor: theme.colors.surface, 
+          background: theme.mode === 'dark' ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(24px)',
           color: theme.colors.text,
-          border: `1px solid ${theme.colors.text}10` 
+          borderColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+          boxShadow: theme.mode === 'dark' 
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255,255,255,0.1)' 
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255,255,255,0.8)',
         }}
       >
-        <h3 className="text-xl font-bold mb-6">Change Password</h3>
+        <div className="mb-8">
+          <h3 className="text-2xl font-extrabold tracking-tight">Change Password</h3>
+          <p className="text-sm font-medium mt-1" style={{ color: theme.colors.textSecondary }}>Secure your account with a new passcode.</p>
+        </div>
         
         {/* Global Error Alert (For generic API errors) */}
         {errors.global && (
@@ -236,20 +243,23 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
           {renderPasswordField("New Password", "newPassword", "new", "Enter new password")}
           {renderPasswordField("Confirm New Password", "confirmPassword", "confirm", "Re-enter new password")}
 
-          <div className="flex justify-end gap-3 mt-8">
+          <div className="flex justify-end gap-3 mt-8 pt-4 border-t" style={{ borderColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded hover:bg-gray-100 transition-colors"
-              style={{ color: theme.colors.error }}
+              className="px-5 py-2.5 rounded-xl font-medium transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/5"
+              style={{ color: theme.colors.textSecondary }}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || isSuccess}
-              className="px-4 py-2 rounded text-white transition-all hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: theme.colors.accent }}
+              className="px-6 py-2.5 rounded-xl font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              style={{ 
+                background: `linear-gradient(135deg, ${theme.colors.accent}, ${theme.colors.accentHover || theme.colors.accent})`,
+                boxShadow: `0 8px 15px -5px ${theme.colors.accent}60`,
+              }}
             >
               {isLoading ? "Updating..." : "Update Password"}
             </button>

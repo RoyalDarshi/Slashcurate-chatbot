@@ -22,6 +22,7 @@ import { useTheme } from "../ThemeContext";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
 import { useConnections, useSession, useRecommendedQuestions } from "../hooks";
+import { useSettings } from "../SettingsContext";
 import DashboardView, { DashboardViewHandle } from "./DashboardView";
 import SchemaExplorer from "./SchemaExplorer";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
@@ -37,6 +38,7 @@ import {
   PlusCircle,
   AlertCircle,
   Sparkles,
+  MessageSquare,
 } from "lucide-react";
 
 export type DashboardInterfaceHandle = {
@@ -248,6 +250,7 @@ const DashboardInterface = memo(
   forwardRef<DashboardInterfaceHandle, DashboardInterfaceProps>(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
+      const { setCurrentView } = useSettings();
       const token = sessionStorage.getItem("token") ?? "";
 
       const connectionDropdownRef = useRef<HTMLDivElement>(null);
@@ -2205,6 +2208,17 @@ const DashboardInterface = memo(
                         transition: "transform 0.2s",
                       }}
                     />
+                  </button>
+                </CustomTooltip>
+                <CustomTooltip title="Switch to Chat" position="top">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView("chat")}
+                    disabled={isSubmitting}
+                    className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
+                    <MessageSquare size={19} />
                   </button>
                 </CustomTooltip>
                 <CustomTooltip title="New Chat Session" position="top">

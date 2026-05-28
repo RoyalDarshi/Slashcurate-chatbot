@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AxiosError } from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -19,6 +19,16 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
+  
+  const [mousePos, setMousePos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -40,25 +50,18 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
 
     try {
       setLoading(true);
-      // const response = await axios.post(
-      //   `${API_URL}/login/admin`, // Updated to match our Flask route
-      //   { email, password },
-      //   { headers: { "Content-Type": "application/json" } }
-      // );
       const response = await loginAdmin(email, password);
 
       if (response.status === 200 && response.data.token) {
         const token = response.data.token;
-        sessionStorage.setItem("token", token); // Store token for ExistingConnections
+        sessionStorage.setItem("token", token);
         toast.success("Admin login successful!", { theme: mode });
         onLoginSuccess(token);
-        setFormData({ email: "", password: "" }); // Clear form
+        setFormData({ email: "", password: "" });
       } else {
         toast.error(
           `Error: ${response.data?.message || "Admin login failed"}`,
-          {
-            theme: mode,
-          },
+          { theme: mode },
         );
         setLoading(false);
       }
@@ -77,189 +80,257 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     setTimeout(() => setShowPassword(false), 750);
   };
 
-  // const handleForgotPassword = () => {
-  //   toast.info("Admin password reset not implemented yet.", { theme: mode });
-  // };
-
-  // const handleSwitchToSignup = () => {
-  //   toast.info("Admin registration not available here.", { theme: mode });
-  // };
-
   return (
     <div
-      className="min-h-screen flex flex-col justify-center items-center p-6 relative overflow-hidden"
+      className="min-h-screen w-full flex flex-col lg:flex-row relative overflow-hidden"
       style={{
         backgroundColor: theme.colors.background,
         fontFamily: theme.typography.fontFamily,
       }}
     >
-      <div
-        className="absolute inset-0 opacity-50 pointer-events-none"
+      {/* LEFT SIDE - VISUALS */}
+      <div 
+        className="hidden lg:flex lg:w-[55%] relative flex-col justify-between p-12 overflow-hidden"
         style={{
-          background: `radial-gradient(circle at 50% 50%, ${theme.colors.accent}20, transparent 70%)`,
+          background: theme.mode === 'dark' 
+            ? 'linear-gradient(135deg, #020617 0%, #0f172a 100%)' 
+            : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+          borderRight: `1px solid ${theme.colors.border}`,
         }}
-      />
-
-      <div
-        className="absolute top-4 left-4 flex items-center space-x-2"
-        style={{ color: theme.colors.textSecondary }}
       >
-        <svg
-          className="h-6 w-6"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={theme.colors.accent}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <div 
+          className="absolute inset-0 opacity-[0.03] mix-blend-overlay pointer-events-none"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+        />
+        <div 
+          className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full mix-blend-screen opacity-60 animate-blob"
+          style={{
+            background: `linear-gradient(135deg, ${theme.colors.accent}, transparent)`,
+            filter: 'blur(20px)',
+            animation: 'blob 7s infinite alternate'
+          }}
+        />
+        <div 
+          className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full mix-blend-screen opacity-40 animate-blob animation-delay-2000"
+          style={{
+            background: `linear-gradient(135deg, ${theme.mode === 'dark' ? '#f43f5e' : '#fb923c'}, transparent)`,
+            filter: 'blur(30px)',
+            animation: 'blob 10s infinite alternate-reverse'
+          }}
+        />
+
+        <div 
+          className="absolute inset-0 opacity-60 blur-[90px] pointer-events-none transition-all duration-1000 ease-out"
+          style={{
+            background: `radial-gradient(circle at ${mousePos.x * 0.4}px ${mousePos.y * 0.4}px, ${theme.colors.accent}60, transparent 45%),
+                         radial-gradient(circle at ${window.innerWidth * 0.5 - mousePos.x * 0.3}px ${window.innerHeight * 0.5 - mousePos.y * 0.3}px, ${theme.mode === 'dark' ? '#f43f5e50' : '#fb923c50'}, transparent 45%)`
+          }}
+        />
+        
+        <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%239C92AC' fill-opacity='0.04' fill-rule='evenodd'/%3E%3C/svg%3E")`
+        }} />
+
+        <div className="absolute top-1/3 right-12 w-64 h-40 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl p-5 transform rotate-6 animate-float"
+          style={{ background: 'rgba(255,255,255,0.03)', animation: 'float 6s ease-in-out infinite' }}
         >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 6v6l4 2" />
-        </svg>
-        <span
-          className="text-base font-medium"
-          style={{ fontFamily: theme.typography.fontFamily }}
+          <div className="w-full h-3 rounded-full bg-white/10 mb-3" />
+          <div className="w-3/4 h-3 rounded-full bg-white/10 mb-6" />
+          <div className="flex items-end gap-2 h-16">
+            <div className="w-1/4 h-full rounded-t-sm bg-gradient-to-t from-orange-500/50 to-transparent" />
+            <div className="w-1/4 h-3/4 rounded-t-sm bg-gradient-to-t from-red-500/50 to-transparent" />
+            <div className="w-1/4 h-1/2 rounded-t-sm bg-gradient-to-t from-rose-500/50 to-transparent" />
+            <div className="w-1/4 h-full rounded-t-sm bg-gradient-to-t from-pink-500/50 to-transparent" />
+          </div>
+        </div>
+
+        <div
+          className="relative z-10 flex items-center gap-3 animate-fade-down"
+          style={{ color: '#fff' }}
         >
-          SlashCurate
-        </span>
+          <div 
+            className="flex items-center justify-center w-11 h-11 rounded-2xl shadow-lg"
+            style={{ 
+                background: `linear-gradient(135deg, ${theme.colors.error || '#ef4444'}, #f43f5e)`,
+                color: '#fff',
+                boxShadow: `0 10px 25px -5px ${theme.colors.error || '#ef4444'}60`
+            }}
+          >
+            <svg
+              className="h-6 w-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0110 0v4"></path>
+            </svg>
+          </div>
+          <span className="text-2xl font-bold tracking-tight">
+            SlashCurate
+          </span>
+        </div>
+
+        <div className="relative z-10 max-w-xl mb-16 animate-fade-up">
+          <h1 className="text-5xl lg:text-[3.75rem] leading-[1.1] font-extrabold tracking-tight mb-6 text-white drop-shadow-lg">
+            System <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-rose-500">Administration</span> & Control.
+          </h1>
+          <p className="text-lg leading-relaxed font-medium text-slate-300">
+            Securely manage configurations, monitor activity, and oversee your data environments.
+          </p>
+        </div>
       </div>
 
-      <div className="w-full max-w-md relative z-10 space-y-6">
-        <h2
-          className="text-2xl font-bold text-center tracking-tight"
+      {/* RIGHT SIDE - FORM */}
+      <div className="w-full lg:w-[45%] flex flex-col justify-center items-center p-6 lg:p-12 relative bg-transparent">
+        
+        <div 
+          className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+        />
+        
+        <div
+          className="lg:hidden absolute top-6 left-6 flex items-center gap-2"
           style={{ color: theme.colors.text }}
         >
-          Admin Access
-        </h2>
+          <svg
+            className="h-6 w-6"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={theme.colors.error || theme.colors.accent}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0110 0v4"></path>
+          </svg>
+          <span className="text-xl font-bold tracking-tight">
+            SlashCurate
+          </span>
+        </div>
 
-        <div className="space-y-4">
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar
-            closeOnClick
-            pauseOnHover
-            toastStyle={{
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-              borderRadius: theme.borderRadius.default,
-              boxShadow: theme.shadow.sm,
-            }}
-          />
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1">
-              <label
-                htmlFor="email"
-                className="text-sm font-semibold tracking-wide"
-                style={{ color: theme.colors.text }}
-              >
-                Admin Email
-              </label>
-              <InputField
-                type="email"
-                name="email"
-                placeholder="Enter your admin email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
-                style={{
-                  backgroundColor: theme.colors.bubbleBot,
-                  color: theme.colors.text,
-                  borderRadius: theme.borderRadius.default,
-                }}
-                focusRingColor={theme.colors.accent}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label
-                htmlFor="password"
-                className="text-sm font-semibold tracking-wide"
-                style={{ color: theme.colors.text }}
-              >
-                Admin Passcode
-              </label>
-              <PasswordField
-                name="password"
-                placeholder="Enter your admin passcode"
-                value={formData.password}
-                onChange={handleChange}
-                showPassword={showPassword}
-                toggleShowPassword={handleShowPassword}
-                disabled={loading}
-                className="w-full px-3 py-2 text-sm border-none rounded-lg focus:ring-2 transition-all duration-200"
-                style={{
-                  backgroundColor: theme.colors.bubbleBot,
-                  color: theme.colors.text,
-                  borderRadius: theme.borderRadius.default,
-                }}
-                focusRingColor={theme.colors.accent}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-32 mx-auto block py-1.5 text-sm font-medium tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                color: theme.colors.text,
-                backgroundColor: "transparent",
-                border: `1px solid ${theme.colors.accent}`,
-                borderRadius: theme.borderRadius.pill,
-              }}
-              onMouseOver={(e) =>
-                !loading &&
-                (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-              }
-              onMouseOut={(e) =>
-                !loading &&
-                (e.currentTarget.style.backgroundColor = "transparent")
-              }
-              disabled={loading}
-              title="Access admin panel"
+        <div 
+          className="w-full max-w-[420px] relative z-10 p-8 lg:p-10 rounded-3xl shadow-2xl border backdrop-blur-3xl animate-fade-in"
+          style={{
+            background: theme.mode === 'dark' ? 'rgba(15, 23, 42, 0.4)' : 'rgba(255, 255, 255, 0.6)',
+            borderColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+            boxShadow: theme.mode === 'dark' 
+                ? '0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255,255,255,0.1)' 
+                : '0 25px 50px -12px rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255,255,255,0.8)',
+          }}
+        >
+          <div className="mb-8 text-center">
+            <h2
+              className="text-[2rem] font-extrabold tracking-tight mb-2"
+              style={{ color: theme.colors.text }}
             >
-              {loading ? "Processing..." : "Start Managing"}
-            </button>
-          </form>
-
-          <div className="flex flex-col items-center mt-6">
-            <button
-              type="button"
-              className="text-sm transition-all duration-200 hover:underline opacity-80 hover:opacity-100"
-              style={{ color: theme.colors.textSecondary }}
-              onClick={() => navigate("/")} // Assuming you have a navigation function to switch to user login
-              disabled={loading}
-              title="Access the User Dashboard"
-            >
-              Are you an User? Login here
-            </button>
+              Admin Access
+            </h2>
+            <p className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
+              Enter your elevated credentials to manage the workspace.
+            </p>
           </div>
 
-          {/* <div className="flex flex-col items-center space-y-2 text-sm mt-4">
-            <button
-              type="button"
-              className="transition-all duration-200 hover:underline"
-              style={{ color: theme.colors.textSecondary }}
-              onClick={handleForgotPassword}
-              disabled={loading}
-              title="Recover your admin account"
-            >
-              Forgot Your Passcode?
-            </button>
-            <button
-              type="button"
-              className="transition-all duration-200 hover:underline"
-              style={{ color: theme.colors.textSecondary }}
-              onClick={handleSwitchToSignup}
-              disabled={loading}
-              title="Register as an admin (if applicable)"
-            >
-              New Admin? Register
-            </button>
-            {loading && <Loader text="Logging in..." />}
-          </div> */}
+          <div className="space-y-4">
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar
+              closeOnClick
+              pauseOnHover
+              toastStyle={{
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                borderRadius: theme.borderRadius.large,
+                boxShadow: theme.shadow.md,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            />
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-1">
+                <label
+                  htmlFor="email"
+                  className="text-sm font-semibold tracking-wide"
+                  style={{ color: theme.colors.text }}
+                >
+                  Admin Email
+                </label>
+                <InputField
+                  type="email"
+                  name="email"
+                  placeholder="admin@company.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-transparent shadow-sm focus:border-transparent transition-all"
+                  style={{
+                    backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                    color: theme.colors.text,
+                    focusRingColor: theme.colors.accent,
+                  }}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label
+                  htmlFor="password"
+                  className="text-sm font-semibold tracking-wide"
+                  style={{ color: theme.colors.text }}
+                >
+                  Admin Passcode
+                </label>
+                <PasswordField
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  showPassword={showPassword}
+                  toggleShowPassword={handleShowPassword}
+                  disabled={loading}
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-transparent shadow-sm focus:border-transparent transition-all duration-200"
+                  style={{
+                    backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                    color: theme.colors.text,
+                    focusRingColor: theme.colors.accent,
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full shadow-lg block py-3 mt-6 text-sm font-semibold tracking-wide transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
+                style={{
+                  color: '#fff',
+                  background: `linear-gradient(135deg, ${theme.colors.accent}, ${theme.colors.accentHover})`,
+                  borderRadius: '12px',
+                  boxShadow: `0 8px 20px -6px ${theme.colors.accent}80`
+                }}
+                disabled={loading}
+                title="Access admin panel"
+              >
+                {loading ? "Authenticating..." : "Start Managing"}
+              </button>
+            </form>
+
+            <div className="flex flex-col items-center mt-8">
+              <button
+                type="button"
+                className="text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 opacity-60 hover:opacity-100 hover:-translate-x-1"
+                style={{ color: theme.colors.textSecondary }}
+                onClick={() => navigate("/")}
+                disabled={loading}
+                title="Return to user login"
+              >
+                &larr; <span style={{ color: theme.colors.accent }}>Not an Admin?</span> User Login
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

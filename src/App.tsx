@@ -25,6 +25,7 @@ import UserTips from "./components/UserTips";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import HelpPage from "./components/HelpPage";
+import { MessageSquare } from "lucide-react";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");

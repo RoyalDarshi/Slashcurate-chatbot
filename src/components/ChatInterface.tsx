@@ -22,6 +22,7 @@ import {
   PlusCircle,
   AlertCircle,
   Sparkles,
+  LayoutDashboard,
 } from "lucide-react";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
@@ -31,6 +32,7 @@ import {
   useRecommendedQuestions,
   useChatScroll,
 } from "../hooks";
+import { useSettings } from "../SettingsContext";
 import SchemaExplorer from "./SchemaExplorer";
 import schemaSampleData from "../data/sampleSchemaData";
 import { FaFilePdf } from "react-icons/fa";
@@ -90,6 +92,7 @@ const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
     ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
       const { theme } = useTheme();
+      const { setCurrentView } = useSettings();
       const token = sessionStorage.getItem("token") ?? "";
 
       const {
@@ -1390,6 +1393,18 @@ const ChatInterface = memo(
                         transition: "transform 0.2s",
                       }}
                     />
+                  </button>
+                </CustomTooltip>
+
+                <CustomTooltip title="Switch to Dashboard" position="top">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView("dashboard")}
+                    disabled={isSubmitting}
+                    className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
+                    <LayoutDashboard size={19} />
                   </button>
                 </CustomTooltip>
 
