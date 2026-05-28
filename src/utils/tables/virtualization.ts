@@ -3,27 +3,15 @@ import type { SmartTablePerformanceConfig } from "./types";
 export const getSmartVirtualizationConfig = (
   rowCount: number
 ): SmartTablePerformanceConfig => {
-  if (rowCount > 1000) {
+  if (rowCount > 50) {
     return {
       mode: "virtualized",
       rowCount,
       pageSize: 100,
-      virtualizationThreshold: 1000,
-      paginationThreshold: 120,
+      virtualizationThreshold: 50,
+      paginationThreshold: 50,
       estimatedRowHeight: 36,
-      overscan: 18,
-    };
-  }
-
-  if (rowCount > 120) {
-    return {
-      mode: "paginated",
-      rowCount,
-      pageSize: 50,
-      virtualizationThreshold: 1000,
-      paginationThreshold: 120,
-      estimatedRowHeight: 36,
-      overscan: 12,
+      overscan: 20,
     };
   }
 

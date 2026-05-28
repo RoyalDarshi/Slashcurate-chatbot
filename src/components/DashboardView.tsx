@@ -739,7 +739,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                   style={{ borderColor: "transparent" }}
                 >
                   {dashboardItem.mainViewData.chartData?.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-center">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-start">
                       <div className="flex items-center flex-shrink-0">
 
                         <select

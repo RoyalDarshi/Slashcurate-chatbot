@@ -220,7 +220,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
         className="flex h-full flex-grow flex-col relative bg-transparent"
         style={{ overflow: "visible" }}
       >
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+        <div className="flex items-center justify-end gap-1.5 mb-2 relative z-10 w-full shrink-0 px-1">
           <div className="relative flex-shrink-0" ref={insightsRef}>
             <button
               onClick={() => {

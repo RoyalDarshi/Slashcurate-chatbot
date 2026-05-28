@@ -27,7 +27,7 @@ import SchemaExplorer from "./SchemaExplorer";
 import DashboardSkeletonLoader from "./DashboardSkeletonLoader";
 import schemaSampleData from "../data/sampleSchemaData";
 import DashboardError from "./DashboardError";
-import PreviousQuestionsModal from "./PreviousQuestionModal";
+import PreviousQuestionsDrawer from "./PreviousQuestionsDrawer";
 import html2canvas from "html2canvas";
 import { FaFilePdf } from "react-icons/fa";
 import {
@@ -2255,13 +2255,13 @@ const DashboardInterface = memo(
             </footer>
           )}
 
-          <PreviousQuestionsModal
+          <PreviousQuestionsDrawer
             showPrevQuestionsModal={showPrevQuestionsModal}
             onClose={() => setShowPrevQuestionsModal(false)}
             userQuestionsFromSession={userQuestionsFromSession}
             handleSelectPrevQuestion={handleSelectPrevQuestion}
-            currentQuestionId={currentQuestionId}
             theme={theme}
+            currentQuestionId={currentQuestionId}
           />
 
           {connectionError && (
