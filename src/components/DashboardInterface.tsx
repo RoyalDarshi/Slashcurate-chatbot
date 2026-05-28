@@ -1948,19 +1948,21 @@ const DashboardInterface = memo(
           }}
         >
           {sessionConnectionError && (
-            <div
-              className="flex items-center justify-between sticky top-4 z-50 mx-auto w-[calc(100%-2rem)] max-w-3xl border-l-4 p-3 rounded-lg shadow-md animate-fade-in"
-              style={{
-                background: theme.colors.surface,
-                color: theme.colors.error,
-                borderColor: theme.colors.error,
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <AlertCircle size={16} />
-                <span className="font-semibold text-sm">
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 animate-fade-down max-w-md w-full px-4 pointer-events-none">
+              <div 
+                className="flex items-start gap-3 p-4 rounded-2xl shadow-xl backdrop-blur-xl border pointer-events-auto"
+                style={{
+                  background: theme.mode === 'light' ? 'rgba(254, 242, 242, 0.9)' : 'rgba(69, 10, 10, 0.85)',
+                  borderColor: theme.mode === 'light' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.3)',
+                  color: theme.mode === 'light' ? '#B91C1C' : '#FCA5A5'
+                }}
+              >
+                <div className="flex-shrink-0 p-1.5 rounded-full bg-red-500/15 text-red-500 mt-0.5">
+                  <AlertCircle size={18} />
+                </div>
+                <div className="flex-1 text-sm font-medium leading-snug">
                   {sessionConnectionError}
-                </span>
+                </div>
               </div>
             </div>
           )}
@@ -2040,7 +2042,7 @@ const DashboardInterface = memo(
                         onRetry={() =>
                           handleRetry(currentDashboardView.questionMessageId)
                         }
-                        sessionConErr={!!sessionConnectionError}
+                        sessionConErr={!sessionConnection && !!sessionId}
                         botResponseId={currentDashboardView.botResponseId}
                         questionMessageId={
                           currentDashboardView.questionMessageId
@@ -2062,7 +2064,7 @@ const DashboardInterface = memo(
                       historyIndex={currentHistoryIndex}
                       historyLength={dashboardHistory.length}
                       onToggleFavorite={handleToggleFavorite}
-                      sessionConErr={!!sessionConnectionError}
+                      sessionConErr={!sessionConnection && !!sessionId}
                       graphSummary={graphSummary}
                       onEditQuestion={handleEditQuestion}
                       onUpdateReaction={handleUpdateReaction}
@@ -2137,7 +2139,7 @@ const DashboardInterface = memo(
                     <button
                       type="button"
                       onClick={toggleConnectionDropdown}
-                      disabled={isSubmitting || !!sessionConnectionError}
+                      disabled={isSubmitting || (!sessionConnection && !!sessionId)}
                       className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
                       style={{ color: theme.colors.textSecondary }}
                     >
@@ -2194,7 +2196,7 @@ const DashboardInterface = memo(
                     disabled={
                       isSubmitting ||
                       !selectedConnection ||
-                      !!sessionConnectionError
+                      (!sessionConnection && !!sessionId)
                     }
                     className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
                     style={{
@@ -2245,7 +2247,7 @@ const DashboardInterface = memo(
                   onNewChat={handleNewChat}
                   disabled={
                     isSubmitting ||
-                    !!sessionConnectionError ||
+                    (!sessionConnection && !!sessionId) ||
                     (!selectedConnection && connections.length > 0)
                   }
                   isDbExplorerOpen={isDbExplorerOpen}
@@ -2281,8 +2283,18 @@ const DashboardInterface = memo(
           />
 
           {connectionError && (
-            <div className="text-center text-xs font-semibold py-2.5 text-red-500 bg-red-500/10 border-b border-red-500/20 absolute top-0 left-0 right-0 z-50 animate-fade-in">
-              Connection Error: {connectionError}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-down max-w-sm w-full px-4 pointer-events-none">
+              <div 
+                className="flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg backdrop-blur-md border text-xs font-bold justify-center pointer-events-auto"
+                style={{
+                  background: theme.mode === 'light' ? 'rgba(254, 242, 242, 0.95)' : 'rgba(69, 10, 10, 0.85)',
+                  borderColor: theme.mode === 'light' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.3)',
+                  color: theme.mode === 'light' ? '#DC2626' : '#FCA5A5'
+                }}
+              >
+                <AlertCircle size={14} />
+                <span className="truncate">Connection Error: {connectionError}</span>
+              </div>
             </div>
           )}
         </div>
