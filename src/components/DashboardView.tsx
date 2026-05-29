@@ -221,6 +221,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           token: sessionStorage.getItem("token") || "",
           reaction: newReaction,
           isFeedbackPositive: newReaction === "like" ? true : null,
+          dislike_reason: null,
         });
         onUpdateReaction(dashboardItem.questionMessageId, newReaction, null);
       } catch (error) {
@@ -236,6 +237,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             token: sessionStorage.getItem("token") || "",
             reaction: null,
             isFeedbackPositive: false,
+            dislike_reason: null,
           });
           onUpdateReaction(dashboardItem.questionMessageId, null, null);
         } catch (error) {
@@ -254,6 +256,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           token: sessionStorage.getItem("token") || "",
           reaction: "dislike",
           isFeedbackPositive: false,
+          dislike_reason: reason,
         });
         onUpdateReaction(dashboardItem.questionMessageId, "dislike", reason);
         setShowDislikeOptions(false);
@@ -453,7 +456,7 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
           >
             {/* Core Workspace Header Deck Panel */}
             <div
-              className="mx-4 mt-2 mb-2 px-4 py-2 flex-shrink-0 flex items-center justify-between gap-3 rounded-xl border shadow-sm transition-all duration-300 relative overflow-hidden"
+              className="mx-4 mt-2 mb-2 px-4 py-2 flex-shrink-0 flex items-center justify-between gap-3 rounded-xl border shadow-sm transition-all duration-300 relative z-50"
               style={{
                 backgroundColor: theme.mode === "light" ? "#FFFFFF" : "rgba(30, 41, 59, 0.5)",
                 borderColor: theme.mode === "light" ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
@@ -461,12 +464,14 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               }}
             >
               {/* Subtle decorative glow */}
-              <div
-                className="absolute top-0 left-0 w-1/3 h-full opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
-                style={{
-                  background: `linear-gradient(90deg, ${theme.colors.accent}, transparent)`,
-                }}
-              />
+              <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
+                <div
+                  className="absolute top-0 left-0 w-1/3 h-full opacity-[0.03] dark:opacity-[0.05]"
+                  style={{
+                    background: `linear-gradient(90deg, ${theme.colors.accent}, transparent)`,
+                  }}
+                />
+              </div>
 
               {isEditing ? (
                 <div className="flex-grow flex items-center gap-2 relative z-10">

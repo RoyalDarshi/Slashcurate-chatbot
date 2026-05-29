@@ -110,7 +110,12 @@ const getDashboardLoadingState = () => ({
   textualSummary: "Processing your request...",
 });
 
-const getDashboardErrorState = (question: string, errorMsg: string) => ({
+const getDashboardErrorState = (
+  question: string,
+  errorMsg: string,
+  reaction: "like" | "dislike" | null = null,
+  dislike_reason: string | null = null
+) => ({
   kpiData: {
     kpi1: { value: null, label: "Error", change: 0 },
     kpi2: { value: null, label: "Error", change: 0 },
@@ -123,8 +128,8 @@ const getDashboardErrorState = (question: string, errorMsg: string) => ({
   },
   textualSummary: errorMsg,
   question: question,
-  reaction: null,
-  dislike_reason: null,
+  reaction: reaction,
+  dislike_reason: dislike_reason,
   isError: true,
 });
 
@@ -201,7 +206,12 @@ const createDashboardItemFromMessages = (
   } else if (botMessage.status === "error") {
     return {
       ...baseItem,
-      ...getDashboardErrorState(userMessage.content, botMessage.content),
+      ...getDashboardErrorState(
+        userMessage.content,
+        botMessage.content,
+        baseItem.reaction,
+        baseItem.dislike_reason
+      ),
       isError: true,
     };
   } else {
@@ -241,6 +251,8 @@ const createDashboardItemFromMessages = (
         ...getDashboardErrorState(
           userMessage.content,
           "Sorry, an error occurred. Please try again.",
+          baseItem.reaction,
+          baseItem.dislike_reason
         ),
         isError: true,
       };
@@ -336,6 +348,38 @@ const DashboardInterface = memo(
       const currentDashboardView = dashboardHistory[currentHistoryIndex];
 
       useEffect(() => {
+        setDashboardHistory((prevHistory) => {
+          let hasChanges = false;
+          const newHistory = prevHistory.map((item) => {
+            const matchedQuestion = messages.find((m) => m.id === item.questionMessageId);
+            const matchedResponse = messages.find((m) => m.id === item.botResponseId);
+            
+            if (matchedQuestion || matchedResponse) {
+              const newIsFavorited = matchedQuestion ? matchedQuestion.isFavorited : item.isFavorited;
+              const newReaction = matchedResponse ? matchedResponse.reaction : item.reaction;
+              const newDislikeReason = matchedResponse ? matchedResponse.dislike_reason : item.dislike_reason;
+              
+              if (
+                item.isFavorited !== newIsFavorited ||
+                item.reaction !== newReaction ||
+                item.dislike_reason !== newDislikeReason
+              ) {
+                hasChanges = true;
+                return {
+                  ...item,
+                  isFavorited: newIsFavorited || false,
+                  reaction: newReaction || null,
+                  dislike_reason: newDislikeReason || null,
+                };
+              }
+            }
+            return item;
+          });
+          return hasChanges ? newHistory : prevHistory;
+        });
+      }, [messages]);
+
+      useEffect(() => {
         const checkAndPoll = async () => {
           const allLoadingMessages = messages.filter(
             (msg) => msg.isBot && msg.status === "loading",
@@ -383,6 +427,8 @@ const DashboardInterface = memo(
                           ...getDashboardErrorState(
                             item.question,
                             response.data.content,
+                            sanitizeReaction(response.data.reaction),
+                            response.data.dislike_reason ?? null
                           ),
                           isError: true,
                         };
@@ -425,6 +471,8 @@ const DashboardInterface = memo(
                             ...getDashboardErrorState(
                               item.question,
                               "Sorry, an error occurred. Please try again.",
+                              item.reaction,
+                              item.dislike_reason
                             ),
                             isError: true,
                           };
@@ -1218,6 +1266,9 @@ const DashboardInterface = memo(
               questionId: questionMessageId,
               questionContent: questionContent,
               currentConnection: currentConnection,
+              con_id: connections.find(
+                (c) => c.connectionName === currentConnection,
+              )?.id ?? "",
               responseQuery: responseQuery,
             });
             dispatchMessages({

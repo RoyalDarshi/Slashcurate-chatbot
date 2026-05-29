@@ -45,7 +45,7 @@ class ChatService {
     return response.data;
   }
 
-  async updateReaction(messageId: string, payload: { token: string; reaction: "like" | "dislike" | null; isFeedbackPositive: boolean | null }) {
+  async updateReaction(messageId: string, payload: { token: string; reaction: "like" | "dislike" | null; isFeedbackPositive: boolean | null; dislike_reason?: string | null }) {
     const response = await apiClient.post(`/api/messages/${messageId}/reaction`, payload);
     return response.data;
   }

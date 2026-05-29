@@ -95,6 +95,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   const graphRef = useRef<HTMLDivElement>(null);
   const dislikeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsLiked(message.reaction === "like");
+    setIsDisliked(message.reaction === "dislike");
+    setDislikeReason(message.dislike_reason);
+    setIsFavorited(initialIsFavorited);
+  }, [message.reaction, message.dislike_reason, initialIsFavorited]);
   const resolutionRef = useRef<HTMLDivElement>(null);
   const { chatFontSize } = useSettings();
 
@@ -821,7 +828,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             {renderContent()}
 
             {/* Bottom Actions Matrix */}
-            {message.status === "normal" && !disabled && (
+            {(message.status === "normal" || message.status === "error" || currentView === "error") && !disabled && (
               <div className="flex justify-end items-center gap-3.5 mt-1 pt-2 border-t border-slate-100 dark:border-slate-800/40">
                 <span
                   className="text-[11px] font-semibold mr-auto opacity-50"

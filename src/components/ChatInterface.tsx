@@ -128,6 +128,7 @@ const ChatInterface = memo(
       } = useChatScroll();
       const [activeRequestController, setActiveRequestController] =
         useState<AbortController | null>(null);
+      const [activeRequestTargetId, setActiveRequestTargetId] = useState<string | null>(null);
 
       const [input, setInput] = useState("");
       const connectionDropdownRef = useRef<HTMLDivElement>(null);
@@ -209,6 +210,24 @@ const ChatInterface = memo(
         const intervalId = setInterval(checkAndPoll, 3000);
         return () => clearInterval(intervalId);
       }, [messages, token, dispatchMessages]);
+
+      // Auto-scroll to target message when its response arrives
+      useEffect(() => {
+        if (activeRequestTargetId) {
+          const targetMsg = messages.find(m => m.id === activeRequestTargetId);
+          if (targetMsg && targetMsg.status !== "loading") {
+            // The response has arrived (status is normal or error)
+            setTimeout(() => {
+              scrollToMessage(activeRequestTargetId);
+              // Trigger a secondary scroll to account for dynamic chart/table rendering delays
+              setTimeout(() => {
+                scrollToMessage(activeRequestTargetId);
+              }, 400);
+            }, 100);
+            setActiveRequestTargetId(null);
+          }
+        }
+      }, [messages, activeRequestTargetId, scrollToMessage]);
 
       useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -395,6 +414,8 @@ const ChatInterface = memo(
               newId: finalBotMessageId,
             });
 
+            setActiveRequestTargetId(finalBotMessageId);
+
             const controller = new AbortController();
             setActiveRequestController(controller);
 
@@ -454,7 +475,6 @@ const ChatInterface = memo(
               },
             });
             setIsSubmitting(false);
-            setTimeout(() => scrollToMessage(finalBotMessageId), 150);
           } catch (error) {
             setActiveRequestController(null);
             const errorContent = getErrorMessage(error);
@@ -586,8 +606,10 @@ const ChatInterface = memo(
       ]);
 
       useEffect(() => {
-        if (!userHasScrolledUp && !editingMessageId) scrollToBottom();
-      }, [messages, userHasScrolledUp, editingMessageId, scrollToBottom]);
+        if (!userHasScrolledUp && !editingMessageId && !activeRequestTargetId) {
+          scrollToBottom();
+        }
+      }, [messages, userHasScrolledUp, editingMessageId, activeRequestTargetId, scrollToBottom]);
 
       const handleConnectionSelect = useCallback(
         (value: string) => {
@@ -732,7 +754,7 @@ const ChatInterface = memo(
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId,
             );
-            await chatService.favoriteMessage({ token, questionId: messageId, questionContent: questionMessage.content, currentConnection: currentConnectionForAction, con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id, responseQuery: responseMessage && responseMessage.status === "normal" ? (JSON.parse(responseMessage.content).metadata?.query || JSON.parse(responseMessage.content).query || null) : null });
+            await chatService.favoriteMessage({ token, questionId: messageId, questionContent: questionMessage.content, currentConnection: currentConnectionForAction, con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id ?? "", responseQuery: responseMessage && responseMessage.status === "normal" ? (JSON.parse(responseMessage.content).metadata?.query || JSON.parse(responseMessage.content).query || null) : null });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
               id: messageId,
@@ -772,7 +794,7 @@ const ChatInterface = memo(
           }
           try {
             const message = messages.find((msg) => msg.id === messageId);
-            await chatService.unfavoriteMessage({ token, currentConnection: currentConnectionForAction, con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id, questionContent: message?.content, questionId: messageId });
+            await chatService.unfavoriteMessage({ token, currentConnection: currentConnectionForAction, con_id: connections.find((c) => c.connectionName === currentConnectionForAction)?.id ?? "", questionContent: message?.content, questionId: messageId });
             const responseMessage = messages.find(
               (msg) => msg.parentId === messageId,
             );
@@ -839,6 +861,8 @@ const ChatInterface = memo(
               },
             });
 
+            setActiveRequestTargetId(originalBotMessageId);
+
             const controller = new AbortController();
             setActiveRequestController(controller);
 
@@ -857,7 +881,6 @@ const ChatInterface = memo(
                 status: "normal",
               },
             });
-            setTimeout(() => scrollToMessage(originalBotMessageId), 100);
           } catch (error) {
             setActiveRequestController(null);
             const errorContent = getErrorMessage(error);
@@ -877,7 +900,6 @@ const ChatInterface = memo(
                 status: "error",
               },
             });
-            setTimeout(() => scrollToMessage(originalBotMessageId), 100);
           }
         },
         [
@@ -953,6 +975,8 @@ const ChatInterface = memo(
             });
           }
 
+          setActiveRequestTargetId(botMessageToUpdateId!);
+
           const controller = new AbortController();
           setActiveRequestController(controller);
           const response = await chatService.askChatbot(payload, controller);
@@ -969,7 +993,6 @@ const ChatInterface = memo(
               status: "normal",
             },
           });
-          setTimeout(() => scrollToMessage(botMessageToUpdateId!, 100));
         } catch (error) {
           setActiveRequestController(null);
           const errorContent = getErrorMessage(error);
