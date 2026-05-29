@@ -619,18 +619,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 <div className="flex justify-end">
                   <button
                     onClick={() => onRetry?.(message.parentId!)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider transition-colors"
+                    className="group flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md"
                     style={{
-                      background: theme.colors.surface,
-                      borderColor: theme.colors.border,
+                      background: theme.mode === 'light' ? '#FFFFFF' : theme.colors.surface,
+                      borderColor: theme.mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : theme.colors.border,
                       color: theme.colors.text,
                     }}
                   >
                     <RefreshCw
-                      size={12}
+                      size={13}
+                      className="transition-transform duration-700 group-hover:rotate-180"
                       style={{ color: theme.colors.accent }}
                     />
-                    Re-evaluate Request
+                    <span>Re-evaluate Request</span>
                   </button>
                 </div>
               )}
@@ -828,7 +829,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             {renderContent()}
 
             {/* Bottom Actions Matrix */}
-            {(message.status === "normal" || message.status === "error" || currentView === "error") && !disabled && (
+            {message.status !== "loading" && (message.status === "normal" || message.status === "error" || currentView === "error") && !disabled && (
               <div className="flex justify-end items-center gap-3.5 mt-1 pt-2 border-t border-slate-100 dark:border-slate-800/40">
                 <span
                   className="text-[11px] font-semibold mr-auto opacity-50"
@@ -976,30 +977,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             >
               {!disabled && (
                 <div className="absolute right-full top-1/2 -translate-y-1/2 pr-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                  <CustomTooltip
-                    title={
-                      isFavorited
-                        ? "Remove from favorites"
-                        : "Bookmark this layout"
-                    }
-                    position="left"
-                  >
-                    <button
-                      disabled={
-                        responseStatus === "loading" ||
-                        responseStatus === "error"
-                      }
-                      onClick={handleFavorite}
-                      className="p-1 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                    >
-                      <Heart
-                        size={14}
-                        fill={isFavorited ? "#EF4444" : "none"}
-                        className={isFavorited ? "text-red-500" : ""}
-                      />
-                    </button>
-                  </CustomTooltip>
-
                   {!isSubmitting && (
                     <CustomTooltip title="Edit this question" position="left">
                       <button

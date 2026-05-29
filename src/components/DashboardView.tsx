@@ -15,6 +15,7 @@ import {
   Users,
   TrendingUp as TrendingUpIcon,
   Activity,
+  RefreshCw,
 } from "lucide-react";
 import KPICard from "./KPICard";
 import {
@@ -337,12 +338,16 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     dashboardItem.question,
                   )
                 }
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shadow-xs"
+                className="group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md"
                 style={{
                   backgroundColor: theme.colors.accent,
                 }}
               >
-                Retry
+                <RefreshCw
+                  size={13}
+                  className="transition-transform duration-700 group-hover:rotate-180"
+                />
+                <span>Retry</span>
               </button>
             </div>
           )}

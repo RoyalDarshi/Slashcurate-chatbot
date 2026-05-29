@@ -25,6 +25,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import HelpPage from "./components/HelpPage";
 import { MessageSquare } from "lucide-react";
+import { useConnections, useSession, useRecommendedQuestions } from "./hooks";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
@@ -216,6 +217,25 @@ const AppContent: React.FC<{
 }) => {
   const { theme } = useTheme();
   const { notificationsEnabled, currentView } = useSettings();
+  const token = sessionStorage.getItem("token") ?? "";
+  const {
+    connections,
+    selectedConnection,
+    setSelectedConnection,
+    connectionError,
+    connectionsLoading,
+  } = useConnections(token);
+
+  const {
+    sessionId,
+    messages,
+    dispatchMessages,
+    sessionConnection,
+    loadSession,
+    clearSession,
+  } = useSession(token);
+
+  const recommendedQuestions = useRecommendedQuestions(token, sessionId);
 
   const handleSessionClicked = () => {
     onHomePage();
@@ -284,6 +304,18 @@ const AppContent: React.FC<{
                       onCreateConSelected={onCreateConSelected}
                       initialQuestion={currentView === "chat" ? questionToAsk : null}
                       onQuestionAsked={() => setQuestionToAsk(null)}
+                      connections={connections}
+                      selectedConnection={selectedConnection}
+                      setSelectedConnection={setSelectedConnection}
+                      connectionError={connectionError}
+                      connectionsLoading={connectionsLoading}
+                      sessionId={sessionId}
+                      messages={messages}
+                      dispatchMessages={dispatchMessages}
+                      sessionConnection={sessionConnection}
+                      loadSession={loadSession}
+                      clearSession={clearSession}
+                      recommendedQuestions={recommendedQuestions}
                     />
                   </div>
                   <div className={`absolute inset-0 flex flex-col ${currentView === "dashboard" ? "z-10" : "hidden"}`}>
@@ -292,6 +324,18 @@ const AppContent: React.FC<{
                       onCreateConSelected={onCreateConSelected}
                       initialQuestion={currentView === "dashboard" ? questionToAsk : null}
                       onQuestionAsked={() => setQuestionToAsk(null)}
+                      connections={connections}
+                      selectedConnection={selectedConnection}
+                      setSelectedConnection={setSelectedConnection}
+                      connectionError={connectionError}
+                      connectionsLoading={connectionsLoading}
+                      sessionId={sessionId}
+                      messages={messages}
+                      dispatchMessages={dispatchMessages}
+                      sessionConnection={sessionConnection}
+                      loadSession={loadSession}
+                      clearSession={clearSession}
+                      recommendedQuestions={recommendedQuestions}
                     />
                   </div>
                 </>

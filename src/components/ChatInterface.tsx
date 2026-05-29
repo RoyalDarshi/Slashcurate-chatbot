@@ -29,14 +29,14 @@ import {
   Sparkles,
   LayoutDashboard,
   X,
+  Plus,
+  Check,
+  ChevronDown,
 } from "lucide-react";
 import ConnectionForm from "./ConnectionForm";
 import RecommendedQuestions from "./RecommendedQuestions";
 import CustomTooltip from "./CustomTooltip";
 import {
-  useConnections,
-  useSession,
-  useRecommendedQuestions,
   useChatScroll,
 } from "../hooks";
 import { useSettings } from "../SettingsContext";
@@ -97,27 +97,29 @@ const limitDataForBackend = (responseData: any): any => {
 
 const ChatInterface = memo(
   forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(
-    ({ onCreateConSelected, initialQuestion, onQuestionAsked }, ref) => {
-      const { theme } = useTheme();
-      const { currentView, setCurrentView } = useSettings();
-      const token = sessionStorage.getItem("token") ?? "";
-
-      const {
+    (
+      {
+        onCreateConSelected,
+        initialQuestion,
+        onQuestionAsked,
         connections,
         selectedConnection,
         setSelectedConnection,
         connectionError,
         connectionsLoading,
-      } = useConnections(token);
-      const {
         sessionId,
         messages,
         dispatchMessages,
         sessionConnection,
         loadSession,
         clearSession,
-      } = useSession(token);
-      const recommendedQuestions = useRecommendedQuestions(token, sessionId);
+        recommendedQuestions,
+      },
+      ref,
+    ) => {
+      const { theme } = useTheme();
+      const { currentView, setCurrentView } = useSettings();
+      const token = sessionStorage.getItem("token") ?? "";
       const {
         chatContainerRef,
         messagesEndRef,
@@ -1265,52 +1267,114 @@ const ChatInterface = memo(
                       type="button"
                       onClick={toggleConnectionDropdown}
                       disabled={isSubmitting || (!sessionConnection && !!sessionId)}
-                      className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
-                      style={{ color: theme.colors.textSecondary }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                      style={{
+                        borderColor: theme.colors.border,
+                        color: theme.colors.text,
+                        backgroundColor: theme.mode === 'light' ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)'
+                      }}
                     >
-                      <Database size={19} />
+                      <Database size={15} style={{ color: selectedConnection ? theme.colors.accent : theme.colors.textSecondary }} />
+                      <span className="text-xs font-bold tracking-tight max-w-[120px] truncate">
+                        {selectedConnection || "Select Node"}
+                      </span>
+                      <ChevronDown size={12} className="opacity-60" />
                     </button>
                   </CustomTooltip>
 
                   {isConnectionDropdownOpen && (
                     <div
-                      className="absolute bottom-[calc(100%+0.5rem)] left-0 rounded-xl border z-50 min-w-[220px] overflow-hidden py-1.5 shadow-xl animate-fade-up"
+                      className="absolute bottom-[calc(100%+0.5rem)] left-0 rounded-2xl border z-50 min-w-[240px] overflow-hidden py-2 shadow-2xl animate-fade-up backdrop-blur-xl"
                       style={{
-                        background: theme.colors.surface,
+                        background: theme.mode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 41, 59, 0.95)',
                         borderColor: theme.colors.border,
                       }}
                     >
-                      {options.map((option) => (
-                        <div
-                          key={option.value}
-                          className="flex items-center justify-between px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors text-xs font-semibold"
-                          style={{
-                            color: theme.colors.text,
-                            background:
-                              selectedConnection === option.value
-                                ? `${theme.colors.accent}08`
-                                : "transparent",
-                          }}
-                          onClick={() => handleConnectionSelect(option.value)}
-                        >
-                          <span className="truncate">{option.label}</span>
-                          {option.isAdmin && (
-                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ml-2 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400">
-                              System
-                            </span>
-                          )}
-                          {option.value !== "create-con" && (
+                      {options.map((option) =>
+                        option.value === "create-con" ? (
+                          <div
+                            key={option.value}
+                            className="px-2 pb-2 mb-1.5 border-b"
+                            style={{ borderColor: `${theme.colors.border}60` }}
+                          >
                             <button
                               type="button"
-                              onClick={(e) => handlePdfClick(option.value, e)}
-                              className="p-1 rounded text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
+                              onClick={() => {
+                                handleConnectionSelect(option.value);
+                                setIsConnectionDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-98 shadow-xs"
+                              style={{ backgroundColor: theme.colors.accent }}
+                            >
+                              <Plus size={14} />
+                              <span>{option.label}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            key={option.value}
+                            className="group flex items-center gap-2.5 px-3 py-2 mx-1.5 rounded-xl cursor-pointer transition-all duration-200"
+                            style={{
+                              color: theme.colors.text,
+                              backgroundColor:
+                                selectedConnection === option.value
+                                  ? `${theme.colors.accent}12`
+                                  : "transparent",
+                            }}
+                            onClick={() => {
+                              handleConnectionSelect(option.value);
+                              setIsConnectionDropdownOpen(false);
+                            }}
+                          >
+                            <div
+                              className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-colors"
+                              style={{
+                                backgroundColor:
+                                  selectedConnection === option.value
+                                    ? `${theme.colors.accent}20`
+                                    : theme.mode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+                              }}
+                            >
+                              {selectedConnection === option.value ? (
+                                <Check size={13} style={{ color: theme.colors.accent }} />
+                              ) : (
+                                <Database size={13} style={{ color: theme.colors.textSecondary }} />
+                              )}
+                            </div>
+                            <span
+                              className={`text-xs truncate flex-grow ${
+                                selectedConnection === option.value
+                                  ? "font-bold"
+                                  : "font-semibold"
+                              }`}
+                            >
+                              {option.label}
+                            </span>
+                            {option.isAdmin && (
+                              <span
+                                className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md"
+                                style={{
+                                  backgroundColor: `${theme.colors.accent}10`,
+                                  color: theme.colors.accent,
+                                }}
+                              >
+                                System
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePdfClick(option.value, e);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors ml-auto opacity-0 group-hover:opacity-100 focus:opacity-100"
                               title="Data Atlas PDF"
                             >
                               <FaFilePdf size={13} />
                             </button>
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
                 </div>
@@ -1421,7 +1485,6 @@ const ChatInterface = memo(
                 >
                   <X size={20} />
                 </button>
-                <div className="p-6 md:p-8">
                   <ConnectionForm
                     isAdmin={false}
                     token={token}
@@ -1429,7 +1492,6 @@ const ChatInterface = memo(
                       setShowCreateConnectionModal(false);
                     }}
                   />
-                </div>
               </div>
             </div>
           )}

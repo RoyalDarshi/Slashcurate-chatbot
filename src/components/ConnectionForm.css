@@ -1,0 +1,118 @@
+/* Custom styled classes for premium database connection form */
+
+/* Grid Cards for Database Engines */
+.db-engine-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--card-border-color, rgba(0, 0, 0, 0.08));
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.db-engine-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(99, 102, 241, 0.15);
+}
+
+.db-engine-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(79, 70, 229, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.db-engine-card:hover::before {
+  opacity: 1;
+}
+
+.db-engine-card-active {
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 8px 20px -6px rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Stepper Component styling */
+.stepper-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.stepper-line {
+  position: absolute;
+  top: 1.25rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--stepper-line-bg, rgba(0, 0, 0, 0.08));
+  z-index: 1;
+  transition: all 0.4s ease;
+}
+
+.stepper-line-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #6366F1 0%, #4F46E5 100%);
+  transition: width 0.4s ease;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+
+.step-bubble {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid var(--step-bubble-border, rgba(0, 0, 0, 0.1));
+}
+
+.step-bubble-active {
+  border-color: #6366F1 !important;
+  background-color: #6366F1 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+.step-bubble-complete {
+  border-color: #10B981 !important;
+  background-color: #10B981 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+
+/* Premium Inputs with Icon Glows */
+.input-icon-wrapper {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.input-icon-wrapper:focus-within svg {
+  color: var(--accent-color) !important;
+  opacity: 1 !important;
+}
+
+.input-focus-glow:focus {
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
+/* Custom transitions */
+.transition-bounce {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}

@@ -64,6 +64,18 @@ export interface ChatInterfaceProps {
   onSessionSelected?: (session: any) => void;
   initialQuestion?: { text: string; connection: string; query?: string } | null;
   onQuestionAsked?: () => void;
+  connections: Connection[];
+  selectedConnection: string | null;
+  setSelectedConnection: (val: string | null) => void;
+  connectionError: string | null;
+  connectionsLoading: boolean;
+  sessionId: string | null;
+  messages: Message[];
+  dispatchMessages: React.Dispatch<any>;
+  sessionConnection: string | null;
+  loadSession: (sessionId: string) => Promise<void>;
+  clearSession: () => void;
+  recommendedQuestions: any[];
 }
 
 export interface ChatState {

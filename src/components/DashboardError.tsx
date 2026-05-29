@@ -418,10 +418,13 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                     {!sessionConErr && (
                       <button
                         onClick={onRetry}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 active:scale-95"
+                        className="group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md"
                         style={{ backgroundColor: theme.colors.accent }}
                       >
-                        <RefreshCw size={12} />
+                        <RefreshCw
+                          size={13}
+                          className="transition-transform duration-700 group-hover:rotate-180"
+                        />
                         <span>Re-index</span>
                       </button>
                     )}

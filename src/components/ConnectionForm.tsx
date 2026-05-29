@@ -20,6 +20,9 @@ import {
   Key,
   FileText,
   ClipboardList, // Icon for Extract Metadata
+  Check,
+  Settings,
+  Activity,
 } from "lucide-react";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
@@ -491,18 +494,23 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     icon,
     placeholder,
   }: FieldConfig) => (
-    <div key={name} className="mb-4">
+    <div key={name} className="flex flex-col gap-1.5">
       <label
-        className="block text-sm font-medium mb-1"
-        style={{ color: theme.colors.text }}
+        className="text-xs font-bold tracking-wide"
+        style={{ color: theme.colors.textSecondary }}
       >
         {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      <div 
+        className="input-icon-wrapper relative rounded-xl"
+        style={{
+          '--accent-color': theme.colors.accent,
+        } as React.CSSProperties}
+      >
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
           {React.cloneElement(icon as React.ReactElement, {
-            className: "h-5 w-5",
-            style: { color: `${theme.colors.text}80` },
+            className: "h-4 w-4 transition-colors duration-200",
+            style: { color: theme.colors.textSecondary, opacity: 0.6 },
           })}
         </div>
         {type === "textarea" ? (
@@ -512,14 +520,13 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             value={formData[name]}
             onChange={handleChange}
             placeholder={placeholder}
-            className="pl-10 w-full p-3 rounded-md focus:outline-none focus:ring-2 transition-all duration-200"
+            rows={2}
+            className="pl-10 pr-4 py-2.5 w-full text-sm border-none shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 input-focus-glow"
             style={{
-              background: theme.colors.surface,
+              backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.7)',
               color: theme.colors.text,
-              border: `1px solid ${
-                errors[name] ? theme.colors.error : `${theme.colors.text}20`
-              }`,
-              borderRadius: theme.borderRadius.default,
+              border: `1px solid ${errors[name] ? theme.colors.error : theme.colors.border}`,
+              borderRadius: '12px',
             }}
           />
         ) : (
@@ -531,20 +538,18 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
             onChange={handleChange}
             required={required}
             placeholder={placeholder}
-            className="pl-10 w-full p-3 rounded-md focus:outline-none focus:ring-2 transition-all duration-200"
+            className="pl-10 pr-4 py-2.5 w-full text-sm border-none shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 input-focus-glow"
             style={{
-              background: theme.colors.surface,
+              backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.7)',
               color: theme.colors.text,
-              border: `1px solid ${
-                errors[name] ? theme.colors.error : `${theme.colors.text}20`
-              }`,
-              borderRadius: theme.borderRadius.default,
+              border: `1px solid ${errors[name] ? theme.colors.error : theme.colors.border}`,
+              borderRadius: '12px',
             }}
           />
         )}
       </div>
       {errors[name] && (
-        <p className="text-red-500 text-sm mt-1">{errors[name]}</p>
+        <p className="text-red-500 text-xs font-semibold mt-0.5 ml-1">{errors[name]}</p>
       )}
     </div>
   );
@@ -553,150 +558,188 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     (option) => option.value === formData.selectedDB,
   );
 
+  // Steps description for visual stepper
+  const currentStep = useMemo(() => {
+    if (isMetadataExtracted) return 4;
+    if (isTestSuccessful) return 3;
+    if (isFormValid) return 2;
+    return 1;
+  }, [isFormValid, isTestSuccessful, isMetadataExtracted]);
+
   return (
-    <div
-      className="p-6 rounded-lg shadow-md h-full overflow-y-auto"
-      style={{
-        backgroundColor: theme.colors.background,
-      }}
-    >
+    <div className="w-full h-full flex flex-col gap-6 p-6 overflow-y-auto">
       <ToastContainer
         toastStyle={{
-          backgroundColor: theme.colors.background,
+          backgroundColor: theme.colors.surface,
           color: theme.colors.text,
-          border: `1px solid ${theme.colors.text}20`,
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: theme.borderRadius.default,
         }}
       />
-      <div className="flex items-center mb-6">
-        <Database
-          style={{ color: theme.colors.accent }}
-          className="h-8 w-8 mr-3"
-        />
-        <h2 className="text-2xl font-bold" style={{ color: theme.colors.text }}>
-          {isAdmin ? "Default Database Connection" : "New Database Connection"}
-        </h2>
+      
+      {/* Visual Stepper */}
+      <div 
+        className="stepper-container px-4"
+        style={{
+          '--stepper-line-bg': theme.mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)',
+        } as React.CSSProperties}
+      >
+        <div className="stepper-line">
+          <div 
+            className="stepper-line-progress"
+            style={{
+              width: `${((currentStep - 1) / 3) * 100}%`
+            }}
+          />
+        </div>
+        
+        {[
+          { label: "Configure Details", step: 1 },
+          { label: "Test Connection", step: 2 },
+          { label: "Extract Metadata", step: 3 },
+          { label: "Ready to Save", step: 4 },
+        ].map((item) => {
+          const isActive = currentStep === item.step;
+          const isCompleted = currentStep > item.step;
+          
+          return (
+            <div key={item.step} className="stepper-step">
+              <div 
+                className={`step-bubble ${isCompleted ? 'step-bubble-complete' : isActive ? 'step-bubble-active' : ''}`}
+                style={{
+                  backgroundColor: isCompleted 
+                    ? theme.colors.success 
+                    : isActive 
+                      ? theme.colors.accent 
+                      : theme.colors.surface,
+                  borderColor: isCompleted 
+                    ? theme.colors.success 
+                    : isActive 
+                      ? theme.colors.accent 
+                      : theme.colors.border,
+                  color: isCompleted || isActive ? '#FFF' : theme.colors.textSecondary,
+                }}
+              >
+                {isCompleted ? <Check className="h-4 w-4" /> : item.step}
+              </div>
+              <span 
+                className="text-[10px] font-bold mt-2 text-center"
+                style={{
+                  color: isActive ? theme.colors.accent : isCompleted ? theme.colors.success : theme.colors.textSecondary,
+                }}
+              >
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="mb-8 custom-select-container">
+      {/* Grid selector for database engine */}
+      <div>
         <label
-          className="block text-sm font-medium mb-2"
-          style={{ color: theme.colors.text }}
+          className="block text-xs font-bold uppercase tracking-wider mb-3"
+          style={{ color: theme.colors.textSecondary }}
         >
           Select Database Engine
         </label>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsSelectOpen(!isSelectOpen)}
-            className="w-full p-3 rounded-md flex items-center justify-between focus:outline-none focus:ring-2 transition-all duration-200"
-            style={{
-              backgroundColor: theme.colors.surface,
-              border: `1px solid ${theme.colors.text}20`,
-              borderRadius: theme.borderRadius.default,
-              color: theme.colors.text,
-            }}
-          >
-            {selectedOption ? (
-              <div className="flex items-center">
-                {React.cloneElement(selectedOption.icon as React.ReactElement, {
-                  style: { color: theme.colors.accent },
-                })}
-                <span className="ml-3 font-medium">{selectedOption.label}</span>
-              </div>
-            ) : (
-              <span style={{ color: `${theme.colors.text}80` }}>
-                Select a database engine
-              </span>
-            )}
-            <ChevronDown
-              className={`h-5 w-5 transition-transform duration-200 ${
-                isSelectOpen ? "rotate-180" : ""
-              }`}
-              style={{ color: `${theme.colors.text}80` }}
-            />
-          </button>
-          {isSelectOpen && (
-            <div
-              className="absolute z-10 mt-2 w-full rounded-md shadow-lg max-h-72 overflow-auto"
-              style={{
-                backgroundColor: theme.colors.background,
-                border: `1px solid ${theme.colors.text}20`,
-                borderRadius: theme.borderRadius.default,
-              }}
-            >
-              {databaseOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={() => handleSelectDB(option.value)}
-                  className="p-3 flex flex-col cursor-pointer hover:bg-opacity-10 transition-colors duration-150"
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {databaseOptions.map((option) => {
+            const isSelected = formData.selectedDB === option.value;
+            return (
+              <div
+                key={option.value}
+                onClick={() => handleSelectDB(option.value)}
+                className={`db-engine-card p-4 rounded-2xl flex flex-col items-center text-center justify-center border transition-all duration-300 ${
+                  isSelected ? 'db-engine-card-active' : ''
+                }`}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  borderColor: isSelected ? theme.colors.accent : theme.colors.border,
+                  '--accent-color': theme.colors.accent,
+                  '--card-border-color': theme.colors.border,
+                } as React.CSSProperties}
+              >
+                <div 
+                  className="p-2.5 rounded-xl mb-2 transition-colors duration-300"
                   style={{
-                    backgroundColor:
-                      formData.selectedDB === option.value
-                        ? `${theme.colors.accent}30`
-                        : "transparent",
+                    backgroundColor: isSelected ? `${theme.colors.accent}15` : `${theme.colors.text}05`,
+                    color: isSelected ? theme.colors.accent : theme.colors.textSecondary,
                   }}
-                  onMouseOver={(e) =>
-                    (e.currentTarget.style.backgroundColor = theme.colors.hover)
-                  }
-                  onMouseOut={(e) =>
-                    (e.currentTarget.style.backgroundColor =
-                      formData.selectedDB === option.value
-                        ? `${theme.colors.accent}30`
-                        : "transparent")
-                  }
                 >
-                  <div className="flex items-center">
-                    {React.cloneElement(option.icon as React.ReactElement, {
-                      style: { color: theme.colors.accent },
-                    })}
-                    <span
-                      className="ml-3 font-medium"
-                      style={{ color: theme.colors.text }}
-                    >
-                      {option.label}
-                    </span>
-                  </div>
-                  <p
-                    className="text-xs mt-1 ml-8"
-                    style={{ color: `${theme.colors.text}80` }}
-                  >
-                    {option.description}
-                  </p>
+                  {React.cloneElement(option.icon as React.ReactElement, {
+                    className: "h-5 w-5",
+                  })}
                 </div>
-              ))}
-            </div>
-          )}
+                <span 
+                  className="font-bold text-[11px] leading-tight"
+                  style={{ color: theme.colors.text }}
+                >
+                  {option.label}
+                </span>
+                <span 
+                  className="text-[9px] mt-1 line-clamp-2 leading-tight"
+                  style={{ color: theme.colors.textSecondary, opacity: 0.8 }}
+                >
+                  {option.description}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {formData.selectedDB && (
-        <div
-          className="pt-6 border-t"
-          style={{ borderColor: `${theme.colors.text}20` }}
+      {/* Detail form card or placeholder empty state */}
+      {!formData.selectedDB ? (
+        <div 
+          className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-dashed flex-grow min-h-[220px]"
+          style={{
+            backgroundColor: `${theme.colors.text}03`,
+            borderColor: theme.colors.border,
+          }}
         >
-          <div className="flex items-center mb-6">
-            {React.cloneElement(selectedOption!.icon as React.ReactElement, {
-              style: { color: theme.colors.accent },
-            })}
+          <div className="p-4 rounded-full mb-3" style={{ backgroundColor: `${theme.colors.text}05` }}>
+            <Activity className="h-6 w-6 opacity-40 animate-pulse" style={{ color: theme.colors.textSecondary }} />
+          </div>
+          <h3 className="font-bold text-sm mb-1" style={{ color: theme.colors.text }}>No Database Engine Selected</h3>
+          <p className="text-xs max-w-xs leading-normal" style={{ color: theme.colors.textSecondary }}>
+            Choose one of the database options above to input parameters, authenticate credentials, and test connectivity.
+          </p>
+        </div>
+      ) : (
+        <div 
+          className="p-6 rounded-2xl border shadow-xs transition-all duration-300"
+          style={{
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+          }}
+        >
+          <div className="flex items-center gap-2.5 mb-5 pb-3 border-b" style={{ borderColor: theme.colors.border }}>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: `${theme.colors.accent}12`, color: theme.colors.accent }}>
+              {React.cloneElement(selectedOption!.icon as React.ReactElement, {
+                className: "h-4 w-4",
+              })}
+            </div>
             <h3
-              className="ml-3 text-xl font-semibold"
+              className="text-sm font-bold"
               style={{ color: theme.colors.text }}
             >
-              {selectedOption?.label} Connection Details
+              Configure {selectedOption?.label} Parameters
             </h3>
           </div>
+          
           <form
             onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4"
           >
             {fieldConfigs.map((config) => renderInputField(config))}
 
             {(isAdmin || localStorage.getItem("allowedToCreatePublicConnection") !== "false") && (
               <div
-                className="md:col-span-2 mt-2 p-3 rounded flex items-center gap-3"
+                className="sm:col-span-2 mt-2 p-4 rounded-xl flex items-start gap-3 border transition-colors duration-200"
                 style={{
-                  backgroundColor: `${theme.colors.accent}15`,
-                  border: `1px solid ${theme.colors.accent}40`,
+                  backgroundColor: `${theme.colors.accent}05`,
+                  borderColor: `${theme.colors.accent}15`,
                 }}
               >
                 <input
@@ -711,137 +754,153 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
                     setIsTestSuccessful(false);
                     setIsMetadataExtracted(false);
                   }}
-                  className="w-5 h-5 rounded focus:ring-2"
+                  className="w-4 h-4 rounded focus:ring-2 mt-0.5"
                   style={{ accentColor: theme.colors.accent }}
                 />
                 <label
                   htmlFor="isPublic"
-                  className="font-medium cursor-pointer"
+                  className="font-bold text-xs cursor-pointer select-none"
                   style={{ color: theme.colors.text }}
                 >
                   Make this connection public
                   <p
-                    className="text-xs font-normal"
-                    style={{ color: `${theme.colors.text}80` }}
+                    className="text-[10px] font-medium mt-0.5"
+                    style={{ color: theme.colors.textSecondary }}
                   >
-                    Public connections are visible and accessible to all users in
-                    the system.
+                    Public connections are visible and accessible to all users in the system workspace.
                   </p>
                 </label>
               </div>
             )}
 
-            <div className="md:col-span-2 flex flex-wrap justify-end gap-4 mt-6">
+            <div className="sm:col-span-2 flex flex-wrap justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: theme.colors.border }}>
               <button
                 type="button"
                 onClick={handleClearForm}
                 disabled={
                   !isFormModified && !isTestSuccessful && !isMetadataExtracted
-                } // Enable if form has content or progress has been made
-                className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200"
+                }
+                className="px-5 py-2 w-full md:w-auto text-xs font-bold transition-all duration-200"
                 style={{
-                  backgroundColor:
-                    isFormModified || isTestSuccessful || isMetadataExtracted
-                      ? theme.colors.error
-                      : `${theme.colors.text}20`,
-                  color: "white",
-                  borderRadius: theme.borderRadius.default,
-                  boxShadow:
-                    isFormModified || isTestSuccessful || isMetadataExtracted
-                      ? `0 4px 6px ${theme.colors.text}20`
-                      : "none",
-                  opacity:
-                    isFormModified || isTestSuccessful || isMetadataExtracted
-                      ? 1
-                      : 0.5,
-                  cursor:
-                    isFormModified || isTestSuccessful || isMetadataExtracted
-                      ? "pointer"
-                      : "not-allowed",
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: 'transparent',
+                  color: isFormModified || isTestSuccessful || isMetadataExtracted ? theme.colors.error : theme.colors.disabledText,
+                  borderRadius: '12px',
+                  cursor: isFormModified || isTestSuccessful || isMetadataExtracted ? 'pointer' : 'not-allowed',
+                }}
+                onMouseOver={(e) => {
+                  if (isFormModified || isTestSuccessful || isMetadataExtracted) {
+                    e.currentTarget.style.backgroundColor = `${theme.colors.error}10`;
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
-                Clear Form
+                Reset Form
               </button>
+              
               <button
                 type="button"
                 onClick={handleTestConnection}
-                disabled={!isTestButtonEnabled || isTestSuccessful} // Disable if already tested successfully or form invalid
-                className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200"
+                disabled={!isTestButtonEnabled || isTestSuccessful}
+                className="px-5 py-2 w-full md:w-auto text-xs font-bold border transition-all duration-200"
                 style={{
-                  backgroundColor:
-                    isTestButtonEnabled && !isTestSuccessful
-                      ? theme.colors.accent
-                      : `${theme.colors.text}20`,
-                  color: "white",
-                  borderRadius: theme.borderRadius.default,
-                  boxShadow:
-                    isTestButtonEnabled && !isTestSuccessful
-                      ? `0 4px 6px ${theme.colors.text}20`
-                      : "none",
-                  opacity: isTestButtonEnabled && !isTestSuccessful ? 1 : 0.5,
-                  cursor:
-                    isTestButtonEnabled && !isTestSuccessful
-                      ? "pointer"
-                      : "not-allowed",
+                  backgroundColor: isTestButtonEnabled && !isTestSuccessful
+                    ? `${theme.colors.accent}12`
+                    : isTestSuccessful 
+                      ? `${theme.colors.success}12`
+                      : 'transparent',
+                  borderColor: isTestButtonEnabled && !isTestSuccessful
+                    ? theme.colors.accent
+                    : isTestSuccessful
+                      ? theme.colors.success
+                      : theme.colors.border,
+                  color: isTestButtonEnabled && !isTestSuccessful
+                    ? theme.colors.accent
+                    : isTestSuccessful
+                      ? theme.colors.success
+                      : theme.colors.disabledText,
+                  borderRadius: '12px',
+                  cursor: isTestButtonEnabled && !isTestSuccessful ? 'pointer' : 'not-allowed',
+                }}
+                onMouseOver={(e) => {
+                  if (isTestButtonEnabled && !isTestSuccessful) {
+                    e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`;
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (isTestButtonEnabled && !isTestSuccessful) {
+                    e.currentTarget.style.backgroundColor = `${theme.colors.accent}12`;
+                  }
                 }}
               >
-                {isTestSuccessful ? "Tested" : "Test Connection"}
+                {isTestSuccessful ? "Tested ✓" : "Test Connection"}
               </button>
+              
               <button
                 type="button"
                 onClick={handleExtractMetadata}
                 disabled={
                   !isExtractMetadataButtonEnabled || isMetadataExtracted
-                } // Disable if not ready or already extracted
-                className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200 flex items-center justify-center"
+                }
+                className="px-5 py-2 w-full md:w-auto text-xs font-bold border transition-all duration-200 flex items-center justify-center"
                 style={{
-                  backgroundColor:
-                    isExtractMetadataButtonEnabled && !isMetadataExtracted
-                      ? theme.colors.accent
-                      : `${theme.colors.text}20`,
-                  color: "white",
-                  borderRadius: theme.borderRadius.default,
-                  boxShadow:
-                    isExtractMetadataButtonEnabled && !isMetadataExtracted
-                      ? `0 4px 6px ${theme.colors.text}20`
-                      : "none",
-                  opacity:
-                    isExtractMetadataButtonEnabled && !isMetadataExtracted
-                      ? 1
-                      : 0.5,
-                  cursor:
-                    isExtractMetadataButtonEnabled && !isMetadataExtracted
-                      ? "pointer"
-                      : "not-allowed",
+                  backgroundColor: isExtractMetadataButtonEnabled && !isMetadataExtracted
+                    ? `${theme.colors.accent}12`
+                    : isMetadataExtracted
+                      ? `${theme.colors.success}12`
+                      : 'transparent',
+                  borderColor: isExtractMetadataButtonEnabled && !isMetadataExtracted
+                    ? theme.colors.accent
+                    : isMetadataExtracted
+                      ? theme.colors.success
+                      : theme.colors.border,
+                  color: isExtractMetadataButtonEnabled && !isMetadataExtracted
+                    ? theme.colors.accent
+                    : isMetadataExtracted
+                      ? theme.colors.success
+                      : theme.colors.disabledText,
+                  borderRadius: '12px',
+                  cursor: isExtractMetadataButtonEnabled && !isMetadataExtracted ? 'pointer' : 'not-allowed',
+                }}
+                onMouseOver={(e) => {
+                  if (isExtractMetadataButtonEnabled && !isMetadataExtracted) {
+                    e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`;
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (isExtractMetadataButtonEnabled && !isMetadataExtracted) {
+                    e.currentTarget.style.backgroundColor = `${theme.colors.accent}12`;
+                  }
                 }}
               >
-                <ClipboardList className="h-4 w-4 mr-2" />
+                <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                 {isMetadataExtracted
-                  ? "Metadata Extracted"
+                  ? "Metadata Extracted ✓"
                   : "Extract Metadata"}
               </button>
+              
               <button
                 type="submit"
                 disabled={!isSubmitButtonEnabled}
-                className="px-6 py-2 w-full md:w-auto rounded-md font-medium shadow-md transition-all duration-200"
+                className="px-6 py-2 w-full md:w-auto text-xs font-bold transition-all duration-200 text-white"
                 style={{
-                  backgroundColor: isSubmitButtonEnabled
-                    ? theme.colors.accent
-                    : `${theme.colors.text}20`,
-                  color: "white",
-                  borderRadius: theme.borderRadius.default,
-                  boxShadow: isSubmitButtonEnabled
-                    ? `0 4px 6px ${theme.colors.text}20`
-                    : "none",
-                  opacity: isSubmitButtonEnabled ? 1 : 0.5,
-                  cursor: isSubmitButtonEnabled ? "pointer" : "not-allowed",
+                  background: isSubmitButtonEnabled
+                    ? theme.gradients.primary
+                    : theme.colors.disabled,
+                  color: isSubmitButtonEnabled ? 'white' : theme.colors.disabledText,
+                  borderRadius: '12px',
+                  cursor: isSubmitButtonEnabled ? 'pointer' : 'not-allowed',
+                  boxShadow: isSubmitButtonEnabled ? `0 4px 12px ${theme.colors.accent}30` : 'none',
                 }}
               >
                 {editConnectionId ? "Save Changes" : "Create Connection"}
               </button>
             </div>
+            
             {loading && (
-              <div className="md:col-span-2 mt-4">
+              <div className="sm:col-span-2 mt-4">
                 <Loader text={loadingText} />
               </div>
             )}
