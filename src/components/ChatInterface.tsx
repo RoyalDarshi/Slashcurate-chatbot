@@ -130,6 +130,13 @@ const ChatInterface = memo(
         useState<AbortController | null>(null);
       const [activeRequestTargetId, setActiveRequestTargetId] = useState<string | null>(null);
 
+      const [queuedQuestion, setQueuedQuestion] = useState<{
+        question: string;
+        connection: string;
+        query?: string;
+        forceNewSession?: boolean;
+      } | null>(null);
+
       const [input, setInput] = useState("");
       const connectionDropdownRef = useRef<HTMLDivElement>(null);
       const [isSubmitting, setIsSubmitting] = useState(false);
@@ -281,13 +288,14 @@ const ChatInterface = memo(
           connection: string,
           isFavorited: boolean,
           query?: string,
+          forceNewSession: boolean = false
         ) => {
           if (!connection) {
             toast.error("No connection provided.");
             setIsSubmitting(false);
             return;
           }
-          let currentSessionId = sessionId;
+          let currentSessionId = forceNewSession ? null : sessionId;
           if (currentSessionId && !sessionConnection) {
             const currentSessionInfo = connections.find(
               (c) => c.connectionName === selectedConnection,
@@ -527,12 +535,32 @@ const ChatInterface = memo(
             return;
           }
           handleNewChat();
-          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          await new Promise<void>((resolve) => setTimeout(resolve, 100));
           setSelectedConnection(connection);
-          await askQuestion(question, connection, false, query);
+          setQueuedQuestion({ question, connection, query, forceNewSession: true });
         },
-        [connections, askQuestion, handleNewChat, setSelectedConnection],
+        [connections, handleNewChat, setSelectedConnection],
       );
+
+      useEffect(() => {
+        if (queuedQuestion && !isSubmitting && connections.length > 0) {
+          const connectionObj = connections.find(
+            (conn) => conn.connectionName === queuedQuestion.connection,
+          );
+          if (connectionObj) {
+            askQuestion(
+              queuedQuestion.question,
+              queuedQuestion.connection,
+              false,
+              queuedQuestion.query,
+              queuedQuestion.forceNewSession
+            );
+          } else {
+            toast.error(`Connection "${queuedQuestion.connection}" not found.`);
+          }
+          setQueuedQuestion(null);
+        }
+      }, [queuedQuestion, isSubmitting, connections, askQuestion]);
 
       useEffect(() => {
         if (sessionConnection) {

@@ -21,6 +21,7 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [editedContent, setEditedContent] = useState<string>(messageContent);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+  const [isFocused, setIsFocused] = useState<boolean>(false);
 
   useEffect(() => {
     setEditedContent(messageContent);
@@ -55,48 +56,52 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (hasChanges && editedContent.trim()) {
-        onSave();
-      } else if (!hasChanges) {
-        onCancel();
-      }
+      onSave();
     } else if (e.key === "Escape") {
       onCancel();
     }
   };
 
   return (
-    <div
-      className="w-full rounded-[2rem] rounded-tr-none p-4 md:p-5 shadow-floating transition-all duration-300 border backdrop-blur-md flex flex-col gap-3 group/editor focus-within:shadow-lg"
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 6 }}
+      transition={{ duration: 0.15 }}
+      className="w-full rounded-xl p-3 border transition-[border-color,box-shadow] duration-200 flex flex-col gap-3"
       style={{
-        backgroundColor: theme.colors.surfaceGlass,
-        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surface,
+        borderColor: isFocused ? theme.colors.accent : theme.colors.border,
+        boxShadow: isFocused 
+          ? `0 0 0 2px ${theme.colors.accent}15` 
+          : "none",
       }}
     >
       <textarea
         ref={inputRef}
-        placeholder="Edit your message..."
+        placeholder="Edit message..."
         value={editedContent}
         onChange={handleTextareaChange}
         onKeyDown={handleKeyDown}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         rows={1}
-        className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 p-0 text-base placeholder-opacity-50"
+        className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 p-0 text-[15px] placeholder-slate-400 dark:placeholder-slate-500 custom-scrollbar"
         style={{
           fontSize: fontSize,
           color: theme.colors.text,
-          lineHeight: "1.6",
+          lineHeight: "1.5",
           fontFamily: theme.typography.fontFamily,
-          minHeight: "36px",
+          minHeight: "40px",
           maxHeight: "240px",
           outline: "none",
         }}
       />
-      <div className="flex justify-end gap-2 border-t pt-3 border-slate-100 dark:border-slate-800/60">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+
+      <div className="flex justify-end items-center gap-2">
+        <button
           type="button"
-          className="rounded-full px-4 py-1.5 text-xs font-semibold transition-colors duration-200 border"
+          className="rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors duration-150 border"
           style={{
             borderColor: theme.colors.border,
             backgroundColor: "transparent",
@@ -113,37 +118,27 @@ const EditableMessage: React.FC<EditableMessageProps> = ({
           onClick={onCancel}
         >
           Cancel
-        </motion.button>
-        <motion.button
-          whileHover={hasChanges ? { scale: 1.02 } : {}}
-          whileTap={hasChanges ? { scale: 0.98 } : {}}
+        </button>
+        
+        <button
           type="button"
-          disabled={!hasChanges}
-          className="rounded-full px-5 py-1.5 text-xs font-semibold transition-all duration-200 shadow-sm"
+          className="rounded-lg px-4 py-1.5 text-xs font-semibold transition-all duration-150 shadow-sm cursor-pointer"
           style={{
-            backgroundColor: hasChanges
-              ? theme.colors.accent
-              : `${theme.colors.text}10`,
-            color: hasChanges ? "white" : theme.colors.textSecondary,
-            opacity: hasChanges ? 1 : 0.6,
-            cursor: hasChanges ? "pointer" : "not-allowed",
+            backgroundColor: theme.colors.accent,
+            color: "white",
           }}
           onMouseEnter={(e) => {
-            if (hasChanges) {
-              e.currentTarget.style.backgroundColor = theme.colors.accentHover;
-            }
+            e.currentTarget.style.backgroundColor = theme.colors.accentHover;
           }}
           onMouseLeave={(e) => {
-            if (hasChanges) {
-              e.currentTarget.style.backgroundColor = theme.colors.accent;
-            }
+            e.currentTarget.style.backgroundColor = theme.colors.accent;
           }}
           onClick={onSave}
         >
-          Save
-        </motion.button>
+          Retry
+        </button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

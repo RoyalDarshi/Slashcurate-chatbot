@@ -84,6 +84,7 @@ interface QueuedQuestion {
   question: string;
   connection: string;
   query?: string;
+  forceNewSession?: boolean;
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -678,7 +679,7 @@ const DashboardInterface = memo(
       }, [clearSession, initialDashboardState]);
 
       const askQuestion = useCallback(
-        async (question: string, connection: string, query?: string) => {
+        async (question: string, connection: string, query?: string, forceNewSession: boolean = false) => {
           if (!connection) {
             toast.error("No connection provided.");
             return;
@@ -737,7 +738,7 @@ const DashboardInterface = memo(
             },
           });
 
-          let currentSessionId = sessionId;
+          let currentSessionId = forceNewSession ? null : sessionId;
 
           if (currentSessionId && !sessionConnection) {
             const currentSessionInfo = connections.find(
@@ -1078,6 +1079,7 @@ const DashboardInterface = memo(
               queuedQuestion.question,
               queuedQuestion.connection,
               queuedQuestion.query,
+              queuedQuestion.forceNewSession
             );
           } else {
             toast.error(`Connection "${queuedQuestion.connection}" not found.`);
@@ -1179,7 +1181,7 @@ const DashboardInterface = memo(
           handleNewChat();
           await new Promise((resolve) => setTimeout(resolve, 100));
           setSelectedConnection(connection);
-          setQueuedQuestion({ question, connection, query });
+          setQueuedQuestion({ question, connection, query, forceNewSession: true });
         },
         [connections, handleNewChat, setSelectedConnection],
       );
@@ -2168,7 +2170,7 @@ const DashboardInterface = memo(
           </main>
 
           {isDbExplorerOpen && selectedConnection && (
-            <div className="absolute bottom-22 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl pointer-events-auto">
+            <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl pointer-events-auto">
               <SchemaExplorer
                 schemas={schemaSampleData}
                 onClose={() => setIsDbExplorerOpen(false)}

@@ -282,7 +282,7 @@ const AppContent: React.FC<{
                     <ChatInterface
                       ref={chatRef}
                       onCreateConSelected={onCreateConSelected}
-                      initialQuestion={questionToAsk}
+                      initialQuestion={currentView === "chat" ? questionToAsk : null}
                       onQuestionAsked={() => setQuestionToAsk(null)}
                     />
                   </div>
@@ -290,7 +290,7 @@ const AppContent: React.FC<{
                     <DashboardInterface
                       ref={dashboardRef}
                       onCreateConSelected={onCreateConSelected}
-                      initialQuestion={questionToAsk}
+                      initialQuestion={currentView === "dashboard" ? questionToAsk : null}
                       onQuestionAsked={() => setQuestionToAsk(null)}
                     />
                   </div>

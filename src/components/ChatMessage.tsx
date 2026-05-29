@@ -300,7 +300,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const handleSave = async () => {
     setIsEditing(false);
     setIsFavorited(false);
-    if (!selectedConnection || !editedContent.trim() || !hasChanges) return;
+    if (!selectedConnection || !editedContent.trim()) return;
     try {
       await onEditMessage(message.id, editedContent);
       setHasChanges(false);
