@@ -1,8 +1,24 @@
-/* Premium Loader Animations */
+/* Premium Loader Visuals & Animations */
 
+/* Background backdrop blur transition */
+@keyframes backdrop-fade {
+  from {
+    backdrop-filter: blur(0px);
+    background-color: rgba(9, 13, 22, 0);
+  }
+  to {
+    backdrop-filter: blur(20px);
+  }
+}
+
+.animate-backdrop-in {
+  animation: backdrop-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Shimmer animation for loading indicators */
 @keyframes shimmer {
   0% {
-    left: -50%;
+    left: -100%;
   }
   100% {
     left: 100%;
@@ -15,9 +31,10 @@
   bottom: 0;
   width: 50%;
   border-radius: 9999px;
-  animation: shimmer 1.6s infinite ease-in-out;
+  animation: shimmer 1.8s infinite linear;
 }
 
+/* Standard fade-in */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -28,5 +45,117 @@
 }
 
 .animate-fade-in {
-  animation: fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Card slide and scale entrance */
+@keyframes card-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-card-in {
+  animation: card-entrance 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Technical mesh grid mask style */
+.loader-mesh-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black 30%, transparent 80%);
+  pointer-events: none;
+}
+
+/* Dynamic glow elements */
+.glow-spot {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* Orbit spins */
+@keyframes spin-cw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-ccw {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pulse-ring {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.45;
+  }
+}
+
+.orbit-outer-spin {
+  animation: spin-cw 10s linear infinite;
+}
+
+.orbit-middle-spin {
+  animation: spin-ccw 7s linear infinite;
+}
+
+.orbit-inner-pulse {
+  animation: pulse-ring 2.5s ease-in-out infinite;
+}
+
+/* Step checklists entering smoothly */
+@keyframes step-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-step-entry {
+  animation: step-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Segmented progress gaps overlay */
+.segmented-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 90%,
+    var(--gap-color, #131C2E) 90%,
+    var(--gap-color, #131C2E) 100%
+  );
+  background-size: 16px 100%;
+  pointer-events: none;
 }
