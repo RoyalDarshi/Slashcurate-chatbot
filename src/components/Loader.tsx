@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useTheme } from "../ThemeContext";
 import { 
   Database, 
@@ -134,14 +135,42 @@ const Loader = ({ text }: { text: string }) => {
     return () => clearInterval(timer);
   }, [operationType, steps.length, simulatedDuration]);
 
+  // Lock scrolling on document body and intercept keyboard/mouse captures
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    
+    // Intercept keyboard clicks to block esc, space or navigation triggers
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["Escape", "Tab", "Space", "Enter"].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, []);
+
   // Styling helpers
   const isDark = theme.mode === 'dark';
 
-  return (
+  if (typeof window === "undefined" || !window.document) {
+    return null;
+  }
+
+  const loaderContent = (
     <div
-      className="fixed inset-0 flex items-center justify-center z-[9999] animate-backdrop-in"
+      className="fixed inset-0 flex items-center justify-center z-[99999] animate-backdrop-in pointer-events-auto select-none"
       style={{
         backgroundColor: isDark ? 'rgba(9, 13, 22, 0.72)' : 'rgba(241, 245, 249, 0.72)',
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
       }}
     >
       {/* Visual Tech Background mesh grid */}
@@ -178,11 +207,14 @@ const Loader = ({ text }: { text: string }) => {
       <div 
         className="loader-card animate-card-in"
         style={{
-          backgroundColor: isDark ? 'rgba(19, 28, 46, 0.75)' : 'rgba(255, 255, 255, 0.85)',
+          backgroundColor: isDark ? 'rgba(19, 28, 46, 0.8)' : 'rgba(255, 255, 255, 0.9)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.08)',
           boxShadow: isDark
             ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 50px rgba(99, 102, 241, 0.08)'
             : '0 25px 50px -12px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 0 50px rgba(79, 70, 229, 0.04)',
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
         }}
       >
         {/* Dynamic Holographic Orbit Graphic */}
@@ -335,6 +367,8 @@ const Loader = ({ text }: { text: string }) => {
       </div>
     </div>
   );
+
+  return createPortal(loaderContent, document.body);
 };
 
 export default Loader;

@@ -424,7 +424,13 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       const response = await connectionService.testConnection(formData, isAdmin);
       setLoading(false);
 
-      if (response.message === "Connection successful!" || response.status === "success") {
+      const msg = (response.message || "").toLowerCase();
+      const isSuccess = 
+        msg.includes("successful") || 
+        msg.includes("success") || 
+        response.status === "success";
+
+      if (isSuccess) {
         toast.success("Connection test successful.", { theme: mode });
         setIsTestSuccessful(true);
       } else {
