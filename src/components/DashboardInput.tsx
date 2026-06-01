@@ -42,24 +42,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
       "prompt" | "granted" | "denied" | "unsupported"
     >("prompt");
 
-    const dashboardSuggestions = [
-      "Ask: 'Plot monthly user signups as a bar chart'...",
-      "Ask: 'Show KPI summary for server throughput'...",
-      "Ask: 'Find anomalies in database transaction logs'...",
-      "Ask: 'Compare monthly revenue performance'..."
-    ];
-
-    const [suggestionIdx, setSuggestionIdx] = useState(0);
-
-    useEffect(() => {
-      if (input) return;
-      const timer = setInterval(() => {
-        setSuggestionIdx((prev) => (prev + 1) % dashboardSuggestions.length);
-      }, 4500);
-      return () => clearInterval(timer);
-    }, [input, dashboardSuggestions.length]);
-
-    const activePlaceholder = dashboardSuggestions[suggestionIdx];
+    const activePlaceholder = "Ask: 'Show total sales by product line last month'...";
 
     useEffect(() => {
       onInputChangeRef.current = onInputChange;

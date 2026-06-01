@@ -26,13 +26,6 @@ const Login: React.FC<LoginProps> = ({
   const { theme } = useTheme();
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
-  const [loginType, setLoginType] = useState<"user" | "admin">(
-    queryParams.get("login") === "admin" ? "admin" : "user"
-  );
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -54,15 +47,13 @@ const Login: React.FC<LoginProps> = ({
     try {
       setLoading(true);
       
-      if (loginType === "admin") {
-        const response = await authService.loginAdmin(username, password);
+      const response = await authService.login(username, password);
+      if (response.isAdmin) {
         toast.success("Admin login successful!", { theme: mode });
-        onLoginSuccess(response.token, true);
       } else {
-        const response = await authService.loginUser(username, password);
         toast.success("Login successful!", { theme: mode });
-        onLoginSuccess(response.token, false);
       }
+      onLoginSuccess(response.token, response.isAdmin);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
@@ -109,32 +100,6 @@ const Login: React.FC<LoginProps> = ({
           }}
         />
 
-        {/* Login Type Toggle */}
-        <div className="flex p-1 rounded-xl mb-6 shadow-sm" style={{ backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)' }}>
-          <button
-            type="button"
-            onClick={() => setLoginType("user")}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${loginType === "user" ? "shadow-md" : "opacity-60"}`}
-            style={{ 
-              backgroundColor: loginType === "user" ? theme.colors.surface : "transparent",
-              color: loginType === "user" ? theme.colors.text : theme.colors.textSecondary 
-            }}
-          >
-            User Login
-          </button>
-          <button
-            type="button"
-            onClick={() => setLoginType("admin")}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${loginType === "admin" ? "shadow-md" : "opacity-60"}`}
-            style={{ 
-              backgroundColor: loginType === "admin" ? theme.colors.surface : "transparent",
-              color: loginType === "admin" ? theme.colors.text : theme.colors.textSecondary 
-            }}
-          >
-            Admin Login
-          </button>
-        </div>
-
         {/* Username / Email Field */}
         <div className="space-y-1">
           <label
@@ -142,12 +107,12 @@ const Login: React.FC<LoginProps> = ({
             className="text-sm font-semibold tracking-wide"
             style={{ color: theme.colors.text }}
           >
-            {loginType === "admin" ? "Admin Email" : "Username"}
+            Username or Email
           </label>
           <InputField
             type="text"
             name="username"
-            placeholder={loginType === "admin" ? "admin@company.com" : "john_doe"}
+            placeholder="Username or Email"
             value={formData.username}
             onChange={handleChange}
             required

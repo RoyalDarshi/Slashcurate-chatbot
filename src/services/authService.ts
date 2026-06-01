@@ -1,16 +1,12 @@
 import { apiClient } from "./apiClient";
 
-interface UserLoginResponse {
+export interface LoginResponse {
   message: string;
   token: string;
-  uid: string;
-  allowed_to_create_connection: boolean;
-  allowed_to_create_public_connection: boolean;
-}
-
-interface AdminLoginResponse {
-  token: string;
   isAdmin: boolean;
+  uid?: string;
+  allowed_to_create_connection?: boolean;
+  allowed_to_create_public_connection?: boolean;
 }
 
 class AuthService {
@@ -19,24 +15,25 @@ class AuthService {
 
   // -- Login Methods --
 
-  async loginUser(username: string, password: string): Promise<UserLoginResponse> {
-    const response = await apiClient.post<UserLoginResponse>(
-      `/login/user`,
-      { email: username, password } // Backend expects 'email' key even for username
+  async login(username: string, password: string): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>(
+      `/login`,
+      { email: username, password }
     );
-    this.setToken(response.data.token, false);
-    localStorage.setItem("uid", String(response.data.uid));
-    localStorage.setItem("allowedToCreateConnection", String(response.data.allowed_to_create_connection));
-    localStorage.setItem("allowedToCreatePublicConnection", String(response.data.allowed_to_create_public_connection));
-    return response.data;
-  }
-
-  async loginAdmin(email: string, password: string): Promise<AdminLoginResponse> {
-    const response = await apiClient.post<AdminLoginResponse>(
-      `/login/admin`,
-      { email, password }
-    );
-    this.setToken(response.data.token, true);
+    const { token, isAdmin, uid, allowed_to_create_connection, allowed_to_create_public_connection } = response.data;
+    
+    this.setToken(token, isAdmin);
+    if (isAdmin) {
+      localStorage.removeItem("uid");
+      localStorage.removeItem("allowedToCreateConnection");
+      localStorage.removeItem("allowedToCreatePublicConnection");
+      sessionStorage.removeItem(this.USER_TOKEN_KEY);
+    } else {
+      localStorage.setItem("uid", String(uid));
+      localStorage.setItem("allowedToCreateConnection", String(allowed_to_create_connection));
+      localStorage.setItem("allowedToCreatePublicConnection", String(allowed_to_create_public_connection));
+      sessionStorage.removeItem(this.ADMIN_TOKEN_KEY);
+    }
     return response.data;
   }
 

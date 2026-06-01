@@ -68,7 +68,6 @@ export function useConnections(token: string) {
     const fetchConnections = async () => {
       setConnectionsLoading(true);
       if (!token) {
-        toast.error("User ID not found. Please log in again.");
         setConnectionsLoading(false);
         return;
       }

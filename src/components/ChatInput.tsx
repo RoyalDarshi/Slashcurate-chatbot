@@ -35,24 +35,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       "prompt" | "granted" | "denied" | "unsupported"
     >("prompt");
 
-    const chatSuggestions = [
-      "Ask: 'Show total sales by product line last month'...",
-      "Ask: 'Find top 10 users with highest transaction counts'...",
-      "Ask: 'Compare PostgreSQL vs MongoDB latency trends'...",
-      "Ask: 'List connections that are currently public'..."
-    ];
-
-    const [suggestionIdx, setSuggestionIdx] = useState(0);
-
-    useEffect(() => {
-      if (input) return;
-      const timer = setInterval(() => {
-        setSuggestionIdx((prev) => (prev + 1) % chatSuggestions.length);
-      }, 4500);
-      return () => clearInterval(timer);
-    }, [input, chatSuggestions.length]);
-
-    const activePlaceholder = chatSuggestions[suggestionIdx];
+    const activePlaceholder = "Ask: 'Show total sales by product line last month'...";
 
     useEffect(() => {
       onInputChangeRef.current = onInputChange;

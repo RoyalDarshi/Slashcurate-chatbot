@@ -1231,18 +1231,20 @@ const ChatInterface = memo(
           </div>
 
           {userHasScrolledUp && (
-            <div className="absolute bottom-24 right-6 z-50">
-              <CustomTooltip title="Scroll to Bottom" position="top">
+            <div className="absolute bottom-[84px] left-0 right-0 z-50 pointer-events-none flex justify-center animate-fade-up">
+              <div className="w-full max-w-4xl px-4 flex justify-end">
                 <button
                   onClick={scrollToBottom}
-                  className="p-3 rounded-full text-white transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md"
+                  className="p-2 rounded-full text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-md hover:shadow-lg backdrop-blur-md pointer-events-auto"
                   style={{
                     background: theme.colors.accent,
+                    border: `1px solid ${theme.colors.accent}30`,
                   }}
+                  aria-label="Scroll to Bottom"
                 >
-                  <ArrowDown size={18} />
+                  <ArrowDown size={14} />
                 </button>
-              </CustomTooltip>
+              </div>
             </div>
           )}
 
