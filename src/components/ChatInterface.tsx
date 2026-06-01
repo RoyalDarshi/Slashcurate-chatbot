@@ -649,6 +649,13 @@ const ChatInterface = memo(
         }
       }, [messages, userHasScrolledUp, editingMessageId, activeRequestTargetId, scrollToBottom]);
 
+      useEffect(() => {
+        const timer = setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+        return () => clearTimeout(timer);
+      }, [scrollToBottom]);
+
       const handleConnectionSelect = useCallback(
         (value: string) => {
           if (value === "create-con") {
