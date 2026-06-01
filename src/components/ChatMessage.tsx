@@ -133,7 +133,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             tableData = Array.isArray(parsedData.answer)
               ? parsedData.answer
               : [parsedData.answer];
-          } else if (Object.keys(parsedData).length > 0) {
+          } else if (!parsedData?.sql_query && Object.keys(parsedData).length > 0) {
             tableData = [parsedData];
           }
 
@@ -170,13 +170,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             setCurrentView("table");
           } else if (tableData.length > 0) {
             setCurrentView("table");
+          } else if (parsedData?.sql_query) {
+            setCurrentView("query");
           } else {
             setCurrentView("text");
           }
         } catch {
           setCsvData([]);
           setHasNumericData(false);
-          setCurrentView("text");
+          if (message.content && message.content.includes("SELECT")) {
+            setCurrentView("query");
+          } else {
+            setCurrentView("text");
+          }
         }
       }
     }
