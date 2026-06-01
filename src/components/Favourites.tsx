@@ -192,7 +192,6 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
 
     if (!matchesSearch) return false;
     if (selectedCategory === "all") return true;
-    if (selectedCategory === "queries") return Boolean(message.query);
 
     if (selectedCategory.startsWith("conn:")) {
       const connName = selectedCategory.substring(5);
@@ -372,19 +371,6 @@ const Favorites = ({ onFavoriteSelected }: FavoritesProps) => {
             >
               <BookmarkCheck className="w-4 h-4" />
               All Favorites
-            </button>
-
-            <button
-              onClick={() => setSelectedCategory("queries")}
-              className="px-4 py-2 text-xs md:text-sm font-semibold transition-all flex items-center gap-2 rounded-lg"
-              style={{
-                background: selectedCategory === "queries" ? theme.colors.accent : "transparent",
-                color: selectedCategory === "queries" ? "#FFFFFF" : theme.colors.textSecondary,
-                boxShadow: selectedCategory === "queries" ? theme.shadow.sm : "none",
-              }}
-            >
-              <Sparkles className="w-4 h-4" />
-              SQL Queries
             </button>
 
             {connections.map((conn) => (

@@ -294,7 +294,12 @@ const History: React.FC<HistoryProps> = ({ onSessionClicked }) => {
       scale: 1,
       transition: { type: "spring", stiffness: 300, damping: 24 } 
     },
-    exit: { opacity: 0, scale: 0.95, y: -10, transition: { duration: 0.2 } },
+    exit: { 
+      opacity: 0, 
+      x: 100, 
+      scale: 0.95, 
+      transition: { duration: 0.35, ease: "easeInOut" } 
+    },
     selected: { scale: 0.98, opacity: 0.9, y: 1, transition: { duration: 0.2 } },
   };
 

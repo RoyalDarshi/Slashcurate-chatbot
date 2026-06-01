@@ -977,6 +977,25 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             >
               {!disabled && (
                 <div className="absolute right-full top-1/2 -translate-y-1/2 pr-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                  {responseStatus === "success" && (
+                    <CustomTooltip
+                      title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                      position="left"
+                    >
+                      <button
+                        onClick={handleFavorite}
+                        className="p-1 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                        style={{
+                          color: isFavorited ? theme.colors.accent : "rgb(156 163 175)",
+                        }}
+                      >
+                        <Heart
+                          size={14}
+                          className={isFavorited ? "fill-current" : ""}
+                        />
+                      </button>
+                    </CustomTooltip>
+                  )}
                   {!isSubmitting && (
                     <CustomTooltip title="Edit this question" position="left">
                       <button
