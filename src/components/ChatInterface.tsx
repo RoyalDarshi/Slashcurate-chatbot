@@ -1250,14 +1250,10 @@ const ChatInterface = memo(
           {connections.length > 0 && (
             <footer className="absolute bottom-4 left-0 right-0 z-40 pointer-events-none px-4 flex justify-center">
               <div
-                onFocusCapture={() => setIsInputFocused(true)}
-                onBlurCapture={() => setIsInputFocused(false)}
                 className="w-full max-w-4xl flex items-end gap-2 px-3 py-2 rounded-[24px] pointer-events-auto border transition-all duration-300 shadow-2xl"
                 style={{
                   backgroundColor: theme.mode === 'light' ? '#FFFFFF' : theme.colors.surfaceGlass,
-                  borderColor: isInputFocused
-                    ? theme.colors.accent
-                    : (theme.mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : theme.colors.border),
+                  borderColor: theme.mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : theme.colors.border,
                   boxShadow: theme.mode === "light" 
                     ? "0 8px 32px -4px rgba(0, 0, 0, 0.1), 0 0 1px rgba(0, 0, 0, 0.15)" 
                     : "0 24px 48px -12px rgba(0, 0, 0, 0.5)"
