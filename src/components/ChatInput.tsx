@@ -35,6 +35,25 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       "prompt" | "granted" | "denied" | "unsupported"
     >("prompt");
 
+    const chatSuggestions = [
+      "Ask: 'Show total sales by product line last month'...",
+      "Ask: 'Find top 10 users with highest transaction counts'...",
+      "Ask: 'Compare PostgreSQL vs MongoDB latency trends'...",
+      "Ask: 'List connections that are currently public'..."
+    ];
+
+    const [suggestionIdx, setSuggestionIdx] = useState(0);
+
+    useEffect(() => {
+      if (input) return;
+      const timer = setInterval(() => {
+        setSuggestionIdx((prev) => (prev + 1) % chatSuggestions.length);
+      }, 4500);
+      return () => clearInterval(timer);
+    }, [input, chatSuggestions.length]);
+
+    const activePlaceholder = chatSuggestions[suggestionIdx];
+
     useEffect(() => {
       onInputChangeRef.current = onInputChange;
       onSubmitRef.current = onSubmit;
@@ -149,39 +168,39 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       <form onSubmit={onSubmit} className="flex-grow flex items-end">
         <div className="flex items-end gap-2 w-full bg-transparent p-0 border-none shadow-none">
           {showMicButton &&
-            recognition &&
-            micPermissionStatus !== "unsupported" && (
-              <CustomTooltip
-                title={isRecording ? "Stop Voice Input" : "Voice Input"}
-                position="top"
-              >
-                <div className="relative flex-shrink-0 mb-0.5">
-                  <button
-                    type="button"
-                    onClick={handleMicToggle}
-                    disabled={
-                      isDisabled ||
-                      !recognition ||
-                      micPermissionStatus === "denied"
-                    }
-                    className={`flex items-center justify-center w-10 h-10 rounded-[14px] transition-all duration-200 hover:scale-105 active:scale-95 ${
-                      isRecording ? "animate-pulse" : ""
-                    }`}
-                    style={{
-                      background: isRecording
-                        ? theme.colors.error
-                        : `${theme.colors.accent}15`,
-                      color: isRecording ? "white" : theme.colors.accent,
-                      boxShadow: isRecording
-                        ? `0 4px 14px ${theme.colors.error}40`
-                        : "none",
-                    }}
-                  >
-                    {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
-                  </button>
-                </div>
-              </CustomTooltip>
-            )}
+             recognition &&
+             micPermissionStatus !== "unsupported" && (
+               <CustomTooltip
+                 title={isRecording ? "Stop Voice Input" : "Voice Input"}
+                 position="top"
+               >
+                 <div className="relative flex-shrink-0 mb-0.5">
+                   <button
+                     type="button"
+                     onClick={handleMicToggle}
+                     disabled={
+                       isDisabled ||
+                       !recognition ||
+                       micPermissionStatus === "denied"
+                     }
+                     className={`flex items-center justify-center w-10 h-10 rounded-[14px] transition-all duration-200 hover:scale-105 active:scale-95 ${
+                       isRecording ? "animate-pulse" : ""
+                     }`}
+                     style={{
+                       background: isRecording
+                         ? theme.colors.error
+                         : `${theme.colors.accent}15`,
+                       color: isRecording ? "white" : theme.colors.accent,
+                       boxShadow: isRecording
+                         ? `0 4px 14px ${theme.colors.error}40`
+                         : "none",
+                     }}
+                   >
+                     {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                   </button>
+                 </div>
+               </CustomTooltip>
+             )}
 
           <textarea
             ref={inputRef}
@@ -192,7 +211,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               if (isRecording && recognition) recognition.stop();
             }}
             placeholder={
-              voiceInputStatus || "Ask about your repository context..."
+              voiceInputStatus || activePlaceholder
             }
             className="flex-grow py-2 px-2 text-sm border-none bg-transparent resize-none overflow-y-auto focus:outline-none focus:ring-0 disabled:opacity-40 max-h-36 min-h-[36px]"
             style={{
