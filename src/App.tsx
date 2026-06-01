@@ -138,7 +138,7 @@ function App() {
 
   return (
     <ThemeProvider>
-      <SettingsProvider>
+      <SettingsProvider isAuthenticated={isAuthenticated}>
         <Router>
           <Routes>
             <Route

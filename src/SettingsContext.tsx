@@ -28,8 +28,13 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 );
 
 // SettingsProvider component
-export const SettingsProvider: React.FC<PropsWithChildren<{}>> = ({
+interface SettingsProviderProps {
+  isAuthenticated?: boolean;
+}
+
+export const SettingsProvider: React.FC<PropsWithChildren<SettingsProviderProps>> = ({
   children,
+  isAuthenticated = true,
 }) => {
   const [settings, setSettings] = useState<Settings>(() => {
     const localView = localStorage.getItem("currentView");
@@ -42,6 +47,8 @@ export const SettingsProvider: React.FC<PropsWithChildren<{}>> = ({
 
   // Fetch user settings from the server on mount, excluding currentView
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const loadSettings = async () => {
       try {
         const token = sessionStorage.getItem("token");
@@ -59,7 +66,7 @@ export const SettingsProvider: React.FC<PropsWithChildren<{}>> = ({
       }
     };
     loadSettings();
-  }, []);
+  }, [isAuthenticated]);
 
   // Helper to persist changes to the server
   const persistSettings = async (newSettings: Partial<Settings>) => {
