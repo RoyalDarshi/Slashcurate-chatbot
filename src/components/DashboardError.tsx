@@ -277,7 +277,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                       </h3>
                     </div>
                     {!sessionConErr && (
-                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1.5 transition-opacity">
                         <button
                           onClick={handleEditClick}
                           className="px-2.5 py-1 rounded-md text-xs font-medium border transition-colors bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700"

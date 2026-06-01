@@ -1,4 +1,5 @@
 import { apiClient } from "./apiClient";
+import { DatabaseSchema } from "../types";
 
 export interface ConnectionDetails {
   connectionName: string;
@@ -100,6 +101,18 @@ class ConnectionService {
       }
     );
     return response.data;
+  }
+
+  /**
+   * Fetch the real database schema (schemas → tables → columns) for a saved connection.
+   * @param connectionId - The numeric ID of the connection stored in the DB
+   */
+  async getSchema(connectionId: number | string): Promise<DatabaseSchema[]> {
+    const response = await apiClient.post<{ schemas: DatabaseSchema[] }>(
+      "/api/schema",
+      { connectionId }
+    );
+    return response.data.schemas;
   }
 }
 

@@ -23,7 +23,8 @@ export interface Connection {
 
 export interface DatabaseTable {
   name: string;
-  columns: string[];
+  columns: ColumnInfo[];
+  sampleData?: Record<string, any>[];
 }
 
 export interface DatabaseSchema {

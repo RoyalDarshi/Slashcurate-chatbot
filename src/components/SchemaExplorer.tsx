@@ -3,6 +3,7 @@ import {
   Database,
   Table2,
   ChevronRight,
+  ChevronDown,
   X,
   Search,
   Filter,
@@ -26,11 +27,18 @@ import {
 import { DatabaseSchema, Theme } from "../types";
 import { useTheme } from "../ThemeContext";
 
+interface ConnectionOption {
+  id: number | string;
+  connectionName: string;
+}
+
 interface SchemaExplorerProps {
   schemas: DatabaseSchema[] | null;
   onClose: () => void;
   onColumnClick: (columnName: string) => void;
   selectedConnection?: string;
+  connections?: ConnectionOption[];
+  onConnectionChange?: (connectionName: string) => void;
   maxHeight?: string;
   theme?: Theme;
 }
@@ -40,6 +48,8 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   onClose,
   onColumnClick,
   selectedConnection,
+  connections = [],
+  onConnectionChange,
   maxHeight = "calc(90vh - 180px)",
   theme: propTheme,
 }) => {
@@ -52,6 +62,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   const [sortBy, setSortBy] = useState<"name" | "columns">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showFilterOptions, setShowFilterOptions] = useState<boolean>(false);
+  const [showConnectionDropdown, setShowConnectionDropdown] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeView, setActiveView] = useState<"columns" | "sampleData">(
     "columns"
@@ -66,6 +77,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   const tableListRef = useRef<HTMLDivElement>(null);
   const columnListRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
+  const connectionDropdownRef = useRef<HTMLDivElement>(null);
 
   // Handle responsive layout
   useEffect(() => {
@@ -108,6 +120,12 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
         !filterRef.current.contains(event.target as Node)
       ) {
         setShowFilterOptions(false);
+      }
+      if (
+        connectionDropdownRef.current &&
+        !connectionDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowConnectionDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -388,8 +406,8 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
         boxShadow: theme.mode === "light" 
           ? "0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)"
           : "0 20px 40px -15px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.01)",
-        maxHeight: isMobileView ? "calc(100vh - 80px)" : maxHeight,
-        height: isMobileView ? "calc(100vh - 80px)" : maxHeight,
+        maxHeight: isMobileView ? "85vh" : maxHeight,
+        height: isMobileView ? "85vh" : maxHeight,
         overflow: "hidden",
       }}
     >
@@ -465,7 +483,7 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
           
           @media (max-width: 768px) {
             .schema-explorer { 
-              max-height: calc(100vh - 80px) !important; 
+              max-height: 85vh !important; 
               border-radius: 16px; 
               width: 100% !important; 
             }
@@ -479,31 +497,110 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
 
       {/* Header */}
       <div
-        className={`sticky top-0 z-10 px-4 py-3.5 sm:px-6 border-b flex items-center justify-between ${theme.mode === "light" ? "" : "backdrop-blur-md"}`}
+        className={`sticky top-0 z-10 px-4 py-3 sm:px-5 border-b flex items-center justify-between gap-2 ${theme.mode === "light" ? "" : "backdrop-blur-md"}`}
         style={{
           backgroundColor: theme.mode === "light" ? theme.colors.surface : `${theme.colors.surface}c0`,
           borderColor: theme.colors.border,
         }}
       >
-        <div className="flex items-center space-x-2">
-          <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400">
+        {/* Left: Icon + Title */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${theme.colors.accent}15` }}>
             <Database
-              size={18}
+              size={16}
               style={{ color: theme.colors.accent }}
               aria-hidden="true"
             />
           </div>
-          <div>
-            <h2
-              className="text-base font-bold tracking-tight"
-              style={{ color: theme.colors.text }}
+          <h2
+            className="text-sm font-bold tracking-tight hidden sm:block"
+            style={{ color: theme.colors.text }}
+          >
+            Schema Explorer
+          </h2>
+        </div>
+
+        {/* Center: Connection dropdown */}
+        {connections && connections.length > 0 && onConnectionChange ? (
+          <div className="relative flex-1 min-w-0 max-w-[260px]" ref={connectionDropdownRef}>
+            <button
+              onClick={() => setShowConnectionDropdown((p) => !p)}
+              className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:border-current"
+              style={{
+                backgroundColor: theme.colors.background,
+                borderColor: showConnectionDropdown ? theme.colors.accent : theme.colors.border,
+                color: theme.colors.text,
+                boxShadow: showConnectionDropdown ? `0 0 0 2px ${theme.colors.accent}20` : "none",
+              }}
+              title="Switch connection"
             >
-              Schema Explorer
-            </h2>
+              <Database size={11} style={{ color: theme.colors.accent, flexShrink: 0 }} />
+              <span className="truncate flex-1 text-left" style={{ color: selectedConnection ? theme.colors.text : theme.colors.textSecondary }}>
+                {selectedConnection || "Select connection"}
+              </span>
+              <ChevronDown
+                size={11}
+                style={{
+                  color: theme.colors.textSecondary,
+                  flexShrink: 0,
+                  transform: showConnectionDropdown ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s",
+                }}
+              />
+            </button>
+
+            {showConnectionDropdown && (
+              <div
+                className="absolute left-0 top-[calc(100%+6px)] z-50 rounded-xl border shadow-xl overflow-hidden"
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                  minWidth: "100%",
+                  maxWidth: "280px",
+                  animation: "dropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
+              >
+                <div
+                  className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest border-b"
+                  style={{ color: theme.colors.textSecondary, borderColor: theme.colors.border }}
+                >
+                  Connections
+                </div>
+                <div className="py-1 max-h-48 overflow-y-auto explorer-scroll">
+                  {connections.map((conn) => {
+                    const isActive = conn.connectionName === selectedConnection;
+                    return (
+                      <button
+                        key={conn.id}
+                        onClick={() => {
+                          onConnectionChange(conn.connectionName);
+                          setShowConnectionDropdown(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-colors"
+                        style={{
+                          backgroundColor: isActive ? `${theme.colors.accent}12` : "transparent",
+                          color: isActive ? theme.colors.accent : theme.colors.text,
+                          fontWeight: isActive ? 600 : 400,
+                        }}
+                      >
+                        <div
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: isActive ? theme.colors.accent : theme.colors.border }}
+                        />
+                        <span className="truncate">{conn.connectionName}</span>
+                        {isActive && <Check size={11} className="ml-auto flex-shrink-0" style={{ color: theme.colors.accent }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-          {selectedConnection && !isMobileView && (
+        ) : (
+          /* Static badge when no switcher needed */
+          selectedConnection && !isMobileView ? (
             <span
-              className="text-xs px-2 py-0.5 rounded border font-medium ml-2 opacity-80"
+              className="text-xs px-2 py-0.5 rounded border font-medium opacity-80 truncate max-w-[160px]"
               style={{ 
                 color: theme.colors.textSecondary,
                 borderColor: theme.colors.border,
@@ -512,18 +609,18 @@ const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
             >
               {selectedConnection}
             </span>
-          )}
-        </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors border"
-            style={{ color: theme.colors.textSecondary, borderColor: theme.colors.border }}
-            aria-label="Close schema explorer"
-          >
-            <X size={16} />
-          </button>
-        </div>
+          ) : <div className="flex-1" />
+        )}
+
+        {/* Right: Close */}
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors border flex-shrink-0"
+          style={{ color: theme.colors.textSecondary, borderColor: theme.colors.border }}
+          aria-label="Close schema explorer"
+        >
+          <X size={15} />
+        </button>
       </div>
 
       {/* Mobile Breadcrumb Navigation */}

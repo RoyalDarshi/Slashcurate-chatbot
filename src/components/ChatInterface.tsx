@@ -41,7 +41,7 @@ import {
 } from "../hooks";
 import { useSettings } from "../SettingsContext";
 import SchemaExplorer from "./SchemaExplorer";
-import schemaSampleData from "../data/sampleSchemaData";
+import { DatabaseSchema } from "../types";
 import { FaFilePdf } from "react-icons/fa";
 
 export type ChatInterfaceHandle = {
@@ -153,6 +153,9 @@ const ChatInterface = memo(
       const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
       const [isInputFocused, setIsInputFocused] = useState(false);
       const [showCreateConnectionModal, setShowCreateConnectionModal] = useState(false);
+      const [schemaData, setSchemaData] = useState<DatabaseSchema[] | null>(null);
+      const [schemaLoading, setSchemaLoading] = useState(false);
+      const [schemaError, setSchemaError] = useState<string | null>(null);
 
       const options = [
         { value: "create-con", label: "Create New Connection", isAdmin: false },
@@ -1069,7 +1072,42 @@ const ChatInterface = memo(
 
       const toggleDbExplorer = useCallback(() => {
         setIsDbExplorerOpen((prev) => !prev);
+        setIsConnectionDropdownOpen(false);
       }, []);
+
+      // Fetch real schema whenever the explorer is opened (or connection changes while open)
+      useEffect(() => {
+        if (!isDbExplorerOpen || !selectedConnection) return;
+        const connectionObj = connections.find(
+          (c) => c.connectionName === selectedConnection
+        );
+        if (!connectionObj?.id) return;
+
+        setSchemaLoading(true);
+        setSchemaError(null);
+        setSchemaData(null);
+
+        connectionService.getSchema(connectionObj.id as number)
+          .then((schemas) => {
+            setSchemaData(schemas);
+          })
+          .catch((err) => {
+            const msg =
+              err?.response?.data?.error ||
+              err?.message ||
+              "Failed to load schema";
+            setSchemaError(msg);
+          })
+          .finally(() => {
+            setSchemaLoading(false);
+          });
+      }, [isDbExplorerOpen, selectedConnection, connections]);
+
+      // Clear schema when connection changes so stale data isn't shown
+      useEffect(() => {
+        setSchemaData(null);
+        setSchemaError(null);
+      }, [selectedConnection]);
 
       return (
         <div
@@ -1448,13 +1486,51 @@ const ChatInterface = memo(
 
           {isDbExplorerOpen && selectedConnection && (
             <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl pointer-events-auto">
-              <SchemaExplorer
-                schemas={schemaSampleData}
-                onClose={() => setIsDbExplorerOpen(false)}
-                theme={theme}
-                onColumnClick={() => console.log("Column clicked")}
-                selectedConnection={selectedConnection}
-              />
+              {schemaLoading ? (
+                <div
+                  className="flex items-center justify-center gap-3 px-6 py-5 rounded-2xl border"
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  <svg className="animate-spin" width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+                  </svg>
+                  <span className="text-sm font-medium">Loading schema…</span>
+                </div>
+              ) : schemaError ? (
+                <div
+                  className="flex items-center justify-between gap-3 px-6 py-4 rounded-2xl border"
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.error,
+                  }}
+                >
+                  <span className="text-sm font-medium">{schemaError}</span>
+                  <button
+                    onClick={() => setIsDbExplorerOpen(false)}
+                    className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <SchemaExplorer
+                  schemas={schemaData}
+                  onClose={() => setIsDbExplorerOpen(false)}
+                  theme={theme}
+                  onColumnClick={(col) => setInput((prev) => prev ? `${prev} ${col}` : col)}
+                  selectedConnection={selectedConnection ?? undefined}
+                  connections={connections.map((c) => ({ id: c.id ?? c.connectionName, connectionName: c.connectionName }))}
+                  onConnectionChange={(name) => {
+                    setSelectedConnection(name);
+                  }}
+                />
+              )}
             </div>
           )}
 
