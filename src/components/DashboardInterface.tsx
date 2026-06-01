@@ -935,6 +935,11 @@ const DashboardInterface = memo(
             );
             if (!connectionObj) throw new Error("Connection not found.");
 
+            const connectionPayload = {
+              ...connectionObj,
+              password: connectionObj.password || "",
+            };
+
             const controller = new AbortController();
             setActiveRequestController(controller);
 
@@ -942,12 +947,12 @@ const DashboardInterface = memo(
               ? {
                   question,
                   sql_query: query,
-                  connection: connectionObj,
+                  connection: connectionPayload,
                   sessionId: currentSessionId,
                 }
               : {
                   question,
-                  connection: connectionObj,
+                  connection: connectionPayload,
                   sessionId: currentSessionId,
                 };
 
@@ -1529,12 +1534,16 @@ const DashboardInterface = memo(
               const connectionObj = connections.find(
                 (conn) => conn.connectionName === selectedConnection,
               );
+              const connectionPayload = connectionObj ? {
+                ...connectionObj,
+                password: connectionObj.password || "",
+              } : undefined;
               const controller = new AbortController();
               setActiveRequestController(controller);
 
               const payload = {
                 question: newQuestion,
-                connection: connectionObj,
+                connection: connectionPayload,
                 sessionId,
               };
               const response = await axiosInstance.post(
@@ -1778,12 +1787,16 @@ const DashboardInterface = memo(
             }
 
             try {
+              const connectionPayload = {
+                ...connectionObj,
+                password: connectionObj.password || "",
+              };
               const controller = new AbortController();
               setActiveRequestController(controller);
 
               const payload = {
                 question: questionContent,
-                connection: connectionObj,
+                connection: connectionPayload,
                 sessionId,
               };
               const response = await axiosInstance.post(

@@ -91,13 +91,16 @@ class ConnectionService {
     return response.data;
   }
 
-  async reExtractMetadata(connectionDetails: ConnectionDetails) {
+  async reExtractMetadata(connectionDetails: ConnectionDetails, isEncrypted: boolean = true) {
     const { chatbotApiClient } = await import("./apiClient");
     const response = await chatbotApiClient.post(
       "/meta_data",
       {
-        connection: connectionDetails,
-        isEncrypted: true,
+        connection: {
+          ...connectionDetails,
+          password: connectionDetails.password,
+        },
+        isEncrypted: isEncrypted,
       }
     );
     return response.data;

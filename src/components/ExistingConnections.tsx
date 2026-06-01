@@ -196,6 +196,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
           port: connection.port,
           selectedDB: connection.selectedDB,
           username: connection.username,
+          password: connection.password,
         };
 
         await connectionService.reExtractMetadata(connData);
@@ -849,6 +850,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
                   maxTransportObjects: editConnection.maxTransportObjects,
                   username: editConnection.username,
                   password: "",
+                  originalPassword: editConnection.password,
                   isPublic: editConnection.isPublic || false,
                 } : null}
                 onSuccess={() => {

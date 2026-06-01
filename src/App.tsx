@@ -26,6 +26,7 @@ import "react-toastify/dist/ReactToastify.css";
 import HelpPage from "./components/HelpPage";
 import { MessageSquare } from "lucide-react";
 import { useConnections, useSession, useRecommendedQuestions } from "./hooks";
+import { motion, AnimatePresence } from "framer-motion";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
@@ -268,116 +269,132 @@ const AppContent: React.FC<{
         theme={theme.mode === "dark" ? "dark" : "light"}
         style={{ zIndex: 10000 }}
       />
-      {isAuthenticated ? (
-        <div
-          className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-transparent"
-        >
-          {/* Mobile safe header gap */}
-          <div className="md:hidden h-16 w-full flex-shrink-0" />
-
-          <Sidebar
-            onMenuClick={setActiveMenu}
-            activeMenu={activeMenu}
-            defaultMenuItems={
-              localStorage.getItem("allowedToCreateConnection") !== "false"
-                ? menuItems
-                : menuItems // We don't filter out new-connection here since we removed it from menuItems.
-            }
-            onLogout={onLogout}
-          />
-
-          <main
-            className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
-            style={{
-              backgroundColor: theme.colors.surface,
-              boxShadow: "none",
-              borderLeft: "none",
-            }}
+      <AnimatePresence mode="wait">
+        {isAuthenticated ? (
+          <motion.div
+            key="authenticated"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-transparent"
           >
-            <UserTips show={showTip} onClose={() => setShowTip(false)} />
-            <div className="flex-1 flex flex-col overflow-hidden relative">
-              {activeMenu === "home" && (
-                <>
-                  <div className={`absolute inset-0 flex flex-col ${currentView === "chat" ? "z-10" : "hidden"}`}>
-                    <ChatInterface
-                      ref={chatRef}
-                      onCreateConSelected={onCreateConSelected}
-                      initialQuestion={currentView === "chat" ? questionToAsk : null}
-                      onQuestionAsked={() => setQuestionToAsk(null)}
-                      connections={connections}
-                      selectedConnection={selectedConnection}
-                      setSelectedConnection={setSelectedConnection}
-                      connectionError={connectionError}
-                      connectionsLoading={connectionsLoading}
-                      sessionId={sessionId}
-                      messages={messages}
-                      dispatchMessages={dispatchMessages}
-                      sessionConnection={sessionConnection}
-                      loadSession={loadSession}
-                      clearSession={clearSession}
-                      recommendedQuestions={recommendedQuestions}
+            {/* Mobile safe header gap */}
+            <div className="md:hidden h-16 w-full flex-shrink-0" />
+
+            <Sidebar
+              onMenuClick={setActiveMenu}
+              activeMenu={activeMenu}
+              defaultMenuItems={
+                localStorage.getItem("allowedToCreateConnection") !== "false"
+                  ? menuItems
+                  : menuItems // We don't filter out new-connection here since we removed it from menuItems.
+              }
+              onLogout={onLogout}
+            />
+
+            <main
+              className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
+              style={{
+                backgroundColor: theme.colors.surface,
+                boxShadow: "none",
+                borderLeft: "none",
+              }}
+            >
+              <UserTips show={showTip} onClose={() => setShowTip(false)} />
+              <div className="flex-1 flex flex-col overflow-hidden relative">
+                {activeMenu === "home" && (
+                  <>
+                    <div className={`absolute inset-0 flex flex-col ${currentView === "chat" ? "z-10" : "hidden"}`}>
+                      <ChatInterface
+                        ref={chatRef}
+                        onCreateConSelected={onCreateConSelected}
+                        initialQuestion={currentView === "chat" ? questionToAsk : null}
+                        onQuestionAsked={() => setQuestionToAsk(null)}
+                        connections={connections}
+                        selectedConnection={selectedConnection}
+                        setSelectedConnection={setSelectedConnection}
+                        connectionError={connectionError}
+                        connectionsLoading={connectionsLoading}
+                        sessionId={sessionId}
+                        messages={messages}
+                        dispatchMessages={dispatchMessages}
+                        sessionConnection={sessionConnection}
+                        loadSession={loadSession}
+                        clearSession={clearSession}
+                        recommendedQuestions={recommendedQuestions}
+                      />
+                    </div>
+                    <div className={`absolute inset-0 flex flex-col ${currentView === "dashboard" ? "z-10" : "hidden"}`}>
+                      <DashboardInterface
+                        ref={dashboardRef}
+                        onCreateConSelected={onCreateConSelected}
+                        initialQuestion={currentView === "dashboard" ? questionToAsk : null}
+                        onQuestionAsked={() => setQuestionToAsk(null)}
+                        connections={connections}
+                        selectedConnection={selectedConnection}
+                        setSelectedConnection={setSelectedConnection}
+                        connectionError={connectionError}
+                        connectionsLoading={connectionsLoading}
+                        sessionId={sessionId}
+                        messages={messages}
+                        dispatchMessages={dispatchMessages}
+                        sessionConnection={sessionConnection}
+                        loadSession={loadSession}
+                        clearSession={clearSession}
+                        recommendedQuestions={recommendedQuestions}
+                      />
+                    </div>
+                  </>
+                )}
+                {activeMenu === "existing-connection" && (
+                  <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
+                    <ExistingConnections
+                      isAdmin={false}
+                      createConnection={onCreateConSelected}
                     />
                   </div>
-                  <div className={`absolute inset-0 flex flex-col ${currentView === "dashboard" ? "z-10" : "hidden"}`}>
-                    <DashboardInterface
-                      ref={dashboardRef}
-                      onCreateConSelected={onCreateConSelected}
-                      initialQuestion={currentView === "dashboard" ? questionToAsk : null}
-                      onQuestionAsked={() => setQuestionToAsk(null)}
-                      connections={connections}
-                      selectedConnection={selectedConnection}
-                      setSelectedConnection={setSelectedConnection}
-                      connectionError={connectionError}
-                      connectionsLoading={connectionsLoading}
-                      sessionId={sessionId}
-                      messages={messages}
-                      dispatchMessages={dispatchMessages}
-                      sessionConnection={sessionConnection}
-                      loadSession={loadSession}
-                      clearSession={clearSession}
-                      recommendedQuestions={recommendedQuestions}
+                )}
+                {activeMenu === "history" && (
+                  <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
+                    <History onSessionClicked={handleSessionClicked} />
+                  </div>
+                )}
+                {activeMenu === "favourite" && (
+                  <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
+                    <Favourites
+                      onFavoriteSelected={(question, connection, query) => {
+                        setQuestionToAsk({ text: question, connection, query });
+                        setTimeout(() => setActiveMenu("home"), 0);
+                      }}
                     />
                   </div>
-                </>
-              )}
-              {activeMenu === "existing-connection" && (
-                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
-                  <ExistingConnections
-                    isAdmin={false}
-                    createConnection={onCreateConSelected}
+                )}
+                {activeMenu === "settings" && <Settings />}
+                {activeMenu === "help" && (
+                  <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
+                   <HelpPage
+                    onCreateConSelected={onCreateConSelected}
+                    onNewChat={onNewChat}
                   />
-                </div>
-              )}
-              {activeMenu === "history" && (
-                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
-                  <History onSessionClicked={handleSessionClicked} />
-                </div>
-              )}
-              {activeMenu === "favourite" && (
-                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
-                  <Favourites
-                    onFavoriteSelected={(question, connection, query) => {
-                      setQuestionToAsk({ text: question, connection, query });
-                      setTimeout(() => setActiveMenu("home"), 0);
-                    }}
-                  />
-                </div>
-              )}
-              {activeMenu === "settings" && <Settings />}
-              {activeMenu === "help" && (
-                <div className="p-0 overflow-y-auto flex-1 custom-scrollbar">
-                 <HelpPage
-                  onCreateConSelected={onCreateConSelected}
-                  onNewChat={onNewChat}
-                />
-                </div>
-              )}
-            </div>
-          </main>
-        </div>
-      ) : (
-        <LoginSignup onLoginSuccess={onLoginSuccess} />
-      )}
+                  </div>
+                )}
+              </div>
+            </main>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="unauthenticated"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="w-full min-h-screen"
+          >
+            <LoginSignup onLoginSuccess={onLoginSuccess} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -70,7 +70,7 @@ interface ConnectionFormProps {
   token: string; // Token from sessionStorage (JWT for user or admin)
   onSuccess?: () => void; // Optional callback after successful submission
   editConnectionId?: number | null; // If set, form is in edit mode
-  initialData?: Partial<FormData> | null; // Pre-populated data for editing
+  initialData?: (Partial<FormData> & { originalPassword?: string }) | null; // Pre-populated data for editing
 }
 
 const databaseOptions: DatabaseOption[] = [
@@ -193,6 +193,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 }) => {
   const { theme } = useTheme();
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const [originalPassword, setOriginalPassword] = useState<string>("");
   const [formData, setFormData] = useState<FormData>({
     connectionName: "",
     description: "",
@@ -230,10 +231,10 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       port &&
       database &&
       username &&
-      password &&
+      (editConnectionId ? true : password) &&
       !Object.values(errors).some((error) => error),
     );
-  }, [formData, errors]);
+  }, [formData, errors, editConnectionId]);
 
   useEffect(() => {
     setIsTestButtonEnabled(isFormValid);
@@ -269,6 +270,9 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   useEffect(() => {
     if (initialData) {
       setFormData((prev) => ({ ...prev, ...initialData }));
+      if (initialData.originalPassword) {
+        setOriginalPassword(initialData.originalPassword);
+      }
       // In edit mode, allow submit without re-testing
       setIsTestSuccessful(true);
       setIsMetadataExtracted(true);
@@ -455,10 +459,18 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
     setIsMetadataExtracted(false);
 
     try {
+      const isPasswordEdited = editConnectionId ? (formData.password !== "") : true;
+      const isEncrypted = !isPasswordEdited;
+      const payloadPassword = isPasswordEdited ? formData.password : originalPassword;
+
       // Using reExtractMetadata which maps to /meta_data
-      const response = await connectionService.reExtractMetadata({
-        ...formData,
-      } as any);
+      const response = await connectionService.reExtractMetadata(
+        {
+          ...formData,
+          password: payloadPassword,
+        } as any,
+        isEncrypted
+      );
       
       toast.success("Metadata extracted successfully.", { theme: mode });
       setIsMetadataExtracted(true);
@@ -483,6 +495,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       selectedDB: formData.selectedDB, // Retain selected DB
       isPublic: false,
     });
+    setOriginalPassword("");
     setErrors({});
     setIsTestButtonEnabled(false);
     setIsExtractMetadataButtonEnabled(false);

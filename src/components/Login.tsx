@@ -48,11 +48,6 @@ const Login: React.FC<LoginProps> = ({
       setLoading(true);
       
       const response = await authService.login(username, password);
-      if (response.isAdmin) {
-        toast.success("Admin login successful!", { theme: mode });
-      } else {
-        toast.success("Login successful!", { theme: mode });
-      }
       onLoginSuccess(response.token, response.isAdmin);
     } catch (error) {
       if (axios.isAxiosError(error)) {

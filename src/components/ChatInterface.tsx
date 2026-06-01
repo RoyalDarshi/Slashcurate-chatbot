@@ -436,22 +436,26 @@ const ChatInterface = memo(
             const connectionObj = connections.find(
               (c) => c.connectionName === connection,
             );
+            const connectionPayload = connectionObj ? {
+              ...connectionObj,
+              password: connectionObj.password || "",
+            } : undefined;
             const payload = query
               ? {
                   question,
                   sql_query: query,
-                  connection: connectionObj,
+                  connection: connectionPayload,
                   sessionId: currentSessionId,
                 }
               : {
                   question,
-                  connection: connectionObj,
+                  connection: connectionPayload,
                   sessionId: currentSessionId,
                 };
 
             const response = await chatService.askChatbot(payload, controller);
             setActiveRequestController(null);
-            const responseData = response.data;
+            const responseData = response;
 
             let finalContent = "";
             let finalStatus: Message["status"] = "normal";
@@ -687,7 +691,7 @@ const ChatInterface = memo(
           e.stopPropagation();
           try {
             const response = await connectionService.downloadDataAtlas(connection);
-            const pdfBlob = new Blob([response.data], {
+            const pdfBlob = new Blob([response], {
               type: "application/pdf",
             });
             const url = window.URL.createObjectURL(pdfBlob);
@@ -877,10 +881,16 @@ const ChatInterface = memo(
 
           const originalBotMessageId = botMessage.id;
           
+          const connectionPayload = {
+            ...connectionObj,
+            password: connectionObj.password || "",
+          };
+
           const payload = {
             question: userMessage.content,
             con_id: connectionObj.id,
-            session_id: sessionId,
+            sessionId: sessionId,
+            connection: connectionPayload,
           };
 
           try {
@@ -902,9 +912,9 @@ const ChatInterface = memo(
 
             const response = await chatService.askChatbot(payload, controller);
             setActiveRequestController(null);
-            const botResponseContent = JSON.stringify(response.data, null, 2);
+            const botResponseContent = JSON.stringify(response, null, 2);
 
-            const limitedResponseData = limitDataForBackend(response.data);
+            const limitedResponseData = limitDataForBackend(response);
             await chatService.updateMessage(originalBotMessageId, { token, content: JSON.stringify(limitedResponseData, null, 2), timestamp: new Date().toISOString(), status: "normal" });
             dispatchMessages({
               type: "UPDATE_MESSAGE",
@@ -957,10 +967,16 @@ const ChatInterface = memo(
         );
         if (!connectionObj) return;
 
+        const connectionPayload = {
+          ...connectionObj,
+          password: connectionObj.password || "",
+        };
+
         const payload = {
           question: content,
           con_id: connectionObj.id,
-          session_id: sessionId,
+          sessionId: sessionId,
+          connection: connectionPayload,
         };
 
         let botMessageToUpdateId: string | null = null;
@@ -1015,7 +1031,7 @@ const ChatInterface = memo(
           setActiveRequestController(controller);
           const response = await chatService.askChatbot(payload, controller);
           setActiveRequestController(null);
-          const botResponseContent = JSON.stringify(response.data, null, 2);
+          const botResponseContent = JSON.stringify(response, null, 2);
 
           await chatService.updateMessage(botMessageToUpdateId, { token, content: botResponseContent, timestamp: new Date().toISOString(), status: "normal" });
           dispatchMessages({

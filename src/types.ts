@@ -19,6 +19,15 @@ export interface Connection {
   value: string;
   isAdmin: boolean;
   uid?: string;
+  password?: string;
+  hostname?: string;
+  port?: string | number;
+  database?: string;
+  username?: string;
+  selectedDB?: string;
+  commandTimeout?: string;
+  maxTransportObjects?: string;
+  isPublic?: boolean;
 }
 
 export interface DatabaseTable {

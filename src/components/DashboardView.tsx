@@ -16,6 +16,11 @@ import {
   TrendingUp as TrendingUpIcon,
   Activity,
   RefreshCw,
+  FileWarning,
+  MessageSquareWarning,
+  Clock,
+  Target,
+  MoreHorizontal,
 } from "lucide-react";
 import KPICard from "./KPICard";
 import {
@@ -24,6 +29,7 @@ import {
   BsHandThumbsUp,
   BsHandThumbsUpFill,
 } from "react-icons/bs";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { useTheme } from "../ThemeContext";
 import { chatService } from "../services/chatService";
@@ -580,20 +586,25 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                           title={isLiked ? "Remove Like" : "Like Response"}
                           position="bottom"
                         >
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                             onClick={handleLike}
                             disabled={isSubmitting}
-                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-400"
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isLiked ? "bg-emerald-500/10" : "hover:bg-black/5 dark:hover:bg-white/5"
+                            } text-slate-400`}
                           >
                             {isLiked ? (
                               <BsHandThumbsUpFill
                                 size={15}
                                 style={{ color: theme.colors.success }}
+                                className="drop-shadow-sm"
                               />
                             ) : (
                               <BsHandThumbsUp size={15} />
                             )}
-                          </button>
+                          </motion.button>
                         </CustomTooltip>
 
                         <div className="relative" ref={dislikeRef}>
@@ -603,97 +614,111 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             }
                             position="bottom"
                           >
-                            <button
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
                               onClick={handleDislike}
                               disabled={isSubmitting}
-                              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-slate-400"
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                isDisliked ? "bg-red-500/10" : "hover:bg-black/5 dark:hover:bg-white/5"
+                              } text-slate-400`}
                             >
                               {isDisliked ? (
                                 <BsHandThumbsDownFill
                                   size={15}
                                   style={{ color: theme.colors.error }}
+                                  className="drop-shadow-sm"
                                 />
                               ) : (
                                 <BsHandThumbsDown size={15} />
                               )}
-                            </button>
+                            </motion.button>
                           </CustomTooltip>
 
-                          {showDislikeOptions && (
-                            <div
-                              className="absolute top-full right-0 mt-1 rounded-xl border z-50 min-w-[180px] overflow-hidden py-1 shadow-lg animate-fade-up"
-                              style={{
-                                background: theme.colors.surface,
-                                borderColor: theme.colors.border,
-                              }}
-                            >
-                              {showCustomInput ? (
-                                <div className="p-2.5 flex flex-col gap-2">
-                                  <textarea
-                                    value={customReason}
-                                    onChange={(e) =>
-                                      setCustomReason(e.target.value)
-                                    }
-                                    placeholder="Enter structural error description..."
-                                    rows={2}
-                                    className="w-full p-2 rounded-lg border text-xs focus:outline-none resize-none font-semibold"
-                                    style={{
-                                      background: theme.colors.background,
-                                      color: theme.colors.text,
-                                      borderColor: theme.colors.border,
-                                    }}
-                                  />
-                                  <div className="flex justify-end gap-1.5 text-[10px] font-semibold uppercase tracking-wider">
-                                    <button
-                                      onClick={() => {
-                                        setShowCustomInput(false);
-                                        setCustomReason("");
-                                      }}
-                                      style={{
-                                        color: theme.colors.textSecondary,
-                                      }}
-                                    >
-                                      Cancel
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        if (customReason.trim()) {
-                                          handleDislikeOption(customReason);
-                                          setCustomReason("");
-                                        }
-                                      }}
-                                      className="px-2 py-0.5 rounded text-white bg-indigo-600"
-                                    >
-                                      Submit
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  {[
-                                    "Incorrect data layout",
-                                    "Execution threshold delay",
-                                    "Irrelevant response frame",
-                                    "Confusing answer grid",
-                                    "Other Deviation",
-                                  ].map((reason) => (
-                                    <button
-                                      key={reason}
-                                      onClick={() =>
-                                        reason === "Other"
-                                          ? setShowCustomInput(true)
-                                          : handleDislikeOption(reason)
+                          <AnimatePresence>
+                            {showDislikeOptions && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute top-full right-0 mt-2 rounded-xl border z-50 min-w-[200px] overflow-hidden py-1.5 shadow-xl backdrop-blur-xl"
+                                style={{
+                                  background: theme.mode === 'light' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(30, 41, 59, 0.85)',
+                                  borderColor: theme.mode === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+                                }}
+                              >
+                                {showCustomInput ? (
+                                  <div className="p-3 flex flex-col gap-2.5">
+                                    <textarea
+                                      value={customReason}
+                                      onChange={(e) =>
+                                        setCustomReason(e.target.value)
                                       }
-                                      className="w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                                      style={{ color: theme.colors.text }}
-                                    >
-                                      {reason}
-                                    </button>
-                                  ))}
-                                </>
-                              )}
-                            </div>
-                          )}
+                                      placeholder="What went wrong?"
+                                      rows={2}
+                                      className="w-full p-2.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-none font-medium transition-all"
+                                      style={{
+                                        background: theme.colors.background,
+                                        color: theme.colors.text,
+                                        borderColor: theme.colors.border,
+                                      }}
+                                      autoFocus
+                                    />
+                                    <div className="flex justify-end gap-2 text-[10px] font-bold uppercase tracking-wider">
+                                      <button
+                                        onClick={() => {
+                                          setShowCustomInput(false);
+                                          setCustomReason("");
+                                        }}
+                                        className="hover:opacity-70 transition-opacity"
+                                        style={{
+                                          color: theme.colors.textSecondary,
+                                        }}
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (customReason.trim()) {
+                                            handleDislikeOption(customReason);
+                                            setCustomReason("");
+                                          }
+                                        }}
+                                        className="px-2.5 py-1 rounded text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
+                                      >
+                                        Submit
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-0.5 px-1.5">
+                                    {[
+                                      { id: "Inaccurate data", icon: <FileWarning size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      { id: "Confusing or unclear", icon: <MessageSquareWarning size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      { id: "Too slow", icon: <Clock size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      { id: "Irrelevant response", icon: <Target size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      { id: "Other", icon: <MoreHorizontal size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                    ].map(({ id, icon }) => (
+                                      <button
+                                        key={id}
+                                        onClick={() =>
+                                          id === "Other"
+                                            ? setShowCustomInput(true)
+                                            : handleDislikeOption(id)
+                                        }
+                                        className="group flex items-center gap-2.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:bg-black/5 dark:hover:bg-white/10"
+                                        style={{ color: theme.colors.text }}
+                                      >
+                                        {icon}
+                                        <span>{id}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
 
                         <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-1" />

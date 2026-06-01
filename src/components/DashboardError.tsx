@@ -7,6 +7,11 @@ import {
   AlertCircle,
   RefreshCw,
   Sparkles,
+  FileWarning,
+  MessageSquareWarning,
+  Clock,
+  Target,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   BsHandThumbsUp,
@@ -288,61 +293,70 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                         >
                           Modify
                         </button>
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           onClick={handleLike}
-                          className="p-1.5 rounded-md text-slate-400 hover:text-emerald-500 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isLiked ? "bg-emerald-500/10 text-emerald-500" : "text-slate-400 hover:text-emerald-500 hover:bg-black/5 dark:hover:bg-white/5"
+                          }`}
                         >
                           {isLiked ? (
-                            <BsHandThumbsUpFill size={15} style={{ color: theme.colors.success }} />
+                            <BsHandThumbsUpFill size={15} style={{ color: theme.colors.success }} className="drop-shadow-sm" />
                           ) : (
                             <BsHandThumbsUp size={15} />
                           )}
-                        </button>
+                        </motion.button>
                         <div className="relative" ref={dislikeRef}>
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                             onClick={handleDislike}
-                            className="p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isDisliked ? "bg-red-500/10 text-red-500" : "text-slate-400 hover:text-red-500 hover:bg-black/5 dark:hover:bg-white/5"
+                            }`}
                           >
                             {isDisliked ? (
-                              <BsHandThumbsDownFill size={15} style={{ color: theme.colors.error }} />
+                              <BsHandThumbsDownFill size={15} style={{ color: theme.colors.error }} className="drop-shadow-sm" />
                             ) : (
                               <BsHandThumbsDown size={15} />
                             )}
-                          </button>
+                          </motion.button>
                           <AnimatePresence>
                             {showDislikeOptions && (
                               <motion.div
-                                initial={{ opacity: 0, y: 5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 5 }}
-                                className="absolute top-full right-0 mt-1 rounded-xl border z-50 min-w-[180px] overflow-hidden py-1 shadow-md"
+                                initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute top-full right-0 mt-2 rounded-xl border z-50 min-w-[200px] overflow-hidden py-1.5 shadow-xl backdrop-blur-xl"
                                 style={{
-                                  background: theme.colors.surface,
-                                  borderColor: theme.colors.border,
+                                  background: theme.mode === 'light' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(30, 41, 59, 0.85)',
+                                  borderColor: theme.mode === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
                                 }}
                               >
                                 {showCustomInput ? (
-                                  <div className="p-2.5 flex flex-col gap-2">
+                                  <div className="p-3 flex flex-col gap-2.5">
                                     <textarea
                                       value={customReason}
                                       onChange={(e) => setCustomReason(e.target.value)}
                                       placeholder="Reason description..."
                                       rows={2}
                                       autoFocus
-                                      className="w-full text-xs p-2 rounded-lg border focus:outline-none resize-none font-medium"
+                                      className="w-full p-2.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-none font-medium transition-all"
                                       style={{
                                         color: theme.colors.text,
                                         background: theme.colors.background,
                                         borderColor: theme.colors.border,
                                       }}
                                     />
-                                    <div className="flex justify-end gap-2 text-[10px] font-semibold uppercase tracking-wider">
+                                    <div className="flex justify-end gap-2 text-[10px] font-bold uppercase tracking-wider">
                                       <button
                                         onClick={() => {
                                           setShowCustomInput(false);
                                           setCustomReason("");
                                         }}
-                                        className="hover:opacity-80 transition-opacity"
+                                        className="hover:opacity-70 transition-opacity"
                                         style={{ color: theme.colors.textSecondary }}
                                       >
                                         Cancel
@@ -354,31 +368,36 @@ const DashboardError: React.FC<DashboardErrorProps> = ({
                                             setCustomReason("");
                                           }
                                         }}
-                                        className="px-2 py-1 rounded text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                                        className="px-2.5 py-1 rounded text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
                                       >
                                         Submit
                                       </button>
                                     </div>
                                   </div>
                                 ) : (
-                                  [
-                                    "Incorrect data",
-                                    "Takes too long",
-                                    "Irrelevant response",
-                                    "Confusing answer",
-                                    "Other",
-                                  ].map((reason) => (
-                                    <button
-                                      key={reason}
-                                      onClick={() =>
-                                        reason === "Other" ? setShowCustomInput(true) : handleDislikeOption(reason)
-                                      }
-                                      className="w-full text-left px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                                      style={{ color: theme.colors.text }}
-                                    >
-                                      {reason}
-                                    </button>
-                                  ))
+                                  <div className="flex flex-col gap-0.5 px-1.5">
+                                    {[
+                                      { id: "Inaccurate data", icon: <FileWarning size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      { id: "Confusing or unclear", icon: <MessageSquareWarning size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      { id: "Too slow", icon: <Clock size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      { id: "Irrelevant response", icon: <Target size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      { id: "Other", icon: <MoreHorizontal size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                    ].map(({ id, icon }) => (
+                                      <button
+                                        key={id}
+                                        onClick={() =>
+                                          id === "Other"
+                                            ? setShowCustomInput(true)
+                                            : handleDislikeOption(id)
+                                        }
+                                        className="group flex items-center gap-2.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:bg-black/5 dark:hover:bg-white/10"
+                                        style={{ color: theme.colors.text }}
+                                      >
+                                        {icon}
+                                        <span>{id}</span>
+                                      </button>
+                                    ))}
+                                  </div>
                                 )}
                               </motion.div>
                             )}
