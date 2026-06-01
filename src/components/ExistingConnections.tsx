@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Trash2, Edit2, X } from "react-feather";
-import { ClipboardList,Activity, Database, Server, Globe, User, Clock, Layers,AlertTriangle } from "lucide-react";
+import { ClipboardList, Activity, Database, Server, Globe, User, Clock, Layers, AlertTriangle, LayoutGrid, List } from "lucide-react";
 import { useTheme } from "../ThemeContext";
 import CustomTooltip from "./CustomTooltip";
 import { connectionService } from "../services/connectionService";
@@ -10,6 +10,7 @@ import { handleApiError } from "../utils/errorHandler";
 import Loader from "./Loader";
 import ConnectionForm from "./ConnectionForm";
 import { authService } from "../services/authService";
+import SkeletonLoader from "./SkeletonLoader";
 
 interface Connection {
   id: number;
@@ -95,6 +96,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
   const token = authService.getToken(isAdmin);
+  const [viewFormat, setViewFormat] = useState<"tile" | "table">("tile");
 
   // State for deletion confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -289,10 +291,201 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
               }}
               disabled={loading}
             >
-              {loading ? "Deleting..." : "Delete"}
+              Confirm
             </button>
           </div>
         </div>
+      </div>
+    );
+  };
+
+  const renderSkeletonGrid = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map((val) => (
+          <div 
+            key={val}
+            className="p-5 rounded-2xl border flex flex-col justify-between h-[230px]"
+            style={{ 
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border
+            }}
+          >
+            <div>
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <SkeletonLoader variant="circular" width={40} height={40} />
+                  <div className="space-y-2 animate-pulse" style={{ minWidth: '150px' }}>
+                    <SkeletonLoader variant="text" width="80%" height="1rem" />
+                    <SkeletonLoader variant="text" width="50%" height="0.75rem" />
+                  </div>
+                </div>
+                <SkeletonLoader variant="rectangular" width={60} height={20} className="rounded-full" />
+              </div>
+              <div className="space-y-2 mb-4 animate-pulse">
+                <SkeletonLoader variant="text" width="95%" height="0.75rem" />
+                <SkeletonLoader variant="text" width="80%" height="0.75rem" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t pt-4" style={{ borderColor: theme.colors.border }}>
+              <div className="flex gap-2">
+                <SkeletonLoader variant="rectangular" width={55} height={18} className="rounded-md" />
+                <SkeletonLoader variant="rectangular" width={55} height={18} className="rounded-md" />
+              </div>
+              <div className="flex gap-2">
+                <SkeletonLoader variant="circular" width={28} height={28} />
+                <SkeletonLoader variant="circular" width={28} height={28} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderTableFormat = () => {
+    return (
+      <div 
+        className="overflow-x-auto rounded-2xl border shadow-xs"
+        style={{ 
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border 
+        }}
+      >
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr 
+              className="border-b text-xs font-bold uppercase tracking-wider"
+              style={{ 
+                borderColor: theme.colors.border,
+                color: theme.colors.textSecondary,
+                backgroundColor: `${theme.colors.text}02`
+              }}
+            >
+              <th className="px-6 py-4">Database</th>
+              <th className="px-6 py-4">Host / Database</th>
+              <th className="px-6 py-4">Username</th>
+              <th className="px-6 py-4">Access Type</th>
+              <th className="px-6 py-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y text-sm" style={{ divideColor: theme.colors.border }}>
+            {connections.map((connection) => {
+              const engine = getEngineDetails(connection.selectedDB);
+              return (
+                <tr 
+                  key={connection.id}
+                  className="transition-colors duration-150 hover:bg-black/[0.01] dark:hover:bg-white/[0.01]"
+                  style={{ color: theme.colors.text }}
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="h-9 w-9 rounded-xl flex items-center justify-center border"
+                        style={{ 
+                          backgroundColor: engine.bgColor, 
+                          borderColor: `${theme.colors.text}08` 
+                        }}
+                      >
+                        <Database size={18} style={{ color: engine.color }} />
+                      </div>
+                      <div>
+                        <div className="font-bold tracking-tight">{connection.connectionName}</div>
+                        <div className="text-[10px] uppercase font-bold opacity-60 tracking-wider" style={{ color: engine.color }}>
+                          {connection.selectedDB}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="font-mono text-xs opacity-85">{connection.hostname}:{connection.port}</div>
+                    <div className="text-xs font-semibold mt-0.5" style={{ color: theme.colors.textSecondary }}>
+                      DB: {connection.database}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 font-mono text-xs opacity-75">
+                    {connection.username}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {connection.isAdmin && (
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1 text-blue-500 border border-blue-500/20"
+                          style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)' }}
+                        >
+                          <Server size={8} />
+                          System
+                        </span>
+                      )}
+                      {connection.isPublic ? (
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1 text-emerald-500 border border-emerald-500/20"
+                          style={{ backgroundColor: 'rgba(16, 185, 129, 0.08)' }}
+                        >
+                          <Globe size={8} />
+                          Public
+                        </span>
+                      ) : (
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1 text-orange-500 border border-orange-500/20"
+                          style={{ backgroundColor: 'rgba(249, 115, 22, 0.08)' }}
+                        >
+                          <User size={8} />
+                          Private
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <CustomTooltip title={connection.isAdmin ? "Cannot re-extract metadata for default connections" : "Re-extract Metadata"} position="top">
+                        <button
+                          onClick={() => handleReExtractMetadata(connection)}
+                          disabled={connection.isAdmin}
+                          className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                          style={{ color: connection.isAdmin ? theme.colors.disabledText : '#10B981' }}
+                          onMouseOver={(e) => !connection.isAdmin && (e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.08)')}
+                          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <ClipboardList size={16} />
+                        </button>
+                      </CustomTooltip>
+                      
+                      {(!connection.uid || connection.uid === localStorage.getItem("uid")) && !connection.isAdmin && (
+                        <CustomTooltip title="Edit Connection" position="top">
+                          <button
+                            onClick={() => setEditConnection(connection)}
+                            className="p-1.5 rounded-lg transition-colors"
+                            style={{ color: theme.colors.accent }}
+                            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = `${theme.colors.accent}12`)}
+                            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                        </CustomTooltip>
+                      )}
+                      
+                      {(!connection.uid || connection.uid === localStorage.getItem("uid")) && (
+                        <CustomTooltip title={connection.isAdmin ? "Cannot delete default connections" : "Delete Connection"} position="top">
+                          <button
+                            onClick={() => confirmDeleteConnection(connection)}
+                            disabled={connection.isAdmin}
+                            className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                            style={{ color: connection.isAdmin ? theme.colors.disabledText : theme.colors.error }}
+                            onMouseOver={(e) => !connection.isAdmin && (e.currentTarget.style.backgroundColor = `${theme.colors.error}10`)}
+                            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </CustomTooltip>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     );
   };
@@ -319,23 +512,57 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
           Connections
         </h2>
         
-        {/* Render Add Connection button only if we have connections (empty state handles its own) */}
-        {connections.length > 0 && (
-          <button
-            onClick={() => setIsCreatingConnection(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-xs"
-            style={{ backgroundColor: theme.colors.accent }}
-            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accentHover)}
-            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accent)}
-          >
-            <Database size={16} />
-            Add Connection
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {(connections.length > 0 || (loading && loadingText === "Loading connections, please wait...")) && (
+            <div className="flex items-center bg-black/5 dark:bg-white/5 p-1 rounded-xl gap-1 border" style={{ borderColor: theme.colors.border }}>
+              <button
+                onClick={() => setViewFormat("tile")}
+                className="p-1.5 rounded-lg transition-all duration-200"
+                style={{
+                  backgroundColor: viewFormat === "tile" ? theme.colors.surface : "transparent",
+                  color: viewFormat === "tile" ? theme.colors.accent : theme.colors.textSecondary,
+                  boxShadow: viewFormat === "tile" ? theme.shadow.sm : "none",
+                }}
+                title="Tile Format"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewFormat("table")}
+                className="p-1.5 rounded-lg transition-all duration-200"
+                style={{
+                  backgroundColor: viewFormat === "table" ? theme.colors.surface : "transparent",
+                  color: viewFormat === "table" ? theme.colors.accent : theme.colors.textSecondary,
+                  boxShadow: viewFormat === "table" ? theme.shadow.sm : "none",
+                }}
+                title="Table Format"
+              >
+                <List size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Render Add Connection button only if we have connections or list is loading */}
+          {(connections.length > 0 || (loading && loadingText === "Loading connections, please wait...")) && (
+            <button
+              onClick={() => setIsCreatingConnection(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-xs animate-fade-in"
+              style={{ backgroundColor: theme.colors.accent }}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accentHover)}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = theme.colors.accent)}
+            >
+              <Database size={16} />
+              Add Connection
+            </button>
+          )}
+        </div>
       </div>
 
-      {connections.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {loading && loadingText === "Loading connections, please wait..." ? (
+        renderSkeletonGrid()
+      ) : connections.length > 0 ? (
+        viewFormat === "tile" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
           {connections.map((connection) => {
             const engine = getEngineDetails(connection.selectedDB);
             
@@ -507,7 +734,12 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
               </div>
             );
           })}
-        </div>
+          </div>
+        ) : (
+          <div className="animate-fade-in">
+            {renderTableFormat()}
+          </div>
+        )
       ) : (
         <div
           className="max-w-md mx-auto p-8 rounded-3xl border shadow-sm text-center flex flex-col items-center"
@@ -629,7 +861,7 @@ const ExistingConnections: React.FC<ExistingConnectionsProps> = ({
           </div>
         </div>
       )}
-      {loading && <Loader text={loadingText} />}
+      {loading && loadingText !== "Loading connections, please wait..." && <Loader text={loadingText} />}
     </div>
   );
 };
