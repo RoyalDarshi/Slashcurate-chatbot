@@ -483,7 +483,7 @@ const chooseGroupField = (
 
   const candidates = fields.filter((field) => {
     if (field.isIdentifier || field.kind === "numeric") return false;
-    return field.uniqueCount > 1;
+    return field.uniqueCount > 1 || (rows.length === 1 && field.uniqueCount === 1);
   });
 
   const scored = candidates
