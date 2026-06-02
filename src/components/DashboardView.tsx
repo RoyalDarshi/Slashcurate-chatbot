@@ -25,6 +25,14 @@ import {
   MoreHorizontal,
   Copy,
   Check,
+  BarChart3,
+  LineChart,
+  PieChart,
+  AreaChart,
+  ScatterChart,
+  Radar,
+  Filter,
+  LayoutGrid,
 } from "lucide-react";
 import KPICard from "./KPICard";
 import {
@@ -86,6 +94,51 @@ interface DashboardViewProps {
     dislike_reason: string | null,
   ) => void;
 }
+
+const getChartIcon = (type: SmartChartType, size = 14) => {
+  switch (type) {
+    case "line":
+      return <LineChart size={size} />;
+    case "pie":
+      return <PieChart size={size} />;
+    case "area":
+      return <AreaChart size={size} />;
+    case "scatter":
+      return <ScatterChart size={size} />;
+    case "radar":
+      return <Radar size={size} />;
+    case "funnel":
+      return <Filter size={size} />;
+    case "treemap":
+      return <LayoutGrid size={size} />;
+    case "bar":
+    default:
+      return <BarChart3 size={size} />;
+  }
+};
+
+const getChartLabel = (type: SmartChartType): string => {
+  switch (type) {
+    case "bar":
+      return "Bar";
+    case "line":
+      return "Line";
+    case "pie":
+      return "Pie";
+    case "area":
+      return "Area";
+    case "scatter":
+      return "Scatter";
+    case "radar":
+      return "Radar";
+    case "funnel":
+      return "Funnel";
+    case "treemap":
+      return "Treemap";
+    default:
+      return type;
+  }
+};
 
 const VIEW_TYPES = ["table", "query"] as const;
 
@@ -153,6 +206,18 @@ const DashboardView = forwardRef(
           );
         }),
       );
+    }, [dashboardItem]);
+
+    const { autoChartType, recommendedChartTypes } = useMemo(() => {
+      const chartData = dashboardItem?.mainViewData?.chartData;
+      if (!chartData || chartData.length === 0) {
+        return { autoChartType: "bar" as SmartChartType, recommendedChartTypes: ["bar" as SmartChartType] };
+      }
+      const config = getSmartChartConfig(chartData);
+      return {
+        autoChartType: config.autoChartType,
+        recommendedChartTypes: config.recommendedChartTypes || [config.autoChartType],
+      };
     }, [dashboardItem]);
 
     const getValidValueKeys = (data: any[]): string[] => {
@@ -865,31 +930,78 @@ const DashboardView = forwardRef(
                     style={{ borderColor: "transparent" }}
                   >
                     {dashboardItem.mainViewData.chartData?.length > 0 && (
-                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-start">
-                        <div className="flex items-center flex-shrink-0">
-                          <select
-                            id="graph-type-select"
-                            value={graphType}
-                            onChange={(e) =>
-                              setGraphType(e.target.value as SmartChartType)
-                            }
-                            className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
-                            style={{
-                              backgroundColor: theme.colors.surface,
-                              color: theme.colors.text,
-                              borderColor: theme.colors.border,
-                            }}
-                          >
-                            <option value="bar">Bar</option>
-                            <option value="line">Line</option>
-                            <option value="area">Area</option>
-                            <option value="pie">Pie</option>
-                            <option value="scatter">Scatter</option>
-                            <option value="radar">Radar</option>
-                            <option value="funnel">Funnel</option>
-                            <option value="treemap">Treemap</option>
-                          </select>
-                        </div>
+                      <div className="flex flex-col gap-2.5 py-0.5 w-full flex-shrink-0">
+                        {recommendedChartTypes.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap animate-fade-in">
+                            <span 
+                              className="text-[10px] font-bold uppercase tracking-wider opacity-60 mr-1"
+                              style={{ color: theme.colors.textSecondary }}
+                            >
+                              Views:
+                            </span>
+                            <div
+                              className="flex p-0.5 rounded-xl border items-center gap-0.5"
+                              style={{
+                                backgroundColor:
+                                  theme.mode === "light"
+                                    ? "rgba(15, 23, 42, 0.03)"
+                                    : "rgba(255, 255, 255, 0.03)",
+                                borderColor: theme.colors.border,
+                              }}
+                            >
+                              {recommendedChartTypes.map((type) => {
+                                const isSelected = graphType === type;
+                                const isBest = type === autoChartType;
+                                return (
+                                  <button
+                                    key={type}
+                                    onClick={() => {
+                                      setGraphType(type);
+                                      const newConfig = getSmartChartConfig(dashboardItem.mainViewData.chartData, { chartType: type });
+                                      setGroupBy(newConfig.groupBy);
+                                      setValueKey(newConfig.valueKey);
+                                      setAggregate(newConfig.aggregation);
+                                      setIsVertical(newConfig.orientation === "vertical");
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                                    style={{
+                                      backgroundColor: isSelected
+                                        ? theme.colors.surface
+                                        : "transparent",
+                                      color: isSelected
+                                        ? theme.colors.accent
+                                        : theme.colors.textSecondary,
+                                      boxShadow:
+                                        isSelected && theme.mode === "light"
+                                          ? "0 2px 5px rgba(0,0,0,0.05)"
+                                          : "none",
+                                    }}
+                                  >
+                                    {getChartIcon(type, 13)}
+                                    <span>{getChartLabel(type)}</span>
+                                    {isBest && (
+                                      <span
+                                        className="text-[8px] px-1 py-0.5 rounded-md font-bold uppercase tracking-wider ml-0.5"
+                                        style={{
+                                          backgroundColor: isSelected
+                                            ? `${theme.colors.accent}15`
+                                            : `${theme.colors.textSecondary}15`,
+                                          color: isSelected
+                                            ? theme.colors.accent
+                                            : theme.colors.textSecondary,
+                                        }}
+                                      >
+                                        Best Fit
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-start">
 
                         {["bar", "line", "area"].includes(graphType) && (
                           <div className="flex items-center flex-shrink-0">
@@ -1078,7 +1190,8 @@ const DashboardView = forwardRef(
                           </>
                         )}
                       </div>
-                    )}
+                    </div>
+                  )}
                   </div>
                   <div className="flex-1 min-h-0 w-full overflow-visible flex flex-col items-stretch justify-end">
                     <DynamicGraph

@@ -147,6 +147,7 @@ export interface SmartChartConfig {
   };
   insights: SmartInsight[];
   emptyState: SmartEmptyState;
+  recommendedChartTypes: SmartChartType[];
 }
 
 type AggregateCell = {
@@ -473,9 +474,35 @@ const chooseGroupField = (
   rows: Record<string, unknown>[],
   fields: SmartFieldAnalysis[],
   override?: string | null,
+  chartType?: SmartChartType | null,
 ): SmartFieldAnalysis | null => {
   const overrideField = getField(fields, override);
   if (overrideField && !overrideField.isIdentifier) return overrideField;
+
+  if (chartType && ["line", "area"].includes(chartType)) {
+    const temporal = fields.find((field) => field.kind === "temporal");
+    if (temporal) return temporal;
+  }
+
+  if (chartType && ["pie", "funnel"].includes(chartType)) {
+    const categorical = fields
+      .filter((f) => f.kind === "categorical" && f.uniqueCount > 1 && f.uniqueCount <= 10)
+      .sort((a, b) => a.uniqueCount - b.uniqueCount)[0];
+    if (categorical) return categorical;
+  }
+
+  if (chartType && ["bar", "line", "area"].includes(chartType)) {
+    const categoricals = fields.filter(
+      (f) => ["categorical", "boolean"].includes(f.kind) && !f.isIdentifier
+    );
+    if (categoricals.length >= 2) {
+      const lowCard = categoricals.find((f) => f.uniqueCount >= 2 && f.uniqueCount <= 8);
+      const highCard = categoricals.find((f) => f.uniqueCount > 8 && f.uniqueCount <= 40);
+      if (lowCard && highCard) {
+        return highCard;
+      }
+    }
+  }
 
   const temporal = fields.find((field) => field.kind === "temporal");
   const numericFieldExists = fields.some((field) => field.kind === "numeric");
@@ -514,9 +541,17 @@ const chooseValueField = (
   fields: SmartFieldAnalysis[],
   groupField: SmartFieldAnalysis | null,
   override?: string | null,
+  chartType?: SmartChartType | null,
 ): SmartFieldAnalysis | null => {
   const overrideField = getField(fields, override);
   if (overrideField?.kind === "numeric") return overrideField;
+
+  if (chartType === "scatter") {
+    const numericFields = fields.filter(
+      (f) => f.kind === "numeric" && !f.isIdentifier && f.key !== groupField?.key
+    );
+    if (numericFields.length > 0) return numericFields[0];
+  }
 
   const candidates = fields.filter((field) => {
     if (field.key === groupField?.key) return false;
@@ -610,6 +645,81 @@ const detectAutoChartType = (
   }
 
   return numericFields.length >= 2 ? "scatter" : "bar";
+};
+
+const getRecommendedChartTypes = (
+  rows: Record<string, unknown>[],
+  fields: SmartFieldAnalysis[],
+  groupField: SmartFieldAnalysis | null,
+  valueField: SmartFieldAnalysis | null,
+  autoChartType: SmartChartType,
+): SmartChartType[] => {
+  if (rows.length === 0) return ["bar"];
+
+  const numericFields = fields.filter(
+    (field) => field.kind === "numeric" && !field.isIdentifier,
+  );
+  const timeField = fields.find((field) => field.kind === "temporal");
+  const stageField = fields.find(
+    (field) =>
+      ["categorical", "boolean"].includes(field.kind) &&
+      STAGE_FIELD_PATTERN.test(field.key),
+  );
+
+  const recommendations = new Set<SmartChartType>();
+  // Auto-detected chart type is always the first recommendation
+  recommendations.add(autoChartType);
+
+  // Bar is always a solid choice if we have group and value fields, or any numeric fields
+  if ((groupField && valueField) || numericFields.length > 0) {
+    recommendations.add("bar");
+  }
+
+  // Line and Area charts are great for temporal data
+  if ((timeField || (groupField && groupField.kind === "temporal")) && numericFields.length > 0) {
+    recommendations.add("line");
+    recommendations.add("area");
+  }
+
+  // Pie chart is recommended if it's categorical with small unique count and positive values
+  if (groupField && valueField && groupField.kind !== "temporal") {
+    const positiveValues = rows
+      .map((row) => toFiniteNumber(row[valueField.key]))
+      .filter((value): value is number => value !== null);
+    const canShowPie =
+      groupField.uniqueCount > 1 &&
+      groupField.uniqueCount <= 10 &&
+      positiveValues.every((value) => value >= 0);
+    if (canShowPie) {
+      recommendations.add("pie");
+    }
+  }
+
+  // Funnel chart is compatible if there's a stage field or group field has small cardinality
+  if (groupField && valueField) {
+    if (stageField || groupField.uniqueCount <= 8) {
+      recommendations.add("funnel");
+    }
+  }
+
+  // Treemap is compatible if there's hierarchy or group field has reasonable cardinality
+  if (valueField) {
+    if (hasHierarchy(fields) || (groupField && groupField.uniqueCount > 3 && groupField.uniqueCount <= 30)) {
+      recommendations.add("treemap");
+    }
+  }
+
+  // Scatter is compatible if we have at least 2 numeric fields
+  if (numericFields.length >= 2) {
+    recommendations.add("scatter");
+  }
+
+  // Radar is compatible if we have at least 3 numeric indicator fields and group unique count is small
+  if (numericFields.length >= 3 && groupField && groupField.uniqueCount <= 12) {
+    recommendations.add("radar");
+  }
+
+  return Array.from(recommendations);
 };
 
 const detectAggregation = (
@@ -1262,18 +1372,28 @@ export const getSmartChartConfig = (
   const rawRows = normalizeRows(Array.isArray(data) ? data : []);
   const fields = analyzeSmartFields(rawRows);
   const requestedChartType = normalizeChartType(overrides.chartType);
-  const groupField = chooseGroupField(rawRows, fields, overrides.groupBy);
-  const valueField = chooseValueField(fields, groupField, overrides.valueKey);
+  const initialGroupField = chooseGroupField(rawRows, fields, overrides.groupBy);
+  const initialValueField = chooseValueField(fields, initialGroupField, overrides.valueKey);
   const autoChartType = detectAutoChartType(
     rawRows,
     fields,
-    groupField,
-    valueField,
+    initialGroupField,
+    initialValueField,
+  );
+  const recommendedChartTypes = getRecommendedChartTypes(
+    rawRows,
+    fields,
+    initialGroupField,
+    initialValueField,
+    autoChartType,
   );
   const chartType =
     requestedChartType && !overrides.forceAutoChartType
       ? requestedChartType
       : autoChartType;
+
+  const groupField = chooseGroupField(rawRows, fields, overrides.groupBy, chartType);
+  const valueField = chooseValueField(fields, groupField, overrides.valueKey, chartType);
   const aggregation = detectAggregation(valueField, overrides.aggregate);
   const secondaryField = chooseSecondaryGroupField(
     fields,
@@ -1457,6 +1577,7 @@ export const getSmartChartConfig = (
     },
     insights,
     emptyState,
+    recommendedChartTypes,
   };
 };
 

@@ -19,6 +19,13 @@ import {
   Clock,
   Target,
   MoreHorizontal,
+  BarChart3,
+  PieChart,
+  AreaChart,
+  ScatterChart,
+  Radar,
+  Filter,
+  LayoutGrid,
 } from "lucide-react";
 import {
   BsHandThumbsDown,
@@ -57,6 +64,51 @@ const parseTimestamp = (ts: string | number) => {
     return new Date(ts + "Z");
   }
   return new Date(ts);
+};
+
+const getChartIcon = (type: SmartChartType, size = 14) => {
+  switch (type) {
+    case "line":
+      return <LineChart size={size} />;
+    case "pie":
+      return <PieChart size={size} />;
+    case "area":
+      return <AreaChart size={size} />;
+    case "scatter":
+      return <ScatterChart size={size} />;
+    case "radar":
+      return <Radar size={size} />;
+    case "funnel":
+      return <Filter size={size} />;
+    case "treemap":
+      return <LayoutGrid size={size} />;
+    case "bar":
+    default:
+      return <BarChart3 size={size} />;
+  }
+};
+
+const getChartLabel = (type: SmartChartType): string => {
+  switch (type) {
+    case "bar":
+      return "Bar Chart";
+    case "line":
+      return "Line Plot";
+    case "pie":
+      return "Pie Segment";
+    case "area":
+      return "Area Canvas";
+    case "scatter":
+      return "Scatter Layout";
+    case "radar":
+      return "Radar Matrix";
+    case "funnel":
+      return "Funnel Graph";
+    case "treemap":
+      return "Treemap Hierarchy";
+    default:
+      return type;
+  }
 };
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -404,6 +456,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     };
   }, [csvData]);
 
+  const { autoChartType, recommendedChartTypes } = React.useMemo(() => {
+    if (csvData.length === 0) {
+      return { autoChartType: "bar" as SmartChartType, recommendedChartTypes: ["bar" as SmartChartType] };
+    }
+    const config = getSmartChartConfig(csvData);
+    return {
+      autoChartType: config.autoChartType,
+      recommendedChartTypes: config.recommendedChartTypes || [config.autoChartType],
+    };
+  }, [csvData]);
+
   const renderContent = () => {
     if (message.isBot && message.status === "loading") {
       return (
@@ -469,22 +532,78 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             ref={graphRef}
             className="w-full flex flex-col"
           >
+            {recommendedChartTypes.length > 0 && (
+              <div className="flex items-center gap-2 mb-3 flex-wrap animate-fade-in">
+                <span 
+                  className="text-[10px] font-bold uppercase tracking-wider opacity-60 mr-1"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  Views:
+                </span>
+                <div
+                  className="flex p-0.5 rounded-xl border items-center gap-0.5"
+                  style={{
+                    backgroundColor:
+                      theme.mode === "light"
+                        ? "rgba(15, 23, 42, 0.03)"
+                        : "rgba(255, 255, 255, 0.03)",
+                    borderColor: theme.colors.border,
+                  }}
+                >
+                  {recommendedChartTypes.map((type) => {
+                    const isSelected = chartType === type;
+                    const isBest = type === autoChartType;
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          setChartType(type);
+                          const newConfig = getSmartChartConfig(csvData, { chartType: type });
+                          setGroupBy(newConfig.groupBy);
+                          setValueKey(newConfig.valueKey);
+                          setAggregate(newConfig.aggregation);
+                          setIsVertical(newConfig.orientation === "vertical");
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                        style={{
+                          backgroundColor: isSelected
+                            ? theme.colors.surface
+                            : "transparent",
+                          color: isSelected
+                            ? theme.colors.accent
+                            : theme.colors.textSecondary,
+                          boxShadow:
+                            isSelected && theme.mode === "light"
+                              ? "0 2px 5px rgba(0,0,0,0.05)"
+                              : "none",
+                        }}
+                      >
+                        {getChartIcon(type, 13)}
+                        <span>{getChartLabel(type)}</span>
+                        {isBest && (
+                          <span
+                            className="text-[8px] px-1 py-0.5 rounded-md font-bold uppercase tracking-wider ml-0.5"
+                            style={{
+                              backgroundColor: isSelected
+                                ? `${theme.colors.accent}15`
+                                : `${theme.colors.textSecondary}15`,
+                              color: isSelected
+                                ? theme.colors.accent
+                                : theme.colors.textSecondary,
+                            }}
+                          >
+                            Best Fit
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 mb-3 flex-wrap items-center">
               {[
-                {
-                  value: chartType,
-                  onChange: (e: any) => setChartType(e.target.value),
-                  options: [
-                    { v: "bar", l: "Bar View" },
-                    { v: "line", l: "Line Plot" },
-                    { v: "pie", l: "Pie Segment" },
-                    { v: "area", l: "Area Canvas" },
-                    { v: "scatter", l: "Scatter Layout" },
-                    { v: "radar", l: "Radar Matrix" },
-                    { v: "funnel", l: "Funnel Graph" },
-                    { v: "treemap", l: "Treemap Hierarchy" },
-                  ],
-                },
                 {
                   value: groupBy || "",
                   onChange: (e: any) => setGroupBy(e.target.value || null),
