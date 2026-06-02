@@ -88,6 +88,8 @@ interface DashboardViewProps {
   ) => void;
 }
 
+const VIEW_TYPES = ["table", "query"] as const;
+
 const DashboardView = forwardRef(
   (
     {
@@ -1166,7 +1168,7 @@ const DashboardView = forwardRef(
                           borderColor: theme.colors.border,
                         }}
                       >
-                      {(["table", "query"] as const).map((viewType) => (
+                      {VIEW_TYPES.map((viewType) => (
                         <button
                           key={viewType}
                           onClick={() => onViewTypeChange(viewType)}
@@ -1192,8 +1194,9 @@ const DashboardView = forwardRef(
                       ))}
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex-1 overflow-auto p-3 min-h-0">
+                <div className="flex-1 overflow-auto p-3 min-h-0">
                     {activeViewType === "query" ? (
                       <QueryDisplay
                         query={dashboardItem.mainViewData.queryData}
