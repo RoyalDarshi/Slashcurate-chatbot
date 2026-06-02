@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { useTheme } from "../ThemeContext";
 import { Copy, Check, Code, Database } from "lucide-react";
-import CustomTooltip from "./CustomTooltip";
 import { motion, AnimatePresence } from "framer-motion";
+import { copyToClipboard } from "../utils";
+import CustomTooltip from "./CustomTooltip";
 
 interface QueryDisplayProps {
   query: string | object | null | undefined;
@@ -489,19 +490,15 @@ const CopyButton = ({ query }: { query: string }) => {
     if (!canCopy) return;
     setCanCopy(false);
 
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard
-        .writeText(query)
-        .then(() => {
-          setCopied(true);
-        })
-        .finally(() => {
-          setTimeout(() => {
-            setCopied(false);
-            setCanCopy(true);
-          }, 2000);
-        });
-    }
+    copyToClipboard(query).then((success) => {
+      if (success) {
+        setCopied(true);
+      }
+      setTimeout(() => {
+        setCopied(false);
+        setCanCopy(true);
+      }, 2000);
+    });
   };
 
   return (
