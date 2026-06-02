@@ -2067,7 +2067,7 @@ const DashboardInterface = memo(
           }}
         >
           {sessionConnectionError && (
-            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 animate-fade-down max-w-md w-full px-4 pointer-events-none">
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[9999] animate-fade-down max-w-md w-full px-4 pointer-events-none">
               <div 
                 className="flex items-start gap-3 p-4 rounded-2xl shadow-xl backdrop-blur-xl border pointer-events-auto"
                 style={{
@@ -2082,6 +2082,13 @@ const DashboardInterface = memo(
                 <div className="flex-1 text-sm font-medium leading-snug">
                   {sessionConnectionError}
                 </div>
+                <button
+                  onClick={() => setSessionConnectionError(null)}
+                  className="flex-shrink-0 p-1 rounded-lg hover:bg-red-500/10 transition-colors duration-200 text-red-500/70 hover:text-red-500 mt-0.5 focus:outline-none"
+                  aria-label="Close error message"
+                >
+                  <X size={16} />
+                </button>
               </div>
             </div>
           )}
