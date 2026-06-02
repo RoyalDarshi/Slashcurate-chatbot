@@ -5,6 +5,7 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  useMemo,
 } from "react";
 import {
   HelpCircle,
@@ -132,6 +133,21 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
         lowerKey.length < 3
       );
     };
+
+    const hasNumericData = useMemo(() => {
+      const data = dashboardItem?.mainViewData?.chartData;
+      if (!data || data.length === 0) return false;
+      return data.some((row: any) =>
+        Object.entries(row).some(([key, val]) => {
+          const numericValue = toFiniteNumber(val);
+          return (
+            !isKeyExcluded(key) &&
+            numericValue !== null &&
+            isFinite(numericValue)
+          );
+        }),
+      );
+    }, [dashboardItem]);
 
     const getValidValueKeys = (data: any[]): string[] => {
       if (!data || data.length === 0) return [];
@@ -469,8 +485,12 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
             <div
               className="mx-4 mt-2 mb-2 px-4 py-2 flex-shrink-0 flex items-center justify-between gap-3 rounded-xl border shadow-sm transition-all duration-300 relative z-50"
               style={{
-                backgroundColor: theme.mode === "light" ? "#FFFFFF" : "rgba(30, 41, 59, 0.5)",
-                borderColor: theme.mode === "light" ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+                backgroundColor:
+                  theme.mode === "light" ? "#FFFFFF" : "rgba(30, 41, 59, 0.5)",
+                borderColor:
+                  theme.mode === "light"
+                    ? "rgba(0,0,0,0.06)"
+                    : "rgba(255,255,255,0.06)",
                 backdropFilter: "blur(12px)",
               }}
             >
@@ -492,7 +512,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                     onChange={(e) => setEditedQuestion(e.target.value)}
                     className="flex-1 px-3 py-1.5 rounded-lg border text-sm focus:outline-none font-medium transition-shadow focus:ring-2"
                     style={{
-                      backgroundColor: theme.mode === "light" ? "#F8FAFC" : "rgba(0,0,0,0.2)",
+                      backgroundColor:
+                        theme.mode === "light" ? "#F8FAFC" : "rgba(0,0,0,0.2)",
                       color: theme.colors.text,
                       borderColor: theme.colors.border,
                       ringColor: theme.colors.accent + "40",
@@ -528,16 +549,22 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               ) : (
                 <>
                   <div className="flex items-center gap-2.5 flex-1 min-w-0 relative z-10">
-                    <div 
+                    <div
                       className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
                       style={{ backgroundColor: `${theme.colors.accent}15` }}
                     >
-                      <HelpCircle size={14} style={{ color: theme.colors.accent }} />
+                      <HelpCircle
+                        size={14}
+                        style={{ color: theme.colors.accent }}
+                      />
                     </div>
                     <h3
                       className="text-sm font-semibold truncate tracking-tight"
                       style={{
-                        color: theme.mode === "light" ? "#0F172A" : theme.colors.text,
+                        color:
+                          theme.mode === "light"
+                            ? "#0F172A"
+                            : theme.colors.text,
                       }}
                       title={dashboardItem.question}
                     >
@@ -592,7 +619,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                             onClick={handleLike}
                             disabled={isSubmitting}
                             className={`p-1.5 rounded-lg transition-colors ${
-                              isLiked ? "bg-emerald-500/10" : "hover:bg-black/5 dark:hover:bg-white/5"
+                              isLiked
+                                ? "bg-emerald-500/10"
+                                : "hover:bg-black/5 dark:hover:bg-white/5"
                             } text-slate-400`}
                           >
                             {isLiked ? (
@@ -620,7 +649,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               onClick={handleDislike}
                               disabled={isSubmitting}
                               className={`p-1.5 rounded-lg transition-colors ${
-                                isDisliked ? "bg-red-500/10" : "hover:bg-black/5 dark:hover:bg-white/5"
+                                isDisliked
+                                  ? "bg-red-500/10"
+                                  : "hover:bg-black/5 dark:hover:bg-white/5"
                               } text-slate-400`}
                             >
                               {isDisliked ? (
@@ -644,8 +675,14 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                 transition={{ duration: 0.15 }}
                                 className="absolute top-full right-0 mt-2 rounded-xl border z-50 min-w-[200px] overflow-hidden py-1.5 shadow-xl backdrop-blur-xl"
                                 style={{
-                                  background: theme.mode === 'light' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(30, 41, 59, 0.85)',
-                                  borderColor: theme.mode === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+                                  background:
+                                    theme.mode === "light"
+                                      ? "rgba(255, 255, 255, 0.85)"
+                                      : "rgba(30, 41, 59, 0.85)",
+                                  borderColor:
+                                    theme.mode === "light"
+                                      ? "rgba(0,0,0,0.06)"
+                                      : "rgba(255,255,255,0.08)",
                                 }}
                               >
                                 {showCustomInput ? (
@@ -694,11 +731,51 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                 ) : (
                                   <div className="flex flex-col gap-0.5 px-1.5">
                                     {[
-                                      { id: "Inaccurate data", icon: <FileWarning size={13} className="opacity-60 group-hover:opacity-100" /> },
-                                      { id: "Confusing or unclear", icon: <MessageSquareWarning size={13} className="opacity-60 group-hover:opacity-100" /> },
-                                      { id: "Too slow", icon: <Clock size={13} className="opacity-60 group-hover:opacity-100" /> },
-                                      { id: "Irrelevant response", icon: <Target size={13} className="opacity-60 group-hover:opacity-100" /> },
-                                      { id: "Other", icon: <MoreHorizontal size={13} className="opacity-60 group-hover:opacity-100" /> },
+                                      {
+                                        id: "Inaccurate data",
+                                        icon: (
+                                          <FileWarning
+                                            size={13}
+                                            className="opacity-60 group-hover:opacity-100"
+                                          />
+                                        ),
+                                      },
+                                      {
+                                        id: "Confusing or unclear",
+                                        icon: (
+                                          <MessageSquareWarning
+                                            size={13}
+                                            className="opacity-60 group-hover:opacity-100"
+                                          />
+                                        ),
+                                      },
+                                      {
+                                        id: "Too slow",
+                                        icon: (
+                                          <Clock
+                                            size={13}
+                                            className="opacity-60 group-hover:opacity-100"
+                                          />
+                                        ),
+                                      },
+                                      {
+                                        id: "Irrelevant response",
+                                        icon: (
+                                          <Target
+                                            size={13}
+                                            className="opacity-60 group-hover:opacity-100"
+                                          />
+                                        ),
+                                      },
+                                      {
+                                        id: "Other",
+                                        icon: (
+                                          <MoreHorizontal
+                                            size={13}
+                                            className="opacity-60 group-hover:opacity-100"
+                                          />
+                                        ),
+                                      },
                                     ].map(({ id, icon }) => (
                                       <button
                                         key={id}
@@ -767,54 +844,28 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
 
             <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch w-full gap-4 pb-28 lg:pb-24 flex-1 min-h-0 px-3">
               {/* Left Visualization Panel Island */}
-              <div
-                ref={graphContainerRef}
-                className="lg:col-span-5 w-full flex flex-col overflow-visible min-w-0 animate-fade-up z-20"
-                style={{
-                  maxHeight: "100%",
-                  backgroundColor: "transparent",
-                  borderRadius: theme.borderRadius.large,
-                }}
-              >
+              {hasNumericData && (
                 <div
-                  className="flex items-center justify-center py-1 flex-shrink-0"
-                  style={{ borderColor: "transparent" }}
+                  ref={graphContainerRef}
+                  className="lg:col-span-5 w-full flex flex-col overflow-visible min-w-0 animate-fade-up z-20"
+                  style={{
+                    maxHeight: "100%",
+                    backgroundColor: "transparent",
+                    borderRadius: theme.borderRadius.large,
+                  }}
                 >
-                  {dashboardItem.mainViewData.chartData?.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-start">
-                      <div className="flex items-center flex-shrink-0">
-
-                        <select
-                          id="graph-type-select"
-                          value={graphType}
-                          onChange={(e) =>
-                            setGraphType(e.target.value as SmartChartType)
-                          }
-                          className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
-                          style={{
-                            backgroundColor: theme.colors.surface,
-                            color: theme.colors.text,
-                            borderColor: theme.colors.border,
-                          }}
-                        >
-                          <option value="bar">Bar</option>
-                          <option value="line">Line</option>
-                          <option value="area">Area</option>
-                          <option value="pie">Pie</option>
-                          <option value="scatter">Scatter</option>
-                          <option value="radar">Radar</option>
-                          <option value="funnel">Funnel</option>
-                          <option value="treemap">Treemap</option>
-                        </select>
-                      </div>
-
-                      {["bar", "line", "area"].includes(graphType) && (
+                  <div
+                    className="flex items-center justify-center py-1 flex-shrink-0"
+                    style={{ borderColor: "transparent" }}
+                  >
+                    {dashboardItem.mainViewData.chartData?.length > 0 && (
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-wrap justify-start">
                         <div className="flex items-center flex-shrink-0">
-
                           <select
-                            value={isVertical ? "vertical" : "horizontal"}
+                            id="graph-type-select"
+                            value={graphType}
                             onChange={(e) =>
-                              setIsVertical(e.target.value === "vertical")
+                              setGraphType(e.target.value as SmartChartType)
                             }
                             className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                             style={{
@@ -823,23 +874,166 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               borderColor: theme.colors.border,
                             }}
                           >
-                            <option value="vertical">Vertical</option>
-                            <option value="horizontal">Horizontal</option>
+                            <option value="bar">Bar</option>
+                            <option value="line">Line</option>
+                            <option value="area">Area</option>
+                            <option value="pie">Pie</option>
+                            <option value="scatter">Scatter</option>
+                            <option value="radar">Radar</option>
+                            <option value="funnel">Funnel</option>
+                            <option value="treemap">Treemap</option>
                           </select>
                         </div>
-                      )}
 
-                      {["bar", "line", "area", "pie", "treemap"].includes(
-                        graphType,
-                      ) &&
-                        groupBy && (
+                        {["bar", "line", "area"].includes(graphType) && (
+                          <div className="flex items-center flex-shrink-0">
+                            <select
+                              value={isVertical ? "vertical" : "horizontal"}
+                              onChange={(e) =>
+                                setIsVertical(e.target.value === "vertical")
+                              }
+                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
+                              style={{
+                                backgroundColor: theme.colors.surface,
+                                color: theme.colors.text,
+                                borderColor: theme.colors.border,
+                              }}
+                            >
+                              <option value="vertical">Vertical</option>
+                              <option value="horizontal">Horizontal</option>
+                            </select>
+                          </div>
+                        )}
+
+                        {["bar", "line", "area", "pie", "treemap"].includes(
+                          graphType,
+                        ) &&
+                          groupBy && (
+                            <>
+                              <div className="flex items-center flex-shrink-0">
+                                <select
+                                  value={groupBy || ""}
+                                  onChange={(e) => setGroupBy(e.target.value)}
+                                  className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer max-w-[120px]"
+                                  style={{
+                                    backgroundColor: theme.colors.surface,
+                                    color: theme.colors.text,
+                                    borderColor: theme.colors.border,
+                                  }}
+                                >
+                                  {getValidCategoricalKeys(
+                                    dashboardItem.mainViewData.chartData,
+                                  ).map((key) => (
+                                    <option key={key} value={key}>
+                                      {key.replace(/_/g, " ")}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex items-center flex-shrink-0">
+                                <select
+                                  value={aggregate}
+                                  onChange={(e) =>
+                                    setAggregate(
+                                      e.target.value as SmartAggregation,
+                                    )
+                                  }
+                                  className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
+                                  style={{
+                                    backgroundColor: theme.colors.surface,
+                                    color: theme.colors.text,
+                                    borderColor: theme.colors.border,
+                                  }}
+                                >
+                                  <option value="count">Count</option>
+                                  <option value="sum">Sum</option>
+                                  <option value="avg">Avg</option>
+                                  <option value="min">Min</option>
+                                  <option value="max">Max</option>
+                                </select>
+                              </div>
+                              {(aggregate === "sum" ||
+                                aggregate === "avg" ||
+                                aggregate === "min" ||
+                                aggregate === "max") && (
+                                <div className="flex items-center flex-shrink-0">
+                                  <select
+                                    value={valueKey || ""}
+                                    onChange={(e) =>
+                                      setValueKey(e.target.value)
+                                    }
+                                    className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer max-w-[120px]"
+                                    style={{
+                                      backgroundColor: theme.colors.surface,
+                                      color: theme.colors.text,
+                                      borderColor: theme.colors.border,
+                                    }}
+                                  >
+                                    {getValidValueKeys(
+                                      dashboardItem.mainViewData.chartData,
+                                    ).map((key) => (
+                                      <option key={key} value={key}>
+                                        {key.replace(/_/g, " ")}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                        {graphType === "scatter" && (
                           <>
                             <div className="flex items-center flex-shrink-0">
-
                               <select
                                 value={groupBy || ""}
                                 onChange={(e) => setGroupBy(e.target.value)}
-                                className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer max-w-[120px]"
+                                className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
+                                style={{
+                                  backgroundColor: theme.colors.surface,
+                                  color: theme.colors.text,
+                                  borderColor: theme.colors.border,
+                                }}
+                              >
+                                {getValidValueKeys(
+                                  dashboardItem.mainViewData.chartData,
+                                ).map((key) => (
+                                  <option key={key} value={key}>
+                                    {key.replace(/_/g, " ")}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex items-center flex-shrink-0">
+                              <select
+                                value={valueKey || ""}
+                                onChange={(e) => setValueKey(e.target.value)}
+                                className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
+                                style={{
+                                  backgroundColor: theme.colors.surface,
+                                  color: theme.colors.text,
+                                  borderColor: theme.colors.border,
+                                }}
+                              >
+                                {getValidValueKeys(
+                                  dashboardItem.mainViewData.chartData,
+                                ).map((key) => (
+                                  <option key={key} value={key}>
+                                    {key.replace(/_/g, " ")}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        )}
+
+                        {["radar", "funnel"].includes(graphType) && (
+                          <>
+                            <div className="flex items-center flex-shrink-0">
+                              <select
+                                value={groupBy || ""}
+                                onChange={(e) => setGroupBy(e.target.value)}
+                                className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                                 style={{
                                   backgroundColor: theme.colors.surface,
                                   color: theme.colors.text,
@@ -856,14 +1050,9 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                               </select>
                             </div>
                             <div className="flex items-center flex-shrink-0">
-
                               <select
-                                value={aggregate}
-                                onChange={(e) =>
-                                  setAggregate(
-                                    e.target.value as SmartAggregation,
-                                  )
-                                }
+                                value={valueKey || ""}
+                                onChange={(e) => setValueKey(e.target.value)}
                                 className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
                                 style={{
                                   backgroundColor: theme.colors.surface,
@@ -871,158 +1060,41 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
                                   borderColor: theme.colors.border,
                                 }}
                               >
-                                <option value="count">Count</option>
-                                <option value="sum">Sum</option>
-                                <option value="avg">Avg</option>
-                                <option value="min">Min</option>
-                                <option value="max">Max</option>
+                                {getValidValueKeys(
+                                  dashboardItem.mainViewData.chartData,
+                                ).map((key) => (
+                                  <option key={key} value={key}>
+                                    {key.replace(/_/g, " ")}
+                                  </option>
+                                ))}
                               </select>
                             </div>
-                            {(aggregate === "sum" ||
-                              aggregate === "avg" ||
-                              aggregate === "min" ||
-                              aggregate === "max") && (
-                              <div className="flex items-center flex-shrink-0">
-
-                                <select
-                                  value={valueKey || ""}
-                                  onChange={(e) => setValueKey(e.target.value)}
-                                  className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer max-w-[120px]"
-                                  style={{
-                                    backgroundColor: theme.colors.surface,
-                                    color: theme.colors.text,
-                                    borderColor: theme.colors.border,
-                                  }}
-                                >
-                                  {getValidValueKeys(
-                                    dashboardItem.mainViewData.chartData,
-                                  ).map((key) => (
-                                    <option key={key} value={key}>
-                                      {key.replace(/_/g, " ")}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            )}
                           </>
                         )}
-
-                      {graphType === "scatter" && (
-                        <>
-                          <div className="flex items-center flex-shrink-0">
-
-                            <select
-                              value={groupBy || ""}
-                              onChange={(e) => setGroupBy(e.target.value)}
-                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
-                              style={{
-                                backgroundColor: theme.colors.surface,
-                                color: theme.colors.text,
-                                borderColor: theme.colors.border,
-                              }}
-                            >
-                              {getValidValueKeys(
-                                dashboardItem.mainViewData.chartData,
-                              ).map((key) => (
-                                <option key={key} value={key}>
-                                  {key.replace(/_/g, " ")}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex items-center flex-shrink-0">
-
-                            <select
-                              value={valueKey || ""}
-                              onChange={(e) => setValueKey(e.target.value)}
-                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
-                              style={{
-                                backgroundColor: theme.colors.surface,
-                                color: theme.colors.text,
-                                borderColor: theme.colors.border,
-                              }}
-                            >
-                              {getValidValueKeys(
-                                dashboardItem.mainViewData.chartData,
-                              ).map((key) => (
-                                <option key={key} value={key}>
-                                  {key.replace(/_/g, " ")}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </>
-                      )}
-
-                      {["radar", "funnel"].includes(graphType) && (
-                        <>
-                          <div className="flex items-center flex-shrink-0">
-
-                            <select
-                              value={groupBy || ""}
-                              onChange={(e) => setGroupBy(e.target.value)}
-                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
-                              style={{
-                                backgroundColor: theme.colors.surface,
-                                color: theme.colors.text,
-                                borderColor: theme.colors.border,
-                              }}
-                            >
-                              {getValidCategoricalKeys(
-                                dashboardItem.mainViewData.chartData,
-                              ).map((key) => (
-                                <option key={key} value={key}>
-                                  {key.replace(/_/g, " ")}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex items-center flex-shrink-0">
-
-                            <select
-                              value={valueKey || ""}
-                              onChange={(e) => setValueKey(e.target.value)}
-                              className="px-2 py-0.5 text-xs rounded border font-semibold outline-none cursor-pointer"
-                              style={{
-                                backgroundColor: theme.colors.surface,
-                                color: theme.colors.text,
-                                borderColor: theme.colors.border,
-                              }}
-                            >
-                              {getValidValueKeys(
-                                dashboardItem.mainViewData.chartData,
-                              ).map((key) => (
-                                <option key={key} value={key}>
-                                  {key.replace(/_/g, " ")}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-h-0 w-full overflow-visible flex flex-col items-stretch justify-end">
+                    <DynamicGraph
+                      data={
+                        syncedTableRows ?? dashboardItem.mainViewData.chartData
+                      }
+                      graphType={graphType}
+                      groupBy={groupBy}
+                      setGroupBy={setGroupBy}
+                      aggregate={aggregate}
+                      setAggregate={setAggregate}
+                      valueKey={valueKey}
+                      setValueKey={setValueKey}
+                      isVertical={isVertical}
+                    />
+                  </div>
                 </div>
-                <div className="flex-1 min-h-0 w-full overflow-visible flex flex-col items-stretch justify-end">
-                  <DynamicGraph
-                    data={
-                      syncedTableRows ?? dashboardItem.mainViewData.chartData
-                    }
-                    graphType={graphType}
-                    groupBy={groupBy}
-                    setGroupBy={setGroupBy}
-                    aggregate={aggregate}
-                    setAggregate={setAggregate}
-                    valueKey={valueKey}
-                    setValueKey={setValueKey}
-                    isVertical={isVertical}
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Right Tabular Query Log Island */}
               <div
-                className="lg:col-span-7 w-full flex flex-col overflow-hidden min-w-0 animate-fade-up"
+                className={`${hasNumericData ? "lg:col-span-7" : "lg:col-span-12"} w-full flex flex-col overflow-hidden min-w-0 animate-fade-up`}
                 style={{
                   maxHeight: "100%",
                   backgroundColor: "transparent",
