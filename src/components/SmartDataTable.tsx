@@ -877,6 +877,7 @@ const SmartDataTable: React.FC<SmartDataTableProps> = React.memo(
         {/* Bounded Scroll Matrix Frame */}
         <div
           ref={tableContainerRef}
+          className="custom-scrollbar"
           style={{
             overflow: "auto",
             flex: 1,

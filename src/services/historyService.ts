@@ -40,6 +40,11 @@ class HistoryService {
     return response.data;
   }
 
+  async bulkDeleteFavorites(questionIds: string[]) {
+    const response = await apiClient.post("/api/favorites/bulk-delete", { question_ids: questionIds });
+    return response.data;
+  }
+
   async fetchFavourites() {
     const response = await apiClient.post("/favorites", {});
     return response.data;

@@ -1157,7 +1157,7 @@ const DashboardView = forwardRef(
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-auto p-3 min-h-0">
+                <div className="flex-1 overflow-auto p-3 min-h-0 custom-scrollbar">
                     {activeViewType === "query" ? (
                       <QueryDisplay
                         query={dashboardItem.mainViewData.queryData}
@@ -1193,7 +1193,7 @@ const DashboardView = forwardRef(
                         Data Matrix Grid
                       </span>
                     </div>
-                    <div className="flex-1 overflow-auto p-3 min-h-0">
+                    <div className="flex-1 overflow-auto p-3 min-h-0 custom-scrollbar">
                       <DataTable
                         data={dashboardItem.mainViewData.tableData}
                         onRowsChange={setSyncedTableRows}
@@ -1219,7 +1219,7 @@ const DashboardView = forwardRef(
                         SQL Query Log
                       </span>
                     </div>
-                    <div className="flex-1 overflow-auto p-3 min-h-0">
+                    <div className="flex-1 overflow-auto p-3 min-h-0 custom-scrollbar">
                       <QueryDisplay
                         query={dashboardItem.mainViewData.queryData}
                         fontSize="text-sm"
