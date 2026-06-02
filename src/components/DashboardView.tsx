@@ -1093,76 +1093,134 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
               )}
 
               {/* Right Tabular Query Log Island */}
-              <div
-                className={`${hasNumericData ? "lg:col-span-7" : "lg:col-span-12"} w-full flex flex-col overflow-hidden min-w-0 animate-fade-up`}
-                style={{
-                  maxHeight: "100%",
-                  backgroundColor: "transparent",
-                  borderRadius: theme.borderRadius.large,
-                }}
-              >
+              {hasNumericData ? (
+                /* Split view with tab switcher when there is a chart */
                 <div
-                  className="flex items-center justify-between py-2 flex-shrink-0 min-h-[45px]"
-                  style={{ borderColor: "transparent" }}
+                  className="lg:col-span-7 w-full flex flex-col overflow-hidden min-w-0 animate-fade-up"
+                  style={{
+                    maxHeight: "100%",
+                    backgroundColor: "transparent",
+                    borderRadius: theme.borderRadius.large,
+                  }}
                 >
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    {activeViewType === "query"
-                      ? "SQL Query Log"
-                      : "Data Matrix Grid"}
-                  </span>
-
-                  {/* Segmented Light High Contrast Switcher Controls */}
                   <div
-                    className="flex p-0.5 rounded-lg border font-semibold"
-                    style={{
-                      backgroundColor:
-                        theme.mode === "light" ? "#E2E8F0" : "#0F172A",
-                      borderColor: theme.colors.border,
-                    }}
+                    className="flex items-center justify-between py-2 flex-shrink-0 min-h-[45px]"
+                    style={{ borderColor: "transparent" }}
                   >
-                    {(["table", "query"] as const).map((viewType) => (
-                      <button
-                        key={viewType}
-                        onClick={() => onViewTypeChange(viewType)}
-                        disabled={isSubmitting}
-                        className="px-2.5 py-1 text-xs font-semibold rounded-md transition-all"
-                        style={{
-                          backgroundColor:
-                            activeViewType === viewType
-                              ? theme.colors.surface
-                              : "transparent",
-                          color:
-                            activeViewType === viewType
-                              ? theme.colors.text
-                              : theme.colors.textSecondary,
-                          boxShadow:
-                            activeViewType === viewType
-                              ? "0 1px 3px rgba(0,0,0,0.06)"
-                              : "none",
-                        }}
-                      >
-                        {viewType === "table" ? "Table" : "SQL"}
-                      </button>
-                    ))}
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {activeViewType === "query"
+                        ? "SQL Query Log"
+                        : "Data Matrix Grid"}
+                    </span>
+
+                    {/* Segmented Light High Contrast Switcher Controls */}
+                    <div
+                      className="flex p-0.5 rounded-lg border font-semibold"
+                      style={{
+                        backgroundColor:
+                          theme.mode === "light" ? "#E2E8F0" : "#0F172A",
+                        borderColor: theme.colors.border,
+                      }}
+                    >
+                      {(["table", "query"] as const).map((viewType) => (
+                        <button
+                          key={viewType}
+                          onClick={() => onViewTypeChange(viewType)}
+                          disabled={isSubmitting}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-md transition-all"
+                          style={{
+                            backgroundColor:
+                              activeViewType === viewType
+                                ? theme.colors.surface
+                                : "transparent",
+                            color:
+                              activeViewType === viewType
+                                ? theme.colors.text
+                                : theme.colors.textSecondary,
+                            boxShadow:
+                              activeViewType === viewType
+                                ? "0 1px 3px rgba(0,0,0,0.06)"
+                                : "none",
+                          }}
+                        >
+                          {viewType === "table" ? "Table" : "SQL"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-auto p-3 min-h-0">
+                    {activeViewType === "query" ? (
+                      <QueryDisplay
+                        query={dashboardItem.mainViewData.queryData}
+                        fontSize="text-sm"
+                        flat
+                      />
+                    ) : (
+                      <DataTable
+                        data={dashboardItem.mainViewData.tableData}
+                        onRowsChange={setSyncedTableRows}
+                        variant="dashboard-flat"
+                      />
+                    )}
                   </div>
                 </div>
+              ) : (
+                /* Side-by-side Table and SQL view when there is no chart */
+                <>
+                  {/* Table Panel */}
+                  <div
+                    className="lg:col-span-6 w-full flex flex-col overflow-hidden min-w-0 animate-fade-up"
+                    style={{
+                      maxHeight: "100%",
+                      backgroundColor: "transparent",
+                      borderRadius: theme.borderRadius.large,
+                    }}
+                  >
+                    <div
+                      className="flex items-center justify-between py-2 flex-shrink-0 min-h-[45px]"
+                      style={{ borderColor: "transparent" }}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Data Matrix Grid
+                      </span>
+                    </div>
+                    <div className="flex-1 overflow-auto p-3 min-h-0">
+                      <DataTable
+                        data={dashboardItem.mainViewData.tableData}
+                        onRowsChange={setSyncedTableRows}
+                        variant="dashboard-flat"
+                      />
+                    </div>
+                  </div>
 
-                <div className="flex-1 overflow-auto p-3 min-h-0">
-                  {activeViewType === "query" ? (
-                    <QueryDisplay
-                      query={dashboardItem.mainViewData.queryData}
-                      fontSize="text-sm"
-                      flat
-                    />
-                  ) : (
-                    <DataTable
-                      data={dashboardItem.mainViewData.tableData}
-                      onRowsChange={setSyncedTableRows}
-                      variant="dashboard-flat"
-                    />
-                  )}
-                </div>
-              </div>
+                  {/* SQL Panel */}
+                  <div
+                    className="lg:col-span-6 w-full flex flex-col overflow-hidden min-w-0 animate-fade-up"
+                    style={{
+                      maxHeight: "100%",
+                      backgroundColor: "transparent",
+                      borderRadius: theme.borderRadius.large,
+                    }}
+                  >
+                    <div
+                      className="flex items-center justify-between py-2 flex-shrink-0 min-h-[45px]"
+                      style={{ borderColor: "transparent" }}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        SQL Query Log
+                      </span>
+                    </div>
+                    <div className="flex-1 overflow-auto p-3 min-h-0">
+                      <QueryDisplay
+                        query={dashboardItem.mainViewData.queryData}
+                        fontSize="text-sm"
+                        flat
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {showSummaryModal && graphSummary && (
