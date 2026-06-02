@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import Loader from "./Loader";
 import { API_URL } from "../config";
 import { useTheme } from "../ThemeContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, X } from "lucide-react";
 
 interface ForgotPasswordProps {
   onBackToLogin: () => void;
@@ -14,23 +14,25 @@ interface ForgotPasswordProps {
 const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
-  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value.trimStart());
+    if (error) setError(null);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      toast.error("Email is required.", { theme: mode });
+      setError("Email is required.");
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       const response = await axios.post(
         `${API_URL}/forgot-password`,
         { email: trimmedEmail },
@@ -39,20 +41,17 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
       setLoading(false);
 
       if (response.status === 200) {
-        toast.success("Password reset email sent.", { theme: mode });
+        toast.success("Password reset email sent.", { theme: theme.mode === "dark" ? "dark" : "light" });
         setTimeout(() => onBackToLogin(), 3000);
       } else {
-        toast.error(`Error: ${response.data.message}`, { theme: mode });
+        setError(response.data.message || "Failed to request password reset.");
       }
-    } catch (error) {
+    } catch (err) {
       setLoading(false);
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          `Error: ${error.response?.data?.message || error.message}`,
-          { theme: mode }
-        );
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || err.message || "Failed to send reset link.");
       } else {
-        toast.error(`Error: ${(error as Error).message}`, { theme: mode });
+        setError((err as Error).message || "An unexpected error occurred");
       }
     }
   };
@@ -63,19 +62,31 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
       style={{ fontFamily: theme.typography.fontFamily }}
     >
       <form onSubmit={handleForgotPassword} className="space-y-4">
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar
-          closeOnClick
-          pauseOnHover
-          toastStyle={{
-            backgroundColor: theme.colors.surface,
-            color: theme.colors.text,
-            borderRadius: theme.borderRadius.default,
-            boxShadow: theme.shadow.sm,
-          }}
-        />
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, y: -10 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -10 }}
+              className="flex items-start gap-3 p-3.5 rounded-xl border text-xs font-semibold leading-relaxed overflow-hidden"
+              style={{
+                backgroundColor: theme.mode === "dark" ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.04)",
+                borderColor: theme.mode === "dark" ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.15)",
+                color: theme.mode === "dark" ? "#F87171" : "#DC2626",
+              }}
+            >
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "#EF4444" }} />
+              <div className="flex-grow">{error}</div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Email Field */}
         <div className="space-y-1">

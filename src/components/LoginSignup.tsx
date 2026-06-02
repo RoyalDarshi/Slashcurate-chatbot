@@ -227,21 +227,6 @@ const LoginSignup: React.FC<LoginSignupProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div className="space-y-4">
-            <ToastContainer
-              position="top-right"
-              autoClose={3000}
-              hideProgressBar
-              closeOnClick
-              pauseOnHover
-              toastStyle={{
-                backgroundColor: theme.colors.surface,
-                color: theme.colors.text,
-                borderRadius: theme.borderRadius.large,
-                boxShadow: theme.shadow.md,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            />
-
             {isSignup && (
               <Signup
                 onSignupSuccess={onLoginSuccess}

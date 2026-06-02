@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from "react";
 import { AxiosError } from "axios";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
 import { useTheme } from "../ThemeContext";
 import { loginAdmin } from "../api";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, X } from "lucide-react";
+
+import React, { useState, useEffect } from "react";
 
 interface AdminLoginProps {
   onLoginSuccess: (token: string) => void;
@@ -16,6 +18,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
   const navigate = useNavigate();
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
@@ -36,6 +39,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
       ...prevData,
       [name]: value.trimStart(),
     }));
+    if (error) setError(null);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -44,34 +48,32 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     const password = formData.password.trim();
 
     if (!email || !password) {
-      toast.error("Email and password cannot be empty.", { theme: mode });
+      setError("Admin email and password cannot be empty.");
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       const response = await loginAdmin(email, password);
 
       if (response.status === 200 && response.data.token) {
         const token = response.data.token;
         sessionStorage.setItem("token", token);
-        toast.success("Admin login successful!", { theme: mode });
+        toast.success("Admin login successful!", { theme: theme.mode === "dark" ? "dark" : "light" });
         onLoginSuccess(token);
         setFormData({ email: "", password: "" });
       } else {
-        toast.error(
-          `Error: ${response.data?.message || "Admin login failed"}`,
-          { theme: mode },
-        );
+        setError(response.data?.message || "Admin login failed");
         setLoading(false);
       }
-    } catch (error) {
+    } catch (err) {
       setLoading(false);
       const errorMsg =
-        (error as AxiosError<{ message?: string }>).response?.data?.message ||
-        (error as Error).message ||
+        (err as AxiosError<{ message?: string }>).response?.data?.message ||
+        (err as Error).message ||
         "An unexpected error occurred";
-      toast.error(`Error: ${errorMsg}`, { theme: mode });
+      setError(errorMsg);
     }
   };
 
@@ -236,20 +238,31 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div className="space-y-4">
-            <ToastContainer
-              position="top-right"
-              autoClose={3000}
-              hideProgressBar
-              closeOnClick
-              pauseOnHover
-              toastStyle={{
-                backgroundColor: theme.colors.surface,
-                color: theme.colors.text,
-                borderRadius: theme.borderRadius.large,
-                boxShadow: theme.shadow.md,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            />
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: "auto", y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  className="flex items-start gap-3 p-3.5 rounded-xl border text-xs font-semibold leading-relaxed overflow-hidden"
+                  style={{
+                    backgroundColor: theme.mode === "dark" ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.04)",
+                    borderColor: theme.mode === "dark" ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.15)",
+                    color: theme.mode === "dark" ? "#F87171" : "#DC2626",
+                  }}
+                >
+                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "#EF4444" }} />
+                  <div className="flex-grow">{error}</div>
+                  <button
+                    type="button"
+                    onClick={() => setError(null)}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0"
+                  >
+                    <X size={14} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">

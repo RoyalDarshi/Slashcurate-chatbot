@@ -1,8 +1,17 @@
 import { apiClient } from "./apiClient";
 
+export interface FetchSessionsOptions {
+  filter?: string;
+  connection_name?: string;
+  con_id?: number;
+}
+
 class HistoryService {
-  async fetchSessions(filter: string) {
-    const response = await apiClient.post("/api/fetchsessions", { filter });
+  async fetchSessions(filter: string, connectionName?: string, conId?: number) {
+    const payload: FetchSessionsOptions = { filter };
+    if (connectionName) payload.connection_name = connectionName;
+    if (conId !== undefined) payload.con_id = conId;
+    const response = await apiClient.post("/api/fetchsessions", payload);
     return response.data;
   }
 
@@ -17,9 +26,17 @@ class HistoryService {
   }
 
   async deleteSession(sessionId: string) {
-    // Some endpoints may still rely on Authorization header temporarily, 
-    // but interceptor injects body. We pass empty config for now, interceptor does the rest.
     const response = await apiClient.delete(`/api/sessions/${sessionId}`);
+    return response.data;
+  }
+
+  async togglePin(sessionId: string) {
+    const response = await apiClient.post(`/api/sessions/${sessionId}/pin`);
+    return response.data;
+  }
+
+  async bulkDelete(sessionIds: string[]) {
+    const response = await apiClient.post("/api/sessions/bulk-delete", { session_ids: sessionIds });
     return response.data;
   }
 

@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { useNavigate, useLocation } from "react-router-dom"; // <-- ADDED IMPORT
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
 import { authService } from "../services/authService";
 import { useTheme } from "../ThemeContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, X } from "lucide-react";
 
 interface LoginProps {
   onLoginSuccess: (token: string, isAdmin: boolean) => void;
@@ -22,6 +22,7 @@ const Login: React.FC<LoginProps> = ({
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { theme } = useTheme();
   const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
@@ -32,6 +33,7 @@ const Login: React.FC<LoginProps> = ({
       ...prevData,
       [name]: value.trimStart(),
     }));
+    if (error) setError(null);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,30 +42,25 @@ const Login: React.FC<LoginProps> = ({
     const password = formData.password.trim();
 
     if (!username || !password) {
-      toast.error("Username and password cannot be empty.", { theme: mode });
+      setError("Username and passcode cannot be empty.");
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       
       const response = await authService.login(username, password);
       onLoginSuccess(response.token, response.isAdmin);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 401) {
-          toast.error("Invalid credentials.", { theme: mode });
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          setError("Invalid username or passcode. Please check your credentials and try again.");
         } else {
-          toast.error(
-            `Error: ${error.response?.data?.message || error.message}`,
-            { theme: mode },
-          );
+          setError(err.response?.data?.message || err.message || "An unexpected error occurred during authentication.");
         }
       } else {
-        toast.error(
-          `Error: ${(error as Error).message || "An unexpected error occurred"}`,
-          { theme: mode },
-        );
+        setError((err as Error).message || "An unexpected error occurred");
       }
     } finally {
       setLoading(false);
@@ -81,19 +78,31 @@ const Login: React.FC<LoginProps> = ({
       style={{ fontFamily: theme.typography.fontFamily }}
     >
       <form onSubmit={handleLogin} className="space-y-4" id="login-form">
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar
-          closeOnClick
-          pauseOnHover
-          toastStyle={{
-            backgroundColor: theme.colors.surface,
-            color: theme.colors.text,
-            borderRadius: theme.borderRadius.default,
-            boxShadow: theme.shadow.sm,
-          }}
-        />
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, y: -10 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -10 }}
+              className="flex items-start gap-3 p-3.5 rounded-xl border text-xs font-semibold leading-relaxed overflow-hidden"
+              style={{
+                backgroundColor: theme.mode === "dark" ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.04)",
+                borderColor: theme.mode === "dark" ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.15)",
+                color: theme.mode === "dark" ? "#F87171" : "#DC2626",
+              }}
+            >
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "#EF4444" }} />
+              <div className="flex-grow">{error}</div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Username / Email Field */}
         <div className="space-y-1">

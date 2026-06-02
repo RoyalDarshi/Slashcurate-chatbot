@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import axios, { isAxiosError } from "axios";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
 import Loader from "./Loader";
 import { API_URL } from "../config";
 import { useTheme } from "../ThemeContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, X } from "lucide-react";
 
 interface SignupProps {
   onSignupSuccess: (token: string) => void;
@@ -27,8 +27,8 @@ const Signup: React.FC<SignupProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
-  const mode = theme.colors.background === "#0F172A" ? "dark" : "light";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -36,6 +36,7 @@ const Signup: React.FC<SignupProps> = ({
       ...prevData,
       [name]: value.trimStart(),
     }));
+    if (error) setError(null);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -50,22 +51,21 @@ const Signup: React.FC<SignupProps> = ({
       !password.trim() ||
       !confirmPassword.trim()
     ) {
-      toast.error("All fields are required.", { theme: mode });
+      setError("All fields are required.");
       return;
     }
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match.", { theme: mode });
+      setError("Passwords do not match.");
       return;
     }
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters long.", {
-        theme: mode,
-      });
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       const res = await axios.post(
         `${API_URL}/signup`,
         {
@@ -79,18 +79,16 @@ const Signup: React.FC<SignupProps> = ({
       setLoading(false);
 
       if (res.status === 200) {
-        toast.success("Signup successful!", { theme: mode });
         onSignupSuccess(res.data.token);
       } else {
-        toast.error(res.data.message || "Signup failed.", { theme: mode });
+        setError(res.data.message || "Signup failed.");
       }
     } catch (err) {
       setLoading(false);
-      toast.error(
+      setError(
         isAxiosError(err)
           ? err.response?.data?.message || err.message
-          : (err as Error).message || "An unexpected error occurred",
-        { theme: mode }
+          : (err as Error).message || "An unexpected error occurred"
       );
     }
   };
@@ -111,19 +109,31 @@ const Signup: React.FC<SignupProps> = ({
       style={{ fontFamily: theme.typography.fontFamily }}
     >
       <form onSubmit={handleSignup} className="space-y-4">
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar
-          closeOnClick
-          pauseOnHover
-          toastStyle={{
-            backgroundColor: theme.colors.surface,
-            color: theme.colors.text,
-            borderRadius: theme.borderRadius.default,
-            boxShadow: theme.shadow.sm,
-          }}
-        />
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, y: -10 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -10 }}
+              className="flex items-start gap-3 p-3.5 rounded-xl border text-xs font-semibold leading-relaxed overflow-hidden"
+              style={{
+                backgroundColor: theme.mode === "dark" ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.04)",
+                borderColor: theme.mode === "dark" ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.15)",
+                color: theme.mode === "dark" ? "#F87171" : "#DC2626",
+              }}
+            >
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "#EF4444" }} />
+              <div className="flex-grow">{error}</div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* First Name */}
         <div className="space-y-1">
