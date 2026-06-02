@@ -47,7 +47,6 @@ import SummaryModal from "./SummaryModal";
 import CustomTooltip from "./CustomTooltip";
 import { Theme } from "../types";
 import { API_URL } from "../config";
-import { copyToClipboard } from "../utils";
 import {
   getSmartChartConfig,
   toFiniteNumber,
@@ -124,9 +123,6 @@ const DashboardView = forwardRef(
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customReason, setCustomReason] = useState("");
 
-    const [copied, setCopied] = useState(false);
-    const [canCopy, setCanCopy] = useState(true);
-    const [copyTooltipTxt, setCopyTooltipTxt] = useState("Copy SQL Query");
 
     const graphContainerRef = useRef<HTMLDivElement>(null);
     const dislikeRef = useRef<HTMLDivElement>(null);
@@ -1124,41 +1120,6 @@ const DashboardView = forwardRef(
                     </span>
 
                     <div className="flex items-center gap-1.5">
-                      {activeViewType === "query" && dashboardItem?.mainViewData?.queryData && (
-                        <CustomTooltip title={copyTooltipTxt} position="top">
-                          <button
-                            onClick={() => {
-                              if (!canCopy) return;
-                              setCanCopy(false);
-                              copyToClipboard(dashboardItem.mainViewData.queryData).then((success) => {
-                                if (success) {
-                                  setCopied(true);
-                                  setCopyTooltipTxt("Copied!");
-                                } else {
-                                  setCopyTooltipTxt("Failed to copy");
-                                }
-                                setTimeout(() => {
-                                  setCopied(false);
-                                  setCopyTooltipTxt("Copy SQL Query");
-                                  setCanCopy(true);
-                                }, 2000);
-                              });
-                            }}
-                            className="p-1.5 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                            disabled={!canCopy}
-                          >
-                            {copied ? (
-                              <Check
-                                size={15}
-                                style={{ color: theme.colors.success }}
-                              />
-                            ) : (
-                              <Copy size={15} />
-                            )}
-                          </button>
-                        </CustomTooltip>
-                      )}
-
                       {/* Segmented Light High Contrast Switcher Controls */}
                       <div
                         className="flex p-0.5 rounded-lg border font-semibold"
@@ -1257,40 +1218,6 @@ const DashboardView = forwardRef(
                       <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         SQL Query Log
                       </span>
-                      {dashboardItem?.mainViewData?.queryData && (
-                        <CustomTooltip title={copyTooltipTxt} position="top">
-                          <button
-                            onClick={() => {
-                              if (!canCopy) return;
-                              setCanCopy(false);
-                              copyToClipboard(dashboardItem.mainViewData.queryData).then((success) => {
-                                if (success) {
-                                  setCopied(true);
-                                  setCopyTooltipTxt("Copied!");
-                                } else {
-                                  setCopyTooltipTxt("Failed to copy");
-                                }
-                                setTimeout(() => {
-                                  setCopied(false);
-                                  setCopyTooltipTxt("Copy SQL Query");
-                                  setCanCopy(true);
-                                }, 2000);
-                              });
-                            }}
-                            className="p-1.5 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                            disabled={!canCopy}
-                          >
-                            {copied ? (
-                              <Check
-                                size={15}
-                                style={{ color: theme.colors.success }}
-                              />
-                            ) : (
-                              <Copy size={15} />
-                            )}
-                          </button>
-                        </CustomTooltip>
-                      )}
                     </div>
                     <div className="flex-1 overflow-auto p-3 min-h-0">
                       <QueryDisplay
