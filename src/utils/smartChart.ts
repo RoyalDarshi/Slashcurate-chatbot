@@ -506,7 +506,7 @@ const chooseGroupField = (
 
   const temporal = fields.find((field) => field.kind === "temporal");
   const numericFieldExists = fields.some((field) => field.kind === "numeric");
-  if (temporal && numericFieldExists) return temporal;
+  if (temporal && numericFieldExists && (!chartType || ["line", "area"].includes(chartType))) return temporal;
 
   const candidates = fields.filter((field) => {
     if (field.isIdentifier || field.kind === "numeric") return false;
@@ -1795,7 +1795,7 @@ export const getSmartEChartsOption = (
   const showLegend =
     config.chartType === "pie"
       ? config.processedData.length <= 6
-      : config.seriesKeys.length > 1 && config.seriesKeys.length <= 6;
+      : config.seriesKeys.length > 1 && config.seriesKeys.length <= 8;
 
   const baseOption: EChartsOption = {
     animationDuration: 450,
@@ -1840,6 +1840,11 @@ export const getSmartEChartsOption = (
             fontSize: 12,
           },
           formatter: (name: string) => formatKey(name),
+          selected: config.seriesKeys.reduce<Record<string, boolean>>((acc, key, idx) => {
+            const isLineOrArea = ["line", "area"].includes(config.chartType);
+            acc[key] = !isLineOrArea || config.seriesKeys.length <= 3 || idx === 0;
+            return acc;
+          }, {}),
         }
       : { show: false },
   };
@@ -2078,6 +2083,8 @@ export const getSmartEChartsOption = (
             type: "inside",
             throttle: 50,
             zoomLock: false,
+            start: config.processedData.length > 40 ? Math.max(0, 100 - Math.round((30 / config.processedData.length) * 100)) : 0,
+            end: 100,
           },
           {
             type: "slider",
@@ -2087,6 +2094,8 @@ export const getSmartEChartsOption = (
             fillerColor: `${theme.colors.accent}33`,
             handleStyle: { color: theme.colors.accent },
             textStyle: { color: theme.colors.textSecondary },
+            start: config.processedData.length > 40 ? Math.max(0, 100 - Math.round((30 / config.processedData.length) * 100)) : 0,
+            end: 100,
           },
         ]
       : undefined,
@@ -2104,21 +2113,21 @@ export const getSmartEChartsOption = (
             ? "total"
             : undefined,
         smooth: isLine,
-        showSymbol: config.processedData.length <= 28,
-        symbolSize: 7,
+        showSymbol: config.processedData.length <= 15,
+        symbolSize: 6,
         barMaxWidth: isHorizontal ? 24 : 54,
         barCategoryGap: config.processedData.length <= 3 ? "42%" : "18%",
         data: getSeriesData(config, seriesKey, color, theme),
         lineStyle: isLine
           ? {
-              width: 3,
+              width: config.processedData.length > 80 ? 1.5 : config.processedData.length > 30 ? 2 : 3,
               color,
             }
           : undefined,
         areaStyle:
           config.chartType === "area"
             ? {
-                opacity: 0.24,
+                opacity: config.processedData.length > 50 ? 0.08 : config.processedData.length > 20 ? 0.14 : 0.24,
                 color: makeGradient(color, "vertical", 0.8),
               }
             : undefined,

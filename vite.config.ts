@@ -22,10 +22,24 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rollupOptions: {
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            return "vendor";
-          }
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (id.includes("echarts")) {
+                return "charts-echarts";
+              }
+              if (id.includes("plotly.js") || id.includes("react-plotly.js")) {
+                return "charts-plotly";
+              }
+              if (id.includes("framer-motion")) {
+                return "motion";
+              }
+              if (id.includes("lucide-react") || id.includes("react-icons") || id.includes("react-feather")) {
+                return "icons";
+              }
+              return "vendor";
+            }
+          },
         },
       },
       sourcemap: env.VITE_ENABLE_SOURCEMAP === "true",

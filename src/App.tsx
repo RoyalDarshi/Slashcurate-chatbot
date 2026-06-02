@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import ChatInterface, { ChatInterfaceHandle } from "./components/ChatInterface";
-import DashboardInterface, {
-  DashboardInterfaceHandle,
-} from "./components/DashboardInterface";
-import LoginSignup from "./components/LoginSignup";
-import ResetPassword from "./components/ResetPassword";
 import ConnectionForm from "./components/ConnectionForm";
-import ExistingConnections from "./components/ExistingConnections";
-import History from "./components/History";
-import Settings from "./components/Settings";
-import AdminDashboard from "./components/AdminDashboard";
+import type { ChatInterfaceHandle } from "./components/ChatInterface";
+import type { DashboardInterfaceHandle } from "./components/DashboardInterface";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import { SettingsProvider, useSettings } from "./SettingsContext";
 import { handleLogout } from "./utils";
@@ -19,14 +11,33 @@ import "@fontsource/inter";
 import "./index.css";
 import { authService } from "./services/authService";
 import { menuItems } from "./menuItems";
-import Favourites from "./components/Favourites";
 import UserTips from "./components/UserTips";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import HelpPage from "./components/HelpPage";
+
+// Lazy-loaded routes
+const ChatInterface = React.lazy(() => import("./components/ChatInterface"));
+const DashboardInterface = React.lazy(() => import("./components/DashboardInterface"));
+const LoginSignup = React.lazy(() => import("./components/LoginSignup"));
+const ResetPassword = React.lazy(() => import("./components/ResetPassword"));
+const ExistingConnections = React.lazy(() => import("./components/ExistingConnections"));
+const History = React.lazy(() => import("./components/History"));
+const Favourites = React.lazy(() => import("./components/Favourites"));
+const Settings = React.lazy(() => import("./components/Settings"));
+const HelpPage = React.lazy(() => import("./components/HelpPage"));
+const AdminDashboard = React.lazy(() => import("./components/AdminDashboard"));
 import { MessageSquare } from "lucide-react";
 import { useConnections, useSession, useRecommendedQuestions } from "./hooks";
 import { motion, AnimatePresence } from "framer-motion";
+
+const LoadingFallback = () => (
+  <div className="flex h-screen w-screen items-center justify-center transition-colors duration-300" style={{ backgroundColor: "#0F172A" }}>
+    <div className="flex flex-col items-center gap-4 animate-fade-in">
+      <div className="w-8 h-8 border-4 border-t-transparent border-indigo-500 rounded-full animate-spin"></div>
+      <p className="text-white opacity-70 text-xs font-semibold tracking-wider animate-pulse uppercase">Loading Workspace...</p>
+    </div>
+  </div>
+);
 
 function App() {
   const [activeMenu, setActiveMenu] = useState<string | null>("home");
@@ -141,42 +152,44 @@ function App() {
     <ThemeProvider>
       <SettingsProvider isAuthenticated={isAuthenticated}>
         <Router>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <AppContent
-                  isAuthenticated={isAuthenticated}
-                  activeMenu={activeMenu}
-                  setActiveMenu={setActiveMenu}
-                  onLoginSuccess={handleLoginSuccess}
-                  onLogout={handleUserLogout}
-                  chatRef={chatRef}
-                  dashboardRef={dashboardRef}
-                  onCreateConSelected={handleCreateConSelected}
-                  onHomePage={handleHomePage}
-                  onNewChat={handleNewChat}
-                  questionToAsk={questionToAsk}
-                  setQuestionToAsk={setQuestionToAsk}
-                  showTip={showTip}
-                  setShowTip={setShowTip}
-                />
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                isAdminAuthenticated ? (
-                  <AdminDashboard
-                    onLogout={() => setIsAdminAuthenticated(false)}
+          <React.Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <AppContent
+                    isAuthenticated={isAuthenticated}
+                    activeMenu={activeMenu}
+                    setActiveMenu={setActiveMenu}
+                    onLoginSuccess={handleLoginSuccess}
+                    onLogout={handleUserLogout}
+                    chatRef={chatRef}
+                    dashboardRef={dashboardRef}
+                    onCreateConSelected={handleCreateConSelected}
+                    onHomePage={handleHomePage}
+                    onNewChat={handleNewChat}
+                    questionToAsk={questionToAsk}
+                    setQuestionToAsk={setQuestionToAsk}
+                    showTip={showTip}
+                    setShowTip={setShowTip}
                   />
-                ) : (
-                  <Navigate to="/?login=admin" replace />
-                )
-              }
-            />
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
-          </Routes>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  isAdminAuthenticated ? (
+                    <AdminDashboard
+                      onLogout={() => setIsAdminAuthenticated(false)}
+                    />
+                  ) : (
+                    <Navigate to="/?login=admin" replace />
+                  )
+                }
+              />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
+            </Routes>
+          </React.Suspense>
         </Router>
       </SettingsProvider>
     </ThemeProvider>
