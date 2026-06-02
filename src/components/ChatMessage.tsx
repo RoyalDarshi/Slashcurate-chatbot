@@ -38,6 +38,7 @@ import {
 } from "../utils/smartChart";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { copyToClipboard } from "../utils";
 import html2canvas from "html2canvas";
 import EditableMessage from "./EditableMessage";
 import { motion, AnimatePresence } from "framer-motion";
@@ -807,17 +808,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           onClick={() => {
                             if (!canCopy) return;
                             setCanCopy(false);
-                            navigator.clipboard
-                              ?.writeText(parsedData.sql_query)
-                              .then(() => {
+                            copyToClipboard(parsedData.sql_query).then((success) => {
+                              if (success) {
                                 setCopied(true);
                                 setCopyTooltipTxt("Copied!");
-                                setTimeout(() => {
-                                  setCopied(false);
-                                  setCopyTooltipTxt("Copy SQL Query");
-                                  setCanCopy(true);
-                                }, 2000);
-                              });
+                              } else {
+                                setCopyTooltipTxt("Failed to copy");
+                              }
+                              setTimeout(() => {
+                                setCopied(false);
+                                setCopyTooltipTxt("Copy SQL Query");
+                                setCanCopy(true);
+                              }, 2000);
+                            });
                           }}
                           className="p-1.5 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                           disabled={!canCopy}
