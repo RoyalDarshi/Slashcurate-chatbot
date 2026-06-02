@@ -102,7 +102,7 @@ const DashboardView = forwardRef(
       onEditQuestion,
       onUpdateReaction,
     }: DashboardViewProps,
-    ref: Ref<DashboardViewHandle>,
+    ref: any,
   ) => {
     const [graphType, setGraphType] = useState<SmartChartType>("bar");
     const [groupBy, setGroupBy] = useState<string | null>(null);
