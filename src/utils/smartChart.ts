@@ -326,7 +326,8 @@ const isIdentifierKey = (
   return (
     rowCount > 20 &&
     uniqueCount > rowCount * 0.9 &&
-    !METRIC_FIELD_PATTERN.test(key)
+    !METRIC_FIELD_PATTERN.test(key) &&
+    !/name|desc|title|label/i.test(lower)
   );
 };
 
