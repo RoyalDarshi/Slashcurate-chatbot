@@ -622,7 +622,7 @@ const detectAggregation = (
   const key = valueField.key.toLowerCase();
   if (AVERAGE_FIELD_PATTERN.test(key)) return "avg";
   if (COUNT_FIELD_PATTERN.test(key) && !MONEY_FIELD_PATTERN.test(key)) {
-    return "count";
+    return "sum";
   }
   if (MONEY_FIELD_PATTERN.test(key)) return "sum";
   return "sum";
