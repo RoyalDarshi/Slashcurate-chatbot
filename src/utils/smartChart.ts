@@ -327,7 +327,7 @@ const isIdentifierKey = (
     rowCount > 20 &&
     uniqueCount > rowCount * 0.9 &&
     !METRIC_FIELD_PATTERN.test(key) &&
-    !/name|desc|title|label/i.test(lower)
+    !/name|desc|title|label|state|city|country|region|zone|category|segment|product|status|stage|type|branch|department|division/i.test(lower)
   );
 };
 
