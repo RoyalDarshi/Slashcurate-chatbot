@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   useMemo,
+  Ref,
 } from "react";
 import {
   HelpCircle,
@@ -87,7 +88,7 @@ interface DashboardViewProps {
   ) => void;
 }
 
-const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
+const DashboardView = forwardRef(
   (
     {
       dashboardItem,
@@ -100,8 +101,8 @@ const DashboardView = forwardRef<DashboardViewHandle, DashboardViewProps>(
       graphSummary,
       onEditQuestion,
       onUpdateReaction,
-    },
-    ref,
+    }: DashboardViewProps,
+    ref: Ref<DashboardViewHandle>,
   ) => {
     const [graphType, setGraphType] = useState<SmartChartType>("bar");
     const [groupBy, setGroupBy] = useState<string | null>(null);
