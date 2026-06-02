@@ -1098,11 +1098,14 @@ const getInsights = (
   groupField: SmartFieldAnalysis | null,
   numberFormat: SmartNumberFormat,
 ): SmartInsight[] => {
-  if (data.length === 0) return [];
+  const realData = data.filter((datum) => datum.name !== "Others");
+  const dataToUse = realData.length > 0 ? realData : data;
+
+  if (dataToUse.length === 0) return [];
 
   const metricLabel = formatKey(valueKey ?? "Value");
   const groupLabel = formatKey(groupBy ?? "Category");
-  const sortedByValue = [...data].sort((a, b) => b.total - a.total);
+  const sortedByValue = [...dataToUse].sort((a, b) => b.total - a.total);
   const top = sortedByValue[0];
   const lowest = sortedByValue[sortedByValue.length - 1];
   const insights: SmartInsight[] = [];
@@ -1114,7 +1117,7 @@ const getInsights = (
     tone: top.total >= 0 ? "positive" : "negative",
   });
 
-  if (data.length > 1 && lowest.name !== top.name) {
+  if (dataToUse.length > 1 && lowest.name !== top.name) {
     insights.push({
       kind: "low",
       label: `Lowest ${groupLabel}`,
@@ -1136,9 +1139,9 @@ const getInsights = (
     });
   }
 
-  if (groupField?.kind === "temporal" && data.length >= 2) {
-    const first = data[0];
-    const last = data[data.length - 1];
+  if (groupField?.kind === "temporal" && dataToUse.length >= 2) {
+    const first = dataToUse[0];
+    const last = dataToUse[dataToUse.length - 1];
     const change =
       first.total === 0
         ? 0
@@ -1156,12 +1159,12 @@ const getInsights = (
     });
   }
 
-  if (data.length >= 5) {
+  if (dataToUse.length >= 5) {
     const mean =
-      data.reduce((sum, datum) => sum + datum.total, 0) / data.length;
+      dataToUse.reduce((sum, datum) => sum + datum.total, 0) / dataToUse.length;
     const variance =
-      data.reduce((sum, datum) => sum + Math.pow(datum.total - mean, 2), 0) /
-      data.length;
+      dataToUse.reduce((sum, datum) => sum + Math.pow(datum.total - mean, 2), 0) /
+      dataToUse.length;
     const deviation = Math.sqrt(variance);
     const outlier = sortedByValue.find(
       (datum) => deviation > 0 && datum.total > mean + deviation * 2,
