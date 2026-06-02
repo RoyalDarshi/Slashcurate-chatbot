@@ -1655,7 +1655,11 @@ const getSeriesData = (
           ? theme.colors.error
           : makeGradient(color, config.orientation),
         borderRadius:
-          config.orientation === "horizontal" ? [0, 6, 6, 0] : [6, 6, 0, 0],
+          config.seriesKeys.length > 1
+            ? 0
+            : config.orientation === "horizontal"
+              ? [0, 6, 6, 0]
+              : [6, 6, 0, 0],
       },
     };
   });
