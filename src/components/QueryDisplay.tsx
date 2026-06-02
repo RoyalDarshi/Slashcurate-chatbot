@@ -368,7 +368,17 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
         let html = "";
         for (const token of processedTokens) {
           if (token.color) {
-            const opacity = ["identifier", "table", "quotedIdentifier"].includes(token.type) ? "0.75" : ["string", "number", "function"].includes(token.type) ? "0.85" : ["keyword"].includes(token.type) ? "0.9" : "1";
+            const opacity = [
+              "identifier",
+              "table",
+              "quotedIdentifier",
+            ].includes(token.type)
+              ? "0.75"
+              : ["string", "number", "function"].includes(token.type)
+                ? "0.85"
+                : ["keyword"].includes(token.type)
+                  ? "0.9"
+                  : "1";
             html += `<span style="color: ${token.color}; opacity: ${opacity};">${token.value}</span>`;
           } else {
             html += `<span style="opacity: 0.75">${token.value}</span>`;
@@ -396,17 +406,25 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
         className="w-full flex flex-col group my-2"
       >
         {formattedQuery ? (
-          <div 
+          <div
             className={`flex flex-col relative overflow-hidden transition-all duration-300 ${flat ? "" : "rounded-xl"}`}
             style={{
-              backgroundColor: flat ? "transparent" : (theme.mode === 'light' ? 'rgba(15, 23, 42, 0.03)' : 'rgba(255, 255, 255, 0.04)'),
+              backgroundColor: flat
+                ? "transparent"
+                : theme.mode === "light"
+                  ? "rgba(15, 23, 42, 0.03)"
+                  : "rgba(255, 255, 255, 0.04)",
             }}
           >
             {/* Integrated Toolbar */}
-            <div 
+            <div
               className="flex items-center justify-between px-4 py-2"
               style={{
-                backgroundColor: flat ? "transparent" : (theme.mode === 'light' ? 'rgba(15, 23, 42, 0.02)' : 'rgba(255, 255, 255, 0.02)')
+                backgroundColor: flat
+                  ? "transparent"
+                  : theme.mode === "light"
+                    ? "rgba(15, 23, 42, 0.02)"
+                    : "rgba(255, 255, 255, 0.02)",
               }}
             >
               <div className="flex items-center gap-2">
@@ -414,21 +432,27 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
                   {getLanguageIcon()}
                 </div>
                 {title && (
-                  <span className="text-xs font-medium tracking-wide" style={{ color: theme.colors.text, opacity: 0.9 }}>
+                  <span
+                    className="text-xs font-medium tracking-wide"
+                    style={{ color: theme.colors.text, opacity: 0.9 }}
+                  >
                     {title}
                   </span>
                 )}
-                <span 
+                <span
                   className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ml-1"
-                  style={{ 
-                    backgroundColor: theme.mode === 'light' ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255, 255, 255, 0.05)',
-                    color: theme.colors.textSecondary 
+                  style={{
+                    backgroundColor:
+                      theme.mode === "light"
+                        ? "rgba(15, 23, 42, 0.04)"
+                        : "rgba(255, 255, 255, 0.05)",
+                    color: theme.colors.textSecondary,
                   }}
                 >
                   {language}
                 </span>
               </div>
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <div className="transition-opacity duration-200">
                 <CopyButton query={formattedQuery} />
               </div>
             </div>
@@ -439,23 +463,41 @@ const QueryDisplay: React.FC<QueryDisplayProps> = React.memo(
               style={{
                 fontSize: fontSize || "13px",
                 lineHeight: "1.7",
-                color: theme.mode === 'light' ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+                color:
+                  theme.mode === "light"
+                    ? "rgba(15, 23, 42, 0.85)"
+                    : "rgba(255, 255, 255, 0.85)",
               }}
             >
-              <code className="block w-full">{colorizedQuery || formattedQuery}</code>
+              <code className="block w-full">
+                {colorizedQuery || formattedQuery}
+              </code>
             </pre>
           </div>
         ) : (
           <div
             className="flex items-center justify-center p-6 rounded-xl border border-dashed transition-colors duration-300"
             style={{
-              borderColor: theme.mode === 'light' ? 'rgba(15, 23, 42, 0.1)' : 'rgba(255, 255, 255, 0.1)',
-              backgroundColor: theme.mode === 'light' ? 'rgba(15, 23, 42, 0.01)' : 'rgba(255, 255, 255, 0.01)',
+              borderColor:
+                theme.mode === "light"
+                  ? "rgba(15, 23, 42, 0.1)"
+                  : "rgba(255, 255, 255, 0.1)",
+              backgroundColor:
+                theme.mode === "light"
+                  ? "rgba(15, 23, 42, 0.01)"
+                  : "rgba(255, 255, 255, 0.01)",
             }}
           >
             <div className="text-center opacity-40">
-              <Code size={20} className="mx-auto mb-2" style={{ color: theme.colors.textSecondary }} />
-              <p className="italic text-xs font-medium tracking-wide" style={{ color: theme.colors.textSecondary }}>
+              <Code
+                size={20}
+                className="mx-auto mb-2"
+                style={{ color: theme.colors.textSecondary }}
+              />
+              <p
+                className="italic text-xs font-medium tracking-wide"
+                style={{ color: theme.colors.textSecondary }}
+              >
                 No active query
               </p>
             </div>
@@ -506,7 +548,9 @@ const CopyButton = ({ query }: { query: string }) => {
       <button
         onClick={handleCopy}
         className="p-1.5 rounded-md transition-all duration-200 hover:bg-slate-500/10 active:scale-95 flex items-center justify-center"
-        style={{ color: copied ? theme.colors.success : theme.colors.textSecondary }}
+        style={{
+          color: copied ? theme.colors.success : theme.colors.textSecondary,
+        }}
       >
         <AnimatePresence mode="wait" initial={false}>
           {copied ? (
