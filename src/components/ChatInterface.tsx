@@ -1320,13 +1320,14 @@ const ChatInterface = memo(
           {connections.length > 0 && (
             <footer className="absolute bottom-4 left-0 right-0 z-40 pointer-events-none px-4 flex justify-center">
               <div
-                className="w-full max-w-4xl flex items-end gap-2 px-3 py-2 rounded-[24px] pointer-events-auto border transition-all duration-300 shadow-2xl"
+                className="w-full max-w-4xl flex items-center gap-2 pl-4 pr-3 py-2 rounded-full pointer-events-auto border transition-all duration-300 shadow-2xl"
                 style={{
                   backgroundColor: theme.mode === 'light' ? '#FFFFFF' : theme.colors.surfaceGlass,
                   borderColor: theme.mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : theme.colors.border,
                   boxShadow: theme.mode === "light" 
                     ? "0 8px 32px -4px rgba(0, 0, 0, 0.1), 0 0 1px rgba(0, 0, 0, 0.15)" 
-                    : "0 24px 48px -12px rgba(0, 0, 0, 0.5)"
+                    : "0 24px 48px -12px rgba(0, 0, 0, 0.5)",
+                  borderRadius: "9999px"
                 }}
               >
                 <div
@@ -1338,7 +1339,7 @@ const ChatInterface = memo(
                       type="button"
                       onClick={toggleConnectionDropdown}
                       disabled={isSubmitting || (!sessionConnection && !!sessionId)}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
                       style={{
                         borderColor: theme.colors.border,
                         color: theme.colors.text,
@@ -1459,7 +1460,7 @@ const ChatInterface = memo(
                         !selectedConnection ||
                         (!sessionConnection && !!sessionId)
                       }
-                    className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                    className="p-2 rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
                     style={{
                       color: isDbExplorerOpen
                         ? theme.colors.accent
@@ -1481,7 +1482,7 @@ const ChatInterface = memo(
                     type="button"
                     onClick={() => setCurrentView("dashboard")}
                     disabled={isSubmitting}
-                    className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                    className="p-2 rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
                     style={{ color: theme.colors.textSecondary }}
                   >
                     <LayoutDashboard size={19} />
@@ -1493,7 +1494,7 @@ const ChatInterface = memo(
                     type="button"
                     onClick={handleNewChat}
                     disabled={isSubmitting}
-                    className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                    className="p-2 rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
                     style={{ color: theme.colors.textSecondary }}
                   >
                     <PlusCircle size={19} />
@@ -1508,6 +1509,8 @@ const ChatInterface = memo(
                     onSubmit={handleSubmit}
                     disabled={!sessionConnection && !!sessionId}
                     onStopRequest={handleStopRequest}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                   />
                 </div>
               </div>

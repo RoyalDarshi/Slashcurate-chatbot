@@ -52,6 +52,8 @@ export interface ChatInputProps {
   onSelect: (option: any) => void;
   disabled: boolean;
   onNewChat: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export interface ChatMessageProps {

@@ -273,7 +273,7 @@ const HelpPage: React.FC<HelpPageProps> = ({
 
   return (
     <div
-      className="p-6 h-full overflow-y-auto"
+      className="p-6 h-full overflow-y-auto custom-scrollbar"
       style={{
         backgroundColor: theme.colors.background,
       }}

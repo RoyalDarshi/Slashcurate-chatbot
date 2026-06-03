@@ -262,6 +262,7 @@ const Settings = () => {
 
   return (
     <div
+      className="custom-scrollbar"
       style={{
         minHeight: "100%",
         backgroundColor: bg,

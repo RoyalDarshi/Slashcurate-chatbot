@@ -26,6 +26,8 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
     onSubmit,
     disabled,
     onStopRequest,
+    onFocus,
+    onBlur,
   }) => {
     const { theme } = useTheme();
     const isDisabled = isSubmitting || disabled;
@@ -157,9 +159,9 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
     return (
       <form
         onSubmit={onSubmit}
-        className="flex-grow flex items-end m-0 p-0 bg-transparent border-none shadow-none"
+        className="flex-grow flex items-center m-0 p-0 bg-transparent border-none shadow-none"
       >
-        <div className="flex items-end gap-2 w-full bg-transparent p-0 border-none shadow-none">
+        <div className="flex items-center gap-2 w-full bg-transparent p-0 border-none shadow-none">
           {showMicButton &&
             recognition &&
             micPermissionStatus !== "unsupported" && (
@@ -167,7 +169,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                 title={isRecording ? "Stop Voice Input" : "Voice Input"}
                 position="top"
               >
-                <div className="relative flex-shrink-0 mb-0.5">
+                <div className="relative flex-shrink-0">
                   <button
                     type="button"
                     onClick={handleMicToggle}
@@ -176,7 +178,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                       !recognition ||
                       micPermissionStatus === "denied"
                     }
-                    className={`flex items-center justify-center w-10 h-10 rounded-[14px] transition-all duration-200 hover:scale-105 active:scale-95 ${
+                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 ${
                       isRecording ? "animate-pulse" : ""
                     }`}
                     style={{
@@ -203,8 +205,10 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
               onInputChange(e.target.value);
               if (isRecording && recognition) recognition.stop();
             }}
+            onFocus={onFocus}
+            onBlur={onBlur}
             placeholder={voiceInputStatus || activePlaceholder}
-            className="flex-grow py-2 px-2 text-sm border-none bg-transparent resize-none overflow-y-auto focus:outline-none focus:ring-0 disabled:opacity-40 max-h-36 min-h-[36px]"
+            className="flex-grow py-2.5 px-3 text-sm border-none bg-transparent resize-none overflow-y-auto no-scrollbar focus:outline-none focus:ring-0 disabled:opacity-40 max-h-36 min-h-[36px]"
             style={{
               color: theme.colors.text,
               fontFamily: theme.typography.fontFamily,
@@ -226,7 +230,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
               <button
                 type="button"
                 onClick={onStopRequest}
-                className="flex items-center justify-center w-10 h-10 rounded-[14px] transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 mb-0.5 text-white shadow-xs"
+                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 text-white shadow-xs"
                 style={{
                   background: theme.colors.error,
                   boxShadow: `0 4px 14px ${theme.colors.error}40`,
@@ -245,7 +249,7 @@ const DashboardInput: React.FC<ExtendedDashboardInputProps> = React.memo(
                   micPermissionStatus === "denied" ||
                   !input.trim()
                 }
-                className="flex items-center justify-center w-10 h-10 rounded-[14px] transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 mb-0.5 text-white"
+                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 text-white"
                 style={{
                   background:
                     !input.trim() ||

@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef, useEffect } from "react";
 import { X, MessageSquare, Clock, ChevronRight } from "lucide-react";
 import { Theme } from "../types";
 import { Message } from "../types";
@@ -12,6 +12,8 @@ interface PreviousQuestionsDrawerProps {
   currentQuestionId?: string | null;
 }
 
+let savedScrollTop = 0;
+
 const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
   showPrevQuestionsModal,
   onClose,
@@ -20,6 +22,23 @@ const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
   theme,
   currentQuestionId,
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showPrevQuestionsModal && scrollContainerRef.current) {
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = savedScrollTop;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showPrevQuestionsModal]);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    savedScrollTop = e.currentTarget.scrollTop;
+  }, []);
+
   if (!showPrevQuestionsModal) return null;
 
   const truncateText = (text: string, maxLength: number = 80) => {
@@ -44,11 +63,11 @@ const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Overlay */}
-      <div 
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
+      <div
+        className="absolute inset-0 bg-black/10 transition-opacity duration-300"
         onClick={onClose}
       />
-      
+
       <style>
         {`
         @keyframes slideInRightFloat {
@@ -96,7 +115,10 @@ const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
       <div
         className="floating-drawer absolute right-4 top-4 bottom-4 w-[calc(100%-2rem)] sm:w-[380px] flex flex-col shadow-[0_16px_40px_-10px_rgba(0,0,0,0.15)] rounded-[24px] overflow-hidden z-10"
         style={{
-          background: theme.mode === "light" ? "rgba(255, 255, 255, 0.85)" : "rgba(20, 20, 25, 0.85)",
+          background:
+            theme.mode === "light"
+              ? "rgba(255, 255, 255, 0.85)"
+              : "rgba(20, 20, 25, 0.85)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           border: `1px solid ${theme.colors.border}80`,
@@ -105,7 +127,7 @@ const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
         {/* Header */}
         <div
           className="flex flex-col gap-1.5 p-6 shrink-0 relative z-10"
-          style={{ 
+          style={{
             borderBottom: `1px solid ${theme.colors.border}40`,
           }}
         >
@@ -120,8 +142,15 @@ const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
               onClick={onClose}
               className="p-1.5 rounded-full transition-colors duration-200"
               style={{ color: theme.colors.textSecondary }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = theme.mode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)')}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  theme.mode === "light"
+                    ? "rgba(0,0,0,0.05)"
+                    : "rgba(255,255,255,0.05)")
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
             >
               <X size={18} />
             </button>
@@ -130,12 +159,17 @@ const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
             className="text-[13px] font-medium"
             style={{ color: theme.colors.textSecondary }}
           >
-            {userQuestionsFromSession.length} question{userQuestionsFromSession.length !== 1 ? "s" : ""} asked
+            {userQuestionsFromSession.length} question
+            {userQuestionsFromSession.length !== 1 ? "s" : ""} asked
           </p>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-2">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-2"
+        >
           {userQuestionsFromSession.length > 0 ? (
             userQuestionsFromSession.map((msg, index) => {
               const isCurrentQuestion = msg.id === currentQuestionId;
@@ -153,34 +187,42 @@ const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
                     `}
                     style={{
                       backgroundColor: isCurrentQuestion
-                        ? (theme.mode === "light" ? "#ffffff" : "rgba(255,255,255,0.08)")
+                        ? theme.mode === "light"
+                          ? "#ffffff"
+                          : "rgba(255,255,255,0.08)"
                         : "transparent",
-                      border: `1px solid ${isCurrentQuestion ? theme.colors.border : 'transparent'}`,
+                      border: `1px solid ${isCurrentQuestion ? theme.colors.border : "transparent"}`,
                     }}
                     onMouseOver={(e) => {
                       if (!isCurrentQuestion) {
-                        e.currentTarget.style.backgroundColor = theme.mode === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)';
+                        e.currentTarget.style.backgroundColor =
+                          theme.mode === "light"
+                            ? "rgba(0,0,0,0.03)"
+                            : "rgba(255,255,255,0.04)";
                       }
                     }}
                     onMouseOut={(e) => {
                       if (!isCurrentQuestion) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.backgroundColor = "transparent";
                       }
                     }}
                   >
-                    <div className="flex items-center justify-between w-full text-[12px] font-semibold" style={{ color: theme.colors.textSecondary }}>
+                    <div
+                      className="flex items-center justify-between w-full text-[12px] font-semibold"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
                       <span className="flex items-center gap-1.5 opacity-80">
                         <Clock size={13} strokeWidth={2.5} />
                         {formatTimeAgo(msg.timestamp)}
                       </span>
                       {isCurrentQuestion && (
-                        <span 
-                          style={{ 
-                            color: theme.colors.accent, 
-                            fontSize: '11px', 
-                            padding: '3px 8px', 
-                            borderRadius: '10px', 
-                            backgroundColor: `${theme.colors.accent}15` 
+                        <span
+                          style={{
+                            color: theme.colors.accent,
+                            fontSize: "11px",
+                            padding: "3px 8px",
+                            borderRadius: "10px",
+                            backgroundColor: `${theme.colors.accent}15`,
                           }}
                         >
                           Viewing
@@ -199,9 +241,21 @@ const PreviousQuestionsDrawer: React.FC<PreviousQuestionsDrawerProps> = ({
             })
           ) : (
             <div className="h-full flex flex-col items-center justify-center opacity-60">
-              <MessageSquare size={32} style={{ color: theme.colors.textSecondary, marginBottom: '16px' }} strokeWidth={1.5} />
-              <p className="font-semibold" style={{ color: theme.colors.text }}>It's quiet here</p>
-              <p className="text-[13px] mt-1 text-center px-4" style={{ color: theme.colors.textSecondary }}>
+              <MessageSquare
+                size={32}
+                style={{
+                  color: theme.colors.textSecondary,
+                  marginBottom: "16px",
+                }}
+                strokeWidth={1.5}
+              />
+              <p className="font-semibold" style={{ color: theme.colors.text }}>
+                It's quiet here
+              </p>
+              <p
+                className="text-[13px] mt-1 text-center px-4"
+                style={{ color: theme.colors.textSecondary }}
+              >
                 Your asked questions will appear here as you chat.
               </p>
             </div>
