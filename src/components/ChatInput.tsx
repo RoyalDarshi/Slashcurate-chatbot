@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Send, Mic, MicOff, XSquare } from "lucide-react";
 import { ChatInputProps } from "../types";
 import { useTheme } from "../ThemeContext";
-import CustomTooltip from "./CustomTooltip";
 
 declare global {
   interface Window {
@@ -155,36 +154,31 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           {showMicButton &&
              recognition &&
              micPermissionStatus !== "unsupported" && (
-               <CustomTooltip
-                 title={isRecording ? "Stop Voice Input" : "Voice Input"}
-                 position="top"
-               >
-                 <div className="relative flex-shrink-0">
-                   <button
-                     type="button"
-                     onClick={handleMicToggle}
-                     disabled={
-                       isDisabled ||
-                       !recognition ||
-                       micPermissionStatus === "denied"
-                     }
-                     className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 ${
-                       isRecording ? "animate-pulse" : ""
-                     }`}
-                     style={{
-                       background: isRecording
-                         ? theme.colors.error
-                         : `${theme.colors.accent}15`,
-                       color: isRecording ? "white" : theme.colors.accent,
-                       boxShadow: isRecording
-                         ? `0 4px 14px ${theme.colors.error}40`
-                         : "none",
-                     }}
-                   >
-                     {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
-                   </button>
-                 </div>
-               </CustomTooltip>
+               <div className="relative flex-shrink-0">
+                 <button
+                   type="button"
+                   onClick={handleMicToggle}
+                   disabled={
+                     isDisabled ||
+                     !recognition ||
+                     micPermissionStatus === "denied"
+                   }
+                   className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 ${
+                     isRecording ? "animate-pulse" : ""
+                   }`}
+                   style={{
+                     background: isRecording
+                       ? theme.colors.error
+                       : `${theme.colors.accent}15`,
+                     color: isRecording ? "white" : theme.colors.accent,
+                     boxShadow: isRecording
+                       ? `0 4px 14px ${theme.colors.error}40`
+                       : "none",
+                   }}
+                 >
+                   {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                 </button>
+               </div>
              )}
 
           <textarea
@@ -218,57 +212,53 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           />
 
           {isSubmitting ? (
-            <CustomTooltip title="Stop Request" position="top">
-              <button
-                type="button"
-                onClick={onStopRequest}
-                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 text-white"
-                style={{
-                  background: theme.colors.error,
-                  boxShadow: `0 4px 14px ${theme.colors.error}40`,
-                }}
-              >
-                <XSquare size={16} />
-              </button>
-            </CustomTooltip>
+            <button
+              type="button"
+              onClick={onStopRequest}
+              className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 text-white"
+              style={{
+                background: theme.colors.error,
+                boxShadow: `0 4px 14px ${theme.colors.error}40`,
+              }}
+            >
+              <XSquare size={16} />
+            </button>
           ) : (
-            <CustomTooltip title="Ask Question" position="top">
-              <button
-                type="submit"
-                disabled={
+            <button
+              type="submit"
+              disabled={
+                isDisabled ||
+                isRecording ||
+                micPermissionStatus === "denied" ||
+                !input.trim()
+              }
+              className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 text-white"
+              style={{
+                background:
+                  !input.trim() ||
                   isDisabled ||
                   isRecording ||
-                  micPermissionStatus === "denied" ||
-                  !input.trim()
-                }
-                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 text-white"
-                style={{
-                  background:
-                    !input.trim() ||
-                    isDisabled ||
-                    isRecording ||
-                    micPermissionStatus === "denied"
-                      ? `${theme.colors.text}10`
-                      : theme.colors.accent,
-                  color:
-                    !input.trim() ||
-                    isDisabled ||
-                    isRecording ||
-                    micPermissionStatus === "denied"
-                      ? theme.colors.textSecondary
-                      : "white",
-                  boxShadow:
-                    !input.trim() ||
-                    isDisabled ||
-                    isRecording ||
-                    micPermissionStatus === "denied"
-                      ? "none"
-                      : `0 4px 14px ${theme.colors.accent}40`,
-                }}
-              >
-                <Send size={16} />
-              </button>
-            </CustomTooltip>
+                  micPermissionStatus === "denied"
+                    ? `${theme.colors.text}10`
+                    : theme.colors.accent,
+                color:
+                  !input.trim() ||
+                  isDisabled ||
+                  isRecording ||
+                  micPermissionStatus === "denied"
+                    ? theme.colors.textSecondary
+                    : "white",
+                boxShadow:
+                  !input.trim() ||
+                  isDisabled ||
+                  isRecording ||
+                  micPermissionStatus === "denied"
+                    ? "none"
+                    : `0 4px 14px ${theme.colors.accent}40`,
+              }}
+            >
+              <Send size={16} />
+            </button>
           )}
         </div>
       </form>

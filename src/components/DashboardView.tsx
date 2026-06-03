@@ -52,7 +52,6 @@ import DynamicGraph from "./Graphs/DynamicGraph";
 import DataTable from "./DataTable";
 import QueryDisplay from "./QueryDisplay";
 import SummaryModal from "./SummaryModal";
-import CustomTooltip from "./CustomTooltip";
 import { Theme } from "../types";
 import { API_URL } from "../config";
 import {
@@ -645,97 +644,76 @@ const DashboardView = forwardRef(
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {!sessionConErr && (
                       <>
-                        <CustomTooltip
-                          title={
-                            dashboardItem.isFavorited
-                              ? "Remove Favorite"
-                              : "Bookmark Metric Layout"
+                        <button
+                          onClick={() =>
+                            onToggleFavorite(
+                              dashboardItem.questionMessageId,
+                              dashboardItem.question,
+                              dashboardItem.mainViewData.queryData,
+                              dashboardItem.connectionName,
+                              dashboardItem.isFavorited,
+                            )
                           }
-                          position="bottom"
+                          disabled={isSubmitting}
+                          className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-400"
                         >
-                          <button
-                            onClick={() =>
-                              onToggleFavorite(
-                                dashboardItem.questionMessageId,
-                                dashboardItem.question,
-                                dashboardItem.mainViewData.queryData,
-                                dashboardItem.connectionName,
-                                dashboardItem.isFavorited,
-                              )
+                          <Heart
+                            size={15}
+                            fill={
+                              dashboardItem.isFavorited ? "#EF4444" : "none"
                             }
-                            disabled={isSubmitting}
-                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-400"
-                          >
-                            <Heart
-                              size={15}
-                              fill={
-                                dashboardItem.isFavorited ? "#EF4444" : "none"
-                              }
-                              className={
-                                dashboardItem.isFavorited
-                                  ? "text-red-500"
-                                  : "text-slate-400"
-                              }
-                            />
-                          </button>
-                        </CustomTooltip>
+                            className={
+                              dashboardItem.isFavorited
+                                ? "text-red-500"
+                                : "text-slate-400"
+                            }
+                          />
+                        </button>
 
-                        <CustomTooltip
-                          title={isLiked ? "Remove Like" : "Like Response"}
-                          position="bottom"
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={handleLike}
+                          disabled={isSubmitting}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isLiked
+                              ? "bg-emerald-500/10"
+                              : "hover:bg-black/5 dark:hover:bg-white/5"
+                          } text-slate-400`}
                         >
+                          {isLiked ? (
+                            <BsHandThumbsUpFill
+                              size={15}
+                              style={{ color: theme.colors.success }}
+                              className="drop-shadow-sm"
+                            />
+                          ) : (
+                            <BsHandThumbsUp size={15} />
+                          )}
+                        </motion.button>
+
+                        <div className="relative" ref={dislikeRef}>
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            onClick={handleLike}
+                            onClick={handleDislike}
                             disabled={isSubmitting}
                             className={`p-1.5 rounded-lg transition-colors ${
-                              isLiked
-                                ? "bg-emerald-500/10"
+                              isDisliked
+                                ? "bg-red-500/10"
                                 : "hover:bg-black/5 dark:hover:bg-white/5"
                             } text-slate-400`}
                           >
-                            {isLiked ? (
-                              <BsHandThumbsUpFill
+                            {isDisliked ? (
+                              <BsHandThumbsDownFill
                                 size={15}
-                                style={{ color: theme.colors.success }}
+                                style={{ color: theme.colors.error }}
                                 className="drop-shadow-sm"
                               />
                             ) : (
-                              <BsHandThumbsUp size={15} />
+                              <BsHandThumbsDown size={15} />
                             )}
                           </motion.button>
-                        </CustomTooltip>
-
-                        <div className="relative" ref={dislikeRef}>
-                          <CustomTooltip
-                            title={
-                              isDisliked ? "Remove Dislike" : "Dislike Response"
-                            }
-                            position="bottom"
-                          >
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={handleDislike}
-                              disabled={isSubmitting}
-                              className={`p-1.5 rounded-lg transition-colors ${
-                                isDisliked
-                                  ? "bg-red-500/10"
-                                  : "hover:bg-black/5 dark:hover:bg-white/5"
-                              } text-slate-400`}
-                            >
-                              {isDisliked ? (
-                                <BsHandThumbsDownFill
-                                  size={15}
-                                  style={{ color: theme.colors.error }}
-                                  className="drop-shadow-sm"
-                                />
-                              ) : (
-                                <BsHandThumbsDown size={15} />
-                              )}
-                            </motion.button>
-                          </CustomTooltip>
 
                           <AnimatePresence>
                             {showDislikeOptions && (

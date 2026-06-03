@@ -35,7 +35,6 @@ import {
 } from "lucide-react";
 import ConnectionForm from "./ConnectionForm";
 import RecommendedQuestions from "./RecommendedQuestions";
-import CustomTooltip from "./CustomTooltip";
 import {
   useChatScroll,
 } from "../hooks";
@@ -1334,7 +1333,6 @@ const ChatInterface = memo(
                   className="relative flex-shrink-0"
                   ref={connectionDropdownRef}
                 >
-                  <CustomTooltip title="Database Nodes" position="top">
                     <button
                       type="button"
                       onClick={toggleConnectionDropdown}
@@ -1352,7 +1350,6 @@ const ChatInterface = memo(
                       </span>
                       <ChevronDown size={12} className="opacity-60" />
                     </button>
-                  </CustomTooltip>
 
                   {isConnectionDropdownOpen && (
                     <div
@@ -1451,7 +1448,6 @@ const ChatInterface = memo(
                   )}
                 </div>
 
-                <CustomTooltip title="Schema Matrix" position="top">
                   <button
                     type="button"
                     onClick={toggleDbExplorer}
@@ -1475,9 +1471,7 @@ const ChatInterface = memo(
                       }}
                     />
                   </button>
-                </CustomTooltip>
 
-                <CustomTooltip title="Switch to Dashboard" position="top">
                   <button
                     type="button"
                     onClick={() => setCurrentView("dashboard")}
@@ -1487,9 +1481,7 @@ const ChatInterface = memo(
                   >
                     <LayoutDashboard size={19} />
                   </button>
-                </CustomTooltip>
 
-                <CustomTooltip title="Reset Analytics Thread" position="top">
                   <button
                     type="button"
                     onClick={handleNewChat}
@@ -1499,7 +1491,6 @@ const ChatInterface = memo(
                   >
                     <PlusCircle size={19} />
                   </button>
-                </CustomTooltip>
 
                 <div className="flex-1 min-w-0">
                   <ChatInput

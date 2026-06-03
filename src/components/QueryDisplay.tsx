@@ -3,7 +3,6 @@ import { useTheme } from "../ThemeContext";
 import { Copy, Check, Code, Database } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { copyToClipboard } from "../utils";
-import CustomTooltip from "./CustomTooltip";
 
 interface QueryDisplayProps {
   query: string | object | null | undefined;
@@ -544,38 +543,36 @@ const CopyButton = ({ query }: { query: string }) => {
   };
 
   return (
-    <CustomTooltip title={copied ? "Copied" : "Copy"} position="left">
-      <button
-        onClick={handleCopy}
-        className="p-1.5 rounded-md transition-all duration-200 hover:bg-slate-500/10 active:scale-95 flex items-center justify-center"
-        style={{
-          color: copied ? theme.colors.success : theme.colors.textSecondary,
-        }}
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          {copied ? (
-            <motion.div
-              key="check"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.15 }}
-            >
-              <Check size={14} strokeWidth={2.5} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="copy"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.15 }}
-            >
-              <Copy size={14} strokeWidth={2} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </button>
-    </CustomTooltip>
+    <button
+      onClick={handleCopy}
+      className="p-1.5 rounded-md transition-all duration-200 hover:bg-slate-500/10 active:scale-95 flex items-center justify-center"
+      style={{
+        color: copied ? theme.colors.success : theme.colors.textSecondary,
+      }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {copied ? (
+          <motion.div
+            key="check"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.15 }}
+          >
+            <Check size={14} strokeWidth={2.5} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="copy"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.15 }}
+          >
+            <Copy size={14} strokeWidth={2} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </button>
   );
 };

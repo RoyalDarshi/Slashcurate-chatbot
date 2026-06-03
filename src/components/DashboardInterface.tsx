@@ -20,8 +20,6 @@ import DashboardInput from "./DashboardInput";
 import Loader from "./Loader";
 import { useTheme } from "../ThemeContext";
 import RecommendedQuestions from "./RecommendedQuestions";
-import CustomTooltip from "./CustomTooltip";
-
 import { useSettings } from "../SettingsContext";
 import DashboardView, { DashboardViewHandle } from "./DashboardView";
 import SchemaExplorer from "./SchemaExplorer";
@@ -2302,7 +2300,6 @@ const DashboardInterface = memo(
                   className="relative flex-shrink-0"
                   ref={connectionDropdownRef}
                 >
-                  <CustomTooltip title="Database Nodes" position="top">
                     <button
                       type="button"
                       onClick={toggleConnectionDropdown}
@@ -2320,7 +2317,6 @@ const DashboardInterface = memo(
                       </span>
                       <ChevronDown size={12} className="opacity-60" />
                     </button>
-                  </CustomTooltip>
 
                   {isConnectionDropdownOpen && (
                     <div
@@ -2418,7 +2414,6 @@ const DashboardInterface = memo(
                     </div>
                   )}
                 </div>
-                <CustomTooltip title="Schema Matrix" position="top">
                   <button
                     type="button"
                     onClick={toggleDbExplorer}
@@ -2442,8 +2437,6 @@ const DashboardInterface = memo(
                       }}
                     />
                   </button>
-                </CustomTooltip>
-                <CustomTooltip title="Switch to Chat" position="top">
                   <button
                     type="button"
                     onClick={() => setCurrentView("chat")}
@@ -2453,8 +2446,6 @@ const DashboardInterface = memo(
                   >
                     <MessageSquare size={19} />
                   </button>
-                </CustomTooltip>
-                <CustomTooltip title="New Chat Session" position="top">
                   <button
                     type="button"
                     onClick={handleNewChat}
@@ -2464,7 +2455,6 @@ const DashboardInterface = memo(
                   >
                     <PlusCircle size={19} />
                   </button>
-                </CustomTooltip>
                 <DashboardInput
                   input={input}
                   isSubmitting={isSubmitting}
@@ -2485,21 +2475,16 @@ const DashboardInterface = memo(
                   onFocus={() => setIsInputFocused(true)}
                   onBlur={() => setIsInputFocused(false)}
                 />
-                <CustomTooltip
-                  title="Historical Session Metrics"
-                  position="top"
+                <button
+                  onClick={() => setShowPrevQuestionsModal(true)}
+                  disabled={
+                    isSubmitting || userQuestionsFromSession.length === 0
+                  }
+                  className="p-2 rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                  style={{ color: theme.colors.textSecondary }}
                 >
-                  <button
-                    onClick={() => setShowPrevQuestionsModal(true)}
-                    disabled={
-                      isSubmitting || userQuestionsFromSession.length === 0
-                    }
-                    className="p-2 rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    <ListChecks size={19} />
-                  </button>
-                </CustomTooltip>
+                  <ListChecks size={19} />
+                </button>
               </div>
             </footer>
           )}

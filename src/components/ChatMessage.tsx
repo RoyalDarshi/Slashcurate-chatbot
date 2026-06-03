@@ -35,7 +35,6 @@ import {
 } from "react-icons/bs";
 import { ChatMessageProps } from "../types";
 import SmartDataTable from "./SmartDataTable";
-import CustomTooltip from "./CustomTooltip";
 import DynamicGraph, { formatKey } from "./ChatGraphs/ChatDynamicGraph";
 import {
   getSmartChartConfig,
@@ -186,7 +185,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             tableData = Array.isArray(parsedData.answer)
               ? parsedData.answer
               : [parsedData.answer];
-          } else if (!parsedData?.sql_query && Object.keys(parsedData).length > 0) {
+          } else if (
+            !parsedData?.sql_query &&
+            Object.keys(parsedData).length > 0
+          ) {
             tableData = [parsedData];
           }
 
@@ -458,12 +460,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   const { autoChartType, recommendedChartTypes } = React.useMemo(() => {
     if (csvData.length === 0) {
-      return { autoChartType: "bar" as SmartChartType, recommendedChartTypes: ["bar" as SmartChartType] };
+      return {
+        autoChartType: "bar" as SmartChartType,
+        recommendedChartTypes: ["bar" as SmartChartType],
+      };
     }
     const config = getSmartChartConfig(csvData);
     return {
       autoChartType: config.autoChartType,
-      recommendedChartTypes: config.recommendedChartTypes || [config.autoChartType],
+      recommendedChartTypes: config.recommendedChartTypes || [
+        config.autoChartType,
+      ],
     };
   }, [csvData]);
 
@@ -534,7 +541,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           >
             {recommendedChartTypes.length > 0 && (
               <div className="flex items-center gap-2 mb-3 flex-wrap animate-fade-in">
-                <span 
+                <span
                   className="text-[10px] font-bold uppercase tracking-wider opacity-60 mr-1"
                   style={{ color: theme.colors.textSecondary }}
                 >
@@ -558,7 +565,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                         key={type}
                         onClick={() => {
                           setChartType(type);
-                          const newConfig = getSmartChartConfig(csvData, { chartType: type });
+                          const newConfig = getSmartChartConfig(csvData, {
+                            chartType: type,
+                          });
                           setGroupBy(newConfig.groupBy);
                           setValueKey(newConfig.valueKey);
                           setAggregate(newConfig.aggregation);
@@ -752,8 +761,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     onClick={() => onRetry?.(message.parentId!)}
                     className="group flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md"
                     style={{
-                      background: theme.mode === 'light' ? '#FFFFFF' : theme.colors.surface,
-                      borderColor: theme.mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : theme.colors.border,
+                      background:
+                        theme.mode === "light"
+                          ? "#FFFFFF"
+                          : theme.colors.surface,
+                      borderColor:
+                        theme.mode === "light"
+                          ? "rgba(0, 0, 0, 0.08)"
+                          : theme.colors.border,
                       color: theme.colors.text,
                     }}
                   >
@@ -786,15 +801,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             {currentView !== "error" &&
               message.status === "normal" &&
               (csvData.length > 0 || parsedData?.sql_query) && (
-                <div
-                  className="flex items-center justify-between py-1 mb-1"
-                >
+                <div className="flex items-center justify-between py-1 mb-1">
                   {/* Modern Subtle Tab Shell */}
                   <div
                     className="flex p-0.5 rounded-xl font-medium"
                     style={{
                       backgroundColor:
-                        theme.mode === "light" ? "rgba(15, 23, 42, 0.04)" : "rgba(255, 255, 255, 0.04)",
+                        theme.mode === "light"
+                          ? "rgba(15, 23, 42, 0.04)"
+                          : "rgba(255, 255, 255, 0.04)",
                     }}
                   >
                     {hasNumericData && (
@@ -819,18 +834,20 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                         Chart
                       </button>
                     )}
-                    {hasNumericData && parsedData?.content && currentView === 'graph' && (
-                      <button
-                        onClick={() => setShowSummaryModal(true)}
-                        className="ml-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 flex items-center gap-1.5"
-                        style={{
-                          backgroundColor: `${theme.colors.accent}15`,
-                          color: theme.colors.accent,
-                        }}
-                      >
-                        Explain Chart
-                      </button>
-                    )}
+                    {hasNumericData &&
+                      parsedData?.content &&
+                      currentView === "graph" && (
+                        <button
+                          onClick={() => setShowSummaryModal(true)}
+                          className="ml-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 flex items-center gap-1.5"
+                          style={{
+                            backgroundColor: `${theme.colors.accent}15`,
+                            color: theme.colors.accent,
+                          }}
+                        >
+                          Explain Chart
+                        </button>
+                      )}
                     {csvData.length > 0 && (
                       <button
                         onClick={() => setCurrentView("table")}
@@ -922,12 +939,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     )}
 
                     {currentView === "query" && parsedData?.sql_query && (
-                      <CustomTooltip title={copyTooltipTxt} position="top">
-                        <button
-                          onClick={() => {
-                            if (!canCopy) return;
-                            setCanCopy(false);
-                            copyToClipboard(parsedData.sql_query).then((success) => {
+                      <button
+                        onClick={() => {
+                          if (!canCopy) return;
+                          setCanCopy(false);
+                          copyToClipboard(parsedData.sql_query).then(
+                            (success) => {
                               if (success) {
                                 setCopied(true);
                                 setCopyTooltipTxt("Copied!");
@@ -939,21 +956,21 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                                 setCopyTooltipTxt("Copy SQL Query");
                                 setCanCopy(true);
                               }, 2000);
-                            });
-                          }}
-                          className="p-1.5 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                          disabled={!canCopy}
-                        >
-                          {copied ? (
-                            <Check
-                              size={15}
-                              style={{ color: theme.colors.success }}
-                            />
-                          ) : (
-                            <Copy size={15} />
-                          )}
-                        </button>
-                      </CustomTooltip>
+                            },
+                          );
+                        }}
+                        className="p-1.5 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                        disabled={!canCopy}
+                      >
+                        {copied ? (
+                          <Check
+                            size={15}
+                            style={{ color: theme.colors.success }}
+                          />
+                        ) : (
+                          <Copy size={15} />
+                        )}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -962,135 +979,191 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             {renderContent()}
 
             {/* Bottom Actions Matrix */}
-            {message.status !== "loading" && (message.status === "normal" || message.status === "error" || currentView === "error") && !disabled && (
-              <div className="flex justify-end items-center gap-3.5 mt-1 pt-2 border-t border-slate-100 dark:border-slate-800/40">
-                <span
-                  className="text-[11px] font-semibold mr-auto opacity-50"
-                  style={{ color: theme.colors.textSecondary }}
-                >
-                  {parseTimestamp(message.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={handleLike}
-                  className={`p-1.5 rounded-lg transition-colors ${
-                    isLiked ? "bg-emerald-500/10 text-emerald-500" : "text-slate-400 hover:text-emerald-500 hover:bg-black/5 dark:hover:bg-white/5"
-                  }`}
-                >
-                  {isLiked ? (
-                    <BsHandThumbsUpFill
-                      size={15}
-                      style={{ color: theme.colors.success }}
-                      className="drop-shadow-sm"
-                    />
-                  ) : (
-                    <BsHandThumbsUp size={15} />
-                  )}
-                </motion.button>
-                <div className="relative" ref={dislikeRef}>
+            {message.status !== "loading" &&
+              (message.status === "normal" ||
+                message.status === "error" ||
+                currentView === "error") &&
+              !disabled && (
+                <div className="flex justify-end items-center gap-3.5 mt-1 pt-2 border-t border-slate-100 dark:border-slate-800/40">
+                  <span
+                    className="text-[11px] font-semibold mr-auto opacity-50"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
+                    {parseTimestamp(message.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={handleDislike}
+                    onClick={handleLike}
                     className={`p-1.5 rounded-lg transition-colors ${
-                      isDisliked ? "bg-red-500/10 text-red-500" : "text-slate-400 hover:text-red-500 hover:bg-black/5 dark:hover:bg-white/5"
+                      isLiked
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : "text-slate-400 hover:text-emerald-500 hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
-                    {isDisliked ? (
-                      <BsHandThumbsDownFill
+                    {isLiked ? (
+                      <BsHandThumbsUpFill
                         size={15}
-                        style={{ color: theme.colors.error }}
+                        style={{ color: theme.colors.success }}
                         className="drop-shadow-sm"
                       />
                     ) : (
-                      <BsHandThumbsDown size={15} />
+                      <BsHandThumbsUp size={15} />
                     )}
                   </motion.button>
-                  <AnimatePresence>
-                    {showDislikeOptions && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 5, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute bottom-full right-0 mb-2 rounded-xl border z-50 min-w-[200px] overflow-hidden py-1.5 shadow-xl backdrop-blur-xl"
-                        style={{
-                          background: theme.mode === 'light' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(30, 41, 59, 0.85)',
-                          borderColor: theme.mode === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
-                        }}
-                      >
-                        {showCustomInput ? (
-                          <div className="p-3 flex flex-col gap-2.5">
-                            <textarea
-                              value={customReason}
-                              onChange={(e) => setCustomReason(e.target.value)}
-                              placeholder="What went wrong?"
-                              rows={2}
-                              autoFocus
-                              className="w-full p-2.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-none font-medium transition-all"
-                              style={{
-                                color: theme.colors.text,
-                                backgroundColor: theme.colors.background,
-                                borderColor: theme.colors.border,
-                              }}
-                            />
-                            <div className="flex justify-end gap-2 text-[10px] font-bold uppercase tracking-wider">
-                              <button
-                                onClick={() => {
-                                  setShowCustomInput(false);
-                                  setCustomReason("");
-                                }}
-                                className="hover:opacity-70 transition-opacity"
-                                style={{ color: theme.colors.textSecondary }}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (customReason.trim())
-                                    handleDislikeOption(customReason);
-                                }}
-                                className="px-2.5 py-1 rounded text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
-                              >
-                                Submit
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-0.5 px-1.5">
-                            {[
-                              { id: "Inaccurate data", icon: <FileWarning size={13} className="opacity-60 group-hover:opacity-100" /> },
-                              { id: "Confusing or unclear", icon: <MessageSquareWarning size={13} className="opacity-60 group-hover:opacity-100" /> },
-                              { id: "Too slow", icon: <Clock size={13} className="opacity-60 group-hover:opacity-100" /> },
-                              { id: "Irrelevant response", icon: <Target size={13} className="opacity-60 group-hover:opacity-100" /> },
-                              { id: "Other", icon: <MoreHorizontal size={13} className="opacity-60 group-hover:opacity-100" /> },
-                            ].map(({ id, icon }) => (
-                              <button
-                                key={id}
-                                onClick={() =>
-                                  id === "Other"
-                                    ? setShowCustomInput(true)
-                                    : handleDislikeOption(id)
+                  <div className="relative" ref={dislikeRef}>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={handleDislike}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        isDisliked
+                          ? "bg-red-500/10 text-red-500"
+                          : "text-slate-400 hover:text-red-500 hover:bg-black/5 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      {isDisliked ? (
+                        <BsHandThumbsDownFill
+                          size={15}
+                          style={{ color: theme.colors.error }}
+                          className="drop-shadow-sm"
+                        />
+                      ) : (
+                        <BsHandThumbsDown size={15} />
+                      )}
+                    </motion.button>
+                    <AnimatePresence>
+                      {showDislikeOptions && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full right-0 mb-2 rounded-xl border z-50 min-w-[200px] overflow-hidden py-1.5 shadow-xl backdrop-blur-xl"
+                          style={{
+                            background:
+                              theme.mode === "light"
+                                ? "rgba(255, 255, 255, 0.85)"
+                                : "rgba(30, 41, 59, 0.85)",
+                            borderColor:
+                              theme.mode === "light"
+                                ? "rgba(0,0,0,0.06)"
+                                : "rgba(255,255,255,0.08)",
+                          }}
+                        >
+                          {showCustomInput ? (
+                            <div className="p-3 flex flex-col gap-2.5">
+                              <textarea
+                                value={customReason}
+                                onChange={(e) =>
+                                  setCustomReason(e.target.value)
                                 }
-                                className="group flex items-center gap-2.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:bg-black/5 dark:hover:bg-white/10"
-                                style={{ color: theme.colors.text }}
-                              >
-                                {icon}
-                                <span>{id}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                                placeholder="What went wrong?"
+                                rows={2}
+                                autoFocus
+                                className="w-full p-2.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-none font-medium transition-all"
+                                style={{
+                                  color: theme.colors.text,
+                                  backgroundColor: theme.colors.background,
+                                  borderColor: theme.colors.border,
+                                }}
+                              />
+                              <div className="flex justify-end gap-2 text-[10px] font-bold uppercase tracking-wider">
+                                <button
+                                  onClick={() => {
+                                    setShowCustomInput(false);
+                                    setCustomReason("");
+                                  }}
+                                  className="hover:opacity-70 transition-opacity"
+                                  style={{ color: theme.colors.textSecondary }}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (customReason.trim())
+                                      handleDislikeOption(customReason);
+                                  }}
+                                  className="px-2.5 py-1 rounded text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
+                                >
+                                  Submit
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-0.5 px-1.5">
+                              {[
+                                {
+                                  id: "Inaccurate data",
+                                  icon: (
+                                    <FileWarning
+                                      size={13}
+                                      className="opacity-60 group-hover:opacity-100"
+                                    />
+                                  ),
+                                },
+                                {
+                                  id: "Confusing or unclear",
+                                  icon: (
+                                    <MessageSquareWarning
+                                      size={13}
+                                      className="opacity-60 group-hover:opacity-100"
+                                    />
+                                  ),
+                                },
+                                {
+                                  id: "Too slow",
+                                  icon: (
+                                    <Clock
+                                      size={13}
+                                      className="opacity-60 group-hover:opacity-100"
+                                    />
+                                  ),
+                                },
+                                {
+                                  id: "Irrelevant response",
+                                  icon: (
+                                    <Target
+                                      size={13}
+                                      className="opacity-60 group-hover:opacity-100"
+                                    />
+                                  ),
+                                },
+                                {
+                                  id: "Other",
+                                  icon: (
+                                    <MoreHorizontal
+                                      size={13}
+                                      className="opacity-60 group-hover:opacity-100"
+                                    />
+                                  ),
+                                },
+                              ].map(({ id, icon }) => (
+                                <button
+                                  key={id}
+                                  onClick={() =>
+                                    id === "Other"
+                                      ? setShowCustomInput(true)
+                                      : handleDislikeOption(id)
+                                  }
+                                  className="group flex items-center gap-2.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:bg-black/5 dark:hover:bg-white/10"
+                                  style={{ color: theme.colors.text }}
+                                >
+                                  {icon}
+                                  <span>{id}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
           {/* Summary Modal */}
           {showSummaryModal && parsedData?.content && (
@@ -1100,7 +1173,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               theme={theme}
             />
           )}
-
         </div>
       ) : (
         <div className="w-full flex justify-end group py-2">
@@ -1116,35 +1188,30 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               }}
             >
               {!disabled && (
-                <div className="absolute right-full top-1/2 -translate-y-1/2 pr-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                <div className={`absolute right-full top-1/2 -translate-y-1/2 pr-2 transition-opacity flex items-center gap-1 ${isFavorited ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                   {responseStatus === "success" && (
-                    <CustomTooltip
-                      title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-                      position="left"
+                    <button
+                      onClick={handleFavorite}
+                      className="p-1 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{
+                        color: isFavorited
+                          ? theme.colors.error
+                          : "rgb(156 163 175)",
+                      }}
                     >
-                      <button
-                        onClick={handleFavorite}
-                        className="p-1 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                        style={{
-                          color: isFavorited ? theme.colors.accent : "rgb(156 163 175)",
-                        }}
-                      >
-                        <Heart
-                          size={14}
-                          className={isFavorited ? "fill-current" : ""}
-                        />
-                      </button>
-                    </CustomTooltip>
+                      <Heart
+                        size={14}
+                        className={isFavorited ? "fill-current" : ""}
+                      />
+                    </button>
                   )}
                   {!isSubmitting && (
-                    <CustomTooltip title="Edit this question" position="left">
-                      <button
-                        onClick={handleEdit}
-                        className="p-1 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                    </CustomTooltip>
+                    <button
+                      onClick={handleEdit}
+                      className="p-1 rounded-md text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <Edit3 size={14} />
+                    </button>
                   )}
                 </div>
               )}
