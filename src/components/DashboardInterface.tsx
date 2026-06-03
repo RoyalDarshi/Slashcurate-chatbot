@@ -301,6 +301,7 @@ const DashboardInterface = memo(
       const [schemaData, setSchemaData] = useState<DatabaseSchema[] | null>(null);
       const [schemaLoading, setSchemaLoading] = useState(false);
       const [schemaError, setSchemaError] = useState<string | null>(null);
+      const [schemaConnectionName, setSchemaConnectionName] = useState<string | null>(null);
       const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
         null,
       );
@@ -675,9 +676,9 @@ const DashboardInterface = memo(
 
       // Fetch real schema whenever the explorer is opened (or connection changes while open)
       useEffect(() => {
-        if (!isDbExplorerOpen || !selectedConnection) return;
+        if (!isDbExplorerOpen || !schemaConnectionName) return;
         const connectionObj = connections.find(
-          (c) => c.connectionName === selectedConnection
+          (c) => c.connectionName === schemaConnectionName
         );
         if (!connectionObj?.id) return;
 
@@ -699,13 +700,20 @@ const DashboardInterface = memo(
           .finally(() => {
             setSchemaLoading(false);
           });
-      }, [isDbExplorerOpen, selectedConnection, connections]);
+      }, [isDbExplorerOpen, schemaConnectionName, connections]);
+
+      // Sync schemaConnectionName when selectedConnection changes globally
+      useEffect(() => {
+        if (selectedConnection) {
+          setSchemaConnectionName(selectedConnection);
+        }
+      }, [selectedConnection]);
 
       // Clear schema when connection changes so stale data isn't shown
       useEffect(() => {
         setSchemaData(null);
         setSchemaError(null);
-      }, [selectedConnection]);
+      }, [schemaConnectionName]);
 
       const handleNewChat = useCallback(() => {
         clearSession();
@@ -2233,7 +2241,7 @@ const DashboardInterface = memo(
             </div>
           </main>
 
-          {isDbExplorerOpen && selectedConnection && (
+          {isDbExplorerOpen && schemaConnectionName && (
             <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl pointer-events-auto">
               {schemaLoading ? (
                 <div
@@ -2273,10 +2281,10 @@ const DashboardInterface = memo(
                   onClose={() => setIsDbExplorerOpen(false)}
                   theme={theme}
                   onColumnClick={() => {}}
-                  selectedConnection={selectedConnection ?? undefined}
+                  selectedConnection={schemaConnectionName ?? undefined}
                   connections={connections.map((c) => ({ id: c.id ?? c.connectionName, connectionName: c.connectionName }))}
                   onConnectionChange={(name) => {
-                    setSelectedConnection(name);
+                    setSchemaConnectionName(name);
                   }}
                 />
               )}
