@@ -252,7 +252,7 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                 }}
               >
                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                  AI Summary Overview
+                  Summary Overview
                 </div>
                 {config.insights.map((insight, idx) => (
                   <div
@@ -269,7 +269,8 @@ const DynamicGraph: React.FC<DynamicGraphProps> = React.memo(
                       color: theme.colors.text,
                     }}
                   >
-                    <strong className="font-semibold">{insight.label}:</strong> {insight.value}
+                    <strong className="font-semibold">{insight.label}:</strong>{" "}
+                    {insight.value}
                   </div>
                 ))}
               </div>

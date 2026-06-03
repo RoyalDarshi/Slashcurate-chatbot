@@ -110,6 +110,95 @@
   animation: float 6s ease-in-out infinite;
 }
 
+/* ======================================================
+   LOGIN PAGE ANIMATIONS
+====================================================== */
+
+/* Animated floating orbs */
+@keyframes login-orb-1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-30px, 20px) scale(1.08); }
+  66%  { transform: translate(20px, -15px) scale(0.95); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes login-orb-2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  40%  { transform: translate(25px, -30px) scale(1.12); }
+  80%  { transform: translate(-15px, 15px) scale(0.92); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes login-orb-3 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(20px, 25px) scale(1.1); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+.login-orb-1 { animation: login-orb-1 14s ease-in-out infinite; }
+.login-orb-2 { animation: login-orb-2 18s ease-in-out infinite; }
+.login-orb-3 { animation: login-orb-3 11s ease-in-out infinite; }
+
+/* Scan line sweep */
+@keyframes login-scan {
+  0%   { top: -4px; opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 0.3; }
+  100% { top: 100%; opacity: 0; }
+}
+.login-scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.4) 30%, rgba(99,102,241,0.6) 50%, rgba(6,182,212,0.4) 70%, transparent 100%);
+  animation: login-scan 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Entry animations for left panel */
+@keyframes login-entry {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.login-entry-1 { animation: login-entry 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both; }
+.login-entry-2 { animation: login-entry 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both; }
+.login-entry-3 { animation: login-entry 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both; }
+.login-entry-4 { animation: login-entry 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both; }
+.login-entry-5 { animation: login-entry 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both; }
+
+/* Card float animations */
+@keyframes login-float-1 {
+  0%, 100% { transform: translateY(0px) rotate(2deg); }
+  50%       { transform: translateY(-14px) rotate(3deg); }
+}
+@keyframes login-float-2 {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50%       { transform: translateY(-10px) rotate(-2deg); }
+}
+.login-float-1 { animation: login-float-1 7s ease-in-out infinite; }
+.login-float-2 { animation: login-float-2 9s ease-in-out infinite 1.5s; }
+
+/* Form panel entry */
+@keyframes login-form-entry {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.login-form-entry { animation: login-form-entry 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both; }
+
+/* Button shimmer */
+@keyframes login-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.login-shimmer {
+  animation: login-shimmer 2.5s ease-in-out infinite;
+}
+
+/* animate-fade-in utility */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 0.4s ease-out both; }
+
 /* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar {
   display: none !important;

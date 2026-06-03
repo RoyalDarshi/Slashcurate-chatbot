@@ -77,8 +77,8 @@ class AdminService {
     return response.data;
   }
 
-  async saveGroupMapping(groupId: string, payload: { users: string[]; connections: string[] }) {
-    const response = await apiClient.put(`/api/admin/groups/${groupId}/mapping`, payload, {
+  async saveGroupMapping(groupId: string, payload: { users: string[]; connections: number[] }) {
+    const response = await apiClient.post(`/api/admin/groups/${groupId}/mapping`, payload, {
       headers: { "X-Is-Admin": "true" },
     });
     return response.data;
